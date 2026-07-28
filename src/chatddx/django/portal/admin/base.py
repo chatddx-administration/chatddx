@@ -1,4 +1,5 @@
 # src/chatddx/django/repo/admin/base.py
+# pyright: basic
 import json
 from typing import Any, cast, no_type_check, override
 
@@ -43,7 +44,7 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
     ]
 
     @admin.display(description="Versions")
-    def versions(self, obj: DjangoModel) -> int:
+    def versions(self, obj: DjangoModel) -> int | None:
         return getattr(obj, "_version_count", None)
 
     def get_queryset(self, request: HttpRequest):
@@ -113,19 +114,19 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
         obj, created = dump_branch(
             self.name,
             form.validated_data.name or "",
-            request.user.username,
+            form.validated_data.owner.name,
             schema,
         )
 
-        new_collaborators = getattr(form.validated_data, "collaborators", None)
+        new_collaborators = form.validated_data.collaborators
         collaborators_changed = False
 
         if new_collaborators is not None:
             current_ids = set(obj.collaborators.values_list("pk", flat=True))
-            target_ids = {c.pk if hasattr(c, "pk") else c for c in new_collaborators}
+            target_ids = {identity.id for identity in new_collaborators}
 
             if current_ids != target_ids:
-                obj.collaborators.set(new_collaborators)
+                obj.collaborators.set(target_ids)
                 collaborators_changed = True
 
         if not created:
@@ -215,6 +216,7 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
             )
 
         context["fingerprint"] = obj.target.fingerprint[:6]
+        context["timestamp"] = obj.timestamp.strftime("%Y-%m-%d %H:%M")
 
         if obj.owner.name != request.user.username:
             context["version_info"] = {"current": 1, "total": 1}

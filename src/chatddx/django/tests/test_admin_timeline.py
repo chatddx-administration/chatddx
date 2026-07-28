@@ -595,6 +595,28 @@ def test_agent_collaborators(
 
 
 @pytest.mark.django_db
+def test_superagent_owners(
+    admin_client: Client,
+    collaborators,
+    superagent_post_data,
+):
+
+    superagent_post_data["owner"] = collaborators[0].pk
+    response = admin_client.post(
+        reverse("admin:orm_superagent_add"),
+        data=superagent_post_data,
+        follow=True,
+    )
+
+    agent = AgentBranchModel.objects.get(name="some-agent", owner=collaborators[0])
+    assert agent.owner.name == "alex"
+
+    assert response.status_code == 200
+    if "adminform" in response.context:
+        assert response.context["adminform"].form.errors == ""
+
+
+@pytest.mark.django_db
 def test_superagent_collaborators(
     admin_client: Client,
     collaborators,

@@ -3,7 +3,6 @@ import json
 from typing import Any, final, override
 
 from django.contrib import admin
-from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.urls import reverse
 from unfold.utils import format_html
@@ -67,6 +66,8 @@ class AgentAdmin(BranchModelAdmin[proxies.Agent]):
 
 @admin.register(proxies.SharedAgent)
 class SharedAgentAdmin(AgentAdmin):
+    list_display = list(AgentAdmin.list_display) + ["owner"]
+
     def get_queryset(self, request: HttpRequest):
         qs = super().get_queryset(request)
 
@@ -156,6 +157,16 @@ class SuperAgentAdmin(BranchModelAdmin[proxies.SuperAgent]):
 
 @admin.register(proxies.SharedSuperAgent)
 class SharedSuperAgentAdmin(SuperAgentAdmin):
+    list_display = list(BranchModelAdmin.list_display) + [
+        "owner",
+        "instructions",
+        "connection",
+        "output_type",
+        "sampling_params",
+        "tool_group",
+        "collaborators_csv",
+    ]
+
     def get_queryset(self, request: HttpRequest):
         qs = (
             super(TypedModelAdmin, self)

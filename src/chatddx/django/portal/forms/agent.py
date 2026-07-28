@@ -144,6 +144,12 @@ class AgentForm(BaseForm):
         widget=UnfoldAdminSelect2MultipleWidget(),
         label="Collaborators",
     )
+    owner = forms.ModelChoiceField(
+        required=False,
+        queryset=IdentityModel.objects.all(),
+        widget=UnfoldAdminSelect2Widget(),
+        label="Owner",
+    )
     connection = forms.ModelChoiceField(
         queryset=ConnectionTrailModel.objects.none(),
         widget=UnfoldAdminSelect2Widget(),
@@ -192,6 +198,12 @@ class AgentForm(BaseForm):
                     "collaborators",
                     css_class="w-1/2",
                 ),
+            ),
+            Row(
+                Column(
+                    "owner",
+                ),
+                css_class="w-1/2",
             ),
             css_class="mb-8",
         )

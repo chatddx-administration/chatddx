@@ -37,6 +37,10 @@ class BaseForm(ModelForm):
     @override
     def clean(self):
         cleaned = super().clean()
+
+        if not cleaned.get("owner"):
+            cleaned["owner"] = ensure_identity(self.request.user.username)
+
         self.validated_data = self.validate(cleaned)
         return cleaned
 

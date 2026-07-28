@@ -25,6 +25,7 @@ from pydantic import (
 
 from chatddx.core.fields import CoercedStr, NullableStr
 from chatddx.core.models import IdentityModel
+from chatddx.core.schemas import IdentitySpec
 from chatddx.registry.schemas import RegistryInstance
 from chatddx.utils import generate_fingerprint
 
@@ -113,7 +114,8 @@ class BranchSpec[T: TrailSpec](BranchBase, NinjaSchema):
 
 class BaseFormDataIn(NinjaSchema):
     name: NullableStr = None
-    collaborators: list[Any] = Field(default_factory=list)
+    owner: IdentitySpec | None = None
+    collaborators: list[IdentitySpec] = Field(default_factory=list)
 
 
 class BaseFormDataOut(BaseModel):

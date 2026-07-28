@@ -101,7 +101,7 @@ class SuperAgentForm(BaseForm):
     def save(self, commit: bool = True) -> Any:
         instance = super().save(commit=commit)
         if instance and instance.get("api_key") and self.validated_data:
-            owner = IdentityModel.objects.get(name=self.request.user.username)
+            owner = self.validated_data.owner
             owner_api_keys = owner.secrets.get("api-keys", {})
             agent_name = self.validated_data.name
             current_api_key = owner_api_keys.get(agent_name, None)
@@ -234,6 +234,12 @@ class SuperAgentForm(BaseForm):
         widget=UnfoldAdminSelect2MultipleWidget(),
         label="Collaborators",
     )
+    owner = forms.ModelChoiceField(
+        required=False,
+        queryset=IdentityModel.objects.all(),
+        widget=UnfoldAdminSelect2Widget(),
+        label="Owner",
+    )
 
     instructions = forms.CharField(
         required=False,
@@ -275,9 +281,13 @@ class SuperAgentForm(BaseForm):
             ),
             Row(
                 Column(
-                    "collaborators",
+                    "owner",
+                    css_class="w-1/2",
                 ),
-                css_class="w-1/2",
+                Column(
+                    "collaborators",
+                    css_class="w-1/2",
+                ),
             ),
             css_class="mb-8",
         )

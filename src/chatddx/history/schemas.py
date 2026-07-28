@@ -4,28 +4,13 @@ from datetime import datetime
 from uuid import UUID
 
 from ninja import Schema as NinjaSchema
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel
 from pydantic_ai import ModelRequest, ModelResponse
 
 from chatddx.core.choices import MessageKindChoices, RoleChoices
 from chatddx.repo.base import BranchSchema, BranchSpec
 from chatddx.repo.trail_schemas import AgentSchema
 from chatddx.repo.trail_specs import AgentSpec
-
-
-class IdentityBase(BaseModel):
-    name: str
-    user_id: int | None = None
-    guest_id: UUID | None = None
-    secrets: dict[str, JsonValue] = Field(default_factory=dict)
-
-
-class IdentitySchema(IdentityBase):
-    pass
-
-
-class IdentitySpec(IdentityBase, NinjaSchema):
-    id: int
 
 
 class SessionBase(BaseModel):

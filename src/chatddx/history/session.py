@@ -4,8 +4,9 @@ from uuid import UUID
 from asgiref.sync import sync_to_async
 
 from chatddx.core.models import IdentityModel
+from chatddx.core.schemas import IdentitySpec
 from chatddx.history.models import MessageModel, SessionModel
-from chatddx.history.schemas import IdentitySpec, MessageSpec, SessionSpec
+from chatddx.history.schemas import MessageSpec, SessionSpec
 from chatddx.repo.branch_models import AgentBranchModel
 from chatddx.repo.shufflers.main import resolve_related_array_fields_async
 

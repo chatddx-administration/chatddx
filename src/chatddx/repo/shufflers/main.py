@@ -9,11 +9,10 @@ from django.db.models import (
     ForeignKey,
     OneToOneField,
     OuterRef,
+    Q,
     QuerySet,
     Subquery,
-    Window,
 )
-from django.db.models.functions import RowNumber
 
 from chatddx.core.django_fields import RelatedArrayField
 from chatddx.core.models import IdentityModel
@@ -78,6 +77,29 @@ def qs_owned_trails[T: TrailModel](qs: QuerySet[T], owner_name: str) -> QuerySet
 
 def qs_canon[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
     owned_qs = qs.filter(owner__name=owner_name)
+
+    count_subquery = (
+        qs.filter(owner_id=OuterRef("owner_id"), name=OuterRef("name"))
+        .values("owner_id", "name")
+        .annotate(total=Count("id"))
+        .values("total")
+    )
+
+    canonical_ids = (
+        owned_qs.order_by("owner_id", "name", "-timestamp")
+        .distinct("owner_id", "name")
+        .values_list("id", flat=True)
+    )
+
+    return (
+        owned_qs.filter(id__in=canonical_ids)
+        .annotate(_version_count=Subquery(count_subquery))
+        .order_by("-timestamp")
+    )
+
+
+def qs_canon_col[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
+    owned_qs = qs.filter(Q(owner__name=owner_name) | Q(collaborators__name=owner_name))
 
     count_subquery = (
         qs.filter(owner_id=OuterRef("owner_id"), name=OuterRef("name"))
@@ -172,19 +194,14 @@ def load_agents(
 ):
 
     model_cls = Repo("agent", BranchModel)
+    qs = qs_canon(model_cls.objects.all(), owner_name)
 
-    collection_a_targets = OutputTypeBranchModel.objects.filter(
-        name__startswith=output_type,
-    ).values_list("target_id", flat=True)
-
-    matching_agent_branches = model_cls.objects.filter(
-        target__output_type__in=collection_a_targets
-    ).distinct()
+    qs = qs.filter(target__output_type__definition__title=output_type)
 
     return load_branches(
         bundle_name="agent",
         owner_name=owner_name,
-        qs=qs_canon(matching_agent_branches, owner_name),
+        qs=qs,
     )
 
 

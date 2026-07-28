@@ -1,11 +1,9 @@
-import json
+# pyright: basic
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from django.contrib.auth.models import User as DjangoUser
 from ninja.testing import TestAsyncClient
-from pydantic_ai import AgentRunResult
 
 from chatddx.core.models import IdentityModel
 from chatddx.django.api import api
