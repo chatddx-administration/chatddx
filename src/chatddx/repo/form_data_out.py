@@ -32,7 +32,7 @@ class TemplateData(BaseModel):
 
 
 class CaseFormDataOut(CaseBase, BaseFormDataOut):
-    pass
+    tags: list[int] = Field(default_factory=list)
 
 
 class ToolFormDataOut(ToolBasePrimitives, BaseFormDataOut):

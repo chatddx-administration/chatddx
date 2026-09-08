@@ -119,7 +119,7 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
         )
 
         new_collaborators = form.validated_data.collaborators
-        collaborators_changed = False
+        changed: list[str] = []
 
         if new_collaborators is not None:
             current_ids = set(obj.collaborators.values_list("pk", flat=True))
@@ -127,13 +127,15 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
 
             if current_ids != target_ids:
                 obj.collaborators.set(target_ids)
-                collaborators_changed = True
+                changed.append("collaborators")
+
+        changed += self.sync_extra_relations(obj, form)
 
         if not created:
-            if collaborators_changed:
+            if changed:
                 self.message_user(
                     request,
-                    "Branch content unchanged, but updated collaborators.",
+                    self.unchanged_message(changed),
                     level=messages.INFO,
                 )
                 request._skip_success_message = True
@@ -145,14 +147,28 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
                 )
                 request._skip_success_message = True
 
-        elif collaborators_changed:
+        elif changed:
             self.message_user(
                 request,
-                "Collaborators successfully set for the new branch version.",
+                f"{' and '.join(changed).capitalize()} successfully set for the new branch version.",
                 level=messages.SUCCESS,
             )
 
         return obj.as_proxy(proxy_cls)
+
+    def sync_extra_relations(self, obj: DjangoModel, form: BaseForm) -> list[str]:
+        """Hook for subclasses carrying relations beyond `collaborators`
+        (e.g. Case's `tags`): sync them against `obj` and return the label
+        of each one that actually changed, for the messages `save_form()`
+        builds above. The base implementation has nothing extra to sync.
+        """
+        return []
+
+    def unchanged_message(self, changed: list[str]) -> str:
+        """The message shown when the branch's own content (fingerprint)
+        didn't change, but something listed in `changed` did. Subclasses
+        may override for more specific wording."""
+        return f"Branch content unchanged, but updated {' and '.join(changed)}."
 
     def save_related(self, request, form, formsets, change):
         pass
