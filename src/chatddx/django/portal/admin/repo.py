@@ -8,6 +8,7 @@ from django.urls import reverse
 from unfold.utils import format_html
 
 from chatddx.django.portal.admin.base import BranchModelAdmin, TypedModelAdmin
+from chatddx.django.portal.admin.expect import ExpectInline
 from chatddx.django.portal.forms import (
     AgentForm,
     CaseForm,
@@ -294,6 +295,7 @@ class ToolAdmin(BranchModelAdmin[proxies.Tool]):
 class CaseAdmin(BranchModelAdmin[proxies.Case]):
     form = CaseForm
     name = "case"
+    inlines = [ExpectInline]
 
     list_display = BranchModelAdmin.list_display + [  # pyright: ignore
         "payload",
@@ -305,3 +307,17 @@ class CaseAdmin(BranchModelAdmin[proxies.Case]):
     )
     def payload(self, obj: proxies.Case) -> str:
         return str(obj.target.payload[:40])  # pyright: ignore
+
+    def save_related(
+        self,
+        request: HttpRequest,
+        form: CaseForm,
+        formsets: list[Any],
+        change: bool,
+    ):
+        # BranchModelAdmin.save_related() is a deliberate no-op (relations
+        # for other Branch entities are handled through dump_branch(), not
+        # Django's formset machinery) -- re-enable it here for the Expect
+        # inline, which does need its formset saved.
+        for formset in formsets:
+            self.save_formset(request, form, formset, change=change)
