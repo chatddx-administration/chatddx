@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 
-from chatddx.core.models import IdentityModel
+from chatddx.core.models import IdentityModel, TagModel
 from chatddx.repo.shufflers.main import dump_cases_async, ensure_identity_async
 from chatddx.repo.shufflers.tags import (
     dump_case_tags_async,
@@ -37,7 +37,7 @@ async def test_dump_case_tags_and_lookup(owner: IdentityModel):
 
     case_branches = await dump_cases_async(cases_dir, owner.name)
 
-    dumped = await dump_case_tags_async(tags_path, case_branches)
+    dumped = await dump_case_tags_async(tags_path, case_branches, owner.name)
 
     assert {tag.name for tag in dumped["case-alpha"]} == {"respiratory", "fever"}
     assert {tag.name for tag in dumped["case-beta"]} == {"abdominal"}
@@ -50,3 +50,31 @@ async def test_dump_case_tags_and_lookup(owner: IdentityModel):
 
     none_branches = await load_case_branches_by_tag_async("no-such-tag", owner.name)
     assert none_branches == []
+
+
+@pytest.mark.django_db
+@pytest.mark.asyncio
+async def test_tags_are_owner_scoped(owner: IdentityModel):
+    """Same-named tags for different owners are independent rows, and a
+    lookup under one owner never surfaces another owner's branches."""
+    other_owner = await ensure_identity_async("olof")
+
+    cases_dir = Path(__file__).parent / "data/cases"
+    tags_path = Path(__file__).parent / "data/tags.toml"
+
+    case_branches = await dump_cases_async(cases_dir, owner.name)
+    other_case_branches = await dump_cases_async(cases_dir, other_owner.name)
+
+    await dump_case_tags_async(tags_path, case_branches, owner.name)
+    await dump_case_tags_async(tags_path, other_case_branches, other_owner.name)
+
+    fever_tags = [tag async for tag in TagModel.objects.filter(name="fever")]
+    assert {tag.owner_id for tag in fever_tags} == {owner.pk, other_owner.pk}
+
+    fever_branches = await load_case_branches_by_tag_async("fever", owner.name)
+    assert [b.owner_id for b in fever_branches] == [owner.pk]
+
+    other_fever_branches = await load_case_branches_by_tag_async(
+        "fever", other_owner.name
+    )
+    assert [b.owner_id for b in other_fever_branches] == [other_owner.pk]

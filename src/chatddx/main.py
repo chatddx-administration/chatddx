@@ -89,7 +89,7 @@ def init_data_(
     for branch_idx, branch in case_branches.items():
         print(f"{branch.target.fingerprint}: {branch_idx} case {branch.name}:")
 
-    for case_name, tags in dump_case_tags(tags_path, case_branches).items():
+    for case_name, tags in dump_case_tags(tags_path, case_branches, owner).items():
         tag_names = ", ".join(tag.name for tag in tags)
         print(f"tags: case {case_name}: {tag_names}")
 
