@@ -1,4 +1,9 @@
-# src/chatddx/backend/repo/test/test_message_spec.py
+"""Verifies the shape of pydantic-ai message specs recorded from a real run.
+
+Requires network access to the endpoint configured in
+data/test-llm-basics.toml.
+"""
+
 import json
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +17,8 @@ from chatddx.repo.shufflers.main import (
     load_branch_async,
 )
 from chatddx.runtime.runners import run_from_spec
+
+pytestmark = pytest.mark.network
 
 
 @pytest_asyncio.fixture(autouse=True)

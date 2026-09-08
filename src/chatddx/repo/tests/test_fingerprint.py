@@ -1,4 +1,3 @@
-# src/chatddx/backend/repo/test/test_fingerprint.py
 from pathlib import Path
 
 from chatddx.registry.main import parse_registry

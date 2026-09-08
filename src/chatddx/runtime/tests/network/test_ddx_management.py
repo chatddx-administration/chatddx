@@ -1,4 +1,9 @@
-# src/chatddx/backend/repo/test/test_ddx.py
+"""Runtime tests for the ddx-management agent bundle against a live LLM.
+
+Requires network access to the endpoints configured in
+data/ddx-management.toml.
+"""
+
 import json
 from pathlib import Path
 
@@ -9,6 +14,8 @@ from chatddx.core.models import IdentityModel
 from chatddx.history.session import start_session
 from chatddx.repo.shufflers.main import dump_trail_registry_async, load_branch_async
 from chatddx.runtime.runners import run_from_session, run_from_spec
+
+pytestmark = pytest.mark.network
 
 
 @pytest_asyncio.fixture(autouse=True)

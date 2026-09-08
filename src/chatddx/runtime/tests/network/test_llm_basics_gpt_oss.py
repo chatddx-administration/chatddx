@@ -1,4 +1,10 @@
-# src/chatddx/backend/repo/test/test_llm_basics.py
+"""Runtime smoke tests against a live gpt-oss-20b vLLM deployment.
+
+Mirrors test_llm_basics_qwen3.py but against a different model backend;
+requires network access to the endpoint configured in
+data/test-llm-basics-gpt-oss.toml.
+"""
+
 from pathlib import Path
 
 import pytest
@@ -13,10 +19,12 @@ from chatddx.repo.shufflers.main import (
 from chatddx.runtime.runners import run_from_session, run_from_spec
 from chatddx.utils import Dispatcher
 
+pytestmark = pytest.mark.network
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def dump_registry(owner: IdentityModel):
-    path = Path(__file__).parent / "data/test-llm-basics.toml"
+    path = Path(__file__).parent / "data/test-llm-basics-gpt-oss.toml"
     return await dump_trail_registry_async(path, owner_name=owner.name)
 
 
@@ -44,10 +52,9 @@ async def test_tool_coerced(owner: IdentityModel):
 
     assert result.output == {
         "bool": True,
-        "integer": 123,
+        "integer": 42,
         "list": [
-            "string",
-            "string",
+            "example",
         ],
     }
 
@@ -66,11 +73,10 @@ async def test_prompt_coerced(owner: IdentityModel):
     result = await run_from_spec(spec.target, prompt)
 
     assert result.output == {
-        "__error__": "'string' is not of type 'integer'",
-        "bool": 1,
-        "integer": "string",
+        "bool": True,
+        "integer": 42,
         "list": [
-            "boolean",
+            "example",
         ],
     }
 

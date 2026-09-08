@@ -1,3 +1,9 @@
+"""Tests of the /diagnose endpoint with the LLM call mocked out.
+
+Network-free. See network/test_diagnose_api.py for the live-LLM version of
+this test.
+"""
+
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 

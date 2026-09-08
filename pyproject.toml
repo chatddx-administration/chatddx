@@ -62,5 +62,8 @@ reportExplicitAny = false
 [tool.django-stubs]
 django_settings_module = "chatddx.django.settings"
 
-[tool.pytest]
+[tool.pytest.ini_options]
 addopts = ["--liveserver", "localhost:8082"]
+markers = [
+  "network: exercises a live external service (an LLM inference endpoint); requires network access to hosts outside the sandbox and is not runnable offline. Deselect with -m 'not network'.",
+]

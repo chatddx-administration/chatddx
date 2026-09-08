@@ -1,4 +1,3 @@
-# src/chatddx/backend/repo/test/test_branches.py
 from pathlib import Path
 
 import pytest
