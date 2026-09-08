@@ -110,6 +110,26 @@ class CaseSchema(CaseBase, TrailSchema):
     pass
 
 
+class ExpectBase(BaseModel):
+    payload: str
+
+
+class ExpectSchema(ExpectBase, TrailSchema):
+    case: CaseSchema
+    output_type: OutputTypeSchema
+
+    @override
+    def as_fingerprint(self):
+        from chatddx.utils import generate_fingerprint
+
+        relations = {"case", "output_type"}
+
+        serialized = self.model_dump(exclude={"fingerprint"} | relations)
+        fingerprints = {ref: getattr(self, ref).as_fingerprint() for ref in relations}
+
+        return generate_fingerprint(serialized | fingerprints)
+
+
 class ToolGroupBase(BaseModel):
     instructions: str
 

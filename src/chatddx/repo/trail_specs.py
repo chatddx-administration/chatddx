@@ -7,6 +7,7 @@ from chatddx.repo.base import TrailSpec
 from chatddx.repo.trail_schemas import (
     CaseBase,
     ConnectionBase,
+    ExpectBase,
     OutputTypeBase,
     SamplingParamsBase,
     ToolBase,
@@ -28,6 +29,11 @@ class SamplingParamsSpec(SamplingParamsBase, TrailSpec):
 
 class OutputTypeSpec(OutputTypeBase, TrailSpec):
     pass
+
+
+class ExpectSpec(ExpectBase, TrailSpec):
+    case: CaseSpec
+    output_type: OutputTypeSpec
 
 
 class ToolSpec(ToolBase, TrailSpec):

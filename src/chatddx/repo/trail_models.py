@@ -150,6 +150,24 @@ class CaseTrailModel(TrailModel):
     payload = TextField()
 
 
+class ExpectTrailModel(TrailModel):
+    class Meta(TrailModel.Meta):
+        app_label = "orm"
+        db_table = "agents_expect"
+
+    payload = TextField()
+    case = ForeignKey(
+        CaseTrailModel,
+        on_delete=PROTECT,
+        related_name="expects",
+    )
+    output_type = ForeignKey(
+        OutputTypeTrailModel,
+        on_delete=PROTECT,
+        related_name="expects",
+    )
+
+
 class ToolTrailModel(TrailModel):
     class Meta(TrailModel.Meta):
         app_label = "orm"

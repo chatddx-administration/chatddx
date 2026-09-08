@@ -8,6 +8,7 @@ from chatddx.repo.trail_models import (
     AgentTrailModel,
     CaseTrailModel,
     ConnectionTrailModel,
+    ExpectTrailModel,
     OutputTypeTrailModel,
     SamplingParamsTrailModel,
     ToolGroupTrailModel,
@@ -96,6 +97,18 @@ class OutputTypeBranchModel(BranchModel):
 
     target = ForeignKey(
         OutputTypeTrailModel,
+        on_delete=PROTECT,
+        related_name="branches",
+    )
+
+
+class ExpectBranchModel(BranchModel):
+    class Meta(BranchModel.Meta):
+        app_label = "orm"
+        db_table = "agents_expect_branch"
+
+    target = ForeignKey(
+        ExpectTrailModel,
         on_delete=PROTECT,
         related_name="branches",
     )
