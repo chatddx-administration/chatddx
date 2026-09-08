@@ -8,6 +8,7 @@ import typer
 
 django.setup()
 from chatddx.repl import app as repl_app
+from chatddx.repo.shufflers.expect import dump_expects
 from chatddx.repo.shufflers.main import (
     dump_cases,
     dump_trail_registry,
@@ -56,6 +57,16 @@ def init_data_(
             help="location of case files",
         ),
     ] = CURRENT_DIR / "data/cases",
+    expects_dir: Annotated[
+        Path,
+        typer.Option(
+            "--expects-dir",
+            file_okay=False,
+            dir_okay=True,
+            exists=True,
+            help="location of expect files",
+        ),
+    ] = CURRENT_DIR / "data/expects",
 ):
     _ = ensure_identity(owner)
 
@@ -65,3 +76,6 @@ def init_data_(
 
     for branch_idx, branch in dump_cases(cases_dir, owner).items():
         print(f"{branch.target.fingerprint}: {branch_idx} case {branch.name}:")
+
+    for branch_idx, branch in dump_expects(expects_dir, owner).items():
+        print(f"{branch.target.fingerprint}: {branch_idx} expect {branch.name}:")
