@@ -89,6 +89,11 @@ UNFOLD = {
                         "link": reverse_lazy("admin:orm_tool_changelist"),
                     },
                     {
+                        "title": "Cases",
+                        "icon": "folder_open",
+                        "link": reverse_lazy("admin:orm_case_changelist"),
+                    },
+                    {
                         "title": "Database",
                         "icon": "database",
                         "link": reverse_lazy("admin:index"),

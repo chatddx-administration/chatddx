@@ -30,6 +30,7 @@ class TrailRegistry(BaseRegistry):
     tool_group: dict[str, ToolGroupSchema] = Field(default_factory=dict)
     tool: dict[str, ToolSchema] = Field(default_factory=dict)
     output_type: dict[str, OutputTypeSchema] = Field(default_factory=dict)
+    case: dict[str, CaseSchema] = Field(default_factory=dict)
 
 
 class ConnectionBasePrimitives(BaseModel):
@@ -98,6 +99,14 @@ class ToolBase(ToolBasePrimitives):
 
 
 class ToolSchema(ToolBase, TrailSchema):
+    pass
+
+
+class CaseBase(BaseModel):
+    payload: str
+
+
+class CaseSchema(CaseBase, TrailSchema):
     pass
 
 

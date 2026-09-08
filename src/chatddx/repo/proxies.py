@@ -9,6 +9,7 @@ from django.contrib import admin
 from chatddx.repo.base import BranchProxy
 from chatddx.repo.branch_models import (
     AgentBranchModel,
+    CaseBranchModel,
     ConnectionBranchModel,
     OutputTypeBranchModel,
     SamplingParamsBranchModel,
@@ -97,3 +98,11 @@ class Tool(BranchProxy, ToolBranchModel):
         app_label = "orm"
         verbose_name = "Tool"
         verbose_name_plural = "Tools"
+
+
+class Case(BranchProxy, CaseBranchModel):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Case"
+        verbose_name_plural = "Cases"

@@ -10,12 +10,17 @@ from chatddx.core.fields import parse_text_or_list, parse_toml_or_dict
 from chatddx.repo.base import BaseFormDataIn
 from chatddx.repo.trail_schemas import (
     AgentBase,
+    CaseBase,
     ConnectionBase,
     OutputTypeBase,
     SamplingParamsBase,
     ToolBase,
     ToolGroupBase,
 )
+
+
+class CaseFormDataIn(CaseBase, BaseFormDataIn):
+    pass
 
 
 class ToolFormDataIn(ToolBase, BaseFormDataIn):

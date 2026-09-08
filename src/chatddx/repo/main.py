@@ -17,6 +17,7 @@ from chatddx.repo.base import (
 )
 from chatddx.repo.branch_models import (
     AgentBranchModel,
+    CaseBranchModel,
     ConnectionBranchModel,
     OutputTypeBranchModel,
     SamplingParamsBranchModel,
@@ -25,6 +26,7 @@ from chatddx.repo.branch_models import (
 )
 from chatddx.repo.branch_spec import (
     AgentBranchSpec,
+    CaseBranchSpec,
     ConnectionBranchSpec,
     OutputTypeBranchSpec,
     SamplingParamsBranchSpec,
@@ -33,6 +35,7 @@ from chatddx.repo.branch_spec import (
 )
 from chatddx.repo.form_data_in import (
     AgentFormDataIn,
+    CaseFormDataIn,
     ConnectionFormDataIn,
     OutputTypeFormDataIn,
     SamplingParamsFormDataIn,
@@ -41,6 +44,7 @@ from chatddx.repo.form_data_in import (
 )
 from chatddx.repo.form_data_out import (
     AgentFormDataOut,
+    CaseFormDataOut,
     ConnectionFormDataOut,
     OutputTypeFormDataOut,
     SamplingParamsFormDataOut,
@@ -49,6 +53,7 @@ from chatddx.repo.form_data_out import (
 )
 from chatddx.repo.trail_models import (
     AgentTrailModel,
+    CaseTrailModel,
     ConnectionTrailModel,
     OutputTypeTrailModel,
     SamplingParamsTrailModel,
@@ -57,6 +62,7 @@ from chatddx.repo.trail_models import (
 )
 from chatddx.repo.trail_schema_refs import (
     AgentSchemaRef,
+    CaseSchemaRef,
     ConnectionSchemaRef,
     OutputTypeSchemaRef,
     SamplingParamsSchemaRef,
@@ -65,6 +71,7 @@ from chatddx.repo.trail_schema_refs import (
 )
 from chatddx.repo.trail_schemas import (
     AgentSchema,
+    CaseSchema,
     ConnectionSchema,
     OutputTypeSchema,
     SamplingParamsSchema,
@@ -73,6 +80,7 @@ from chatddx.repo.trail_schemas import (
 )
 from chatddx.repo.trail_specs import (
     AgentSpec,
+    CaseSpec,
     ConnectionSpec,
     OutputTypeSpec,
     SamplingParamsSpec,
@@ -178,6 +186,19 @@ tool_bundle = RepoBundle(
     proxies.Tool,
 )
 
+case_bundle = RepoBundle(
+    CaseSchema,
+    CaseSchemaRef,
+    CaseTrailModel,
+    CaseSpec,
+    BranchSchema[CaseSchema],
+    CaseBranchModel,
+    CaseBranchSpec,
+    CaseFormDataIn,
+    CaseFormDataOut,
+    proxies.Case,
+)
+
 
 class RepoBundles(TypedDict):
     agent: RepoBundle[AgentSchema, AgentSpec]
@@ -186,6 +207,7 @@ class RepoBundles(TypedDict):
     output_type: RepoBundle[OutputTypeSchema, OutputTypeSpec]
     tool_group: RepoBundle[ToolGroupSchema, ToolGroupSpec]
     tool: RepoBundle[ToolSchema, ToolSpec]
+    case: RepoBundle[CaseSchema, CaseSpec]
 
 
 repo = RepoBundles(
@@ -195,6 +217,7 @@ repo = RepoBundles(
     output_type=output_type_bundle,
     tool_group=tool_group_bundle,
     tool=tool_bundle,
+    case=case_bundle,
 )
 
 BundleName = Literal[
@@ -204,6 +227,7 @@ BundleName = Literal[
     "output_type",
     "tool_group",
     "tool",
+    "case",
 ]
 
 

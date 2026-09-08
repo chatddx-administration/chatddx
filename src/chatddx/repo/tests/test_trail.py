@@ -32,6 +32,7 @@ schemas = (
     ("agent", "agent-1"),
     ("agent", "agent-2"),
     ("agent", "agent-3"),
+    ("case", "case-1"),
 )
 
 fields = [

@@ -9,6 +9,7 @@ from chatddx.core.fields import CoercedStr, dict_to_toml, list_to_text
 from chatddx.repo.base import BaseFormDataOut
 from chatddx.repo.trail_schemas import (
     AgentBase,
+    CaseBase,
     ConnectionBasePrimitives,
     OutputTypeBasePrimitives,
     SamplingParamsBasePrimitives,
@@ -27,6 +28,11 @@ class TemplateData(BaseModel):
     output_type: dict[str, OutputTypeFormDataOut] = Field(default_factory=dict)
     tool_group: dict[str, ToolGroupFormDataOut] = Field(default_factory=dict)
     tool: dict[str, ToolFormDataOut] = Field(default_factory=dict)
+    case: dict[str, CaseFormDataOut] = Field(default_factory=dict)
+
+
+class CaseFormDataOut(CaseBase, BaseFormDataOut):
+    pass
 
 
 class ToolFormDataOut(ToolBasePrimitives, BaseFormDataOut):

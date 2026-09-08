@@ -2,6 +2,7 @@ from chatddx.registry.schemas import RegistryInstance
 from chatddx.repo.base import TrailSchemaRef
 from chatddx.repo.trail_schemas import (
     AgentBase,
+    CaseBase,
     ConnectionBase,
     OutputTypeBase,
     SamplingParamsBase,
@@ -58,6 +59,14 @@ class OutputTypeSchemaRef(
 class ToolSchemaRef(
     TrailSchemaRef,
     ToolBase,
+    RegistryInstance,
+):
+    pass
+
+
+class CaseSchemaRef(
+    TrailSchemaRef,
+    CaseBase,
     RegistryInstance,
 ):
     pass

@@ -84,3 +84,6 @@ tools = [
   "tool-2",
   "tool-3",
 ]
+
+[case.case-1]
+payload = "some payload"
