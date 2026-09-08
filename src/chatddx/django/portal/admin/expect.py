@@ -83,12 +83,24 @@ class ExpectInlineFormSet(NonrelatedInlineModelFormSet):
     instance: proxies.Case
 
     def _dump(self, form: ExpectInlineForm) -> ExpectBranchModel:
-        branch, _created = dump_expect(
+        output_type = form.cleaned_data["output_type"]
+        branch, created = dump_expect(
             case=self.instance.target,  # pyright: ignore
-            output_type=form.cleaned_data["output_type"].target,
+            output_type=output_type.target,
             payload=form.cleaned_data["payload"],
             owner_name=self.instance.owner.name,
         )
+
+        # Recorded for CaseAdmin.save_formset() to turn into a "no changes
+        # detected" message per row, same idea as the Case-level one in
+        # BranchModelAdmin.save_form() -- Expect has no admin/form of its
+        # own to hang that logic off of directly.
+        label = output_type.name or output_type.target.fingerprint[:6]
+        results = getattr(self, "_expect_results", None)
+        if results is None:
+            results = self._expect_results = []
+        results.append((label, created))
+
         return branch
 
     def save_new(self, form: ExpectInlineForm, commit: bool = True) -> ExpectBranchModel:

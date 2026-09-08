@@ -68,7 +68,8 @@ def test_expect_inline_add_then_edit_is_idempotent_and_versions(
     assert expects[0].target.output_type_id == output_type_branch.target.pk
     first_pk = expects[0].pk
 
-    # Resubmitting the exact same content is a no-op (fingerprint match).
+    # Resubmitting the exact same content is a no-op (fingerprint match),
+    # and now says so -- Expect had no admin message of its own before.
     response = admin_client.post(change_url, data=post_data, follow=True)
     assert response.status_code == 200
     expects = list(
@@ -76,6 +77,11 @@ def test_expect_inline_add_then_edit_is_idempotent_and_versions(
     )
     assert len(expects) == 1
     assert expects[0].pk == first_pk
+
+    messages = [str(m) for m in response.context["messages"]]
+    assert any(
+        "No changes detected for the" in m and "expectation" in m for m in messages
+    )
 
     # Editing the payload versions: a new canonical branch, old one kept.
     edited_post_data = _inline_post_data(

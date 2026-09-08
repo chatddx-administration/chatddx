@@ -1,24 +1,54 @@
 # src/chatddx/django/repo/admin/forms/case.py
 
-from typing import final
+from typing import Any, final
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, Row
 from django.forms import (
     CharField,
     ModelChoiceField,
+    ModelMultipleChoiceField,
 )
 from unfold.layout import Hr
 from unfold.widgets import (
     UnfoldAdminExpandableTextareaWidget,
+    UnfoldAdminSelect2MultipleWidget,
     UnfoldAdminSelect2Widget,
     UnfoldAdminTextInputWidget,
 )
 
+from chatddx.core.models import TagModel
 from chatddx.django.portal.forms.base import BaseForm
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import CaseFormDataIn
 from chatddx.repo.form_data_out import CaseFormDataOut
+
+
+class TagsField(ModelMultipleChoiceField):
+    """A tags widget that can create tags on the fly.
+
+    The widget below renders as a select2 multi-select with tagging turned
+    on (`data-tags`): picking an existing option submits its pk like any
+    other `ModelMultipleChoiceField` value, but typing a name with no
+    matching tag submits that literal name instead, with no pk behind it.
+    Get-or-create it by name -- the same thing `dump_case_tags()` does when
+    loading tags from `data/tags.toml` -- rather than rejecting it as an
+    invalid choice.
+    """
+
+    def clean(self, value: Any) -> list[TagModel]:
+        pks: list[str] = []
+        names: list[str] = []
+
+        for raw in value or []:
+            raw = str(raw).strip()
+            if not raw:
+                continue
+            (pks if raw.isdigit() else names).append(raw)
+
+        tags = list(self.queryset.filter(pk__in=pks))
+        tags += [TagModel.objects.get_or_create(name=name)[0] for name in names]
+        return tags
 
 
 @final
@@ -50,6 +80,15 @@ class CaseForm(BaseForm):
         label="Payload",
         help_text="The raw payload content for this case.",
     )
+    tags = TagsField(
+        queryset=TagModel.objects.all(),
+        required=False,
+        widget=UnfoldAdminSelect2MultipleWidget(
+            attrs={"data-tags": "true", "data-placeholder": "Add tags"}
+        ),
+        label="Tags",
+        help_text="Pick existing tags or type a new one to create it.",
+    )
 
     helper = FormHelper()
     helper.include_media = False
@@ -66,6 +105,12 @@ class CaseForm(BaseForm):
                 Column(
                     "template",
                     css_class="w-1/2",
+                ),
+            ),
+            Row(
+                Column(
+                    "tags",
+                    css_class="w-full",
                 ),
             ),
             Hr(),
