@@ -34,6 +34,7 @@ def test_pydantic_jsonschema():
     assert list(jsonschema["$defs"].keys()) == [
         "CoercionChoices",
         "ConnectionFormDataIn",
+        "IdentitySpec",
         "JsonValue",
         "OutputTypeFormDataIn",
         "ProviderChoices",
@@ -45,6 +46,8 @@ def test_pydantic_jsonschema():
     ]
     assert list(jsonschema["properties"].keys()) == [
         "name",
+        "owner",
+        "collaborators",
         "instructions",
         "connection",
         "sampling_params",
