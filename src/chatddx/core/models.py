@@ -30,3 +30,26 @@ class IdentityModel(Model):
         blank=True,
         on_delete=PROTECT,
     )
+
+
+class TagModel(Model):
+    """A plain label a branch (currently: case branches) can be marked with.
+
+    Tags are not repo-matter: there is no trail/branch pair for a tag and no
+    central tag-management surface. This is just a lookup table plus
+    whatever many-to-many relations branch models declare against it, used
+    to find the branches -- and through them, the trail currently
+    associated with each -- carrying a given label.
+    """
+
+    class Meta:
+        app_label = "orm"
+        db_table = "agents_tag"
+
+    def __str__(self):
+        return self.name
+
+    name = CharField(
+        max_length=255,
+        unique=True,
+    )

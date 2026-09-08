@@ -1,0 +1,303 @@
+# src/chatddx/data/tags.toml
+#
+# Maps each case (by the filename under ./cases, i.e. the case branch's
+# name) to the tag(s) its branch should carry. Derived from the case
+# names themselves -- each groups by the dataset its filename identifies
+# it as coming from.
+
+[case.DutchFall10w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall11w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall12w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall13w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall14w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall15w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall16w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall17w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall18w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall19w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall1w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall20w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall21w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall22w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall23w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall24w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall25w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall26w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall27w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall28w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall29w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall2w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall30w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall3w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall4w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall5w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall6w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall7w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall8w]
+tags = ["dutch-fall"]
+
+[case.Dutchfall9w]
+tags = ["dutch-fall"]
+
+[case.casesfromedn1]
+tags = ["edn"]
+
+[case.casesfromedn10]
+tags = ["edn"]
+
+[case.casesfromedn11]
+tags = ["edn"]
+
+[case.casesfromedn12]
+tags = ["edn"]
+
+[case.casesfromedn13]
+tags = ["edn"]
+
+[case.casesfromedn14]
+tags = ["edn"]
+
+[case.casesfromedn15]
+tags = ["edn"]
+
+[case.casesfromedn16]
+tags = ["edn"]
+
+[case.casesfromedn17]
+tags = ["edn"]
+
+[case.casesfromedn18]
+tags = ["edn"]
+
+[case.casesfromedn19]
+tags = ["edn"]
+
+[case.casesfromedn2]
+tags = ["edn"]
+
+[case.casesfromedn20]
+tags = ["edn"]
+
+[case.casesfromedn3]
+tags = ["edn"]
+
+[case.casesfromedn4]
+tags = ["edn"]
+
+[case.casesfromedn5]
+tags = ["edn"]
+
+[case.casesfromedn6]
+tags = ["edn"]
+
+[case.casesfromedn7]
+tags = ["edn"]
+
+[case.casesfromedn8]
+tags = ["edn"]
+
+[case.casesfromedn9]
+tags = ["edn"]
+
+[case.openxddx-case_1]
+tags = ["openxddx"]
+
+[case.openxddx-case_10]
+tags = ["openxddx"]
+
+[case.openxddx-case_11]
+tags = ["openxddx"]
+
+[case.openxddx-case_12]
+tags = ["openxddx"]
+
+[case.openxddx-case_13]
+tags = ["openxddx"]
+
+[case.openxddx-case_14]
+tags = ["openxddx"]
+
+[case.openxddx-case_15]
+tags = ["openxddx"]
+
+[case.openxddx-case_16]
+tags = ["openxddx"]
+
+[case.openxddx-case_17]
+tags = ["openxddx"]
+
+[case.openxddx-case_18]
+tags = ["openxddx"]
+
+[case.openxddx-case_19]
+tags = ["openxddx"]
+
+[case.openxddx-case_2]
+tags = ["openxddx"]
+
+[case.openxddx-case_20]
+tags = ["openxddx"]
+
+[case.openxddx-case_21]
+tags = ["openxddx"]
+
+[case.openxddx-case_22]
+tags = ["openxddx"]
+
+[case.openxddx-case_23]
+tags = ["openxddx"]
+
+[case.openxddx-case_24]
+tags = ["openxddx"]
+
+[case.openxddx-case_25]
+tags = ["openxddx"]
+
+[case.openxddx-case_26]
+tags = ["openxddx"]
+
+[case.openxddx-case_27]
+tags = ["openxddx"]
+
+[case.openxddx-case_28]
+tags = ["openxddx"]
+
+[case.openxddx-case_29]
+tags = ["openxddx"]
+
+[case.openxddx-case_3]
+tags = ["openxddx"]
+
+[case.openxddx-case_30]
+tags = ["openxddx"]
+
+[case.openxddx-case_31]
+tags = ["openxddx"]
+
+[case.openxddx-case_32]
+tags = ["openxddx"]
+
+[case.openxddx-case_33]
+tags = ["openxddx"]
+
+[case.openxddx-case_34]
+tags = ["openxddx"]
+
+[case.openxddx-case_35]
+tags = ["openxddx"]
+
+[case.openxddx-case_36]
+tags = ["openxddx"]
+
+[case.openxddx-case_37]
+tags = ["openxddx"]
+
+[case.openxddx-case_38]
+tags = ["openxddx"]
+
+[case.openxddx-case_39]
+tags = ["openxddx"]
+
+[case.openxddx-case_4]
+tags = ["openxddx"]
+
+[case.openxddx-case_40]
+tags = ["openxddx"]
+
+[case.openxddx-case_41]
+tags = ["openxddx"]
+
+[case.openxddx-case_42]
+tags = ["openxddx"]
+
+[case.openxddx-case_44]
+tags = ["openxddx"]
+
+[case.openxddx-case_45]
+tags = ["openxddx"]
+
+[case.openxddx-case_46]
+tags = ["openxddx"]
+
+[case.openxddx-case_47]
+tags = ["openxddx"]
+
+[case.openxddx-case_48]
+tags = ["openxddx"]
+
+[case.openxddx-case_49]
+tags = ["openxddx"]
+
+[case.openxddx-case_5]
+tags = ["openxddx"]
+
+[case.openxddx-case_50]
+tags = ["openxddx"]
+
+[case.openxddx-case_6]
+tags = ["openxddx"]
+
+[case.openxddx-case_7]
+tags = ["openxddx"]
+
+[case.openxddx-case_8]
+tags = ["openxddx"]
+
+[case.openxddx-case_9]
+tags = ["openxddx"]

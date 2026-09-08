@@ -1,8 +1,9 @@
 # src/chatddx/django/repo/models/history.py
 from __future__ import annotations
 
-from django.db.models import PROTECT, ForeignKey
+from django.db.models import PROTECT, ForeignKey, ManyToManyField
 
+from chatddx.core.models import TagModel
 from chatddx.repo.base import BranchModel
 from chatddx.repo.trail_models import (
     AgentTrailModel,
@@ -87,6 +88,15 @@ class CaseBranchModel(BranchModel):
         CaseTrailModel,
         on_delete=PROTECT,
         related_name="branches",
+    )
+
+    # Tags are plain labels, not repo-matter: no trail/branch pair backs
+    # them and there is no central place they're managed. They just let a
+    # case branch be found by one or more short labels.
+    tags = ManyToManyField(
+        TagModel,
+        blank=True,
+        related_name="case_branches",
     )
 
 

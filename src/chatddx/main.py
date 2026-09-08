@@ -14,6 +14,7 @@ from chatddx.repo.shufflers.main import (
     dump_trail_registry,
     ensure_identity,
 )
+from chatddx.repo.shufflers.tags import dump_case_tags
 
 CURRENT_DIR = Path(__file__).resolve().parent
 app = typer.Typer()
@@ -67,6 +68,16 @@ def init_data_(
             help="location of expect files",
         ),
     ] = CURRENT_DIR / "data/expects",
+    tags_path: Annotated[
+        Path,
+        typer.Option(
+            "--tags-path",
+            file_okay=True,
+            dir_okay=False,
+            exists=True,
+            help="location of case tag data",
+        ),
+    ] = CURRENT_DIR / "data/tags.toml",
 ):
     _ = ensure_identity(owner)
 
@@ -74,8 +85,13 @@ def init_data_(
         for branch_idx, branch in branches.items():
             print(f"{branch.target.fingerprint}: {branch_idx} {bundle} {branch.name}:")
 
-    for branch_idx, branch in dump_cases(cases_dir, owner).items():
+    case_branches = dump_cases(cases_dir, owner)
+    for branch_idx, branch in case_branches.items():
         print(f"{branch.target.fingerprint}: {branch_idx} case {branch.name}:")
+
+    for case_name, tags in dump_case_tags(tags_path, case_branches).items():
+        tag_names = ", ".join(tag.name for tag in tags)
+        print(f"tags: case {case_name}: {tag_names}")
 
     for branch_idx, branch in dump_expects(expects_dir, owner).items():
         print(f"{branch.target.fingerprint}: {branch_idx} expect {branch.name}:")
