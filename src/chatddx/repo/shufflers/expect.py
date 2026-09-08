@@ -18,11 +18,21 @@ new ExpectBranchModel at it, exactly like editing a Case or a Connection.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from django.db.models import QuerySet
 
-from chatddx.repo.branch_models import ExpectBranchModel
+from chatddx.repo.branch_models import (
+    CaseBranchModel,
+    ExpectBranchModel,
+    OutputTypeBranchModel,
+)
 from chatddx.repo.shufflers.main import ensure_identity, qs_canon
-from chatddx.repo.trail_models import CaseTrailModel, ExpectTrailModel, OutputTypeTrailModel
+from chatddx.repo.trail_models import (
+    CaseTrailModel,
+    ExpectTrailModel,
+    OutputTypeTrailModel,
+)
 from chatddx.repo.trail_schemas import CaseSchema, ExpectSchema, OutputTypeSchema
 from chatddx.utils import make_async
 
@@ -83,6 +93,62 @@ def dump_expect(
 
 
 dump_expect_async = make_async(dump_expect)
+
+
+def dump_expects(
+    expects_dir: Path,
+    owner_name: str,
+    output_type_name: str = "free-text",
+) -> dict[int, ExpectBranchModel]:
+    """
+    Dump every file in `expects_dir` as an Expect, paired with the Case whose
+    branch name matches the file's name -- mirroring `dump_cases` -- against
+    the `output_type_name` OutputType branch (see the registry's
+    `[output_type.free-text]` entry, dumped by `dump_trail_registry`).
+
+    A file with no matching Case branch for `owner_name` is skipped.
+    """
+    owner = ensure_identity(owner_name)
+
+    output_type_branch = qs_canon(
+        OutputTypeBranchModel.objects.filter(name=output_type_name),
+        owner.name,
+    ).first()
+
+    if output_type_branch is None:
+        raise ValueError(
+            f"Output type '{output_type_name}' not found for owner '{owner_name}'"
+        )
+
+    dumped_expects: dict[int, ExpectBranchModel] = {}
+
+    for expect_path in sorted(expects_dir.iterdir()):
+        if not expect_path.is_file():
+            continue
+
+        case_branch = qs_canon(
+            CaseBranchModel.objects.filter(name=expect_path.stem),
+            owner.name,
+        ).first()
+
+        if case_branch is None:
+            continue
+
+        payload = expect_path.read_text(encoding="utf-8").rstrip("\n")
+
+        branch, _ = dump_expect(
+            case=case_branch.target,
+            output_type=output_type_branch.target,
+            payload=payload,
+            owner_name=owner_name,
+        )
+
+        dumped_expects[branch.pk] = branch
+
+    return dumped_expects
+
+
+dump_expects_async = make_async(dump_expects)
 
 
 def load_expects(case: CaseTrailModel, owner_name: str) -> QuerySet[ExpectBranchModel]:

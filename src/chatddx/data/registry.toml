@@ -85,3 +85,8 @@ coercion_strategy = "native"
 [output_type.swift-prompt]
 definition_path = "./output_types/swift.json"
 coercion_strategy = "prompted"
+
+[output_type.free-text]
+# No definition: an empty JSON Schema, which `build_output_type` maps to a
+# plain `str` output -- unstructured free text, as opposed to the
+# structured object schemas above.
