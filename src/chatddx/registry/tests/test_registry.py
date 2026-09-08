@@ -1,4 +1,3 @@
-# src/chatddx/backend/repo/test/test_message_spec.py
 from decimal import Decimal
 from pathlib import Path
 
@@ -13,10 +12,6 @@ registry: TrailRegistry = parse_registry(
     path=Path(__file__).parent / "data/test-registry.toml",
     schema=TrailRegistry,
 )
-
-
-def test_loader():
-    pass
 
 
 def test_properties():

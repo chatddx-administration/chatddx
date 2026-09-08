@@ -1,4 +1,3 @@
-# src/chatddx/django/repo/tests/test_admin_timeline.py
 # pyright: basic
 from collections import defaultdict
 from pathlib import Path
@@ -8,7 +7,7 @@ import pytest
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.test import Client
-from django.urls import get_resolver, reverse
+from django.urls import reverse
 
 from chatddx.core.fields import dict_to_toml, parse_toml_or_dict
 from chatddx.core.models import IdentityModel
@@ -73,22 +72,6 @@ parameters: list[
         lambda i: f"cmd_{i}",
     ),
 ]
-
-
-@pytest.mark.django_db
-def debug_admin_route(admin_client: Client):
-    resolver = get_resolver()
-
-    print("\n--- ALL AVAILABLE URL NAMES ---")
-    for url_pattern in resolver.url_patterns:
-        if hasattr(url_pattern, "url_patterns"):
-            for sub_pattern in url_pattern.url_patterns:
-                if hasattr(sub_pattern, "name") and sub_pattern.name:
-                    print(f"Name: {sub_pattern.name} -> Pattern: {sub_pattern.pattern}")
-        else:
-            if hasattr(url_pattern, "name") and url_pattern.name:
-                print(f"Name: {url_pattern.name} -> Pattern: {url_pattern.pattern}")
-    assert True
 
 
 @pytest.fixture(autouse=True)

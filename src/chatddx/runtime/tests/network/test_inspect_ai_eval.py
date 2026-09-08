@@ -1,12 +1,14 @@
-# src/chatddx/backend/repo/test/test_llm_basics.py
-import json
+"""Runtime smoke tests that drive inspect_ai's eval() against a live vLLM
+deployment.
+
+Requires network access to the endpoint configured in
+data/test-llm-basics.toml.
+"""
+
 from pathlib import Path
 
 import pytest
-from deepdiff import DeepDiff, Delta
-from deepdiff.serialization import json_dumps, json_loads
 from inspect_ai import Task, eval, task
-from inspect_ai._eval.eval import EvalLogs
 from inspect_ai.dataset import MemoryDataset, Sample
 from inspect_ai.model import GenerateConfig, get_model
 from inspect_ai.scorer import choice
@@ -18,6 +20,8 @@ from chatddx.repo.shufflers.main import (
     load_branch,
 )
 from chatddx.utils import Dispatcher
+
+pytestmark = pytest.mark.network
 
 
 @pytest.fixture(autouse=True)
@@ -85,7 +89,7 @@ def test_inspect_no_thinking(owner: IdentityModel):
     # {'extra_body': {'chat_template_kwargs': {'enable_thinking': False}}}
     provider_params = settings.pop("provider_params")
     stop_seqs = settings.pop("stop_sequences")
-    n = settings.pop("n")
+    settings.pop("n")  # sampling n is unsupported by GenerateConfig, drop it
 
     model_config = GenerateConfig(
         stop_seqs=stop_seqs,
@@ -121,7 +125,7 @@ def test_inspect_thinking(owner: IdentityModel):
     # {'extra_body': {'chat_template_kwargs': {'enable_thinking': False}}}
     provider_params = settings.pop("provider_params")
     stop_seqs = settings.pop("stop_sequences")
-    n = settings.pop("n")
+    settings.pop("n")  # sampling n is unsupported by GenerateConfig, drop it
 
     model_config = GenerateConfig(
         stop_seqs=stop_seqs,
