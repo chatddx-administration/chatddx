@@ -1,3 +1,4 @@
+# src/chatddx/core/django_fields.py
 from typing import TYPE_CHECKING, Any
 
 from django.contrib.postgres.fields.array import ArrayField

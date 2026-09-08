@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/schemas.py
+# src/chatddx/django/repo/trail_schemas.py
 from __future__ import annotations
 
 from typing import Annotated, override
