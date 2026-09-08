@@ -6,6 +6,7 @@ from django.db.models import PROTECT, ForeignKey
 from chatddx.repo.base import BranchModel
 from chatddx.repo.trail_models import (
     AgentTrailModel,
+    CaseTrailModel,
     ConnectionTrailModel,
     OutputTypeTrailModel,
     SamplingParamsTrailModel,
@@ -71,6 +72,18 @@ class ToolBranchModel(BranchModel):
 
     target = ForeignKey(
         ToolTrailModel,
+        on_delete=PROTECT,
+        related_name="branches",
+    )
+
+
+class CaseBranchModel(BranchModel):
+    class Meta(BranchModel.Meta):
+        app_label = "orm"
+        db_table = "agents_case_branch"
+
+    target = ForeignKey(
+        CaseTrailModel,
         on_delete=PROTECT,
         related_name="branches",
     )

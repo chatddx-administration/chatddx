@@ -10,6 +10,7 @@ from unfold.utils import format_html
 from chatddx.django.portal.admin.base import BranchModelAdmin, TypedModelAdmin
 from chatddx.django.portal.forms import (
     AgentForm,
+    CaseForm,
     ConnectionForm,
     OutputTypeForm,
     SamplingParamsForm,
@@ -286,3 +287,21 @@ class ToolAdmin(BranchModelAdmin[proxies.Tool]):
     )
     def type(self, obj: proxies.Tool) -> str:
         return obj.target.get_type_display()  # pyright: ignore
+
+
+@final
+@admin.register(proxies.Case)
+class CaseAdmin(BranchModelAdmin[proxies.Case]):
+    form = CaseForm
+    name = "case"
+
+    list_display = BranchModelAdmin.list_display + [  # pyright: ignore
+        "payload",
+    ]
+
+    @admin.display(
+        description="Payload",
+        ordering="target__payload",
+    )
+    def payload(self, obj: proxies.Case) -> str:
+        return str(obj.target.payload[:40])  # pyright: ignore

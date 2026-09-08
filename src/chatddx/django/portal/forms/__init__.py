@@ -1,5 +1,6 @@
 # src/chatddx/django/portal/forms/__init__.py
 from .agent import AgentForm
+from .case import CaseForm
 from .connection import ConnectionForm
 from .output_type import OutputTypeForm
 from .sampling_params import SamplingParamsForm
@@ -13,4 +14,5 @@ __all__ = [
     "OutputTypeForm",
     "SamplingParamsForm",
     "ToolGroupForm",
+    "CaseForm",
 ]

@@ -142,6 +142,14 @@ class OutputTypeTrailModel(TrailModel):
     )
 
 
+class CaseTrailModel(TrailModel):
+    class Meta(TrailModel.Meta):
+        app_label = "orm"
+        db_table = "agents_case"
+
+    payload = TextField()
+
+
 class ToolTrailModel(TrailModel):
     class Meta(TrailModel.Meta):
         app_label = "orm"

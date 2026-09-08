@@ -5,12 +5,17 @@ from pydantic import (
 
 from chatddx.repo.base import TrailSpec
 from chatddx.repo.trail_schemas import (
+    CaseBase,
     ConnectionBase,
     OutputTypeBase,
     SamplingParamsBase,
     ToolBase,
     ToolGroupBase,
 )
+
+
+class CaseSpec(CaseBase, TrailSpec):
+    pass
 
 
 class ConnectionSpec(ConnectionBase, TrailSpec):

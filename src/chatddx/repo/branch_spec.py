@@ -1,12 +1,17 @@
 from chatddx.repo.base import BranchSpec
 from chatddx.repo.trail_specs import (
     AgentSpec,
+    CaseSpec,
     ConnectionSpec,
     OutputTypeSpec,
     SamplingParamsSpec,
     ToolGroupSpec,
     ToolSpec,
 )
+
+
+class CaseBranchSpec(BranchSpec[CaseSpec]):
+    target: CaseSpec
 
 
 class ConnectionBranchSpec(BranchSpec[ConnectionSpec]):
