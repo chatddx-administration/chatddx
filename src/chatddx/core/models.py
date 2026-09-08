@@ -1,7 +1,15 @@
 from typing import Any
 
 from django.conf import settings
-from django.db.models import PROTECT, CharField, Model, OneToOneField, UUIDField
+from django.db.models import (
+    PROTECT,
+    CharField,
+    ForeignKey,
+    Model,
+    OneToOneField,
+    UniqueConstraint,
+    UUIDField,
+)
 from encrypted_fields import EncryptedJSONField
 
 
@@ -40,16 +48,28 @@ class TagModel(Model):
     whatever many-to-many relations branch models declare against it, used
     to find the branches -- and through them, the trail currently
     associated with each -- carrying a given label.
+
+    Tags are owner-scoped: the same name can exist independently for
+    different owners, and a tag is only ever suggested to, or creatable by,
+    its own owner -- see TagsField in the case admin form. This keeps one
+    owner's tag vocabulary from leaking into another's suggestions.
     """
 
     class Meta:
         app_label = "orm"
         db_table = "agents_tag"
+        constraints = [
+            UniqueConstraint(fields=["owner", "name"], name="unique_tag_per_owner"),
+        ]
 
     def __str__(self):
         return self.name
 
+    owner = ForeignKey(
+        IdentityModel,
+        on_delete=PROTECT,
+        related_name="tags",
+    )
     name = CharField(
         max_length=255,
-        unique=True,
     )

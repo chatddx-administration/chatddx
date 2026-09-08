@@ -17,15 +17,16 @@ from unfold.widgets import (
     UnfoldAdminTextInputWidget,
 )
 
-from chatddx.core.models import TagModel
+from chatddx.core.models import IdentityModel, TagModel
 from chatddx.django.portal.forms.base import BaseForm
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import CaseFormDataIn
 from chatddx.repo.form_data_out import CaseFormDataOut
+from chatddx.repo.shufflers.main import ensure_identity
 
 
 class TagsField(ModelMultipleChoiceField):
-    """A tags widget that can create tags on the fly.
+    """A tags widget that can create tags on the fly, scoped to one owner.
 
     The widget below renders as a select2 multi-select with tagging turned
     on (`data-tags`): picking an existing option submits its pk like any
@@ -34,7 +35,14 @@ class TagsField(ModelMultipleChoiceField):
     Get-or-create it by name -- the same thing `dump_case_tags()` does when
     loading tags from `data/tags.toml` -- rather than rejecting it as an
     invalid choice.
+
+    Tags are owner-scoped (see TagModel), so both the suggestions offered
+    (`queryset`, set by `CaseForm.__init__`) and any tag created here are
+    confined to `owner` -- one owner's tags never show up as suggestions
+    for, or get silently reused by, another.
     """
+
+    owner: IdentityModel | None = None
 
     def clean(self, value: Any) -> list[TagModel]:
         pks: list[str] = []
@@ -47,7 +55,10 @@ class TagsField(ModelMultipleChoiceField):
             (pks if raw.isdigit() else names).append(raw)
 
         tags = list(self.queryset.filter(pk__in=pks))
-        tags += [TagModel.objects.get_or_create(name=name)[0] for name in names]
+        tags += [
+            TagModel.objects.get_or_create(name=name, owner=self.owner)[0]
+            for name in names
+        ]
         return tags
 
 
@@ -89,6 +100,14 @@ class CaseForm(BaseForm):
         label="Tags",
         help_text="Pick existing tags or type a new one to create it.",
     )
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        owner = ensure_identity(self.request.user.username)
+        tags_field = self.fields["tags"]
+        assert isinstance(tags_field, TagsField)
+        tags_field.queryset = TagModel.objects.filter(owner=owner)
+        tags_field.owner = owner
 
     helper = FormHelper()
     helper.include_media = False

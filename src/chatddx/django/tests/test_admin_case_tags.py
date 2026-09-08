@@ -82,3 +82,45 @@ def test_case_tags_create_edit_remove_and_messages(
 
     case_branch.refresh_from_db()
     assert list(case_branch.tags.all()) == []
+
+
+@pytest.mark.django_db
+def test_case_tags_are_scoped_to_owner(
+    template_data: TemplateData,
+    owner: IdentityModel,
+    admin_client: Client,
+):
+    """A tag suggested or created for one owner never leaks to another:
+    same-named tags stay independent rows, and one owner's tags never show
+    up as choices on another owner's case form."""
+    other_owner, _ = IdentityModel.objects.get_or_create(name="olof")
+    other_tag = TagModel.objects.create(name="clinical", owner=other_owner)
+
+    case_branch = CaseBranchModel.objects.get(owner__name=owner.name, name="case-1")
+    change_url = reverse("admin:orm_case_change", args=[case_branch.pk])
+
+    # The other owner's same-named tag is never offered as a suggestion.
+    get_response = admin_client.get(change_url)
+    tags_field = get_response.context["adminform"].form.fields["tags"]
+    assert other_tag not in tags_field.queryset
+
+    prefix = "orm-expectbranchmodel"
+    post_data = template_data.case["case-1"].model_dump(exclude_none=True) | {
+        f"{prefix}-TOTAL_FORMS": "0",
+        f"{prefix}-INITIAL_FORMS": "0",
+        f"{prefix}-MIN_NUM_FORMS": "0",
+        f"{prefix}-MAX_NUM_FORMS": "1000",
+    }
+
+    # Typing that same name creates a distinct, owner-scoped tag rather
+    # than reusing (or colliding with) the other owner's row.
+    response = admin_client.post(
+        change_url, data=post_data | {"tags": ["clinical"]}, follow=True
+    )
+    assert response.status_code == 200
+
+    own_tag = TagModel.objects.get(name="clinical", owner=owner)
+    assert own_tag.pk != other_tag.pk
+
+    case_branch.refresh_from_db()
+    assert list(case_branch.tags.all()) == [own_tag]

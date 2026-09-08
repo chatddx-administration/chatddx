@@ -14,7 +14,7 @@ from pathlib import Path
 from chatddx.core.models import TagModel
 from chatddx.repo.base import BranchModel
 from chatddx.repo.branch_models import CaseBranchModel
-from chatddx.repo.shufflers.main import qs_canon
+from chatddx.repo.shufflers.main import ensure_identity, qs_canon
 from chatddx.utils import make_async
 
 
@@ -31,13 +31,18 @@ def parse_case_tags(tags_path: Path) -> dict[str, list[str]]:
 def dump_case_tags(
     tags_path: Path,
     case_branches: dict[int, BranchModel],
+    owner_name: str,
 ) -> dict[str, list[TagModel]]:
     """Attach the tags in `tags_path` to the given, already-dumped case branches.
 
     `case_branches` is the mapping `dump_cases()` returns (branch pk ->
     branch), so branches that were just dumped can be tagged without
-    another database round trip to look them up by name.
+    another database round trip to look them up by name. Tags are
+    owner-scoped (see TagModel), so `owner_name` -- the same owner
+    `case_branches` were dumped under -- is used both to look up and to
+    create them.
     """
+    owner = ensure_identity(owner_name)
     case_tags = parse_case_tags(tags_path)
     branches_by_name = {branch.name: branch for branch in case_branches.values()}
 
@@ -49,7 +54,8 @@ def dump_case_tags(
             continue
 
         tags = [
-            TagModel.objects.get_or_create(name=tag_name)[0] for tag_name in tag_names
+            TagModel.objects.get_or_create(name=tag_name, owner=owner)[0]
+            for tag_name in tag_names
         ]
         branch.tags.set(tags)  # pyright: ignore[reportAttributeAccessIssue]
         dumped_tags[case_name] = tags
@@ -68,9 +74,13 @@ def load_case_branches_by_tag(
 
     A case branch may have several historical versions; this resolves, per
     case name owned by `owner_name`, only the one currently canonical --
-    i.e. the trail the case's tag should be understood to point at.
+    i.e. the trail the case's tag should be understood to point at. Tags
+    are owner-scoped, so this only ever matches `owner_name`'s own
+    `tag_name` tag, never another owner's tag of the same name.
     """
-    qs = CaseBranchModel.objects.filter(tags__name=tag_name)
+    qs = CaseBranchModel.objects.filter(
+        tags__name=tag_name, tags__owner__name=owner_name
+    )
     return list(qs_canon(qs, owner_name))
 
 
