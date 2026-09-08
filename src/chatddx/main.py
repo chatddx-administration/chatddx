@@ -9,6 +9,7 @@ import typer
 django.setup()
 from chatddx.repl import app as repl_app
 from chatddx.repo.shufflers.main import (
+    dump_cases,
     dump_trail_registry,
     ensure_identity,
 )
@@ -45,9 +46,22 @@ def init_data_(
             help="location of registry",
         ),
     ] = CURRENT_DIR / "data/registry.toml",
+    cases_dir: Annotated[
+        Path,
+        typer.Option(
+            "--cases-dir",
+            file_okay=False,
+            dir_okay=True,
+            exists=True,
+            help="location of case files",
+        ),
+    ] = CURRENT_DIR / "data/cases",
 ):
     _ = ensure_identity(owner)
 
     for bundle, branches in dump_trail_registry(registry, owner).items():
         for branch_idx, branch in branches.items():
             print(f"{branch.target.fingerprint}: {branch_idx} {bundle} {branch.name}:")
+
+    for branch_idx, branch in dump_cases(cases_dir, owner).items():
+        print(f"{branch.target.fingerprint}: {branch_idx} case {branch.name}:")

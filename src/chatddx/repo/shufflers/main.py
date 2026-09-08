@@ -28,6 +28,7 @@ from chatddx.repo.base import (
 from chatddx.repo.branch_models import BranchModelRegistry, OutputTypeBranchModel
 from chatddx.repo.form_data_out import TemplateData
 from chatddx.repo.main import BundleName, Repo
+from chatddx.repo.trail_schemas import CaseSchema
 from chatddx.repo.trail_schemas import TrailRegistry
 from chatddx.utils import ListOf, OneOf, make_async, one_or_list_of
 
@@ -147,6 +148,30 @@ def dump_trail_registry(registry_path: Path, owner_name: str):
             dumped_registry[bundle_name][branch_model.pk] = branch_model
 
     return dumped_registry
+
+
+def dump_cases(cases_dir: Path, owner_name: str) -> dict[int, BranchModel]:
+    dumped_cases: dict[int, BranchModel] = {}
+
+    for case_path in sorted(cases_dir.iterdir()):
+        if not case_path.is_file():
+            continue
+
+        payload = case_path.read_text(encoding="utf-8").rstrip("\n")
+
+        branch_model, _ = dump_branch(
+            bundle_name="case",
+            branch_name=case_path.stem,
+            owner_name=owner_name,
+            trail=CaseSchema(payload=payload),
+        )
+
+        dumped_cases[branch_model.pk] = branch_model
+
+    return dumped_cases
+
+
+dump_cases_async = make_async(dump_cases)
 
 
 def load_template_data(owner_name: str):
