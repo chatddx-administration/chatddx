@@ -1,9 +1,36 @@
 from django.db.models import OuterRef, QuerySet, Subquery
+from django.urls import reverse
+from django.utils.html import format_html
 
 from chatddx.experiment.proxies import Experiment
 from chatddx.history.proxies import Message
+from chatddx.repo.base import BranchModel
 from chatddx.repo.branch_models import ExpectBranchModel
 from chatddx.repo.proxies import Agent, Case
+
+
+def get_branch_link(obj: BranchModel, field_name: str):
+    branch_id = getattr(obj, f"{field_name}_id")
+    branch_name = getattr(obj, f"{field_name}_name")
+    target = getattr(obj.target, field_name)
+    label = branch_name or target.fingerprint[:6]
+    if branch_id:
+        url = (
+            reverse(
+                f"admin:orm_{field_name.replace('_', '')}_change",
+                args=[branch_id],
+            )
+            + f"?from_agent={obj.pk}"
+        )
+    else:
+        url = (
+            reverse(
+                f"admin:orm_{field_name.replace('_', '')}_add",
+            )
+            + f"?from_agent={obj.pk}&target={target.id}"
+        )
+
+    return format_html('<a href="{}">{}</a>', url, label)
 
 
 def qs_messages(qs: QuerySet[Message], owner_name: str):

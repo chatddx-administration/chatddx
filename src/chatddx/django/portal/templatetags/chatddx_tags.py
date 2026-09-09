@@ -3,7 +3,7 @@ from django import template
 register = template.Library()
 
 
-@register.inclusion_tag("status_badge.html")
+@register.inclusion_tag("templates/status_badge.html")
 def render_status_badge(kind_or_instance):
     kind = getattr(kind_or_instance, "kind", kind_or_instance)
 

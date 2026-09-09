@@ -1,117 +1,24 @@
 # pyright: basic
 import json
 from dataclasses import asdict
-from typing import Any, override
+from typing import Any
 
 from django.contrib import admin
-from django.db.models import Max, Min
 from django.http import HttpRequest
 from django.utils.safestring import mark_safe
 from markdown import markdown
 from unfold.utils import format_html
 
-from chatddx.core.proxies import Identity
 from chatddx.django.portal.admin.base import TypedModelAdmin
 from chatddx.django.portal.admin.utils import qs_messages
-from chatddx.history.proxies import Message, Session, SharedSession
+from chatddx.history.proxies import Message, Session
 from chatddx.utils import get_step_nav, truncate_content
-
-
-@admin.register(Identity)
-class IdentityAdmin(TypedModelAdmin[Identity]):
-    list_display = [
-        "name",
-        "auth_user",
-        "guest_id",
-    ]
-    fields = list_display + [
-        "secrets",
-    ]
-    readonly_fields = ["guest_id"]
-
-
-@admin.register(Session)
-class SessionAdmin(TypedModelAdmin[Session]):
-    change_form_template: str = "session.html"
-    add_form_template: str = "session.html"
-    fields = [
-        "timestamp",
-        "description",
-        "status",
-        "total_tokens",
-        "processing_time",
-        "message_count",
-        "collaborators",
-    ]
-
-    readonly_fields = [f for f in fields if f not in ["description", "collaborators"]]
-
-    list_display = [f for f in fields if f not in ["collaborators"]] + [
-        "collaborators_csv"
-    ]
-
-    def get_queryset(self, request: HttpRequest):
-        qs = super().get_queryset(request)
-
-        return (
-            qs.filter(
-                owner__name=request.user.username,
-            )
-            .annotate(
-                annotated_earliest=Min("messages__timestamp"),
-                annotated_latest=Max("messages__timestamp"),
-            )
-            .order_by("-timestamp")
-        )
-
-    @override
-    def change_view(
-        self,
-        request: HttpRequest,
-        object_id: str,
-        form_url: str = "",
-        extra_context: dict[str, Any] | None = None,
-    ):
-        extra_context = extra_context or {}
-
-        if object_id:
-            extra_context["related_messages"] = qs_messages(
-                Message.objects.filter(session_id=object_id),
-                owner_name=request.user.username,
-            )
-
-        return super().change_view(
-            request,
-            object_id,
-            form_url,
-            extra_context=extra_context,
-        )
-
-
-@admin.register(SharedSession)
-class SharedSessionAdmin(SessionAdmin):
-    fields = SessionAdmin.list_display
-    readonly_fields = [f for f in fields if f not in ["description", "collaborators"]]
-
-    def get_queryset(self, request: HttpRequest):
-        qs = super().get_queryset(request)
-
-        return (
-            qs.filter(
-                collaborators__name=request.user.username,
-            )
-            .annotate(
-                annotated_earliest=Min("messages__timestamp"),
-                annotated_latest=Max("messages__timestamp"),
-            )
-            .order_by("-timestamp")
-        )
 
 
 @admin.register(Message)
 class MessageAdmin(TypedModelAdmin[Message]):
-    change_form_template: str = "message.html"
-    add_form_template: str = "message.html"
+    change_form_template: str = "templates/message.html"
+    add_form_template: str = "templates/message.html"
 
     list_display = [
         "timestamp",
@@ -174,11 +81,9 @@ class MessageAdmin(TypedModelAdmin[Message]):
                 json_data = json.dumps(message.typed_content, indent=4)
                 return format_html(json_data_tpl, json_data)
 
-    @override
     def has_add_permission(self, request: HttpRequest):
         return False
 
-    @override
     def has_change_permission(
         self,
         request: HttpRequest,
@@ -186,7 +91,6 @@ class MessageAdmin(TypedModelAdmin[Message]):
     ):
         return False
 
-    @override
     def has_delete_permission(
         self,
         request: HttpRequest,
@@ -194,7 +98,6 @@ class MessageAdmin(TypedModelAdmin[Message]):
     ):
         return False
 
-    @override
     def change_view(
         self,
         request: HttpRequest,

@@ -95,10 +95,6 @@ class SharedExperimentAdmin(ExperimentAdmin):
 
 @admin.register(Run)
 class RunAdmin(TypedModelAdmin[Run]):
-    """Runs aren't produced by any product flow yet (see
-    chatddx.experiment.worker) -- this is where one gets created, requeued,
-    or inspected by hand for testing/troubleshooting the worker."""
-
     list_display = [
         "timestamp",
         "experiment",

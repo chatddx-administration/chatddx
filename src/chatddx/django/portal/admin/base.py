@@ -36,8 +36,8 @@ class TrailModelAdmin[T: TrailModel](TypedModelAdmin[T]):
 
 class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
     name: BundleName
-    change_form_template = "branch_change_form.html"
-    add_form_template = "branch_change_form.html"
+    change_form_template = "templates/branch_change_form.html"
+    add_form_template = "templates/branch_change_form.html"
     list_display = [
         "name",
         "versions",
