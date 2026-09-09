@@ -5,11 +5,12 @@ from collections.abc import AsyncGenerator
 from django.utils import timezone
 from pydantic_ai import (
     AgentRunResult,
+    AgentRunResultEvent,
+    AgentStreamEvent,
     ModelRequest,
     ModelResponse,
     UnexpectedModelBehavior,
 )
-from pydantic_ai.result import StreamedRunResult
 from pydantic_core import to_jsonable_python
 
 from chatddx.core.choices import RoleChoices
@@ -50,7 +51,7 @@ async def stream_from_session(
     prompt: str,
     dispatcher: Dispatcher | None = None,
     agent_spec: AgentSpec | None = None,
-) -> AsyncGenerator[tuple[ModelResponse, bool], None]:
+) -> AsyncGenerator[AgentStreamEvent | AgentRunResultEvent[OutputType], None]:
 
     if not dispatcher:
         dispatcher = Dispatcher()
@@ -78,16 +79,15 @@ async def stream_from_session(
         output_type,
     )
 
-    async with agent.run_stream(
+    async with agent.run_stream_events(
         prompt,
         deps=agent_context,
         message_history=get_message_history(session),
-    ) as result:
-        async for msg in result.stream_response(debounce_by=0.1):
-            is_last = msg.state != "incomplete"
-            yield msg, is_last
+    ) as events:
+        async for event in events:
+            yield event
 
-        await dispatcher.publish(result)
+        await dispatcher.publish(events.result)
 
 
 def get_message_history(session: SessionSpec):
@@ -212,7 +212,7 @@ def on_error(session_id: int, agent_id: int):
 
 
 def on_result(session_id: int, agent_id: int):
-    async def _on_result(result: AgentRunResult | StreamedRunResult):
+    async def _on_result(result: AgentRunResult):
         messages = result.new_messages()
         messages_to_create: list[MessageModel] = []
 
