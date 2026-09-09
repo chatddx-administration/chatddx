@@ -1,7 +1,7 @@
 # src/chatddx/repo/shufflers/main.py
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, cast, get_args
+from typing import Any, Literal, get_args, overload
 
 from django.db.models import (
     Count,
@@ -30,6 +30,15 @@ from chatddx.repo.form_data_out import TemplateData
 from chatddx.repo.main import BundleName, Repo
 from chatddx.repo.trail_schemas import CaseSchema
 from chatddx.repo.trail_schemas import TrailRegistry
+from chatddx.repo.trail_specs import (
+    AgentSpec,
+    CaseSpec,
+    ConnectionSpec,
+    OutputTypeSpec,
+    SamplingParamsSpec,
+    ToolGroupSpec,
+    ToolSpec,
+)
 from chatddx.utils import ListOf, OneOf, make_async, one_or_list_of
 
 agent_relations: list[BundleName] = [
@@ -48,7 +57,7 @@ def ensure_identity(name: str) -> IdentityModel:
 ensure_identity_async = make_async(ensure_identity)
 
 
-def qs_super_agent[T: TrailModel](qs: QuerySet[T], owner_name: str):
+def qs_super_agent[T: BranchModel](qs: QuerySet[T], owner_name: str):
     def subquery(owner_name: str, model: str, column: str):
         branch_model_cls = Repo(model, BranchModel)
 
@@ -275,13 +284,82 @@ def load_agent(
 load_agent_async = make_async(load_agent)
 
 
+# `bundle_name` picks the concrete Trail*Spec at runtime via `Repo()`, which
+# pyright can't see through; these overloads let callers that pass a literal
+# bundle name (the common case) get the narrowed `target` type back instead
+# of the base `TrailSpec`.
+@overload
 def load_branch(
-    bundle_name: str,
+    bundle_name: Literal["agent"],
     owner_name: str,
     branch_name: str | None = None,
     trail: TrailModel | TrailSchema | None = None,
     qs: QuerySet | None = None,
-) -> BranchSpec[TrailSpec] | None:
+) -> BranchSpec[AgentSpec] | None: ...
+@overload
+def load_branch(
+    bundle_name: Literal["connection"],
+    owner_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | TrailSchema | None = None,
+    qs: QuerySet | None = None,
+) -> BranchSpec[ConnectionSpec] | None: ...
+@overload
+def load_branch(
+    bundle_name: Literal["sampling_params"],
+    owner_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | TrailSchema | None = None,
+    qs: QuerySet | None = None,
+) -> BranchSpec[SamplingParamsSpec] | None: ...
+@overload
+def load_branch(
+    bundle_name: Literal["output_type"],
+    owner_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | TrailSchema | None = None,
+    qs: QuerySet | None = None,
+) -> BranchSpec[OutputTypeSpec] | None: ...
+@overload
+def load_branch(
+    bundle_name: Literal["tool_group"],
+    owner_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | TrailSchema | None = None,
+    qs: QuerySet | None = None,
+) -> BranchSpec[ToolGroupSpec] | None: ...
+@overload
+def load_branch(
+    bundle_name: Literal["tool"],
+    owner_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | TrailSchema | None = None,
+    qs: QuerySet | None = None,
+) -> BranchSpec[ToolSpec] | None: ...
+@overload
+def load_branch(
+    bundle_name: Literal["case"],
+    owner_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | TrailSchema | None = None,
+    qs: QuerySet | None = None,
+) -> BranchSpec[CaseSpec] | None: ...
+def load_branch(
+    bundle_name: BundleName,
+    owner_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | TrailSchema | None = None,
+    qs: QuerySet | None = None,
+) -> (
+    BranchSpec[AgentSpec]
+    | BranchSpec[ConnectionSpec]
+    | BranchSpec[SamplingParamsSpec]
+    | BranchSpec[OutputTypeSpec]
+    | BranchSpec[ToolGroupSpec]
+    | BranchSpec[ToolSpec]
+    | BranchSpec[CaseSpec]
+    | None
+):
     spec_cls = Repo(bundle_name, BranchSpec)
 
     if qs is None:
@@ -345,18 +423,30 @@ def dump_branch(
 dump_branch_async = make_async(dump_branch)
 
 
-def load_trail[T: (TrailSpec, TrailModel)](
+@overload
+def load_trail(
+    bundle: Any,
+    fingerprint: str,
+    as_schema: type[TrailModel],
+) -> TrailModel: ...
+@overload
+def load_trail[T: TrailSpec](
     bundle: Any,
     fingerprint: str,
     as_schema: type[T],
-) -> T:
+) -> T: ...
+def load_trail(
+    bundle: Any,
+    fingerprint: str,
+    as_schema: type[TrailModel] | type[TrailSpec],
+) -> TrailModel | TrailSpec:
     trail_model_cls = Repo(bundle, TrailModel)
     trail_model = trail_model_cls.objects.get(fingerprint=fingerprint)
 
     trail_model = resolve_related_array_fields(trail_model)
 
-    if as_schema == TrailModel:
-        return cast(T, trail_model)
+    if issubclass(as_schema, TrailModel):
+        return trail_model
 
     return as_schema.model_validate(trail_model)
 

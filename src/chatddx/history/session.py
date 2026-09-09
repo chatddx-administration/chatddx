@@ -1,8 +1,6 @@
 # src/chatddx/history/session.py
 from uuid import UUID
 
-from asgiref.sync import sync_to_async
-
 from chatddx.core.models import IdentityModel
 from chatddx.core.schemas import IdentitySpec
 from chatddx.history.models import MessageModel, SessionModel
@@ -51,8 +49,6 @@ async def resume_session(
 
     if session_model.default_agent is None:
         raise ValueError("Cannot resume a session without an agent")
-
-    target_attr = await sync_to_async(lambda: session_model.default_agent.target)()
 
     session_model.default_agent.target = await resolve_related_array_fields_async(
         session_model.default_agent.target

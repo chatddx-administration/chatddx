@@ -1,6 +1,8 @@
 # src/chatddx/django/portal/forms/base.py
-from typing import Any, override
+# pyright: basic
+from typing import Any, cast, override
 
+from crispy_forms.helper import FormHelper
 from django.forms import ModelForm
 from django.http import HttpRequest
 from pydantic import ValidationError as PydanticValidationError
@@ -22,6 +24,8 @@ class BaseForm(ModelForm):
     form_data_out: type[BaseFormDataOut]
     form_data_in: type[BaseFormDataIn]
     bundle_name: str
+    # Every concrete subform provides a crispy_forms layout helper.
+    helper: FormHelper
 
     validated_data: BaseFormDataIn | None
     request: HttpRequest
@@ -72,7 +76,11 @@ class BaseForm(ModelForm):
             kwargs["initial"] = self.get_initial(new_branch)
 
         super().__init__(*args, **kwargs)
-        owned = qs_canon(self._meta.model.objects.all(), owner)
+        # Every concrete form's Meta.model is a BranchModel subclass;
+        # ModelFormOptions.model is only typed as `type[Model] | None`
+        # because it's generic across all ModelForms.
+        model_cls = cast(type[BranchModel], self._meta.model)
+        owned = qs_canon(model_cls.objects.all(), owner)
 
         self.fields["template"].choices = [("", "=== clear ===")] + [
             (model.target.pk, model.name) for model in owned

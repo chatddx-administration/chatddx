@@ -142,7 +142,9 @@ class ToolGroupSchema(ToolGroupBase, TrailSchema):
         from chatddx.utils import generate_fingerprint
 
         serialized = self.model_dump(exclude={"fingerprint", "tools"})
-        fingerprints = {"tools": [ref.as_fingerprint() for ref in self.tools]}
+        fingerprints: dict[str, JsonValue] = {
+            "tools": [ref.as_fingerprint() for ref in self.tools]
+        }
 
         return generate_fingerprint(serialized | fingerprints)
 

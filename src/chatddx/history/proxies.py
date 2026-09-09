@@ -2,7 +2,7 @@
 import json
 from datetime import timedelta
 from functools import cached_property
-from typing import final, override
+from typing import cast, final, override
 
 import jsonschema
 from django.contrib import admin
@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from pydantic_ai import (
+    ModelRequest,
     ModelResponse,
     TextPart,
     ThinkingPart,
@@ -21,7 +22,7 @@ from pydantic_ai import (
 
 from chatddx.core.choices import MessageKindChoices, RoleChoices
 from chatddx.history.models import MessageModel, SessionModel
-from chatddx.history.schemas import MessageSpec
+from chatddx.history.schemas import ErrorPayload, MessageSpec, PromptPayload
 from chatddx.repo.trail_cache import trail_cache
 from chatddx.repo.trail_specs import AgentSpec
 from chatddx.runtime.utils import get_part_content
@@ -62,9 +63,9 @@ class Session(SessionModel):
         for msg in self.messages.all():
             msg_spec = MessageSpec.model_validate(msg)
             if msg_spec.kind == MessageKindChoices.REQUEST:
-                req_time = msg_spec.payload.timestamp
+                req_time = cast(ModelRequest, msg_spec.payload).timestamp
             if msg_spec.kind == MessageKindChoices.RESPONSE and req_time:
-                ptime += msg_spec.payload.timestamp - req_time
+                ptime += cast(ModelResponse, msg_spec.payload).timestamp - req_time
 
         return f"{ptime.total_seconds():.2f}s"
 
@@ -75,7 +76,10 @@ class Session(SessionModel):
     @admin.display(description="Status")
     def status(self):
         message = self.messages.latest("timestamp")
-        context = {"kind": message.kind, "display_name": message.get_kind_display()}
+        context = {
+            "kind": message.kind,
+            "display_name": message.get_kind_display(),  # pyright: ignore[reportAttributeAccessIssue]
+        }
         html_string = render_to_string("status_badge.html", context)
 
         return mark_safe(html_string)
@@ -111,15 +115,18 @@ class Message(MessageModel):
 
     @cached_property
     def agent_link(self):
-        if self.agent_branch_id:
+        # agent_branch_id/agent_branch_name are annotated onto the queryset by
+        # get_step_nav() (see django/portal/admin/utils.py); they aren't real
+        # model fields, so django-types can't see them.
+        if self.agent_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
             url = (
                 reverse(
                     "admin:orm_superagent_change",
-                    args=[self.agent_branch_id],
+                    args=[self.agent_branch_id],  # pyright: ignore[reportAttributeAccessIssue]
                 )
                 + f"?from_message={self.pk}"
             )
-            label = f"{self.agent_branch_name} ({self.agent.fingerprint[:6]})"
+            label = f"{self.agent_branch_name} ({self.agent.fingerprint[:6]})"  # pyright: ignore[reportAttributeAccessIssue]
         else:
             url = (
                 reverse("admin:orm_superagent_add")
@@ -161,12 +168,12 @@ class Message(MessageModel):
 
     @cached_property
     def parts(self):
-        if isinstance(self.spec.kind, ModelResponse):
+        if isinstance(self.spec.payload, ModelResponse):
             return len(self.spec.payload.parts)
 
     @cached_property
     def thinking(self):
-        if isinstance(self.spec.kind, ModelResponse):
+        if isinstance(self.spec.payload, ModelResponse):
             part_content = get_part_content(self.spec.payload.parts, ThinkingPart)
             return part_content
 
@@ -187,22 +194,26 @@ class Message(MessageModel):
 
     @cached_property
     def content(self):
+        # spec.kind determines the concrete type of spec.payload, but that
+        # correlation isn't expressed in MessageSpec's type (payload is a
+        # plain union); cast to the type this branch's kind guarantees.
         match self.spec.kind:
             case MessageKindChoices.PROMPT:
-                return self.spec.payload.content
+                return cast(PromptPayload, self.spec.payload).content
             case MessageKindChoices.ERROR:
-                return self.spec.payload.content
+                return cast(ErrorPayload, self.spec.payload).content
             case MessageKindChoices.REQUEST:
+                request = cast(ModelRequest, self.spec.payload)
                 match self.spec.role:
                     case RoleChoices.USER:
                         part_content = get_part_content(
-                            self.spec.payload.parts,
+                            request.parts,
                             UserPromptPart,
                         )
                     case RoleChoices.TOOL:
                         part_content = "[tool return]: " + truncate_content(
                             get_part_content(
-                                self.spec.payload.parts,
+                                request.parts,
                                 ToolReturnPart,
                             ),
                             20,
@@ -211,16 +222,17 @@ class Message(MessageModel):
                         raise NotImplementedError(f"unhandled value '{self.spec.role}'")
 
             case MessageKindChoices.RESPONSE:
+                response = cast(ModelResponse, self.spec.payload)
                 match self.spec.role:
                     case RoleChoices.ASSISTANT:
                         part_text = get_part_content(
-                            self.spec.payload.parts,
+                            response.parts,
                             TextPart,
                         )
 
                         part_tool_call = truncate_content(
                             get_part_content(
-                                self.spec.payload.parts,
+                                response.parts,
                                 ToolCallPart,
                             ),
                             20,

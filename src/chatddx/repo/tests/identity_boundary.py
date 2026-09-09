@@ -1,7 +1,7 @@
 # src/chatddx/repo/tests/identity_boundary.py
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, Callable, Optional, cast
 
 from django.db.models import (
     BooleanField,
@@ -21,7 +21,7 @@ from chatddx.core.choices import (
     ToolChoices,
     ValidationChoices,
 )
-from chatddx.core.decimals import SamplingDecimal
+from chatddx.core.decimals import SamplingDecimal, SamplingDecimalBase
 from chatddx.core.django_fields import JSONSchemaField
 from chatddx.registry.main import parse_registry
 from chatddx.repo.trail_models import (
@@ -200,12 +200,14 @@ def _test_optional_int(value: int | None):
 
 
 def _test_decimal(value: SamplingDecimal):
-    altered_value = SamplingDecimal(0) if value else SamplingDecimal("0.1")
+    # SamplingDecimal is an Annotated alias, not a callable class; construct
+    # instances via its underlying concrete type instead.
+    altered_value = SamplingDecimalBase(0) if value else SamplingDecimalBase("0.1")
     return value, altered_value
 
 
 def _test_optional_decimal(value: SamplingDecimal | None):
-    altered_value = SamplingDecimal(0) if value is None else None
+    altered_value = SamplingDecimalBase(0) if value is None else None
     return value, altered_value
 
 
@@ -234,7 +236,7 @@ field_types: dict[Any, Callable[[Any], tuple[Any, Any]]] = {
     (ConnectionTrailModel, ConnectionSchema): _test_Connection,
     (ConnectionTrailModel, ConnectionSchema | None): _test_optional_Connection,
     (DecimalField, SamplingDecimal): _test_decimal,
-    (DecimalField, SamplingDecimal | None): _test_optional_decimal,
+    (DecimalField, Optional[SamplingDecimal]): _test_optional_decimal,
     (IntegerField, int): _test_int,
     (IntegerField, int | None): _test_optional_int,
     (JSONField, dict[str, SamplingDecimal]): _test_dict_str_decimal,

@@ -38,6 +38,7 @@ async def test_tool_coerced(owner: IdentityModel):
         branch_name="tool-coerced",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     prompt = "violate the dictated response type number -> string and boolean -> number"
 
@@ -61,6 +62,7 @@ async def test_prompt_coerced(owner: IdentityModel):
         branch_name="prompt-coerced",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     prompt = "violate the dictated response type number -> string and boolean -> number"
 
@@ -84,6 +86,7 @@ async def test_native_coerced(owner: IdentityModel):
         branch_name="native-coerced",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     prompt = "violate the dictated response type number -> string and boolean -> number"
 
@@ -109,6 +112,7 @@ async def test_no_thinking(owner: IdentityModel):
         branch_name="no-thinking",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     prompt = "this message is a result of automated testing, respond with '123abc'."
 
@@ -126,6 +130,7 @@ async def test_thinking(owner: IdentityModel):
         branch_name="thinking",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     prompt = "this message is a result of automated testing, respond with '123abc'."
 
@@ -144,6 +149,7 @@ async def test_tool_call(owner: IdentityModel):
         branch_name="tools-sentinel",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     prompt = "1) run 'sentinel_string' and tell me the result"
     prompt += "2) run 'sentinel_op' with 12 and 8 and tell me the result"
@@ -162,6 +168,7 @@ async def test_session(owner: IdentityModel):
         branch_name="no-thinking",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     session = await start_session(owner.pk, spec.id)
 

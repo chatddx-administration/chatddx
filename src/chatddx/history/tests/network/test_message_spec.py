@@ -35,6 +35,7 @@ async def test_message_spec(owner: IdentityModel):
         branch_name="no-thinking",
         owner_name=owner.name,
     )
+    assert spec is not None
     assert spec.target.connection
 
     prompt = "hello"

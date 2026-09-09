@@ -1,7 +1,7 @@
 # src/chatddx/django/portal/forms/super_agent.py
 # pyright: basic
 from copy import deepcopy
-from typing import Any, final, override
+from typing import Any, cast, final, override
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, LayoutObject, Row
@@ -101,9 +101,15 @@ class SuperAgentForm(BaseForm):
     def save(self, commit: bool = True) -> Any:
         instance = super().save(commit=commit)
         if instance and instance.get("api_key") and self.validated_data:
-            owner = self.validated_data.owner
+            owner_spec = self.validated_data.owner
+            assert owner_spec is not None
+
+            # validated_data.owner is the pydantic snapshot used for form
+            # validation; the live IdentityModel is what actually persists
+            # secrets.
+            owner = IdentityModel.objects.get(pk=owner_spec.id)
             owner_api_keys = owner.secrets.get("api-keys", {})
-            agent_name = self.validated_data.name
+            agent_name = self.validated_data.name or ""
             current_api_key = owner_api_keys.get(agent_name, None)
 
             if instance["api_key"] == current_api_key:
@@ -148,7 +154,10 @@ class SuperAgentForm(BaseForm):
                 self.data.pop(f"{field_name}_template", None)
 
         for prefix, cls in SUBFORMS:
-            sub_form_data = get_subform_data(self.data, prefix)
+            # self.data is a QueryDict at runtime (built from request.POST);
+            # Form.data is typed more loosely since a plain dict is also
+            # accepted by the base ModelForm constructor.
+            sub_form_data = get_subform_data(cast(QueryDict, self.data), prefix)
             self.subforms[prefix] = cls(
                 data=sub_form_data,
                 request=self.request,
@@ -163,8 +172,9 @@ class SuperAgentForm(BaseForm):
                 self.fields[name] = field
 
     def get_initial(self, instance: proxies.SuperAgent):
-
-        instance.target.tool_group.tools = list(
+        # `tools` is stored as a list of ids, but is hydrated into model
+        # instances here for the form's initial data.
+        instance.target.tool_group.tools = list(  # pyright: ignore[reportAttributeAccessIssue]
             ToolTrailModel.objects.filter(pk__in=instance.target.tool_group.tools)
         )
 
@@ -295,6 +305,9 @@ class SuperAgentForm(BaseForm):
         helper.layout = Layout(main_section)
         for prefix, _ in SUBFORMS:
             subform_instance = self.subforms[prefix]
+            # Every concrete subform sets its helper's layout at class
+            # definition time.
+            assert subform_instance.helper.layout is not None
 
             helper.layout.append(
                 apply_prefix_to_layout(

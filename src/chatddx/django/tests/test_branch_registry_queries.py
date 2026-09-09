@@ -40,6 +40,7 @@ def test_ownership(
 
     new_owner = IdentityModel.objects.create(name="alex")
     some_agent = AgentBranchModel.objects.filter(name="some-agent").first()
+    assert some_agent is not None
     some_agent.owner_id = new_owner.pk
     some_agent.save()
 
@@ -97,4 +98,6 @@ def test_agent_qs(owner: IdentityModel):
     qs = proxies.Agent.objects.filter(name="some-agent", owner_id=owner.pk)
     agent = qs_super_agent(qs, owner.name).first()
     assert agent is not None
-    assert agent.connection_id is not None
+    # connection_id is annotated onto the queryset by qs_super_agent(), not a
+    # real model field, so django-types can't see it.
+    assert agent.connection_id is not None  # pyright: ignore[reportAttributeAccessIssue]
