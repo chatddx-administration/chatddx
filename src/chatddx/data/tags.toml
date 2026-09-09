@@ -1,9 +1,4 @@
 # src/chatddx/data/tags.toml
-#
-# Maps each case (by the filename under ./cases, i.e. the case branch's
-# name) to the tag(s) its branch should carry. Derived from the case
-# names themselves -- each groups by the dataset its filename identifies
-# it as coming from.
 
 [case.DutchFall10w]
 tags = ["dutch-fall"]

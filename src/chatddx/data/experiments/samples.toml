@@ -1,18 +1,4 @@
 # src/chatddx/data/experiments/samples.toml
-#
-# Sample Experiments for `chatddx init-data` (see
-# chatddx.repo.shufflers.experiment.dump_experiments). Each entry names an
-# `agent` and a `case` branch that must already exist for the owner --
-# both are dumped earlier in `init-data`, from `registry.toml` and
-# `cases/` respectively. `expect` is never listed here: it's resolved at
-# creation time from the case's currently canonical Expect for the
-# experiment's own (optional) `scorer` -- a name matching one of the
-# Scorer branches `init-data` dumps by default (see
-# chatddx.repo.shufflers.scorer.DEFAULT_SCORER_NAMES).
-#
-# `tags` are free-form, comma-joined labels on the Experiment itself (see
-# ExperimentModel.tags) -- unrelated to the case's own TagModel tags in
-# tags.toml.
 
 [experiment."dutch-fall-baseline-1"]
 agent = "gpt-4o free-text seed=0"
@@ -38,21 +24,12 @@ case = "openxddx-case_1"
 scorer = "chatddx.experiment.scorers.regex_match"
 tags = ["baseline", "openxddx"]
 
-# Deliberately not the "seed=0" variant: `gpt-4o free-text` carries no
-# fixed sampling seed, so building this experiment prints a warning --
-# its agent, case and expect are all pinned trails and will never change,
-# but re-running the agent isn't guaranteed to reproduce the same output
-# a year from now. See create_experiment() in
-# chatddx.repo.shufflers.experiment.
 [experiment."openxddx-no-seed-demo"]
 agent = "gpt-4o free-text"
 case = "openxddx-case_2"
 scorer = "chatddx.experiment.scorers.regex_match"
 tags = ["smoke-test", "no-seed"]
 
-# Pairs with the plain-text Expect `init-data` dumps directly (see
-# chatddx.main.init_data_) against the other bundled scorer, exact_match --
-# unlike the row-pattern Expects above, it grades the reply verbatim.
 [experiment."openxddx-exact-match-demo"]
 agent = "qwen-3b free-text seed=0"
 case = "openxddx-case_1"
