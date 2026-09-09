@@ -1,24 +1,4 @@
 # src/chatddx/experiment/scorers.py
-"""
-Scorer functions: what `ExperimentModel.scorer` points to.
-
-A scorer is any function importable by dotted path (Django's
-`django.utils.module_loading.import_string` -- the same mechanism Django
-itself uses for e.g. `MIDDLEWARE`) that takes a completed `RunModel` and
-returns a JSON-serializable verdict. `chatddx.experiment.worker.score_run`
-resolves an Experiment's `scorer`, calls it once per completed Run, and
-stores whatever it returns, verbatim, on `Run.result`. A scorer may be a
-regular function or a coroutine function -- `score_run` awaits either.
-
-`exact_match` below is a reference implementation, usable as-is for
-free-text Experiments: it grades a Run's final assistant reply against its
-Experiment's Expect payload, verbatim.
-
-`regex_match` grades against the row-ranked pattern language used by the
-Expect files under `src/chatddx/data/expects` (see `_compile_row` for the
-grammar).
-"""
-
 from __future__ import annotations
 
 import re
@@ -31,8 +11,6 @@ from chatddx.history.proxies import Message
 
 
 def exact_match(run: RunModel) -> dict[str, Any]:
-    """Score a Run by comparing its last assistant message, verbatim,
-    against its Experiment's Expect payload."""
     message = (
         Message.objects.filter(
             session_id=run.session_id,
@@ -49,24 +27,6 @@ def exact_match(run: RunModel) -> dict[str, Any]:
         "expected": expected,
         "actual": actual,
     }
-
-
-# --- regex_match -------------------------------------------------------
-#
-# Each line of an Expect payload is one pattern, built out of:
-#
-#   word          a literal word, matched case-insensitively
-#   a b           two (or more) words separated by a literal space are one
-#                 phrase: the words must appear next to each other,
-#                 separated by exactly one space -- "a b" matches "a b" but
-#                 neither "a" nor "b" alone
-#   x & y         AND: both x and y must match somewhere in the text
-#   x | y         OR: either x or y must match
-#   ( ... )       grouping, to override the default precedence
-#
-# Precedence, tightest to loosest: parentheses, then space (phrase), then
-# `&`, then `|` -- so `a b | c` parses as `(a b) | c`, and
-# `x & y | z & w` parses as `(x & y) | (z & w)`.
 
 
 class _Node:
@@ -102,15 +62,6 @@ _TOKEN_RE = re.compile(r"\(|\)|&|\||[^\s&|()]+")
 
 
 class _RowParser:
-    """Recursive-descent parser for one Expect row.
-
-    expr   := or
-    or     := and ('|' and)*
-    and    := phrase ('&' phrase)*
-    phrase := term+
-    term   := WORD | '(' expr ')'
-    """
-
     def __init__(self, tokens: list[str]):
         self._tokens = tokens
         self._pos = 0
@@ -169,21 +120,10 @@ def _compile_row(row: str) -> _Node:
 
 
 def row_matches(row: str, text: str) -> bool:
-    """Whether `text` satisfies the pattern in `row` (see `_compile_row`)."""
     return _compile_row(row).matches(text)
 
 
 def regex_match(run: RunModel) -> dict[str, Any]:
-    """Score a Run's last assistant message against its Experiment's Expect
-    payload, one pattern per line (see `_compile_row` for the grammar).
-
-    Lines are tried in order starting at 1: the first line whose pattern
-    matches wins, scoring `100 / line_number` (100 for the first line, 50
-    for the second, and so on). Checking stops at the first match. If no
-    line matches -- including when there's no assistant reply at all -- the
-    score is 0. Blank lines are skipped (never match, but still count
-    towards the line number of the lines after them).
-    """
     message = (
         Message.objects.filter(
             session_id=run.session_id,
