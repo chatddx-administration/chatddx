@@ -156,5 +156,21 @@ UNFOLD = {
                 },
             ],
         },
+        {
+            "models": [
+                "orm.experiment",
+                "orm.sharedexperiment",
+            ],
+            "items": [
+                {
+                    "title": "My Experiments",
+                    "link": reverse_lazy("admin:orm_experiment_changelist"),
+                },
+                {
+                    "title": "Shared with Me",
+                    "link": reverse_lazy("admin:orm_sharedexperiment_changelist"),
+                },
+            ],
+        },
     ],
 }

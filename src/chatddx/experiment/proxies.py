@@ -35,3 +35,11 @@ class Experiment(ExperimentModel):
     @admin.display(description="Collaborators")
     def collaborators_csv(self):
         return ", ".join(str(c) for c in self.collaborators.all()) or None
+
+
+class SharedExperiment(Experiment):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Shared Experiment"
+        verbose_name_plural = "Shared Experiments"
