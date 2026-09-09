@@ -22,6 +22,7 @@ from chatddx.repo.trail_models import (
     AgentTrailModel,
     CaseTrailModel,
     ExpectTrailModel,
+    ScorerTrailModel,
 )
 
 
@@ -67,19 +68,18 @@ class ExperimentModel(Model):
     )
     expect_id: int
 
-    scorer = CharField(
-        max_length=255,
+    # The worker resolves and calls this once per completed Run (see
+    # chatddx.experiment.worker.score_run); left unset, completed Runs of
+    # this experiment are never scored.
+    scorer = ForeignKey(
+        ScorerTrailModel,
+        on_delete=PROTECT,
+        default=None,
+        null=True,
         blank=True,
-        default="",
-        help_text=(
-            "Dotted import path to the function that scores this "
-            "experiment's completed Runs, e.g. "
-            "'chatddx.experiment.scorers.exact_match'. The worker resolves "
-            "and calls it once per completed Run (see "
-            "chatddx.experiment.worker.score_run); left blank, completed "
-            "Runs of this experiment are never scored."
-        ),
+        related_name="experiments",
     )
+    scorer_id: int | None
 
     @property
     def tag_list(self) -> list[str]:

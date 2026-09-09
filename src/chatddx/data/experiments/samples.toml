@@ -6,9 +6,9 @@
 # both are dumped earlier in `init-data`, from `registry.toml` and
 # `cases/` respectively. `expect` is never listed here: it's resolved at
 # creation time from the case's currently canonical Expect for the
-# experiment's own (optional) `scorer` (see ExperimentModel) -- none of
-# the entries below set one, so they all pair with the blank-scorer
-# Expects dumped from `expects/` by the default `init-data` run.
+# experiment's own (optional) `scorer` -- a name matching one of the
+# Scorer branches `init-data` dumps by default (see
+# chatddx.repo.shufflers.scorer.DEFAULT_SCORER_NAMES).
 #
 # `tags` are free-form, comma-joined labels on the Experiment itself (see
 # ExperimentModel.tags) -- unrelated to the case's own TagModel tags in
@@ -17,21 +17,25 @@
 [experiment."dutch-fall-baseline-1"]
 agent = "gpt-4o free-text seed=0"
 case = "Dutchfall1w"
+scorer = "chatddx.experiment.scorers.regex_match"
 tags = ["baseline", "dutch-fall"]
 
 [experiment."dutch-fall-baseline-2"]
 agent = "qwen-3b free-text seed=0"
 case = "Dutchfall2w"
+scorer = "chatddx.experiment.scorers.regex_match"
 tags = ["baseline", "dutch-fall"]
 
 [experiment."edn-baseline-1"]
 agent = "qwen-3b free-text seed=0"
 case = "casesfromedn1"
+scorer = "chatddx.experiment.scorers.regex_match"
 tags = ["baseline", "edn"]
 
 [experiment."openxddx-baseline-1"]
 agent = "gpt-4o free-text seed=0"
 case = "openxddx-case_1"
+scorer = "chatddx.experiment.scorers.regex_match"
 tags = ["baseline", "openxddx"]
 
 # Deliberately not the "seed=0" variant: `gpt-4o free-text` carries no
@@ -43,4 +47,14 @@ tags = ["baseline", "openxddx"]
 [experiment."openxddx-no-seed-demo"]
 agent = "gpt-4o free-text"
 case = "openxddx-case_2"
+scorer = "chatddx.experiment.scorers.regex_match"
 tags = ["smoke-test", "no-seed"]
+
+# Pairs with the plain-text Expect `init-data` dumps directly (see
+# chatddx.main.init_data_) against the other bundled scorer, exact_match --
+# unlike the row-pattern Expects above, it grades the reply verbatim.
+[experiment."openxddx-exact-match-demo"]
+agent = "qwen-3b free-text seed=0"
+case = "openxddx-case_1"
+scorer = "chatddx.experiment.scorers.exact_match"
+tags = ["demo", "exact-match"]

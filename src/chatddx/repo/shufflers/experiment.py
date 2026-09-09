@@ -12,15 +12,21 @@ from chatddx.repo.branch_models import (
     AgentBranchModel,
     CaseBranchModel,
     ExpectBranchModel,
+    ScorerBranchModel,
 )
 from chatddx.repo.shufflers.main import ensure_identity, qs_canon
-from chatddx.repo.trail_models import AgentTrailModel, CaseTrailModel, ExpectTrailModel
+from chatddx.repo.trail_models import (
+    AgentTrailModel,
+    CaseTrailModel,
+    ExpectTrailModel,
+    ScorerTrailModel,
+)
 from chatddx.utils import make_async
 
 
 def find_expect(
     case: CaseTrailModel,
-    scorer: str,
+    scorer: ScorerTrailModel | None,
     owner_name: str,
 ) -> ExpectTrailModel | None:
     branch = qs_canon(
@@ -42,16 +48,18 @@ def create_experiment(
     agent: AgentTrailModel,
     case: CaseTrailModel,
     tags: list[str] | None = None,
-    scorer: str = "",
+    scorer: ScorerTrailModel | None = None,
 ) -> ExperimentModel:
     owner = ensure_identity(owner_name)
 
     expect = find_expect(case, scorer, owner.name)
     if expect is None:
+        scorer_name = scorer.name if scorer else None
         raise ValueError(
-            f"no Expect for case {case.pk} against scorer {scorer!r}: cannot "
-            "build a scoreable Experiment. Add an Expect for this (case, "
-            "scorer) pair first -- see chatddx.repo.shufflers.expect.dump_expect."
+            f"no Expect for case {case.pk} against scorer {scorer_name!r}: "
+            "cannot build a scoreable Experiment. Add an Expect for this "
+            "(case, scorer) pair first -- see "
+            "chatddx.repo.shufflers.expect.dump_expect."
         )
 
     if agent.sampling_params.seed is None:
@@ -110,10 +118,26 @@ def dump_experiments(
                 )
                 continue
 
+            scorer_name = entry.get("scorer", "")
+            scorer_trail: ScorerTrailModel | None = None
+            if scorer_name:
+                scorer_branch = qs_canon(
+                    ScorerBranchModel.objects.filter(name=scorer_name),
+                    owner.name,
+                ).first()
+                if scorer_branch is None:
+                    print(
+                        f"experiment {name}: skipped (scorer {scorer_name!r} "
+                        f"not found for owner {owner.name!r})"
+                    )
+                    continue
+                scorer_trail = scorer_branch.target
+
             existing = ExperimentModel.objects.filter(
                 owner=owner,
                 agent=agent_branch.target,
                 case=case_branch.target,
+                scorer=scorer_trail,
             ).first()
 
             if existing is not None:
@@ -126,7 +150,7 @@ def dump_experiments(
                     agent=agent_branch.target,
                     case=case_branch.target,
                     tags=list(entry.get("tags", [])),
-                    scorer=entry.get("scorer", ""),
+                    scorer=scorer_trail,
                 )
             except ValueError as exc:
                 print(f"experiment {name}: skipped ({exc})")

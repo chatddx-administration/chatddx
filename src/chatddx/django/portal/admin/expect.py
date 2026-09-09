@@ -2,14 +2,21 @@
 # pyright: basic
 from typing import Any, final
 
-from django.forms import CharField, ModelForm
+from django.forms import CharField, ModelChoiceField, ModelForm
+from django.http import HttpRequest
 from unfold.contrib.inlines.admin import NonrelatedTabularInline
 from unfold.contrib.inlines.forms import NonrelatedInlineModelFormSet
-from unfold.widgets import UnfoldAdminTextareaWidget, UnfoldAdminTextInputWidget
+from unfold.widgets import UnfoldAdminSelectWidget, UnfoldAdminTextareaWidget
 
 from chatddx.repo import proxies
-from chatddx.repo.branch_models import ExpectBranchModel
+from chatddx.repo.branch_models import ExpectBranchModel, ScorerBranchModel
 from chatddx.repo.shufflers.expect import dump_expect, load_expects
+from chatddx.repo.shufflers.main import qs_canon
+
+
+class ScorerChoiceField(ModelChoiceField):
+    def label_from_instance(self, obj: ScorerBranchModel) -> str:
+        return obj.name
 
 
 class ExpectInlineForm(ModelForm):
@@ -18,16 +25,15 @@ class ExpectInlineForm(ModelForm):
         label="Expected Payload",
         help_text="The expected output for this Case/Scorer pair.",
     )
-    scorer = CharField(
+    scorer = ScorerChoiceField(
+        queryset=ScorerBranchModel.objects.none(),
         required=False,
-        widget=UnfoldAdminTextInputWidget(
-            attrs={"placeholder": "e.g., chatddx.experiment.scorers.exact_match"}
-        ),
+        widget=UnfoldAdminSelectWidget,
         label="Scorer",
         help_text=(
-            "Dotted import path of the scorer function this expectation is "
-            "written for (see ExperimentModel.scorer). Leave blank for the "
-            "default expectation of this Case."
+            "The scorer this expectation is written for (see "
+            "ExperimentModel.scorer). Leave blank for the default "
+            "expectation of this Case."
         ),
     )
 
@@ -41,7 +47,14 @@ class ExpectInlineForm(ModelForm):
         if self.instance.pk:
             target = self.instance.target
             self.initial.setdefault("payload", target.payload)
-            self.initial.setdefault("scorer", target.scorer)
+
+            scorer_branch = None
+            if target.scorer_id:
+                scorer_branch = qs_canon(
+                    ScorerBranchModel.objects.filter(target_id=target.scorer_id),
+                    self.instance.owner.name,
+                ).first()
+            self.initial.setdefault("scorer", scorer_branch)
 
 
 @final
@@ -49,7 +62,9 @@ class ExpectInlineFormSet(NonrelatedInlineModelFormSet):
     instance: proxies.Case
 
     def _dump(self, form: ExpectInlineForm) -> ExpectBranchModel:
-        scorer = form.cleaned_data["scorer"]
+        scorer_branch = form.cleaned_data["scorer"]
+        scorer = scorer_branch.target if scorer_branch else None
+
         branch, created = dump_expect(
             case=self.instance.target,  # pyright: ignore
             scorer=scorer,
@@ -57,7 +72,7 @@ class ExpectInlineFormSet(NonrelatedInlineModelFormSet):
             owner_name=self.instance.owner.name,
         )
 
-        label = scorer or "default"
+        label = scorer.name if scorer else "default"
         results = getattr(self, "_expect_results", None)
         if results is None:
             results = self._expect_results = []
@@ -93,6 +108,18 @@ class ExpectInline(NonrelatedTabularInline):
             return ExpectBranchModel.objects.none()
 
         return load_expects(obj.target, obj.owner.name)  # pyright: ignore
+
+    def get_formset(
+        self, request: HttpRequest, obj: proxies.Case | None = None, **kwargs: Any
+    ):
+        formset = super().get_formset(request, obj, **kwargs)
+
+        if obj is not None:
+            formset.form.base_fields["scorer"].queryset = qs_canon(  # pyright: ignore
+                ScorerBranchModel.objects.all(), obj.owner.name
+            )
+
+        return formset
 
     def save_new_instance(
         self, parent: proxies.Case, instance: ExpectBranchModel
