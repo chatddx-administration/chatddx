@@ -9,6 +9,7 @@ import typer
 django.setup()
 from chatddx.repl import app as repl_app
 from chatddx.repo.shufflers.expect import dump_expects
+from chatddx.repo.shufflers.experiment import dump_experiments
 from chatddx.repo.shufflers.main import (
     dump_cases,
     dump_trail_registry,
@@ -78,6 +79,16 @@ def init_data_(
             help="location of case tag data",
         ),
     ] = CURRENT_DIR / "data/tags.toml",
+    experiments_dir: Annotated[
+        Path,
+        typer.Option(
+            "--experiments-dir",
+            file_okay=False,
+            dir_okay=True,
+            exists=True,
+            help="location of sample experiment files",
+        ),
+    ] = CURRENT_DIR / "data/experiments",
 ):
     _ = ensure_identity(owner)
 
@@ -95,3 +106,6 @@ def init_data_(
 
     for branch_idx, branch in dump_expects(expects_dir, owner).items():
         print(f"{branch.target.fingerprint}: {branch_idx} expect {branch.name}:")
+
+    for experiment_idx, experiment in dump_experiments(experiments_dir, owner).items():
+        print(f"{experiment.uuid}: {experiment_idx} experiment {experiment.tags}")
