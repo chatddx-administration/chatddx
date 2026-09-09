@@ -341,10 +341,6 @@ class CaseAdmin(BranchModelAdmin[proxies.Case]):
         formsets: list[Any],
         change: bool,
     ):
-        # BranchModelAdmin.save_related() is a deliberate no-op (relations
-        # for other Branch entities are handled through dump_branch(), not
-        # Django's formset machinery) -- re-enable it here for the Expect
-        # inline, which does need its formset saved.
         for formset in formsets:
             self.save_formset(request, form, formset, change=change)
 

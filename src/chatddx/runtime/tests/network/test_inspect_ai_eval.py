@@ -1,10 +1,3 @@
-"""Runtime smoke tests that drive inspect_ai's eval() against a live vLLM
-deployment.
-
-Requires network access to the endpoint configured in
-data/test-llm-basics.toml.
-"""
-
 from pathlib import Path
 
 import pytest

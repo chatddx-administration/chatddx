@@ -1,9 +1,3 @@
-"""Verifies the shape of pydantic-ai message specs recorded from a real run.
-
-Requires network access to the endpoint configured in
-data/test-llm-basics.toml.
-"""
-
 import json
 from datetime import datetime
 from pathlib import Path

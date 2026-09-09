@@ -1,9 +1,3 @@
-"""Runtime smoke tests against a live Qwen3-8B vLLM deployment.
-
-Requires network access to the endpoint configured in
-data/test-llm-basics.toml.
-"""
-
 from pathlib import Path
 
 import pytest

@@ -1,11 +1,3 @@
-"""Add/change/delete flows for the plain, single-model admin forms (tool,
-agent, output_type, tool_group).
-
-See test_admin_superagent_form.py for the composite SuperAgent form, and
-test_admin_timeline.py for version-history behavior shared across all
-branch-backed models.
-"""
-
 import pytest
 from django.test import Client
 from django.urls import reverse

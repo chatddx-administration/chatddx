@@ -24,32 +24,6 @@ from chatddx.repo.trail_models import (
 
 
 class ExperimentModel(Model):
-    """A frozen, self-contained record of one Agent run against one Case.
-
-    An Experiment is to scoring what a Session is to a live conversation:
-    like SessionModel, it is never hand-authored or edited in place, only
-    ever created -- here, generated when a Batch (not implemented yet) is
-    saved. Once created it must stay runnable and scoreable completely
-    unchanged, even a year from now, so every reference it holds has to be
-    frozen at creation time.
-
-    That is why `agent`, `case` and `expect` below point at *Trail* rows,
-    never at Branch rows. A Branch (e.g. AgentBranchModel) is a mutable,
-    named pointer -- editing the agent's instructions or swapping its
-    connection repoints the same branch at a new trail -- so anchoring an
-    Experiment to a branch would let its meaning drift out from under it
-    later. Anchoring directly to the trail is what makes an Experiment's
-    agent, case and expected answer permanent: those rows are enforced
-    immutable at the database level (see
-    chatddx.django.orm.apps.install_trail_triggers) and every trail a trail
-    references is itself pinned the same way, all the way down.
-
-    See chatddx.repo.shufflers.experiment for the (owner, tags, agent,
-    case) -> Experiment construction logic, including the check for the
-    piece of information this model *cannot* by itself guarantee is
-    present: a matching Expect for the agent's output_type.
-    """
-
     class Meta:
         app_label = "orm"
         db_table = "agents_experiment"
@@ -69,12 +43,6 @@ class ExperimentModel(Model):
         related_name="shared_experiments",
     )
 
-    # Comma-separated labels, deliberately *not* a many-to-many to TagModel:
-    # TagModel rows are live, owner-scoped and renamable/deletable (see
-    # chatddx.repo.shufflers.tags), so a reference to one could change or
-    # vanish out from under a supposedly-frozen experiment. Storing the
-    # tag text directly keeps it frozen alongside everything else here, at
-    # the cost of it no longer tracking renames of the "live" tag.
     tags = CharField(max_length=255, blank=True, default="")
 
     agent = ForeignKey(
@@ -99,19 +67,6 @@ class ExperimentModel(Model):
 
 
 class RunModel(Model):
-    """One attempt, tracked through pgqueuer, to execute an Experiment.
-
-    A Run is the queue-facing counterpart to Experiment: it holds every
-    piece of context pgqueuer needs to pick the job up, execute it and
-    record the outcome, without pgqueuer having to know anything about
-    agents, cases or trails itself.
-
-    `session` is None until a run completes successfully, at which point
-    it is set to the SessionModel the run produced -- mirroring how
-    `status` starts at STORED and only reaches COMPLETED once that
-    session exists. A run that ends in ERRORED never gets a session.
-    """
-
     class Meta:
         app_label = "orm"
         db_table = "agents_run"
@@ -141,7 +96,7 @@ class RunModel(Model):
         on_delete=PROTECT,
         related_name="runs",
     )
-    # None until the run completes successfully; see class docstring.
+
     session = ForeignKey(
         SessionModel,
         default=None,

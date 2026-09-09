@@ -51,12 +51,6 @@ class ExperimentAdmin(TypedModelAdmin[Experiment]):
 
 @admin.register(SharedExperiment)
 class SharedExperimentAdmin(ExperimentAdmin):
-    # Deliberately calls TypedModelAdmin.get_queryset() rather than
-    # super() here: super() is ExperimentAdmin.get_queryset(), which
-    # already filters to owner__name=<me> -- stacking a collaborator
-    # filter on top of that would only ever match an experiment you both
-    # own *and* collaborate on, i.e. never. This tab is for experiments
-    # someone else owns and shared with you.
     def get_queryset(self, request: HttpRequest):
         qs = TypedModelAdmin.get_queryset(self, request)
 

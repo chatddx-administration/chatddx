@@ -26,22 +26,6 @@ from chatddx.repo.shufflers.main import ensure_identity
 
 
 class TagsField(ModelMultipleChoiceField):
-    """A tags widget that can create tags on the fly, scoped to one owner.
-
-    The widget below renders as a select2 multi-select with tagging turned
-    on (`data-tags`): picking an existing option submits its pk like any
-    other `ModelMultipleChoiceField` value, but typing a name with no
-    matching tag submits that literal name instead, with no pk behind it.
-    Get-or-create it by name -- the same thing `dump_case_tags()` does when
-    loading tags from `data/tags.toml` -- rather than rejecting it as an
-    invalid choice.
-
-    Tags are owner-scoped (see TagModel), so both the suggestions offered
-    (`queryset`, set by `CaseForm.__init__`) and any tag created here are
-    confined to `owner` -- one owner's tags never show up as suggestions
-    for, or get silently reused by, another.
-    """
-
     owner: IdentityModel | None = None
 
     def clean(self, value: Any) -> list[TagModel]:

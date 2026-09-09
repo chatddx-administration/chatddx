@@ -7,16 +7,6 @@ from chatddx.experiment.models import ExperimentModel
 
 
 class Experiment(ExperimentModel):
-    """Read-only admin-facing proxy for ExperimentModel.
-
-    Like Session (chatddx.history.proxies.Session), an Experiment is never
-    hand-authored or edited in place -- it's only ever generated (today by
-    chatddx.repo.shufflers.experiment, eventually by saving a Batch) -- so
-    the admin registered against this proxy (see
-    chatddx.django.portal.admin.experiment) exposes it purely for
-    inspection, with no add/change/delete affordances.
-    """
-
     @final
     class Meta:
         proxy = True

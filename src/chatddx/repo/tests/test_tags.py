@@ -55,8 +55,6 @@ async def test_dump_case_tags_and_lookup(owner: IdentityModel):
 @pytest.mark.django_db
 @pytest.mark.asyncio
 async def test_tags_are_owner_scoped(owner: IdentityModel):
-    """Same-named tags for different owners are independent rows, and a
-    lookup under one owner never surfaces another owner's branches."""
     other_owner = await ensure_identity_async("olof")
 
     cases_dir = Path(__file__).parent / "data/cases"

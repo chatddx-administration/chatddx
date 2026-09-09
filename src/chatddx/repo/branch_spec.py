@@ -16,11 +16,6 @@ from chatddx.repo.trail_specs import (
 
 class CaseBranchSpec(BranchSpec[CaseSpec]):
     target: CaseSpec
-    # Tags live on CaseBranchModel, not the (fingerprinted) trail, so they
-    # sit here rather than on CaseSpec/CaseBase -- same reasoning as
-    # BranchBase.collaborators. NinjaSchema resolves the M2M manager to
-    # TagModel instances (see ninja.schema.DjangoGetter); pull out the pks
-    # the form actually wants.
     tags: list[int] = []
 
     @field_validator("tags", mode="before")

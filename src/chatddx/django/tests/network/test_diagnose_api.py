@@ -1,11 +1,4 @@
 # pyright: basic
-"""End-to-end test of the /diagnose endpoint against a live LLM backend.
-
-Requires network access to the endpoint the "swift" agent resolves to in
-data/test-registry.toml. See test_diagnose_api.py (one level up) for the
-mocked, network-free version of this test.
-"""
-
 from pathlib import Path
 
 import pytest

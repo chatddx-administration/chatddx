@@ -1,8 +1,3 @@
-"""Tests of branch/trail queryset and form-data behavior that don't go
-through the admin HTTP layer at all — split out of test_admin_timeline.py,
-where they didn't belong despite using the same registry fixtures.
-"""
-
 import pytest
 from django.db.models import Q
 

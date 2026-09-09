@@ -1,12 +1,3 @@
-"""Admin version-history ("timeline") behavior, verified generically across
-every branch-backed model: saving is idempotent, renaming forks a new
-branch, and the change-view pager reports correct prev/next/version info.
-
-See also test_admin_branch_forms.py (single-model add/change/delete flows)
-and test_admin_superagent_form.py (the composite SuperAgent form) for other
-admin behavior split out of what used to be this one file.
-"""
-
 from typing import Any, Callable
 
 import pytest

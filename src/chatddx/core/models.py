@@ -41,20 +41,6 @@ class IdentityModel(Model):
 
 
 class TagModel(Model):
-    """A plain label a branch (currently: case branches) can be marked with.
-
-    Tags are not repo-matter: there is no trail/branch pair for a tag and no
-    central tag-management surface. This is just a lookup table plus
-    whatever many-to-many relations branch models declare against it, used
-    to find the branches -- and through them, the trail currently
-    associated with each -- carrying a given label.
-
-    Tags are owner-scoped: the same name can exist independently for
-    different owners, and a tag is only ever suggested to, or creatable by,
-    its own owner -- see TagsField in the case admin form. This keeps one
-    owner's tag vocabulary from leaking into another's suggestions.
-    """
-
     class Meta:
         app_label = "orm"
         db_table = "agents_tag"
