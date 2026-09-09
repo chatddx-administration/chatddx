@@ -1,6 +1,6 @@
 # src/chatddx/django/portal/admin/expect.py
 # pyright: basic
-from typing import Any, final
+from typing import Any
 
 from django.forms import CharField, ModelChoiceField, ModelForm
 from django.http import HttpRequest
@@ -8,10 +8,10 @@ from unfold.contrib.inlines.admin import NonrelatedTabularInline
 from unfold.contrib.inlines.forms import NonrelatedInlineModelFormSet
 from unfold.widgets import UnfoldAdminSelectWidget, UnfoldAdminTextareaWidget
 
+from chatddx.django.orm.qs import qs_canon
 from chatddx.repo import proxies
 from chatddx.repo.branch_models import ExpectBranchModel, ScorerBranchModel
 from chatddx.repo.shufflers.expect import dump_expect, load_expects
-from chatddx.repo.shufflers.main import qs_canon
 
 
 class ScorerChoiceField(ModelChoiceField):
@@ -57,7 +57,6 @@ class ExpectInlineForm(ModelForm):
             self.initial.setdefault("scorer", scorer_branch)
 
 
-@final
 class ExpectInlineFormSet(NonrelatedInlineModelFormSet):
     instance: proxies.Case
 
@@ -94,7 +93,6 @@ class ExpectInlineFormSet(NonrelatedInlineModelFormSet):
         return self._dump(form)
 
 
-@final
 class ExpectInline(NonrelatedTabularInline):
     model = ExpectBranchModel
     form = ExpectInlineForm

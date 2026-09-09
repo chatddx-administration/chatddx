@@ -5,17 +5,17 @@ from typing import Any, override
 from django.contrib import admin
 from django.http import HttpRequest
 
+from chatddx.django.orm.qs import qs_super_agent
 from chatddx.django.portal.admin.base import BranchModelAdmin, TypedModelAdmin
-from chatddx.django.portal.admin.utils import get_branch_link
 from chatddx.django.portal.forms import (
     SuperAgentForm,
 )
-from chatddx.repo import proxies
-from chatddx.repo.shufflers.main import (
-    agent_relations,
+from chatddx.django.portal.utils import (
+    get_branch_link,
     load_template_data,
-    qs_super_agent,
 )
+from chatddx.repo import proxies
+from chatddx.repo.main import agent_relations
 
 
 @admin.register(proxies.SuperAgent)

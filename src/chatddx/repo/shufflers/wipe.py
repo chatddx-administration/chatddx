@@ -20,10 +20,7 @@ from chatddx.repo.branch_models import (
 )
 from chatddx.utils import make_async
 
-# Every kind of Branch a user can own -- deleting these never touches the
-# (shared, content-addressed) Trail rows they point to: TrailModel rows
-# have no `owner` of their own and the DB refuses to delete or update them
-# anyway (see chatddx.django.orm.apps.install_trail_triggers).
+# All ownable branches
 BRANCH_MODELS = [
     AgentBranchModel,
     ConnectionBranchModel,
@@ -38,15 +35,6 @@ BRANCH_MODELS = [
 
 
 def wipe_data(owner_name: str) -> bool:
-    """Delete everything `owner_name` owns -- every Message, Run, Session,
-    Experiment, Branch of every kind, and Tag -- then the identity itself.
-
-    This is the migration strategy for changes that reshape owned data
-    (rather than migrating old rows forward in place): wipe, then re-run
-    `chatddx init-data`.
-
-    Returns False (a no-op) if `owner_name` names no identity.
-    """
     try:
         owner = IdentityModel.objects.get(name=owner_name)
     except IdentityModel.DoesNotExist:

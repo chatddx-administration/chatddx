@@ -1,5 +1,3 @@
-# src/chatddx/repo/shufflers/experiment.py
-
 from __future__ import annotations
 
 import tomllib
@@ -7,6 +5,7 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+from chatddx.django.orm.qs import qs_canon
 from chatddx.experiment.models import ExperimentModel
 from chatddx.repo.branch_models import (
     AgentBranchModel,
@@ -14,7 +13,7 @@ from chatddx.repo.branch_models import (
     ExpectBranchModel,
     ScorerBranchModel,
 )
-from chatddx.repo.shufflers.main import ensure_identity, qs_canon
+from chatddx.repo.shufflers.main import ensure_identity
 from chatddx.repo.trail_models import (
     AgentTrailModel,
     CaseTrailModel,

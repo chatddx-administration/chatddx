@@ -2,11 +2,11 @@ import pytest
 from django.db.models import Q
 
 from chatddx.core.models import IdentityModel
+from chatddx.django.orm.qs import qs_super_agent
 from chatddx.repo import proxies
 from chatddx.repo.branch_models import AgentBranchModel
 from chatddx.repo.form_data_in import SamplingParamsFormDataIn
 from chatddx.repo.form_data_out import TemplateData
-from chatddx.repo.shufflers.main import qs_super_agent
 from chatddx.repo.trail_models import AgentTrailModel, ConnectionTrailModel
 
 

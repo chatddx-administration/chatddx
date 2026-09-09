@@ -230,6 +230,13 @@ BundleName = Literal[
     "case",
 ]
 
+agent_relations: list[BundleName] = [
+    "connection",
+    "sampling_params",
+    "output_type",
+    "tool_group",
+]
+
 
 def is_bundle_name(val: str) -> TypeGuard[BundleName]:
     return val in get_args(BundleName)

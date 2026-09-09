@@ -6,8 +6,9 @@ from pathlib import Path
 
 from django.db.models import QuerySet
 
+from chatddx.django.orm.qs import qs_canon
 from chatddx.repo.branch_models import CaseBranchModel, ExpectBranchModel
-from chatddx.repo.shufflers.main import ensure_identity, qs_canon
+from chatddx.repo.shufflers.main import ensure_identity
 from chatddx.repo.trail_models import CaseTrailModel, ExpectTrailModel, ScorerTrailModel
 from chatddx.repo.trail_schemas import CaseSchema, ExpectSchema, ScorerSchema
 from chatddx.utils import make_async

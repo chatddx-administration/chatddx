@@ -1,35 +1,23 @@
 # src/chatddx/repo/shufflers/main.py
-from collections import defaultdict
 from pathlib import Path
-from typing import Any, Literal, get_args, overload
+from typing import Any, Literal, overload
 
-from django.db.models import (
-    Count,
-    F,
-    ForeignKey,
-    OneToOneField,
-    OuterRef,
-    Q,
-    QuerySet,
-    Subquery,
-)
+from django.db.models import QuerySet
 
-from chatddx.core.django_fields import RelatedArrayField
+from chatddx.core.django_fields import resolve_related_array_fields
 from chatddx.core.models import IdentityModel
+from chatddx.django.orm.qs import qs_canon
 from chatddx.registry.main import parse_registry
 from chatddx.repo.base import (
-    BaseFormDataOut,
     BranchModel,
     BranchSpec,
     TrailModel,
     TrailSchema,
     TrailSpec,
 )
-from chatddx.repo.branch_models import BranchModelRegistry, OutputTypeBranchModel
-from chatddx.repo.form_data_out import TemplateData
+from chatddx.repo.branch_models import BranchModelRegistry
 from chatddx.repo.main import BundleName, Repo
-from chatddx.repo.trail_schemas import CaseSchema
-from chatddx.repo.trail_schemas import TrailRegistry
+from chatddx.repo.trail_schemas import CaseSchema, TrailRegistry
 from chatddx.repo.trail_specs import (
     AgentSpec,
     CaseSpec,
@@ -41,13 +29,6 @@ from chatddx.repo.trail_specs import (
 )
 from chatddx.utils import ListOf, OneOf, make_async, one_or_list_of
 
-agent_relations: list[BundleName] = [
-    "connection",
-    "sampling_params",
-    "output_type",
-    "tool_group",
-]
-
 
 def ensure_identity(name: str) -> IdentityModel:
     owner, _ = IdentityModel.objects.get_or_create(name=name)
@@ -55,84 +36,6 @@ def ensure_identity(name: str) -> IdentityModel:
 
 
 ensure_identity_async = make_async(ensure_identity)
-
-
-def qs_super_agent[T: BranchModel](qs: QuerySet[T], owner_name: str):
-    def subquery(owner_name: str, model: str, column: str):
-        branch_model_cls = Repo(model, BranchModel)
-
-        return branch_model_cls.objects.filter(
-            target=OuterRef(f"target__{model}"),
-            owner__name=owner_name,
-        ).values(column)[:1]
-
-    branch_annotations = {
-        f"{model}_{field}": Subquery(subquery(owner_name, model, field))
-        for field in ("name", "id")
-        for model in agent_relations
-    }
-    return qs.select_related(
-        *[f"target__{model}" for model in agent_relations]
-    ).annotate(**branch_annotations)
-
-
-def qs_owned_trails[T: TrailModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    return (
-        qs.filter(branches__owner__name=owner_name)
-        .annotate(branch_name=F("branches__name"))
-        .order_by("id")
-        .distinct("id")
-    )
-
-
-def qs_canon[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    owned_qs = qs.filter(owner__name=owner_name)
-
-    count_subquery = (
-        qs.filter(owner_id=OuterRef("owner_id"), name=OuterRef("name"))
-        .values("owner_id", "name")
-        .annotate(total=Count("id"))
-        .values("total")
-    )
-
-    canonical_ids = (
-        owned_qs.order_by("owner_id", "name", "-timestamp")
-        .distinct("owner_id", "name")
-        .values_list("id", flat=True)
-    )
-
-    return (
-        owned_qs.filter(id__in=canonical_ids)
-        .annotate(_version_count=Subquery(count_subquery))
-        .order_by("-timestamp")
-    )
-
-
-def qs_canon_col[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    owned_qs = qs.filter(Q(owner__name=owner_name) | Q(collaborators__name=owner_name))
-
-    count_subquery = (
-        qs.filter(owner_id=OuterRef("owner_id"), name=OuterRef("name"))
-        .values("owner_id", "name")
-        .annotate(total=Count("id"))
-        .values("total")
-    )
-
-    canonical_ids = (
-        owned_qs.order_by("owner_id", "name", "-timestamp")
-        .distinct("owner_id", "name")
-        .values_list("id", flat=True)
-    )
-
-    return (
-        owned_qs.filter(id__in=canonical_ids)
-        .annotate(_version_count=Subquery(count_subquery))
-        .order_by("-timestamp")
-    )
-
-
-def qs_owned[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    return qs.filter(owner__name=owner_name)
 
 
 def dump_trail_registry(registry_path: Path, owner_name: str):
@@ -159,6 +62,9 @@ def dump_trail_registry(registry_path: Path, owner_name: str):
     return dumped_registry
 
 
+dump_trail_registry_async = make_async(dump_trail_registry)
+
+
 def dump_cases(cases_dir: Path, owner_name: str) -> dict[int, BranchModel]:
     dumped_cases: dict[int, BranchModel] = {}
 
@@ -181,45 +87,6 @@ def dump_cases(cases_dir: Path, owner_name: str) -> dict[int, BranchModel]:
 
 
 dump_cases_async = make_async(dump_cases)
-
-
-def load_template_data(owner_name: str):
-
-    payload: dict[BundleName, dict[str, BaseFormDataOut]] = defaultdict(dict)
-
-    for bundle in get_args(BundleName):
-        form_data_cls = Repo(bundle, BaseFormDataOut)
-        branch_specs = load_branches(bundle, owner_name)
-
-        for branch_spec in branch_specs:
-            branch_dict = branch_spec.model_dump()
-            form_data = branch_dict | branch_dict["target"]
-            payload[bundle][str(form_data["id"])] = form_data_cls.model_validate(
-                form_data
-            )
-
-    return TemplateData.model_validate(payload)
-
-
-def load_form_data(
-    branch: BranchModel | BranchSpec,
-) -> BaseFormDataOut:
-
-    match branch:
-        case BranchModel():
-            branch.target = resolve_related_array_fields(branch.target)
-            branch_spec = Repo(branch, BranchSpec).model_validate(branch)
-        case BranchSpec():
-            branch_spec = branch
-
-    branch_dict = branch_spec.model_dump()
-    form_data = Repo(branch, BaseFormDataOut).model_validate(
-        branch_dict | branch_dict["target"]
-    )
-    return form_data
-
-
-dump_trail_registry_async = make_async(dump_trail_registry)
 
 
 def load_agents(
@@ -494,31 +361,3 @@ def dump_trail[T: TrailModel](
 
 
 dump_trail_async = make_async(dump_trail)
-
-
-def resolve_related_array_fields(model: TrailModel):
-    for field in model._meta.concrete_fields:
-        if isinstance(field, RelatedArrayField):
-            value = getattr(model, field.name)
-
-            if not value:
-                setattr(model, field.name, [])
-                continue
-
-            queryset = field.associated_model.objects.filter(pk__in=value)
-            resolved_value = list(queryset)
-
-            for obj in resolved_value:
-                _ = resolve_related_array_fields(obj)
-
-            setattr(model, field.name, resolved_value)
-
-        elif isinstance(field, (ForeignKey, OneToOneField)):
-            associated_model = getattr(model, field.name, None)
-            if associated_model is not None:
-                _ = resolve_related_array_fields(associated_model)
-
-    return model
-
-
-resolve_related_array_fields_async = make_async(resolve_related_array_fields)

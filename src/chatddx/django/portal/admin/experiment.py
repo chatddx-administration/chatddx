@@ -7,8 +7,8 @@ from django.db.models import ForeignKey, JSONField, QuerySet
 from django.http import HttpRequest
 
 from chatddx.core.choices import RunStatusChoices
+from chatddx.django.orm.qs import qs_experiments
 from chatddx.django.portal.admin.base import TypedModelAdmin
-from chatddx.django.portal.admin.utils import qs_experiments
 from chatddx.experiment.proxies import Experiment, Run, SharedExperiment, SharedRun
 from chatddx.history.proxies import Session
 from chatddx.repo.shufflers.main import ensure_identity

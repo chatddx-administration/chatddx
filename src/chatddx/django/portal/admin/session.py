@@ -5,8 +5,8 @@ from django.contrib import admin
 from django.db.models import Max, Min
 from django.http import HttpRequest
 
+from chatddx.django.orm.qs import qs_messages
 from chatddx.django.portal.admin.base import TypedModelAdmin
-from chatddx.django.portal.admin.utils import qs_messages
 from chatddx.history.proxies import Message, Session, SharedSession
 
 

@@ -16,11 +16,11 @@ from unfold.widgets import (
     UnfoldAdminTextInputWidget,
 )
 
+from chatddx.django.orm.qs import qs_canon, qs_owned_trails
 from chatddx.django.portal.forms.base import BaseForm
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import ToolGroupFormDataIn
 from chatddx.repo.form_data_out import ToolGroupFormDataOut
-from chatddx.repo.shufflers.main import qs_owned_trails
 from chatddx.repo.trail_models import ToolTrailModel
 
 

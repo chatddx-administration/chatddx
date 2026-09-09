@@ -11,14 +11,12 @@ from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from unfold.admin import ModelAdmin
 
+from chatddx.django.orm.qs import qs_canon
 from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.utils import load_template_data
 from chatddx.repo.base import BranchModel, BranchProxy, TrailModel, TrailSchema
 from chatddx.repo.main import BundleName, Repo
-from chatddx.repo.shufflers.main import (
-    dump_branch,
-    load_template_data,
-    qs_canon,
-)
+from chatddx.repo.shufflers.main import dump_branch
 
 
 class TypedModelAdmin[T: DjangoModel](ModelAdmin):

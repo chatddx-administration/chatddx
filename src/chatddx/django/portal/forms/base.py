@@ -7,13 +7,13 @@ from django.forms import ModelForm
 from django.http import HttpRequest
 from pydantic import ValidationError as PydanticValidationError
 
+from chatddx.django.orm.qs import qs_canon
+from chatddx.django.portal.utils import load_form_data
 from chatddx.repo.base import BaseFormDataIn, BaseFormDataOut, BranchModel, TrailModel
 from chatddx.repo.main import Repo
 from chatddx.repo.shufflers.main import (
     ensure_identity,
-    load_form_data,
     load_trail,
-    qs_canon,
 )
 
 

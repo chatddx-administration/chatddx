@@ -1,17 +1,15 @@
-# src/chatddx/repo/shufflers/tags.py
-
 import tomllib
 from pathlib import Path
 
 from chatddx.core.models import TagModel
+from chatddx.django.orm.qs import qs_canon
 from chatddx.repo.base import BranchModel
 from chatddx.repo.branch_models import CaseBranchModel
-from chatddx.repo.shufflers.main import ensure_identity, qs_canon
+from chatddx.repo.shufflers.main import ensure_identity
 from chatddx.utils import make_async
 
 
 def parse_case_tags(tags_path: Path) -> dict[str, list[str]]:
-    """Read the case -> tag-names mapping out of a tags TOML file."""
     data = tomllib.loads(tags_path.read_text(encoding="utf-8"))
 
     return {

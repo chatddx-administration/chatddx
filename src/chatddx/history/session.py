@@ -1,12 +1,12 @@
 # src/chatddx/history/session.py
 from uuid import UUID
 
+from chatddx.core.django_fields import resolve_related_array_fields_async
 from chatddx.core.models import IdentityModel
 from chatddx.core.schemas import IdentitySpec
 from chatddx.history.models import MessageModel, SessionModel
 from chatddx.history.schemas import MessageSpec, SessionSpec
 from chatddx.repo.branch_models import AgentBranchModel
-from chatddx.repo.shufflers.main import resolve_related_array_fields_async
 
 
 async def get_identity(name: str) -> IdentitySpec:

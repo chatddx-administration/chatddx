@@ -1,22 +1,4 @@
 # src/chatddx/experiment/worker.py
-"""
-pgqueuer-backed worker for RunModel.
-
-RunModel *is* the queue: a Run becomes runnable by having its status set to
-`RunStatusChoices.QUEUED`, and a completed Run becomes scoreable by having
-its status become `RunStatusChoices.COMPLETED` -- those are the only two
-states this worker acts on. pgqueuer itself only supplies the trigger --
-one job on its own queue table, entirely separate from `agents_run` -- so
-that "run the queue" can be delivered and processed like any other
-background job (dedup, at-most-once dispatch, LISTEN/NOTIFY) instead of
-reimplementing that plumbing here.
-
-`trigger()` is what `chatddx worker run` calls: it enqueues that one job and
-drains the pgqueuer queue (processes everything currently queued, including
-jobs from any other trigger that landed in the meantime, then returns) --
-so each invocation does one queued -> {completed, errored} pass over Run,
-followed by one completed -> {scored, errored} pass, and exits.
-"""
 
 from __future__ import annotations
 
@@ -36,10 +18,10 @@ from pgqueuer.domain.types import QueueExecutionMode
 from pgqueuer.models import Job
 
 from chatddx.core.choices import RunStatusChoices
+from chatddx.django.orm.qs import qs_canon
 from chatddx.experiment.models import ExperimentModel, RunModel
 from chatddx.history.session import start_session
 from chatddx.repo.branch_models import AgentBranchModel
-from chatddx.repo.shufflers.main import qs_canon
 from chatddx.repo.trail_cache import trail_cache
 from chatddx.repo.trail_specs import AgentSpec
 from chatddx.runtime.runners import run_from_session

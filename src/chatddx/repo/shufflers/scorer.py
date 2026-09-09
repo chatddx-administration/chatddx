@@ -1,17 +1,12 @@
-# src/chatddx/repo/shufflers/scorer.py
-
 from __future__ import annotations
 
+from chatddx.django.orm.qs import qs_canon
 from chatddx.repo.branch_models import ScorerBranchModel
-from chatddx.repo.shufflers.main import ensure_identity, qs_canon
+from chatddx.repo.shufflers.main import ensure_identity
 from chatddx.repo.trail_models import ScorerTrailModel
 from chatddx.repo.trail_schemas import ScorerSchema
 from chatddx.utils import make_async
 
-# The scorers `chatddx init-data` wires in by default -- see
-# chatddx.experiment.scorers for the functions these dotted paths resolve
-# to (chatddx.experiment.worker.score_run does the resolving, via
-# django.utils.module_loading.import_string).
 DEFAULT_SCORER_NAMES = [
     "chatddx.experiment.scorers.exact_match",
     "chatddx.experiment.scorers.regex_match",

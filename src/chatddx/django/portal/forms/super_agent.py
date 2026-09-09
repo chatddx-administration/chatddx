@@ -21,16 +21,15 @@ from chatddx.django.portal.forms.connection import ConnectionForm
 from chatddx.django.portal.forms.output_type import OutputTypeForm
 from chatddx.django.portal.forms.sampling_params import SamplingParamsForm
 from chatddx.django.portal.forms.tool_group import ToolGroupForm
+from chatddx.django.portal.utils import load_form_data
 from chatddx.repo import proxies
 from chatddx.repo.branch_spec import AgentBranchSpec
 from chatddx.repo.form_data_in import SuperAgentFormDataIn
 from chatddx.repo.form_data_out import SuperAgentFormDataOut
-from chatddx.repo.main import BundleName
+from chatddx.repo.main import BundleName, agent_relations
 from chatddx.repo.shufflers.main import (
-    agent_relations,
     dump_branch,
     load_branch,
-    load_form_data,
 )
 from chatddx.repo.trail_models import ToolTrailModel
 

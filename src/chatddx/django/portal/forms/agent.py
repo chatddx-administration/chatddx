@@ -14,18 +14,17 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import IdentityModel
+from chatddx.django.orm.qs import qs_canon, qs_owned_trails
 from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.utils import load_form_data
 from chatddx.repo import proxies
 from chatddx.repo.branch_spec import AgentBranchSpec
 from chatddx.repo.form_data_in import AgentFormDataIn
 from chatddx.repo.form_data_out import AgentFormDataOut
+from chatddx.repo.main import agent_relations
 from chatddx.repo.shufflers.main import (
-    agent_relations,
     dump_branch,
     load_branch,
-    load_form_data,
-    qs_canon,
-    qs_owned_trails,
 )
 from chatddx.repo.trail_models import (
     ConnectionTrailModel,

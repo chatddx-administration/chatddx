@@ -12,9 +12,10 @@ import pytest
 from django.contrib.auth.models import User
 
 from chatddx.core.models import IdentityModel
+from chatddx.django.portal.utils import load_form_data
 from chatddx.repo.branch_models import BranchModelRegistry
 from chatddx.repo.form_data_out import TemplateData
-from chatddx.repo.shufflers.main import dump_trail_registry, load_form_data
+from chatddx.repo.shufflers.main import dump_trail_registry
 
 
 @pytest.fixture(autouse=True)

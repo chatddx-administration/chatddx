@@ -1,12 +1,12 @@
 from collections import OrderedDict
 from typing import cast
 
-from chatddx.repo.base import TrailModel, TrailSpec
-from chatddx.repo.main import Repo
-from chatddx.repo.shufflers.main import (
+from chatddx.core.django_fields import (
     resolve_related_array_fields,
     resolve_related_array_fields_async,
 )
+from chatddx.repo.base import TrailModel, TrailSpec
+from chatddx.repo.main import Repo
 
 
 class TrailCache:

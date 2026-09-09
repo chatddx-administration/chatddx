@@ -9,8 +9,8 @@ from django.utils.safestring import mark_safe
 from markdown import markdown
 from unfold.utils import format_html
 
+from chatddx.django.orm.qs import qs_messages
 from chatddx.django.portal.admin.base import TypedModelAdmin
-from chatddx.django.portal.admin.utils import qs_messages
 from chatddx.history.proxies import Message, Session
 from chatddx.utils import get_step_nav, truncate_content
 
