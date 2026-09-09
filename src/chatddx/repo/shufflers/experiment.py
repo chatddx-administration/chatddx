@@ -63,6 +63,7 @@ def create_experiment(
     agent: AgentTrailModel,
     case: CaseTrailModel,
     tags: list[str] | None = None,
+    scorer: str = "",
 ) -> ExperimentModel:
     """
     Freeze one (agent, case) pair into a runnable, scoreable Experiment.
@@ -80,6 +81,11 @@ def create_experiment(
     so it stays perfectly reproducible as *input*), but re-running an agent
     with no fixed seed is not guaranteed to reproduce the same *output*
     a year from now. That gets a warning rather than a hard failure.
+
+    `scorer` is a dotted import path to the function that will score this
+    Experiment's completed Runs (see ExperimentModel.scorer and
+    chatddx.experiment.worker.score_run). It's optional -- left blank, the
+    Experiment can still be run, just never scored.
     """
     owner = ensure_identity(owner_name)
 
@@ -107,6 +113,7 @@ def create_experiment(
         case=case,
         expect=expect,
         tags=", ".join(tags or []),
+        scorer=scorer,
     )
 
 
@@ -176,6 +183,7 @@ def dump_experiments(
                     agent=agent_branch.target,
                     case=case_branch.target,
                     tags=list(entry.get("tags", [])),
+                    scorer=entry.get("scorer", ""),
                 )
             except ValueError as exc:
                 print(f"experiment {name}: skipped ({exc})")

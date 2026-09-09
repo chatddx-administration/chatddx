@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from django.db.models import (
     PROTECT,
     CharField,
     DateTimeField,
     ForeignKey,
+    JSONField,
     ManyToManyField,
     Model,
     UUIDField,
@@ -67,6 +69,20 @@ class ExperimentModel(Model):
     )
     expect_id: int
 
+    scorer = CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text=(
+            "Dotted import path to the function that scores this "
+            "experiment's completed Runs, e.g. "
+            "'chatddx.experiment.scorers.exact_match'. The worker resolves "
+            "and calls it once per completed Run (see "
+            "chatddx.experiment.worker.score_run); left blank, completed "
+            "Runs of this experiment are never scored."
+        ),
+    )
+
     @property
     def tag_list(self) -> list[str]:
         return [tag.strip() for tag in self.tags.split(",") if tag.strip()]
@@ -116,3 +132,14 @@ class RunModel(Model):
         related_name="runs",
     )
     session_id: int | None
+
+    result: JSONField[Any | None] = JSONField(
+        default=None,
+        null=True,
+        blank=True,
+        help_text=(
+            "Whatever the experiment's scorer function returned for this "
+            "Run (see ExperimentModel.scorer); set once the Run reaches "
+            "RunStatusChoices.SCORED."
+        ),
+    )

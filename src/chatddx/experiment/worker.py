@@ -3,21 +3,25 @@
 pgqueuer-backed worker for RunModel.
 
 RunModel *is* the queue: a Run becomes runnable by having its status set to
-`RunStatusChoices.QUEUED`, and that's the only state this worker acts on.
-pgqueuer itself only supplies the trigger -- one job on its own queue table,
-entirely separate from `agents_run` -- so that "run the queue" can be
-delivered and processed like any other background job (dedup, at-most-once
-dispatch, LISTEN/NOTIFY) instead of reimplementing that plumbing here.
+`RunStatusChoices.QUEUED`, and a completed Run becomes scoreable by having
+its status become `RunStatusChoices.COMPLETED` -- those are the only two
+states this worker acts on. pgqueuer itself only supplies the trigger --
+one job on its own queue table, entirely separate from `agents_run` -- so
+that "run the queue" can be delivered and processed like any other
+background job (dedup, at-most-once dispatch, LISTEN/NOTIFY) instead of
+reimplementing that plumbing here.
 
 `trigger()` is what `chatddx worker run` calls: it enqueues that one job and
 drains the pgqueuer queue (processes everything currently queued, including
 jobs from any other trigger that landed in the meantime, then returns) --
-so each invocation does exactly one queued -> {completed, errored} pass over
-Run and exits.
+so each invocation does one queued -> {completed, errored} pass over Run,
+followed by one completed -> {scored, errored} pass, and exits.
 """
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -25,6 +29,7 @@ from typing import Any
 
 import psycopg
 from django.db import connections
+from django.utils.module_loading import import_string
 from pgqueuer import PgQueuer
 from pgqueuer.db import PsycopgDriver
 from pgqueuer.domain.types import QueueExecutionMode
@@ -85,6 +90,7 @@ def build_pgqueuer(connection: psycopg.AsyncConnection) -> PgQueuer:
     @pgq.entrypoint(ENTRYPOINT)
     async def _process_queued_runs(job: Job) -> None:
         await process_queued_runs()
+        await process_completed_runs()
 
     return pgq
 
@@ -166,11 +172,69 @@ async def execute_run(run_id: int) -> None:
         await run.asave(update_fields=["session_id", "status"])
 
 
+async def process_completed_runs() -> None:
+    """Score every currently completed Run, oldest first."""
+    run_ids = [
+        run_id
+        async for run_id in (
+            RunModel.objects.filter(status=RunStatusChoices.COMPLETED)
+            .order_by("timestamp")
+            .values_list("id", flat=True)
+        )
+    ]
+
+    for run_id in run_ids:
+        await score_run(run_id)
+
+
+async def score_run(run_id: int) -> None:
+    """Score one completed Run: resolve its Experiment's `scorer` (a dotted
+    import path, see ExperimentModel.scorer) and call it with the Run,
+    storing whatever it returns on Run.result. Like execute_run, a scoring
+    failure is caught and recorded as a status rather than raised, so one
+    bad Run doesn't stop the rest of the pass.
+
+    An Experiment with no `scorer` configured is left alone -- not every
+    Experiment needs to be scored, so a blank `scorer` isn't an error.
+
+    The final write is conditioned on the Run still being COMPLETED, which
+    is what stands in for a claim here: if a concurrent pass already scored
+    this Run, this one's write is simply a no-op.
+    """
+    run = await RunModel.objects.select_related(
+        "experiment", "experiment__expect"
+    ).aget(pk=run_id)
+
+    scorer_path = run.experiment.scorer
+    if not scorer_path:
+        return
+
+    result: Any = None
+
+    try:
+        scorer = import_string(scorer_path)
+        result = (
+            await scorer(run)
+            if inspect.iscoroutinefunction(scorer)
+            else await asyncio.to_thread(scorer, run)
+        )
+        status = RunStatusChoices.SCORED
+
+    except Exception:
+        logger.exception("scoring run %s failed", run.uuid)
+        status = RunStatusChoices.ERRORED
+
+    _ = await RunModel.objects.filter(
+        pk=run.pk, status=RunStatusChoices.COMPLETED
+    ).aupdate(status=status, result=result)
+
+
 async def trigger() -> None:
     """Enqueue one trigger job and drain the pgqueuer queue: process it (and
     anything else already queued) and return. This is the "on trigger" the
     worker system is wired around -- call it, and every Run that was queued
-    at that point gets run, oldest first."""
+    at that point gets run oldest first, and every Run that was (or just
+    became) completed gets scored oldest first."""
     async with _connect() as connection:
         pgq = build_pgqueuer(connection)
 

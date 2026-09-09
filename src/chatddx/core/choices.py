@@ -50,3 +50,4 @@ class RunStatusChoices(TextChoices):
     RUNNING = "running", "Running"
     ERRORED = "errored", "Errored"
     COMPLETED = "completed", "Completed"
+    SCORED = "scored", "Scored"
