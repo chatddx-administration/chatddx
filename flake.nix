@@ -95,6 +95,7 @@
             packages = [
               venv
               pkgs.uv
+              pkgs.basedpyright
             ];
             env = {
               UV_NO_SYNC = "1";
