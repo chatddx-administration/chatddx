@@ -99,6 +99,11 @@ UNFOLD = {
                         "link": reverse_lazy("admin:orm_experiment_changelist"),
                     },
                     {
+                        "title": "Runs",
+                        "icon": "play_circle",
+                        "link": reverse_lazy("admin:orm_run_changelist"),
+                    },
+                    {
                         "title": "Database",
                         "icon": "database",
                         "link": reverse_lazy("admin:index"),
@@ -169,6 +174,22 @@ UNFOLD = {
                 {
                     "title": "Shared with Me",
                     "link": reverse_lazy("admin:orm_sharedexperiment_changelist"),
+                },
+            ],
+        },
+        {
+            "models": [
+                "orm.run",
+                "orm.sharedrun",
+            ],
+            "items": [
+                {
+                    "title": "My Runs",
+                    "link": reverse_lazy("admin:orm_run_changelist"),
+                },
+                {
+                    "title": "Shared with Me",
+                    "link": reverse_lazy("admin:orm_sharedrun_changelist"),
                 },
             ],
         },
