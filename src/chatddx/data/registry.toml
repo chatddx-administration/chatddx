@@ -29,6 +29,15 @@ extends = ["qwen-3b"]
 sampling_params = ["deterministic", "no-thinking"]
 output_type = "swift-native"
 
+[agent."qwen-3b free-text"]
+extends = ["qwen-3b"]
+output_type = "free-text"
+
+[agent."qwen-3b free-text seed=0"]
+extends = ["qwen-3b"]
+sampling_params = ["deterministic", "no-thinking"]
+output_type = "free-text"
+
 [agent."gpt-4o swift-tool"]
 extends = ["gpt-4o"]
 output_type = "swift-tool"
@@ -45,6 +54,15 @@ output_type = "swift-native"
 extends = ["gpt-4o"]
 sampling_params = ["deterministic", "standard-openai"]
 output_type = "swift-native"
+
+[agent."gpt-4o free-text"]
+extends = ["gpt-4o"]
+output_type = "free-text"
+
+[agent."gpt-4o free-text seed=0"]
+extends = ["gpt-4o"]
+sampling_params = ["deterministic", "standard-openai"]
+output_type = "free-text"
 
 [connection.qwen3-8b]
 model = "Qwen/Qwen3-8B-AWQ"

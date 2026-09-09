@@ -1,0 +1,21 @@
+# src/chatddx/repo/tests/data/experiments/test-experiments.toml
+#
+# agent-2 has a fixed seed (see sampling_params-2 in ../test-registry.toml),
+# so this one builds cleanly with no warning.
+[experiment.exp-1]
+agent = "agent-2"
+case = "case-1"
+tags = ["smoke"]
+
+# Names a case branch that was never dumped for the test owner: exercises
+# the "unknown branch" skip path in dump_experiments().
+[experiment.exp-missing-case]
+agent = "agent-2"
+case = "no-such-case"
+
+# "swift" pairs with case-1 fine as branches, but no Expect was ever
+# created for (case-1, output_type "swift"): exercises the "no Expect"
+# skip path.
+[experiment.exp-missing-expect]
+agent = "swift"
+case = "case-1"

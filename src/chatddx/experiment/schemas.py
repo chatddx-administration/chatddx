@@ -1,0 +1,41 @@
+# src/chatddx/experiment/schemas.py
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import UUID
+
+from ninja import Schema as NinjaSchema
+from pydantic import BaseModel, field_validator
+
+from chatddx.repo.trail_schemas import AgentSchema, CaseSchema, ExpectSchema
+from chatddx.repo.trail_specs import AgentSpec, CaseSpec, ExpectSpec
+
+
+class ExperimentBase(BaseModel):
+    uuid: UUID
+    timestamp: datetime
+    owner_id: int
+    tags: list[str] = []
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def _split_tags(cls, value: object) -> object:
+        # ExperimentModel.tags is a single comma-separated CharField (see
+        # chatddx.experiment.models for why this isn't a TagModel
+        # relation); split it back into the list callers actually want.
+        if isinstance(value, str):
+            return [tag.strip() for tag in value.split(",") if tag.strip()]
+        return value
+
+
+class ExperimentSchema(ExperimentBase):
+    agent: AgentSchema
+    case: CaseSchema
+    expect: ExpectSchema
+
+
+class ExperimentSpec(ExperimentBase, NinjaSchema):
+    id: int
+    agent: AgentSpec
+    case: CaseSpec
+    expect: ExpectSpec

@@ -1,0 +1,47 @@
+# src/chatddx/data/experiments/samples.toml
+#
+# Sample Experiments for `chatddx init-data` (see
+# chatddx.repo.shufflers.experiment.dump_experiments). Each entry names an
+# `agent` and a `case` branch that must already exist for the owner --
+# both are dumped earlier in `init-data`, from `registry.toml` and
+# `cases/` respectively. `expect` is never listed here: it's resolved at
+# creation time from the case's currently canonical Expect for the
+# agent's own output_type (see ExperimentModel), which is why every agent
+# below uses one of the "... free-text" registry variants -- the only
+# ones whose output_type matches the plain-text answers dumped from
+# `expects/` by the default `init-data` run.
+#
+# `tags` are free-form, comma-joined labels on the Experiment itself (see
+# ExperimentModel.tags) -- unrelated to the case's own TagModel tags in
+# tags.toml.
+
+[experiment."dutch-fall-baseline-1"]
+agent = "gpt-4o free-text seed=0"
+case = "Dutchfall1w"
+tags = ["baseline", "dutch-fall"]
+
+[experiment."dutch-fall-baseline-2"]
+agent = "qwen-3b free-text seed=0"
+case = "Dutchfall2w"
+tags = ["baseline", "dutch-fall"]
+
+[experiment."edn-baseline-1"]
+agent = "qwen-3b free-text seed=0"
+case = "casesfromedn1"
+tags = ["baseline", "edn"]
+
+[experiment."openxddx-baseline-1"]
+agent = "gpt-4o free-text seed=0"
+case = "openxddx-case_1"
+tags = ["baseline", "openxddx"]
+
+# Deliberately not the "seed=0" variant: `gpt-4o free-text` carries no
+# fixed sampling seed, so building this experiment prints a warning --
+# its agent, case and expect are all pinned trails and will never change,
+# but re-running the agent isn't guaranteed to reproduce the same output
+# a year from now. See create_experiment() in
+# chatddx.repo.shufflers.experiment.
+[experiment."openxddx-no-seed-demo"]
+agent = "gpt-4o free-text"
+case = "openxddx-case_2"
+tags = ["smoke-test", "no-seed"]
