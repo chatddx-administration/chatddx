@@ -16,6 +16,7 @@ class ExperimentAdmin(TypedModelAdmin[Experiment]):
         "agent",
         "case",
         "expect",
+        "scorer",
         "collaborators_csv",
     ]
     fields = list_display

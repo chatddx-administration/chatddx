@@ -171,3 +171,162 @@ async def test_process_queued_runs_processes_oldest_first(
     await worker.process_queued_runs()
 
     assert processed == [older_run.pk, newer_run.pk]
+
+
+async def complete_run(
+    *, owner: IdentityModel, experiment: ExperimentModel
+) -> RunModel:
+    return await RunModel.objects.acreate(
+        owner=owner,
+        experiment=experiment,
+        status=RunStatusChoices.COMPLETED,
+    )
+
+
+def _stub_scorer(run: RunModel) -> dict[str, int]:
+    return {"run_id": run.pk}
+
+
+async def _stub_async_scorer(run: RunModel) -> dict[str, bool]:
+    return {"async": True}
+
+
+def _broken_scorer(run: RunModel) -> None:
+    raise RuntimeError("scoring blew up")
+
+
+@pytest.mark.asyncio
+async def test_score_run_with_no_scorer_configured_is_left_alone(
+    stray_owner: IdentityModel,
+    experiment: ExperimentModel,
+):
+    """`experiment` (see the fixture above) has no `scorer` set -- scoring
+    it is a no-op, not an error."""
+    run = await complete_run(owner=stray_owner, experiment=experiment)
+
+    await worker.score_run(run.pk)
+
+    await run.arefresh_from_db()
+    assert run.status == RunStatusChoices.COMPLETED
+    assert run.result is None
+
+
+@pytest.mark.asyncio
+async def test_score_run_stores_the_scorer_functions_return_value(
+    stray_owner: IdentityModel,
+    experiment: ExperimentModel,
+):
+    experiment.scorer = "chatddx.experiment.tests.test_worker._stub_scorer"
+    await experiment.asave(update_fields=["scorer"])
+
+    run = await complete_run(owner=stray_owner, experiment=experiment)
+
+    await worker.score_run(run.pk)
+
+    await run.arefresh_from_db()
+    assert run.status == RunStatusChoices.SCORED
+    assert run.result == {"run_id": run.pk}
+
+
+@pytest.mark.asyncio
+async def test_score_run_with_an_async_scorer_is_awaited(
+    stray_owner: IdentityModel,
+    experiment: ExperimentModel,
+):
+    experiment.scorer = "chatddx.experiment.tests.test_worker._stub_async_scorer"
+    await experiment.asave(update_fields=["scorer"])
+
+    run = await complete_run(owner=stray_owner, experiment=experiment)
+
+    await worker.score_run(run.pk)
+
+    await run.arefresh_from_db()
+    assert run.status == RunStatusChoices.SCORED
+    assert run.result == {"async": True}
+
+
+@pytest.mark.asyncio
+async def test_score_run_with_a_failing_scorer_is_recorded_as_errored(
+    stray_owner: IdentityModel,
+    experiment: ExperimentModel,
+):
+    experiment.scorer = "chatddx.experiment.tests.test_worker._broken_scorer"
+    await experiment.asave(update_fields=["scorer"])
+
+    run = await complete_run(owner=stray_owner, experiment=experiment)
+
+    await worker.score_run(run.pk)
+
+    await run.arefresh_from_db()
+    assert run.status == RunStatusChoices.ERRORED
+
+
+@pytest.mark.asyncio
+async def test_score_run_skips_a_run_that_is_no_longer_completed(
+    stray_owner: IdentityModel,
+    experiment: ExperimentModel,
+):
+    experiment.scorer = "chatddx.experiment.tests.test_worker._stub_scorer"
+    await experiment.asave(update_fields=["scorer"])
+
+    run = await complete_run(owner=stray_owner, experiment=experiment)
+    run.status = RunStatusChoices.ERRORED
+    await run.asave(update_fields=["status"])
+
+    await worker.score_run(run.pk)
+
+    await run.arefresh_from_db()
+    assert run.status == RunStatusChoices.ERRORED
+    assert run.result is None
+
+
+@pytest.mark.asyncio
+async def test_process_completed_runs_only_picks_up_completed_runs(
+    stray_owner: IdentityModel,
+    experiment: ExperimentModel,
+):
+    experiment.scorer = "chatddx.experiment.tests.test_worker._stub_scorer"
+    await experiment.asave(update_fields=["scorer"])
+
+    completed_run = await complete_run(owner=stray_owner, experiment=experiment)
+    queued_run = await RunModel.objects.acreate(
+        owner=stray_owner,
+        experiment=experiment,
+        status=RunStatusChoices.QUEUED,
+    )
+
+    await worker.process_completed_runs()
+
+    await completed_run.arefresh_from_db()
+    await queued_run.arefresh_from_db()
+    assert completed_run.status == RunStatusChoices.SCORED
+    assert queued_run.status == RunStatusChoices.QUEUED
+
+
+@pytest.mark.asyncio
+async def test_process_completed_runs_processes_oldest_first(
+    stray_owner: IdentityModel,
+    experiment: ExperimentModel,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    newer_run = await complete_run(owner=stray_owner, experiment=experiment)
+    older_run = await complete_run(owner=stray_owner, experiment=experiment)
+
+    now = timezone.now()
+    await RunModel.objects.filter(pk=newer_run.pk).aupdate(timestamp=now)
+    await RunModel.objects.filter(pk=older_run.pk).aupdate(
+        timestamp=now - timedelta(hours=1)
+    )
+
+    processed: list[int] = []
+    original_score_run = worker.score_run
+
+    async def _tracking_score_run(run_id: int) -> None:
+        processed.append(run_id)
+        await original_score_run(run_id)
+
+    monkeypatch.setattr(worker, "score_run", _tracking_score_run)
+
+    await worker.process_completed_runs()
+
+    assert processed == [older_run.pk, newer_run.pk]
