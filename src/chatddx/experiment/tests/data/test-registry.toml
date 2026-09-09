@@ -1,0 +1,89 @@
+extends = ["some.toml"]
+
+[agent.swift]
+connection = "qwen3-8b"
+instructions = ""
+sampling_params = ["deterministic", "no-thinking"]
+output_type = "swift"
+
+[agent.agent-1]
+instructions = "hello 1"
+sampling_params = "sampling_params-1"
+connection = "connection-1"
+output_type = "output_type-1"
+tool_group = "tool_group-1"
+
+[agent.agent-2]
+instructions = "hello 2"
+sampling_params = ["sampling_params-1", "sampling_params-2"]
+connection = "connection-1"
+output_type = "output_type-1"
+
+[agent.agent-3]
+extends = ["agent-1", "agent-2"]
+instructions = "hello 3"
+connection = "connection-1"
+output_type = "output_type-1"
+tool_group = "tool_group-1"
+
+[connection.connection-1]
+model = "Test/test-1"
+provider = "vllm"
+endpoint = "http://example.com/v1/"
+
+[connection.qwen3-8b]
+model = "Qwen/Qwen3-8B-AWQ"
+provider = "vllm"
+endpoint = "http://pelle.km:12009/v1/"
+
+[connection.qwen3-8b.profile]
+supports_json_schema_output = true
+ignore_streamed_leading_whitespace = true
+
+[output_type.output_type-1]
+definition_path = "./output_types/simple.json"
+
+[output_type.swift]
+definition_path = "./output_types/swift.json"
+
+[sampling_params.sampling_params-1]
+temperature = 0.7
+max_tokens = 150
+stop_sequences = ["\\n\\n", "END"]
+
+[sampling_params.sampling_params-2]
+max_tokens = 155
+seed = 0
+stop_sequences = ["END"]
+
+[sampling_params.deterministic]
+seed = 0
+
+[sampling_params.no-thinking]
+provider_params_path = "./provider_params/disable_thinking.json"
+
+[tool.tool-1]
+command = "tool-1"
+type = "function"
+parameters_path = "./output_types/simple.json"
+
+[tool.tool-2]
+command = "tool-2"
+type = "function"
+parameters_path = "./output_types/simple.json"
+
+[tool.tool-3]
+command = "tool-3"
+type = "function"
+parameters_path = "./output_types/simple.json"
+
+[tool_group.tool_group-1]
+instructions = "use these tools"
+tools = [
+  "tool-1",
+  "tool-2",
+  "tool-3",
+]
+
+[case.case-1]
+payload = "some payload"

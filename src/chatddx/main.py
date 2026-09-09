@@ -1,4 +1,5 @@
 # src/chatddx/main.py
+import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -7,6 +8,7 @@ import django
 import typer
 
 django.setup()
+from chatddx.experiment import worker as run_worker
 from chatddx.repl import app as repl_app
 from chatddx.repo.shufflers.expect import dump_expects
 from chatddx.repo.shufflers.experiment import dump_experiments
@@ -21,9 +23,11 @@ CURRENT_DIR = Path(__file__).resolve().parent
 app = typer.Typer()
 
 init_data = typer.Typer(invoke_without_command=True)
+worker = typer.Typer()
 
 app.add_typer(init_data, name="init-data")
 app.add_typer(repl_app, name="repl")
+app.add_typer(worker, name="worker")
 
 
 @dataclass
@@ -109,3 +113,12 @@ def init_data_(
 
     for experiment_idx, experiment in dump_experiments(experiments_dir, owner).items():
         print(f"{experiment.uuid}: {experiment_idx} experiment {experiment.tags}")
+
+
+@worker.command("run")
+def worker_run():
+    """
+    Trigger one worker pass: run every currently queued Run, oldest first,
+    storing the resulting session and status on each, then exit.
+    """
+    asyncio.run(run_worker.trigger())

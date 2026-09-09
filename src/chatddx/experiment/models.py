@@ -91,6 +91,9 @@ class RunModel(Model):
         IdentityModel,
         on_delete=PROTECT,
     )
+    # Django synthesizes these alongside their ForeignKeys, but django-types
+    # doesn't model that.
+    owner_id: int
     collaborators = ManyToManyField(
         IdentityModel,
         blank=True,
@@ -102,6 +105,7 @@ class RunModel(Model):
         on_delete=PROTECT,
         related_name="runs",
     )
+    experiment_id: int
 
     session = ForeignKey(
         SessionModel,
@@ -111,3 +115,4 @@ class RunModel(Model):
         on_delete=PROTECT,
         related_name="runs",
     )
+    session_id: int | None
