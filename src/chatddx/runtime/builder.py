@@ -42,7 +42,7 @@ def build_agent(
         name=agent_spec.fingerprint,
         instructions=instructions,
         tools=tools,
-        output_retries=agent_spec.output_type.output_retries,
+        retries={"output": agent_spec.output_type.output_retries},
         deps_type=AgentContext,
         output_type=output_type,
         model_settings=model_settings,

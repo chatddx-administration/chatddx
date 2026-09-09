@@ -6,8 +6,8 @@ from typing import Any, final, override
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, LayoutObject, Row
 from django import forms
+from django.contrib import messages
 from django.http.request import QueryDict
-from unfold.admin import messages
 from unfold.widgets import (
     UnfoldAdminExpandableTextareaWidget,
     UnfoldAdminSelect2MultipleWidget,

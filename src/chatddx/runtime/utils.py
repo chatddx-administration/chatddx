@@ -5,6 +5,7 @@ from pydantic_ai import (
     ModelResponsePart,
     NativeToolCallPart,
     NativeToolReturnPart,
+    ToolAvailabilityDeltaPart,
     ToolCallPart,
     ToolReturnPart,
 )
@@ -21,6 +22,10 @@ def get_part_content(
                 content.append(f"{part.tool_name}: {part.args_as_json_str()}")
             elif isinstance(part, (ToolReturnPart, NativeToolReturnPart)):
                 content.append(f"{part.tool_name}: {part.content}")
+            elif isinstance(part, ToolAvailabilityDeltaPart):
+                raise NotImplementedError(
+                    f"unhandled part type '{type(part).__name__}'"
+                )
             else:
                 match part.content:
                     case str():
