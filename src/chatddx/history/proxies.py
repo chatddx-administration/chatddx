@@ -8,6 +8,7 @@ import jsonschema
 from django.contrib import admin
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from pydantic_ai import (
     ModelResponse,
@@ -17,7 +18,6 @@ from pydantic_ai import (
     ToolReturnPart,
     UserPromptPart,
 )
-from unfold.admin import format_html
 
 from chatddx.core.choices import MessageKindChoices, RoleChoices
 from chatddx.history.models import MessageModel, SessionModel

@@ -6,8 +6,8 @@ from typing import Any, override
 from django.contrib import admin
 from django.db.models import Max, Min
 from django.http import HttpRequest
+from django.utils.safestring import mark_safe
 from markdown import markdown
-from unfold.admin import mark_safe
 from unfold.utils import format_html
 
 from chatddx.core.proxies import Identity

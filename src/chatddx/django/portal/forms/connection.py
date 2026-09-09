@@ -4,7 +4,6 @@ from typing import Any, final, override
 from crispy_forms.helper import FormHelper, Layout
 from crispy_forms.layout import Column, Fieldset, Row
 from django import forms
-from unfold.admin import messages
 from unfold.layout import Hr
 from unfold.widgets import (
     UnfoldAdminExpandableTextareaWidget,
