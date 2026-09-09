@@ -124,3 +124,45 @@ def test_shared_experiment_admin_is_also_read_only(
         reverse("admin:orm_sharedexperiment_delete", args=[shared_experiment.pk])
     )
     assert delete_response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_changelist_shows_branch_names_and_links_for_agent_and_case(
+    experiment,
+    admin_client: Client,
+):
+    response = admin_client.get(reverse("admin:orm_experiment_changelist"))
+    content = response.content.decode()
+
+    agent_branch = experiment.agent.branches.get(owner__name=experiment.owner.name)
+    case_branch = experiment.case.branches.get(owner__name=experiment.owner.name)
+
+    assert f">agent-2 ({experiment.agent.fingerprint[:6]})<" in content
+    assert reverse("admin:orm_superagent_change", args=[agent_branch.pk]) in content
+
+    assert f">case-1 ({experiment.case.fingerprint[:6]})<" in content
+    assert reverse("admin:orm_case_change", args=[case_branch.pk]) in content
+
+    # Expect has no admin page of its own -- it's only ever edited inline on
+    # its Case (see ExpectInline) -- so its link goes to that Case instead.
+    assert (
+        reverse("admin:orm_case_change", args=[case_branch.pk])
+        in content.split("field-expect_")[1][:300]
+    )
+
+
+@pytest.mark.django_db
+def test_change_view_shows_branch_names_and_links_for_agent_and_case(
+    experiment,
+    admin_client: Client,
+):
+    response = admin_client.get(
+        reverse("admin:orm_experiment_change", args=[experiment.pk])
+    )
+    content = response.content.decode()
+
+    agent_branch = experiment.agent.branches.get(owner__name=experiment.owner.name)
+    case_branch = experiment.case.branches.get(owner__name=experiment.owner.name)
+
+    assert reverse("admin:orm_superagent_change", args=[agent_branch.pk]) in content
+    assert reverse("admin:orm_case_change", args=[case_branch.pk]) in content
