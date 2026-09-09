@@ -8,24 +8,24 @@ from django.db.models import QuerySet
 
 from chatddx.repo.branch_models import CaseBranchModel, ExpectBranchModel
 from chatddx.repo.shufflers.main import ensure_identity, qs_canon
-from chatddx.repo.trail_models import CaseTrailModel, ExpectTrailModel
-from chatddx.repo.trail_schemas import CaseSchema, ExpectSchema
+from chatddx.repo.trail_models import CaseTrailModel, ExpectTrailModel, ScorerTrailModel
+from chatddx.repo.trail_schemas import CaseSchema, ExpectSchema, ScorerSchema
 from chatddx.utils import make_async
 
 
-def expect_branch_name(case_id: int, scorer: str) -> str:
-    return f"{case_id}:{scorer}"
+def expect_branch_name(case_id: int, scorer: ScorerTrailModel | None) -> str:
+    return f"{case_id}:{scorer.name if scorer else ''}"
 
 
 def dump_expect(
     case: CaseTrailModel,
-    scorer: str,
+    scorer: ScorerTrailModel | None,
     payload: str,
     owner_name: str,
 ) -> tuple[ExpectBranchModel, bool]:
     schema = ExpectSchema(
         payload=payload,
-        scorer=scorer,
+        scorer=ScorerSchema.model_validate(scorer) if scorer else None,
         case=CaseSchema.model_validate(case),
     )
 
@@ -44,7 +44,7 @@ def dump_expect(
         fingerprint=schema.fingerprint,
         defaults={
             "payload": schema.payload,
-            "scorer": schema.scorer,
+            "scorer": scorer,
             "case": case,
         },
     )
@@ -64,7 +64,7 @@ dump_expect_async = make_async(dump_expect)
 def dump_expects(
     expects_dir: Path,
     owner_name: str,
-    scorer: str = "",
+    scorer: ScorerTrailModel | None = None,
 ) -> dict[int, ExpectBranchModel]:
     owner = ensure_identity(owner_name)
 

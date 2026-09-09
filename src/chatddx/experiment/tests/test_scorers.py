@@ -16,6 +16,7 @@ from chatddx.repo.base import BranchModel
 from chatddx.repo.shufflers.expect import dump_expect_async
 from chatddx.repo.shufflers.experiment import create_experiment_async
 from chatddx.repo.shufflers.main import dump_trail_registry_async, ensure_identity_async
+from chatddx.repo.shufflers.scorer import dump_scorer_async
 from chatddx.repo.trail_models import AgentTrailModel, CaseTrailModel
 from chatddx.utils import make_async
 
@@ -63,7 +64,7 @@ async def experiment(
 ) -> ExperimentModel:
     _ = await dump_expect_async(
         case=case_1,
-        scorer="",
+        scorer=None,
         payload="the expected answer",
         owner_name=owner.name,
     )
@@ -195,9 +196,14 @@ async def regex_experiment(
     case_1: CaseTrailModel,
     agent: AgentTrailModel,
 ) -> ExperimentModel:
+    scorer_branch, _ = await dump_scorer_async(
+        "chatddx.experiment.scorers.regex_match", owner.name
+    )
+    scorer = await target_async(scorer_branch)
+
     _ = await dump_expect_async(
         case=case_1,
-        scorer="regex_match",
+        scorer=scorer,
         payload=REGEX_MATCH_PAYLOAD,
         owner_name=owner.name,
     )
@@ -207,7 +213,7 @@ async def regex_experiment(
         agent=agent,
         case=case_1,
         tags=None,
-        scorer="regex_match",
+        scorer=scorer,
     )
 
 

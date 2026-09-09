@@ -150,23 +150,41 @@ class CaseTrailModel(TrailModel):
     payload = TextField()
 
 
+class ScorerTrailModel(TrailModel):
+    """A named scorer, selectable in place of typing a dotted import path
+    by hand (see ExpectTrailModel.scorer and ExperimentModel.scorer). `name`
+    is the dotted import path to the function it invokes, e.g.
+    'chatddx.experiment.scorers.exact_match' -- resolved by
+    chatddx.experiment.worker.score_run via
+    django.utils.module_loading.import_string. Nothing checks that `name`
+    resolves to anything at dump time: a bad name is only ever caught when a
+    Run is actually scored.
+    """
+
+    class Meta(TrailModel.Meta):
+        app_label = "orm"
+        db_table = "agents_scorer"
+
+    name = CharField(max_length=255)
+
+
 class ExpectTrailModel(TrailModel):
     class Meta(TrailModel.Meta):
         app_label = "orm"
         db_table = "agents_expect"
 
     payload = TextField()
-    scorer = CharField(
-        max_length=255,
+    # The scorer this expectation is written for -- an Experiment's own
+    # `scorer` is what resolves which Expect pairs with its case (see
+    # chatddx.repo.shufflers.experiment.find_expect); left unset, this is
+    # the default expectation for its case.
+    scorer = ForeignKey(
+        ScorerTrailModel,
+        on_delete=PROTECT,
+        default=None,
+        null=True,
         blank=True,
-        default="",
-        help_text=(
-            "Dotted import path to the scorer function this expectation is "
-            "written for, e.g. 'chatddx.experiment.scorers.exact_match' (see "
-            "ExperimentModel.scorer). An Experiment's scorer is what "
-            "resolves which Expect pairs with its case -- left blank, this "
-            "is the default expectation for its case."
-        ),
+        related_name="expects",
     )
     case = ForeignKey(
         CaseTrailModel,

@@ -110,13 +110,21 @@ class CaseSchema(CaseBase, TrailSchema):
     pass
 
 
+class ScorerBase(BaseModel):
+    name: str
+
+
+class ScorerSchema(ScorerBase, TrailSchema):
+    pass
+
+
 class ExpectBase(BaseModel):
     payload: str
-    scorer: str = ""
 
 
 class ExpectSchema(ExpectBase, TrailSchema):
     case: CaseSchema
+    scorer: ScorerSchema | None = None
 
     @override
     def as_fingerprint(self):
@@ -124,8 +132,9 @@ class ExpectSchema(ExpectBase, TrailSchema):
 
         relations = {"case"}
 
-        serialized = self.model_dump(exclude={"fingerprint"} | relations)
+        serialized = self.model_dump(exclude={"fingerprint", "scorer"} | relations)
         fingerprints = {ref: getattr(self, ref).as_fingerprint() for ref in relations}
+        fingerprints["scorer"] = self.scorer.as_fingerprint() if self.scorer else None
 
         return generate_fingerprint(serialized | fingerprints)
 

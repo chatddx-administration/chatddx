@@ -10,6 +10,7 @@ from chatddx.repo.trail_schemas import (
     ExpectBase,
     OutputTypeBase,
     SamplingParamsBase,
+    ScorerBase,
     ToolBase,
     ToolGroupBase,
 )
@@ -31,8 +32,13 @@ class OutputTypeSpec(OutputTypeBase, TrailSpec):
     pass
 
 
+class ScorerSpec(ScorerBase, TrailSpec):
+    pass
+
+
 class ExpectSpec(ExpectBase, TrailSpec):
     case: CaseSpec
+    scorer: ScorerSpec | None = None
 
 
 class ToolSpec(ToolBase, TrailSpec):

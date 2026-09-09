@@ -13,7 +13,8 @@ from chatddx.repo.base import BranchModel
 from chatddx.repo.shufflers.expect import dump_expect_async
 from chatddx.repo.shufflers.experiment import create_experiment_async
 from chatddx.repo.shufflers.main import dump_trail_registry_async, ensure_identity_async
-from chatddx.repo.trail_models import CaseTrailModel
+from chatddx.repo.trail_models import CaseTrailModel, ScorerTrailModel
+from chatddx.repo.trail_schemas import ScorerSchema
 from chatddx.utils import make_async
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -67,7 +68,7 @@ async def experiment(
 
     _ = await dump_expect_async(
         case=case_1,
-        scorer="",
+        scorer=None,
         payload="the expected answer",
         owner_name=owner.name,
     )
@@ -194,6 +195,15 @@ def _broken_scorer(run: RunModel) -> None:
     raise RuntimeError("scoring blew up")
 
 
+async def _set_scorer(experiment: ExperimentModel, name: str) -> None:
+    schema = ScorerSchema(name=name)
+    scorer, _ = await ScorerTrailModel.objects.aget_or_create(
+        fingerprint=schema.fingerprint, defaults={"name": name}
+    )
+    experiment.scorer = scorer
+    await experiment.asave(update_fields=["scorer"])
+
+
 @pytest.mark.asyncio
 async def test_score_run_with_no_scorer_configured_is_left_alone(
     stray_owner: IdentityModel,
@@ -215,8 +225,7 @@ async def test_score_run_stores_the_scorer_functions_return_value(
     stray_owner: IdentityModel,
     experiment: ExperimentModel,
 ):
-    experiment.scorer = "chatddx.experiment.tests.test_worker._stub_scorer"
-    await experiment.asave(update_fields=["scorer"])
+    await _set_scorer(experiment, "chatddx.experiment.tests.test_worker._stub_scorer")
 
     run = await complete_run(owner=stray_owner, experiment=experiment)
 
@@ -232,8 +241,9 @@ async def test_score_run_with_an_async_scorer_is_awaited(
     stray_owner: IdentityModel,
     experiment: ExperimentModel,
 ):
-    experiment.scorer = "chatddx.experiment.tests.test_worker._stub_async_scorer"
-    await experiment.asave(update_fields=["scorer"])
+    await _set_scorer(
+        experiment, "chatddx.experiment.tests.test_worker._stub_async_scorer"
+    )
 
     run = await complete_run(owner=stray_owner, experiment=experiment)
 
@@ -249,8 +259,7 @@ async def test_score_run_with_a_failing_scorer_is_recorded_as_errored(
     stray_owner: IdentityModel,
     experiment: ExperimentModel,
 ):
-    experiment.scorer = "chatddx.experiment.tests.test_worker._broken_scorer"
-    await experiment.asave(update_fields=["scorer"])
+    await _set_scorer(experiment, "chatddx.experiment.tests.test_worker._broken_scorer")
 
     run = await complete_run(owner=stray_owner, experiment=experiment)
 
@@ -265,8 +274,7 @@ async def test_score_run_skips_a_run_that_is_no_longer_completed(
     stray_owner: IdentityModel,
     experiment: ExperimentModel,
 ):
-    experiment.scorer = "chatddx.experiment.tests.test_worker._stub_scorer"
-    await experiment.asave(update_fields=["scorer"])
+    await _set_scorer(experiment, "chatddx.experiment.tests.test_worker._stub_scorer")
 
     run = await complete_run(owner=stray_owner, experiment=experiment)
     run.status = RunStatusChoices.ERRORED
@@ -284,8 +292,7 @@ async def test_process_completed_runs_only_picks_up_completed_runs(
     stray_owner: IdentityModel,
     experiment: ExperimentModel,
 ):
-    experiment.scorer = "chatddx.experiment.tests.test_worker._stub_scorer"
-    await experiment.asave(update_fields=["scorer"])
+    await _set_scorer(experiment, "chatddx.experiment.tests.test_worker._stub_scorer")
 
     completed_run = await complete_run(owner=stray_owner, experiment=experiment)
     queued_run = await RunModel.objects.acreate(

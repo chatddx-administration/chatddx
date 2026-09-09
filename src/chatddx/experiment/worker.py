@@ -188,31 +188,32 @@ async def process_completed_runs() -> None:
 
 
 async def score_run(run_id: int) -> None:
-    """Score one completed Run: resolve its Experiment's `scorer` (a dotted
-    import path, see ExperimentModel.scorer) and call it with the Run,
-    storing whatever it returns on Run.result. Like execute_run, a scoring
-    failure is caught and recorded as a status rather than raised, so one
-    bad Run doesn't stop the rest of the pass.
+    """Score one completed Run: resolve its Experiment's `scorer` (see
+    ExperimentModel.scorer, a ScorerTrailModel whose `name` is a dotted
+    import path) and call it with the Run, storing whatever it returns on
+    Run.result. Like execute_run, a scoring failure is caught and recorded
+    as a status rather than raised, so one bad Run doesn't stop the rest of
+    the pass.
 
     An Experiment with no `scorer` configured is left alone -- not every
-    Experiment needs to be scored, so a blank `scorer` isn't an error.
+    Experiment needs to be scored, so an unset `scorer` isn't an error.
 
     The final write is conditioned on the Run still being COMPLETED, which
     is what stands in for a claim here: if a concurrent pass already scored
     this Run, this one's write is simply a no-op.
     """
     run = await RunModel.objects.select_related(
-        "experiment", "experiment__expect"
+        "experiment", "experiment__expect", "experiment__scorer"
     ).aget(pk=run_id)
 
-    scorer_path = run.experiment.scorer
-    if not scorer_path:
+    scorer_trail = run.experiment.scorer
+    if scorer_trail is None:
         return
 
     result: Any = None
 
     try:
-        scorer = import_string(scorer_path)
+        scorer = import_string(scorer_trail.name)
         result = (
             await scorer(run)
             if inspect.iscoroutinefunction(scorer)

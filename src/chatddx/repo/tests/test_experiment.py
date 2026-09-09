@@ -16,6 +16,7 @@ from chatddx.repo.shufflers.main import (
     dump_trail_registry_async,
     ensure_identity_async,
 )
+from chatddx.repo.shufflers.scorer import dump_scorer_async
 from chatddx.repo.trail_models import CaseTrailModel
 from chatddx.utils import make_async
 
@@ -57,7 +58,7 @@ async def expect_for_case_1(
 ):
     branch, _ = await dump_expect_async(
         case=case_1,
-        scorer="",
+        scorer=None,
         payload="the expected answer",
         owner_name=owner.name,
     )
@@ -87,6 +88,43 @@ async def test_create_experiment_pins_agent_case_and_expect(
     assert experiment.tags == "baseline, smoke"
     assert experiment.tag_list == ["baseline", "smoke"]
     assert experiment.uuid is not None
+
+
+@pytest.mark.asyncio
+async def test_create_experiment_pairs_with_the_matching_scorers_expect(
+    owner: IdentityModel,
+    branches: dict[str, dict[int, BranchModel]],
+    case_1: CaseTrailModel,
+    expect_for_case_1,
+):
+    """A case can carry more than one Expect, one per scorer -- an
+    Experiment's own `scorer` picks which one it's pinned against."""
+    agent = await target_async(by_name(branches["agent"], "agent-2"))
+
+    scorer_branch, _ = await dump_scorer_async(
+        "chatddx.experiment.scorers.exact_match", owner.name
+    )
+    scorer = await target_async(scorer_branch)
+
+    other_expect_branch, _ = await dump_expect_async(
+        case=case_1,
+        scorer=scorer,
+        payload="a different expected answer",
+        owner_name=owner.name,
+    )
+    other_expect = await target_async(other_expect_branch)
+
+    experiment = await create_experiment_async(
+        owner_name=owner.name,
+        agent=agent,
+        case=case_1,
+        tags=None,
+        scorer=scorer,
+    )
+
+    assert experiment.scorer_id == scorer.pk
+    assert experiment.expect_id == other_expect.pk
+    assert experiment.expect_id != expect_for_case_1.pk
 
 
 @pytest.mark.asyncio
@@ -138,7 +176,7 @@ async def test_create_experiment_without_a_matching_expect_raises(
     # no Expect at all has been dumped for case_1 in this test.
     agent = await target_async(by_name(branches["agent"], "swift"))
 
-    assert await find_expect_async(case_1, "", owner.name) is None
+    assert await find_expect_async(case_1, None, owner.name) is None
 
     with pytest.raises(ValueError, match="no Expect"):
         await create_experiment_async(

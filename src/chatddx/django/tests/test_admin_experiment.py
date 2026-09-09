@@ -22,7 +22,7 @@ def experiment(owner: IdentityModel, branch_registry: BranchModelRegistry):
 
     dump_expect(
         case=case,
-        scorer="",
+        scorer=None,
         payload="the expected answer",
         owner_name=owner.name,
     )
@@ -83,7 +83,7 @@ def shared_experiment(
 
     dump_expect(
         case=case,
-        scorer="",
+        scorer=None,
         payload="the expected answer",
         owner_name=other_owner.name,
     )
