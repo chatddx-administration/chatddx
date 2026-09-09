@@ -3,7 +3,7 @@ from typing import final, override
 
 from django.contrib import admin
 
-from chatddx.experiment.models import ExperimentModel
+from chatddx.experiment.models import ExperimentModel, RunModel
 
 
 class Experiment(ExperimentModel):
@@ -33,3 +33,28 @@ class SharedExperiment(Experiment):
         app_label = "orm"
         verbose_name = "Shared Experiment"
         verbose_name_plural = "Shared Experiments"
+
+
+class Run(RunModel):
+    @final
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Run"
+        verbose_name_plural = "Runs"
+
+    @override
+    def __str__(self):
+        return f"[{self.uuid}]"
+
+    @admin.display(description="Collaborators")
+    def collaborators_csv(self):
+        return ", ".join(str(c) for c in self.collaborators.all()) or None
+
+
+class SharedRun(Run):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Shared Run"
+        verbose_name_plural = "Shared Runs"
