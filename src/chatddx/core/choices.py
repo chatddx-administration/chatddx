@@ -42,3 +42,11 @@ class MessageKindChoices(TextChoices):
     RESPONSE = "response"
     ERROR = "error"
     PROMPT = "prompt"
+
+
+class RunStatusChoices(TextChoices):
+    STORED = "stored", "Stored"
+    QUEUED = "queued", "Queued"
+    RUNNING = "running", "Running"
+    ERRORED = "errored", "Errored"
+    COMPLETED = "completed", "Completed"

@@ -13,7 +13,9 @@ from django.db.models import (
     UUIDField,
 )
 
+from chatddx.core.choices import RunStatusChoices
 from chatddx.core.models import IdentityModel
+from chatddx.history.models import SessionModel
 from chatddx.repo.trail_models import (
     AgentTrailModel,
     CaseTrailModel,
@@ -94,3 +96,57 @@ class ExperimentModel(Model):
     @property
     def tag_list(self) -> list[str]:
         return [tag.strip() for tag in self.tags.split(",") if tag.strip()]
+
+
+class RunModel(Model):
+    """One attempt, tracked through pgqueuer, to execute an Experiment.
+
+    A Run is the queue-facing counterpart to Experiment: it holds every
+    piece of context pgqueuer needs to pick the job up, execute it and
+    record the outcome, without pgqueuer having to know anything about
+    agents, cases or trails itself.
+
+    `session` is None until a run completes successfully, at which point
+    it is set to the SessionModel the run produced -- mirroring how
+    `status` starts at STORED and only reaches COMPLETED once that
+    session exists. A run that ends in ERRORED never gets a session.
+    """
+
+    class Meta:
+        app_label = "orm"
+        db_table = "agents_run"
+
+    uuid = UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+    )
+    timestamp = DateTimeField(auto_now_add=True)
+    status = CharField(
+        max_length=255,
+        choices=RunStatusChoices.choices,
+        default=RunStatusChoices.STORED,
+    )
+    owner = ForeignKey(
+        IdentityModel,
+        on_delete=PROTECT,
+    )
+    collaborators = ManyToManyField(
+        IdentityModel,
+        blank=True,
+        related_name="shared_runs",
+    )
+
+    experiment = ForeignKey(
+        ExperimentModel,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    # None until the run completes successfully; see class docstring.
+    session = ForeignKey(
+        SessionModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
