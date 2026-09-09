@@ -1,24 +1,4 @@
 # src/chatddx/repo/shufflers/experiment.py
-"""
-Persistence for Experiment: a frozen (owner, agent, case, expect) record,
-generated -- never hand-authored -- when a Batch is saved. Batch is not
-implemented yet, so for now this module offers:
-
-* `create_experiment()`, the construction logic a future Batch will call
-  once per (agent, case) pair it wants scored, and
-* `dump_experiments()`, which seeds the sample Experiments recorded under
-  `data/experiments/*.toml` for `chatddx init-data`.
-
-Like Expect (see chatddx.repo.shufflers.expect), Experiment sits outside
-the RepoBundle/BundleName registry: it has no admin page of its own and
-isn't itself a Trail/Branch pair, so it can't reuse the generic
-`dump_branch()` machinery. Unlike Expect, an Experiment isn't
-content-addressed either -- there's no single fingerprint identifying "the"
-experiment for a given (agent, case) pair, since re-running the same pair
-is a legitimate, separate Experiment. Only the sample-seeding path below
-needs idempotency (so re-running `init-data` doesn't pile up duplicates),
-and gets it by checking for an existing (owner, agent, case) row itself.
-"""
 
 from __future__ import annotations
 
@@ -43,7 +23,6 @@ def find_expect(
     scorer: str,
     owner_name: str,
 ) -> ExpectTrailModel | None:
-    """The Expect trail currently paired with `case` for `scorer`."""
     branch = qs_canon(
         ExpectBranchModel.objects.filter(
             target__case_id=case.pk,
@@ -65,30 +44,6 @@ def create_experiment(
     tags: list[str] | None = None,
     scorer: str = "",
 ) -> ExperimentModel:
-    """
-    Freeze one (agent, case) pair into a runnable, scoreable Experiment.
-
-    `expect` isn't supplied by the caller: it's looked up from the
-    currently canonical Expect for `case` against `scorer`, per
-    ExperimentModel's contract -- the same `scorer` this Experiment is
-    itself built with, since that's what will grade its completed Runs.
-    There's no substitute for it -- an Expect is what scoring the result
-    *means* -- so when none exists yet for this exact pairing, this refuses
-    to fabricate an Experiment that could never be scored, rather than
-    leaving that gap for whoever runs it later to discover.
-
-    A missing deterministic seed is a softer gap: the Experiment can still
-    be built (its inputs -- agent, case, expect -- are all pinned trails,
-    so it stays perfectly reproducible as *input*), but re-running an agent
-    with no fixed seed is not guaranteed to reproduce the same *output*
-    a year from now. That gets a warning rather than a hard failure.
-
-    `scorer` is a dotted import path to the function that will score this
-    Experiment's completed Runs (see ExperimentModel.scorer and
-    chatddx.experiment.worker.score_run). It's optional -- left blank, the
-    Experiment is paired with the default Expect for `case` and can still
-    be run, just never scored.
-    """
     owner = ensure_identity(owner_name)
 
     expect = find_expect(case, scorer, owner.name)
@@ -122,7 +77,6 @@ create_experiment_async = make_async(create_experiment)
 
 
 def parse_experiments(experiments_path: Path) -> dict[str, dict[str, Any]]:
-    """Read the `[experiment.<name>]` tables out of one experiments TOML file."""
     data = tomllib.loads(experiments_path.read_text(encoding="utf-8"))
     return data.get("experiment", {})
 
@@ -131,19 +85,6 @@ def dump_experiments(
     experiments_dir: Path,
     owner_name: str,
 ) -> dict[int, ExperimentModel]:
-    """
-    Build the sample Experiments recorded under `experiments_dir`: every
-    `[experiment.<name>]` table in every file there names an `agent` branch
-    and a `case` branch, both expected to already be dumped (by
-    `dump_trail_registry` and `dump_cases` respectively) before this runs.
-
-    An entry naming a branch that doesn't exist for `owner_name` is
-    skipped, as is one whose case has no Expect yet for its (optional)
-    `scorer` -- both logged rather than raised, so one bad sample doesn't
-    block the rest.
-    Re-running this against an (owner, agent, case) pair that already has
-    an Experiment is a no-op, so `chatddx init-data` stays safe to re-run.
-    """
     owner = ensure_identity(owner_name)
 
     dumped: dict[int, ExperimentModel] = {}

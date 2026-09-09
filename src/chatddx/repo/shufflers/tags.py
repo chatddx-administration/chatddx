@@ -1,12 +1,4 @@
 # src/chatddx/repo/shufflers/tags.py
-"""Wiring for case tags.
-
-Tags are not repo-matter: a tag is a plain `TagModel` row plus a
-many-to-many relation on `CaseBranchModel`, with no trail/branch pair of
-its own and no central tag-management surface. They exist so a case branch
-can be found by one or more short labels, and so the trail currently
-associated with each tagged case can be looked up through them.
-"""
 
 import tomllib
 from pathlib import Path
@@ -33,15 +25,6 @@ def dump_case_tags(
     case_branches: dict[int, BranchModel],
     owner_name: str,
 ) -> dict[str, list[TagModel]]:
-    """Attach the tags in `tags_path` to the given, already-dumped case branches.
-
-    `case_branches` is the mapping `dump_cases()` returns (branch pk ->
-    branch), so branches that were just dumped can be tagged without
-    another database round trip to look them up by name. Tags are
-    owner-scoped (see TagModel), so `owner_name` -- the same owner
-    `case_branches` were dumped under -- is used both to look up and to
-    create them.
-    """
     owner = ensure_identity(owner_name)
     case_tags = parse_case_tags(tags_path)
     branches_by_name = {branch.name: branch for branch in case_branches.values()}
@@ -70,14 +53,6 @@ def load_case_branches_by_tag(
     tag_name: str,
     owner_name: str,
 ) -> list[CaseBranchModel]:
-    """Return the trail currently associated with each case tagged `tag_name`.
-
-    A case branch may have several historical versions; this resolves, per
-    case name owned by `owner_name`, only the one currently canonical --
-    i.e. the trail the case's tag should be understood to point at. Tags
-    are owner-scoped, so this only ever matches `owner_name`'s own
-    `tag_name` tag, never another owner's tag of the same name.
-    """
     qs = CaseBranchModel.objects.filter(
         tags__name=tag_name, tags__owner__name=owner_name
     )

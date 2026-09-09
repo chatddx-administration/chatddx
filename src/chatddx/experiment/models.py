@@ -39,8 +39,6 @@ class ExperimentModel(Model):
         IdentityModel,
         on_delete=PROTECT,
     )
-    # Django synthesizes these alongside their ForeignKeys, but django-types
-    # doesn't model that.
     owner_id: int
     collaborators = ManyToManyField(
         IdentityModel,
@@ -107,8 +105,6 @@ class RunModel(Model):
         IdentityModel,
         on_delete=PROTECT,
     )
-    # Django synthesizes these alongside their ForeignKeys, but django-types
-    # doesn't model that.
     owner_id: int
     collaborators = ManyToManyField(
         IdentityModel,
