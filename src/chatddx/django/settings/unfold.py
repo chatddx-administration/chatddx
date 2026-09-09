@@ -94,6 +94,11 @@ UNFOLD = {
                         "link": reverse_lazy("admin:orm_case_changelist"),
                     },
                     {
+                        "title": "Experiments",
+                        "icon": "science",
+                        "link": reverse_lazy("admin:orm_experiment_changelist"),
+                    },
+                    {
                         "title": "Database",
                         "icon": "database",
                         "link": reverse_lazy("admin:index"),
