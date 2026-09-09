@@ -8,7 +8,7 @@
         
         {% for message in related_messages %}
             <div class="message-card">
-                {% include "session_message.html" with instance=message %}
+                {% include "templates/session_message.html" with instance=message %}
             </div>
         {% empty %}
             <p>No messages in this session.</p>

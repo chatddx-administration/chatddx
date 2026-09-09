@@ -80,7 +80,7 @@ class Session(SessionModel):
             "kind": message.kind,
             "display_name": message.get_kind_display(),  # pyright: ignore[reportAttributeAccessIssue]
         }
-        html_string = render_to_string("status_badge.html", context)
+        html_string = render_to_string("templates/status_badge.html", context)
 
         return mark_safe(html_string)
 
