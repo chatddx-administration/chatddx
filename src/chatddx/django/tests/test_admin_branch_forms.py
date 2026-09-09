@@ -1,3 +1,4 @@
+# pyright: basic
 import pytest
 from django.test import Client
 from django.urls import reverse
@@ -27,11 +28,13 @@ def test_tool_edit_versions_then_delete_removes_it(
     )
 
     assert existing.count() == 1
+    some_tool = existing.first()
+    assert some_tool is not None
 
     post_data["command"] = "some-command"
 
     response = admin_client.post(
-        reverse("admin:orm_tool_change", args=[existing.first().pk]),
+        reverse("admin:orm_tool_change", args=[some_tool.pk]),
         data=post_data,
         follow=True,
     )
@@ -48,9 +51,11 @@ def test_tool_edit_versions_then_delete_removes_it(
     ).count()
 
     assert versions == 2
+    some_tool = existing.first()
+    assert some_tool is not None
 
     response = admin_client.post(
-        reverse("admin:orm_tool_delete", args=[existing.first().pk]),
+        reverse("admin:orm_tool_delete", args=[some_tool.pk]),
         data={"post": "yes"},
         follow=True,
     )
@@ -61,9 +66,11 @@ def test_tool_edit_versions_then_delete_removes_it(
     )
 
     assert existing.count() == 1
+    some_tool = existing.first()
+    assert some_tool is not None
 
     response = admin_client.post(
-        reverse("admin:orm_tool_delete", args=[existing.first().pk]),
+        reverse("admin:orm_tool_delete", args=[some_tool.pk]),
         data={"post": "yes"},
         follow=True,
     )

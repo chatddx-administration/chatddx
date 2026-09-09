@@ -1,7 +1,7 @@
 import asyncio
 import hashlib
 import inspect
-from collections.abc import Awaitable, Coroutine
+from collections.abc import Awaitable, Coroutine, Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import (
@@ -43,7 +43,7 @@ def default_parser(obj: Any):
             raise TypeError(f"Unsupported type: {type(obj)}")
 
 
-def generate_fingerprint(data: dict[str, JsonValue]):
+def generate_fingerprint(data: Mapping[str, JsonValue]):
     import orjson
 
     json = orjson.dumps(

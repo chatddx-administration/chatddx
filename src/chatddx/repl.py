@@ -8,6 +8,8 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.history import FileHistory
 from pydantic_ai import (
     ModelMessage,
+    ModelRequest,
+    ModelResponse,
     TextPart,
     ThinkingPart,
     ToolCallPart,
@@ -48,26 +50,35 @@ def main(
             typer.echo(agent.name)
 
         typer.secho("\nAvailable sessions:", bold=True)
-        for session in SessionModel.objects.filter(owner_id=owner.pk):
+        for db_session in SessionModel.objects.filter(owner_id=owner.pk):
+            default_agent_name = (
+                db_session.default_agent.name if db_session.default_agent else "?"
+            )
             typer.echo(
-                f"{session.uuid} {session.timestamp.strftime('%Y-%m-%d %H:%M')} {session.default_agent.name} {len(session.messages.all())}"
+                f"{db_session.uuid} {db_session.timestamp.strftime('%Y-%m-%d %H:%M')} {default_agent_name} {len(db_session.messages.all())}"
             )
 
         return
 
+    session: SessionSpec | None = None
+    agent_branch: BranchSpec[AgentSpec] | None = None
+
     if session_uuid:
-        session = asyncio.run(resume_session(owner.id, session_uuid))
+        session = asyncio.run(resume_session(owner.pk, session_uuid))
         if not agent_name:
             agent_branch = session.default_agent
 
     if agent_name:
         agent_branch = BranchSpec[AgentSpec].model_validate(
-            AgentBranchModel.objects.filter(name=agent_name, owner_id=owner.id).latest(
+            AgentBranchModel.objects.filter(name=agent_name, owner_id=owner.pk).latest(
                 "timestamp"
             )
         )
         if not session_uuid:
-            session = asyncio.run(start_session(owner.id, agent_branch.id))
+            session = asyncio.run(start_session(owner.pk, agent_branch.id))
+
+    assert session is not None
+    assert agent_branch is not None
 
     run_repl(session, agent_branch)
 
@@ -79,10 +90,16 @@ def run_repl(session: SessionSpec, agent_branch: BranchSpec[AgentSpec]):
     print(f"agent: {agent_name}")
 
     for message in session.messages:
+        if not isinstance(message.payload, (ModelRequest, ModelResponse)):
+            continue
+
         msg_agent = AgentBranchModel.objects.filter(
             owner_id=session.owner_id,
             target_id=message.agent_id,
         ).first()
+        if msg_agent is None:
+            continue
+
         print_message(message.payload, msg_agent.name, msg_agent.target)
 
     async def consume_and_print(user_prompt: str):

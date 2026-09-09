@@ -1,3 +1,5 @@
+from typing import cast
+
 import pytest
 
 from chatddx.core.choices import ToolChoices
@@ -54,7 +56,11 @@ def test_pydantic_jsonschema():
 
 
 def test_type_pipeline():
-    tool = Repo("tool", TrailSchema).model_validate(
+    # Repo() resolves "tool" -> ToolSchema at runtime via the generic
+    # `TrailSchema` slot name, so its static return type is the generic
+    # base; cast to what "tool" actually gives back.
+    tool_schema_cls = cast(type[ToolSchema], Repo("tool", TrailSchema))
+    tool = tool_schema_cls.model_validate(
         {
             "command": "cmd",
             "type": ToolChoices.FUNCTION,

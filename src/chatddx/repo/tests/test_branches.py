@@ -39,6 +39,7 @@ async def test_model_from_schema(owner: IdentityModel):
         branch_name="agent-1",
         owner_name=owner.name,
     )
+    assert branch_model is not None
     assert branch_model.id is not None
     assert branch_model.name == "agent-1"
 

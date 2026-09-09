@@ -9,6 +9,7 @@ from typing import (
     IO,
     Any,
     Callable,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -128,7 +129,10 @@ def _from_file(
         )
 
     if not isinstance(data, dict):
-        return data
+        raise ParseError(
+            f"Registry file '{path}' must contain a top-level object, "
+            f"got {type(data).__name__}"
+        )
 
     extends = data.pop("extends", [])
     match extends:
@@ -139,11 +143,19 @@ def _from_file(
         case _:
             raise ValueError(f"unexpected type {type(extends)}")
 
-    for extend_path in extends:
-        extend_dict = _from_file(path.parent / extend_path, current_seen)
-        data = extend_registries(data, extend_dict)
+    # Every remaining top-level value is a bundle of records; `extends` (a
+    # path or list of paths, handled above) was the only other shape a
+    # registry file's top level is allowed to carry.
+    registry = cast(DictRegistry, data)
 
-    return data
+    for extend_path in extends:
+        if not isinstance(extend_path, str):
+            raise ParseError(f"'extends' entries must be strings, got {extend_path!r}")
+
+        extend_dict = _from_file(path.parent / extend_path, current_seen)
+        registry = extend_registries(registry, extend_dict)
+
+    return registry
 
 
 def extend_registries(base: DictRegistry, update: DictRegistry):

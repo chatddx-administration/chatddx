@@ -56,6 +56,9 @@ class TagModel(Model):
         on_delete=PROTECT,
         related_name="tags",
     )
+    # Django synthesizes this alongside `owner`, but django-types doesn't
+    # model that.
+    owner_id: int
     name = CharField(
         max_length=255,
     )

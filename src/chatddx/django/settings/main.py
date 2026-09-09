@@ -1,17 +1,22 @@
 # src/chatddx/django/settings/main.py
+# pyright: basic
 import os
 
 DJANGO_MODE = os.environ["DJANGO_MODE"]
 
 match DJANGO_MODE:
+    # These settings modules are resolved through the editable install's
+    # search path, so pyright treats them as an external library even
+    # though they're first-party; the wildcard splitting itself is the
+    # standard Django settings pattern.
     case "main":
-        from chatddx.django.settings.base import *
-        from chatddx.django.settings.prod import *
-        from chatddx.django.settings.unfold import *
+        from chatddx.django.settings.base import *  # pyright: ignore[reportWildcardImportFromLibrary]
+        from chatddx.django.settings.prod import *  # pyright: ignore[reportWildcardImportFromLibrary]
+        from chatddx.django.settings.unfold import *  # pyright: ignore[reportWildcardImportFromLibrary]
     case "dev":
-        from chatddx.django.settings.base import *
-        from chatddx.django.settings.dev import *
-        from chatddx.django.settings.unfold import *
+        from chatddx.django.settings.base import *  # pyright: ignore[reportWildcardImportFromLibrary]
+        from chatddx.django.settings.dev import *  # pyright: ignore[reportWildcardImportFromLibrary]
+        from chatddx.django.settings.unfold import *  # pyright: ignore[reportWildcardImportFromLibrary]
     case "collectstatic":
         pass
     case _:

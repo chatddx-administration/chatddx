@@ -1,1 +1,2 @@
-from chatddx.django.settings.main import *
+# pyright: basic
+from chatddx.django.settings.main import *  # pyright: ignore[reportWildcardImportFromLibrary]

@@ -41,6 +41,7 @@ async def test_ddx_management(owner: IdentityModel):
         branch_name="ddx-management",
         owner_name=owner.name,
     )
+    assert spec is not None
     result = await run_from_spec(spec.target, case_a)
 
     print(json.dumps(result.output, indent=2))

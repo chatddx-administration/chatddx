@@ -5,7 +5,9 @@ from typing import final
 
 import tomli_w
 from django.contrib import admin
+from django.db.models import Manager
 
+from chatddx.core.models import IdentityModel
 from chatddx.repo.base import BranchProxy
 from chatddx.repo.branch_models import (
     AgentBranchModel,
@@ -16,15 +18,25 @@ from chatddx.repo.branch_models import (
     ToolBranchModel,
     ToolGroupBranchModel,
 )
+from chatddx.repo.trail_models import AgentTrailModel, ConnectionTrailModel
 
 
 class Shared:
+    # Provided by the `collaborators` ManyToManyField on whichever
+    # BranchModel this is mixed into alongside; declared here so `self` is
+    # typed for that access instead of just bare `Shared`.
+    collaborators: Manager[IdentityModel]
+
     @admin.display(description="Collaborators")
     def collaborators_csv(self):
         return ", ".join([str(c) for c in self.collaborators.all()]) or None
 
 
 class SuperAgent(BranchProxy, AgentBranchModel, Shared):
+    # Narrows BranchProxy's generic `target: TrailModel` to what this
+    # branch's `target` FK actually points at.
+    target: AgentTrailModel
+
     class Meta:
         proxy = True
         app_label = "orm"
@@ -33,6 +45,8 @@ class SuperAgent(BranchProxy, AgentBranchModel, Shared):
 
 
 class SharedSuperAgent(BranchProxy, AgentBranchModel, Shared):
+    target: AgentTrailModel
+
     class Meta:
         proxy = True
         app_label = "orm"
@@ -41,6 +55,8 @@ class SharedSuperAgent(BranchProxy, AgentBranchModel, Shared):
 
 
 class Agent(BranchProxy, AgentBranchModel, Shared):
+    target: AgentTrailModel
+
     class Meta:
         proxy = True
         app_label = "orm"
@@ -49,6 +65,8 @@ class Agent(BranchProxy, AgentBranchModel, Shared):
 
 
 class SharedAgent(BranchProxy, AgentBranchModel, Shared):
+    target: AgentTrailModel
+
     class Meta:
         proxy = True
         app_label = "orm"
@@ -57,6 +75,10 @@ class SharedAgent(BranchProxy, AgentBranchModel, Shared):
 
 
 class Connection(BranchProxy, ConnectionBranchModel):
+    # Narrows BranchProxy's generic `target: TrailModel` to what this
+    # branch's `target` FK actually points at.
+    target: ConnectionTrailModel
+
     class Meta:
         proxy = True
         app_label = "orm"

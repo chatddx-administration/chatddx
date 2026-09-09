@@ -37,6 +37,9 @@ class ExperimentModel(Model):
         IdentityModel,
         on_delete=PROTECT,
     )
+    # Django synthesizes these alongside their ForeignKeys, but django-types
+    # doesn't model that.
+    owner_id: int
     collaborators = ManyToManyField(
         IdentityModel,
         blank=True,
@@ -50,16 +53,19 @@ class ExperimentModel(Model):
         on_delete=PROTECT,
         related_name="experiments",
     )
+    agent_id: int
     case = ForeignKey(
         CaseTrailModel,
         on_delete=PROTECT,
         related_name="experiments",
     )
+    case_id: int
     expect = ForeignKey(
         ExpectTrailModel,
         on_delete=PROTECT,
         related_name="experiments",
     )
+    expect_id: int
 
     @property
     def tag_list(self) -> list[str]:

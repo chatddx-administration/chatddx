@@ -75,6 +75,7 @@ def test_inspect_no_thinking(owner: IdentityModel):
         branch_name="no-thinking",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     settings = spec.target.sampling_params.model_dump(
         exclude={"id", "timestamp", "fingerprint"},
@@ -99,6 +100,7 @@ def test_inspect_no_thinking(owner: IdentityModel):
     )
     Path("log.json").write_text(log.model_dump_json())
 
+    assert log.results is not None
     assert log.results.scores[0].metrics["accuracy"].value == 0.5
     assert log.stats.model_usage["vllm/Qwen/Qwen3-8B-AWQ"].total_tokens == 212
 
@@ -110,6 +112,7 @@ def test_inspect_thinking(owner: IdentityModel):
         branch_name="thinking",
         owner_name=owner.name,
     )
+    assert spec is not None
 
     settings = spec.target.sampling_params.model_dump(
         exclude={"id", "timestamp", "fingerprint"},

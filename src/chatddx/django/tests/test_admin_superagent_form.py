@@ -1,3 +1,6 @@
+# pyright: basic
+from typing import cast
+
 import pytest
 from django.test import Client
 from django.urls import reverse
@@ -16,10 +19,15 @@ def test_super_agent_change_recreates_dangling_connection_branch(
     branch_registry: BranchModelRegistry,
     admin_client: Client,
 ):
-    agent = next(a for a in branch_registry["agent"].values() if a.name == "some-agent")
+    # branch_registry is keyed generically, but the "agent" bucket only
+    # ever holds AgentBranchModel rows.
+    agent = cast(
+        AgentBranchModel,
+        next(a for a in branch_registry["agent"].values() if a.name == "some-agent"),
+    )
     fingerprint = agent.target.connection.fingerprint
 
-    change_url = reverse("admin:orm_superagent_change", args=[agent.id])
+    change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
     response = admin_client.get(change_url)
     assert response.status_code == 200
 
@@ -27,7 +35,7 @@ def test_super_agent_change_recreates_dangling_connection_branch(
 
     _ = ConnectionBranchModel.objects.filter(target=agent.target.connection).delete()
 
-    change_url = reverse("admin:orm_superagent_change", args=[agent.id])
+    change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
     response = admin_client.get(change_url)
     assert response.status_code == 200
 
@@ -37,7 +45,7 @@ def test_super_agent_change_recreates_dangling_connection_branch(
         f"'{fingerprint}' not found in: {[m.message for m in messages]}"
     )
 
-    change_url = reverse("admin:orm_superagent_change", args=[agent.id])
+    change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
     response = admin_client.get(change_url)
     assert response.status_code == 200
 
@@ -77,9 +85,11 @@ def test_super_agent_add_and_versioning(
     )
 
     assert existing.count() == 1
+    some_agent = existing.first()
+    assert some_agent is not None
 
     response = admin_client.post(
-        reverse("admin:orm_superagent_change", args=[existing.first().pk]),
+        reverse("admin:orm_superagent_change", args=[some_agent.pk]),
         data=post_data,
         follow=True,
     )
@@ -93,8 +103,10 @@ def test_super_agent_add_and_versioning(
     )
 
     assert existing.count() == 1
+    some_agent = existing.first()
+    assert some_agent is not None
 
-    assert existing.first().target.output_type.definition["type"] == "object"
+    assert some_agent.target.output_type.definition["type"] == "object"
 
     output_type_def = parse_toml_or_dict(post_data["output_type_definition"])
 
@@ -105,7 +117,7 @@ def test_super_agent_add_and_versioning(
     post_data["output_type_definition"] = dict_to_toml(output_type_def)
 
     response = admin_client.post(
-        reverse("admin:orm_superagent_change", args=[existing.first().pk]),
+        reverse("admin:orm_superagent_change", args=[some_agent.pk]),
         data=post_data,
         follow=True,
     )
@@ -119,12 +131,14 @@ def test_super_agent_add_and_versioning(
     )
 
     assert existing.count() == 1
+    some_agent = existing.first()
+    assert some_agent is not None
 
     output_type_def["properties"]["age"]["minimum"] = 1
     post_data["output_type_definition"] = dict_to_toml(output_type_def)
 
     response = admin_client.post(
-        reverse("admin:orm_superagent_change", args=[existing.first().pk]),
+        reverse("admin:orm_superagent_change", args=[some_agent.pk]),
         data=post_data,
         follow=True,
     )
@@ -138,10 +152,12 @@ def test_super_agent_add_and_versioning(
     )
 
     assert existing.count() == 2
+    some_agent = existing.first()
+    assert some_agent is not None
 
     post_data["output_type_definition"] = "asdf"
     response = admin_client.post(
-        reverse("admin:orm_superagent_change", args=[existing.first().pk]),
+        reverse("admin:orm_superagent_change", args=[some_agent.pk]),
         data=post_data,
         follow=True,
     )

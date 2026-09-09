@@ -76,6 +76,9 @@ class BranchModel(DjangoModel):
         IdentityModel,
         on_delete=PROTECT,
     )
+    # Django synthesizes this alongside `owner`, but django-types doesn't
+    # model that, so it's spelled out here for every BranchModel subclass.
+    owner_id: int
     name = CharField(max_length=255)
     timestamp = DateTimeField(
         auto_now_add=True,
@@ -95,7 +98,11 @@ class BranchModel(DjangoModel):
         ]
 
     def as_proxy(self, proxy_model: type[BranchProxy]):
-        return proxy_model.from_db(
+        # `proxy_model` is `BranchProxy` in name only: every real registered
+        # proxy (e.g. proxies.Agent) is also a concrete Django proxy model
+        # and so does carry `.from_db()`, but that isn't expressible on the
+        # typing-only BranchProxy shape itself.
+        return proxy_model.from_db(  # pyright: ignore[reportAttributeAccessIssue]
             db=self._state.db,
             field_names=[f.name for f in self._meta.fields],
             values=[getattr(self, f.name) for f in self._meta.fields],

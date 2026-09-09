@@ -165,8 +165,6 @@ async def run_from_session(
                 f"{e.__cause__}"
             )
 
-            e.enhanced_message = enhanced_message
-
             new_exception = UnexpectedModelBehavior(enhanced_message)
             new_exception.__cause__ = e.__cause__
 

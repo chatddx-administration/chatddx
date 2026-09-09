@@ -61,6 +61,7 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
         field = (
             model._meta.pk if from_field is None else model._meta.get_field(from_field)
         )
+        assert field is not None
         try:
             object_id = field.to_python(object_id)
             return queryset.get(**{field.name: object_id})
@@ -107,6 +108,10 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
         if form.validated_data is None:
             raise ValueError("form.validated_data is unexpectedly None")
 
+        # BaseForm.clean() always fills in an owner before validating, so
+        # this is never actually None here.
+        assert form.validated_data.owner is not None
+
         schema_cls = Repo(self.name, TrailSchema)
         proxy_cls = Repo(self.name, BranchProxy)
         schema = schema_cls.model_validate(form.validated_data.model_dump())
@@ -138,14 +143,14 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
                     self.unchanged_message(changed),
                     level=messages.INFO,
                 )
-                request._skip_success_message = True
+                request._skip_success_message = True  # pyright: ignore[reportAttributeAccessIssue]
             else:
                 self.message_user(
                     request,
                     "No changes detected. The current version is up to date.",
                     level=messages.INFO,
                 )
-                request._skip_success_message = True
+                request._skip_success_message = True  # pyright: ignore[reportAttributeAccessIssue]
 
         elif changed:
             self.message_user(
@@ -230,6 +235,10 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
             return super().render_change_form(
                 request, context, add, change, form_url, obj
             )
+
+        # obj is generically typed DjangoModel to match the base admin's
+        # signature, but this admin (and its `obj`) is always a BranchModel.
+        obj = cast(BranchModel, obj)
 
         context["fingerprint"] = obj.target.fingerprint[:6]
         context["timestamp"] = obj.timestamp.strftime("%Y-%m-%d %H:%M")

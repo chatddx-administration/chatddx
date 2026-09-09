@@ -58,21 +58,23 @@ class AgentForm(BaseForm):
             (model.target.pk, model.name) for model in owned
         ]
 
-        self.fields["connection"].queryset = qs_owned_trails(
+        self.fields["connection"].queryset = qs_owned_trails(  # pyright: ignore[reportAttributeAccessIssue]
             ConnectionTrailModel.objects.all(), owner
         )
-        self.fields["sampling_params"].queryset = qs_owned_trails(
+        self.fields["sampling_params"].queryset = qs_owned_trails(  # pyright: ignore[reportAttributeAccessIssue]
             SamplingParamsTrailModel.objects.all(), owner
         )
-        self.fields["output_type"].queryset = qs_owned_trails(
+        self.fields["output_type"].queryset = qs_owned_trails(  # pyright: ignore[reportAttributeAccessIssue]
             OutputTypeTrailModel.objects.all(), owner
         )
-        self.fields["tool_group"].queryset = qs_owned_trails(
+        self.fields["tool_group"].queryset = qs_owned_trails(  # pyright: ignore[reportAttributeAccessIssue]
             ToolGroupTrailModel.objects.all(), owner
         )
 
     def get_initial(self, instance: proxies.Agent):
-        instance.target.tool_group.tools = list(
+        # `tools` is stored as a list of ids, but is hydrated into model
+        # instances here for the form's initial data.
+        instance.target.tool_group.tools = list(  # pyright: ignore[reportAttributeAccessIssue]
             ToolTrailModel.objects.filter(pk__in=instance.target.tool_group.tools)
         )
 
