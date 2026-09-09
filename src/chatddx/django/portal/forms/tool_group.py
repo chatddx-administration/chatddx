@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/admin/forms/tool_group.py
+# src/chatddx/django/portal/forms/tool_group.py
 from typing import Any, final, override
 
 from crispy_forms.helper import FormHelper

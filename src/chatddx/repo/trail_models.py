@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/models/agent.py
+# src/chatddx/repo/trail_models.py
 from __future__ import annotations
 
 from decimal import Decimal

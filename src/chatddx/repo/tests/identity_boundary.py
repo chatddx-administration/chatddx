@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/tests/field_types/identity_boundary.py
+# src/chatddx/repo/tests/identity_boundary.py
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, cast

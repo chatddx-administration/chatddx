@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/schemas.py
+# src/chatddx/repo/trail_specs.py
 from pydantic import (
     BaseModel,
 )

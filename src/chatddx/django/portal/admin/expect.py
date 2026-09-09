@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/admin/expect.py
+# src/chatddx/django/portal/admin/expect.py
 """
 Inline editing of Expect rows on the Case admin form.
 

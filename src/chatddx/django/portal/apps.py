@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/apps.py
+# src/chatddx/django/portal/apps.py
 
 from django.apps import AppConfig
 

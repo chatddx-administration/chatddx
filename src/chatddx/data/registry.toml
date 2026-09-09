@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/data/registry.toml
+# src/chatddx/data/registry.toml
 
 [agent."qwen-3b"]
 partial = true

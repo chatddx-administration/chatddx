@@ -1,4 +1,4 @@
-# src/chatddx/django/portal/admin/forms/agent.py
+# src/chatddx/django/portal/forms/agent.py
 # pyright: basic
 from typing import Any, final
 

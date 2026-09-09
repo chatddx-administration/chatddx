@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/admin/forms/sampling_params.py
+# src/chatddx/django/portal/forms/sampling_params.py
 
 from typing import final
 

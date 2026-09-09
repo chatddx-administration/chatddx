@@ -1,4 +1,4 @@
-# src/chatddx/django/settings_main.py
+# src/chatddx/django/settings/prod.py
 import os
 from pathlib import Path
 

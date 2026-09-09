@@ -1,4 +1,4 @@
--- src/chatddx/django/repo/sql/trail_functions.sql
+-- src/chatddx/repo/sql/trail_functions.sql
 CREATE OR REPLACE FUNCTION protect_trail_{table_name}()
 RETURNS TRIGGER AS $$
 BEGIN

@@ -86,7 +86,6 @@ def test_inspect_no_thinking(owner: IdentityModel):
     settings = spec.target.sampling_params.model_dump(
         exclude={"id", "timestamp", "fingerprint"},
     )
-    # {'extra_body': {'chat_template_kwargs': {'enable_thinking': False}}}
     provider_params = settings.pop("provider_params")
     stop_seqs = settings.pop("stop_sequences")
     settings.pop("n")  # sampling n is unsupported by GenerateConfig, drop it
@@ -122,7 +121,6 @@ def test_inspect_thinking(owner: IdentityModel):
     settings = spec.target.sampling_params.model_dump(
         exclude={"id", "timestamp", "fingerprint"},
     )
-    # {'extra_body': {'chat_template_kwargs': {'enable_thinking': False}}}
     provider_params = settings.pop("provider_params")
     stop_seqs = settings.pop("stop_sequences")
     settings.pop("n")  # sampling n is unsupported by GenerateConfig, drop it

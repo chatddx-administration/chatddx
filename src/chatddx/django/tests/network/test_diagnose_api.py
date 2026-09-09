@@ -47,7 +47,6 @@ async def test_swift_diagnose_endpoint_success(branch_registry, admin_user):
 
     assert response.status_code == 200
     data = response.json()
-    # (Path(__file__).parent.parent / "data/responses/swift.json").write_text(json.dumps(data))
 
     assert (
         data["acute_warning"]

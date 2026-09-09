@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/models/history.py
+# src/chatddx/repo/branch_models.py
 from __future__ import annotations
 
 from django.db.models import PROTECT, ForeignKey, ManyToManyField

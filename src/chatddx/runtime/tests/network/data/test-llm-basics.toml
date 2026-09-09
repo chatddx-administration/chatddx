@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/tests/registry/test-llm-basics.toml
+# src/chatddx/runtime/tests/network/data/test-llm-basics.toml
 
 [connection.qwen3-8b]
 model = "Qwen/Qwen3-8B-AWQ"
