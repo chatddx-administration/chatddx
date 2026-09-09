@@ -10,7 +10,7 @@ from pydantic_core import to_jsonable_python
 from chatddx.core.choices import RoleChoices, RunStatusChoices
 from chatddx.core.models import IdentityModel
 from chatddx.experiment.models import ExperimentModel, RunModel
-from chatddx.experiment.scorers import exact_match
+from chatddx.experiment.scorers import exact_match, regex_match
 from chatddx.history.models import MessageModel, SessionModel
 from chatddx.repo.base import BranchModel
 from chatddx.repo.shufflers.expect import dump_expect_async
@@ -181,3 +181,134 @@ async def test_exact_match_treats_a_missing_reply_as_incorrect(
         "expected": "the expected answer",
         "actual": None,
     }
+
+
+REGEX_MATCH_PAYLOAD = (
+    "pneumonia\ncopd | ((exacerbation | obstructive) & pulmonary)\na b | c"
+)
+
+
+@pytest_asyncio.fixture
+async def regex_experiment(
+    owner: IdentityModel,
+    branches: dict[str, dict[int, BranchModel]],
+    case_1: CaseTrailModel,
+    agent: AgentTrailModel,
+) -> ExperimentModel:
+    _ = await dump_expect_async(
+        case=case_1,
+        scorer="regex_match",
+        payload=REGEX_MATCH_PAYLOAD,
+        owner_name=owner.name,
+    )
+
+    return await create_experiment_async(
+        owner_name=owner.name,
+        agent=agent,
+        case=case_1,
+        tags=None,
+        scorer="regex_match",
+    )
+
+
+@pytest.mark.asyncio
+async def test_regex_match_scores_a_first_line_match_as_100(
+    owner: IdentityModel,
+    regex_experiment: ExperimentModel,
+    branches: dict[str, dict[int, BranchModel]],
+    agent: AgentTrailModel,
+):
+    run = await run_with_reply(
+        owner=owner,
+        experiment=regex_experiment,
+        branches=branches,
+        agent=agent,
+        content="likely community-acquired pneumonia",
+    )
+
+    result = await make_async(regex_match)(run)
+
+    assert result["score"] == 100
+    assert result["matched_row"] == "pneumonia"
+
+
+@pytest.mark.asyncio
+async def test_regex_match_scores_a_second_line_match_as_100_over_2(
+    owner: IdentityModel,
+    regex_experiment: ExperimentModel,
+    branches: dict[str, dict[int, BranchModel]],
+    agent: AgentTrailModel,
+):
+    run = await run_with_reply(
+        owner=owner,
+        experiment=regex_experiment,
+        branches=branches,
+        agent=agent,
+        content="obstructive pulmonary disease flare-up",
+    )
+
+    result = await make_async(regex_match)(run)
+
+    assert result["score"] == 50
+    assert result["matched_row"] == "copd | ((exacerbation | obstructive) & pulmonary)"
+
+
+@pytest.mark.asyncio
+async def test_regex_match_scores_a_third_line_match_as_100_over_3(
+    owner: IdentityModel,
+    regex_experiment: ExperimentModel,
+    branches: dict[str, dict[int, BranchModel]],
+    agent: AgentTrailModel,
+):
+    run = await run_with_reply(
+        owner=owner,
+        experiment=regex_experiment,
+        branches=branches,
+        agent=agent,
+        content="the note only says a b here",
+    )
+
+    result = await make_async(regex_match)(run)
+
+    assert result["score"] == pytest.approx(100 / 3)
+    assert result["matched_row"] == "a b | c"
+
+
+@pytest.mark.asyncio
+async def test_regex_match_scores_no_match_as_0(
+    owner: IdentityModel,
+    regex_experiment: ExperimentModel,
+    branches: dict[str, dict[int, BranchModel]],
+    agent: AgentTrailModel,
+):
+    run = await run_with_reply(
+        owner=owner,
+        experiment=regex_experiment,
+        branches=branches,
+        agent=agent,
+        content="no findings of note",
+    )
+
+    result = await make_async(regex_match)(run)
+
+    assert result["score"] == 0
+    assert result["matched_row"] is None
+
+
+@pytest.mark.asyncio
+async def test_regex_match_treats_a_missing_reply_as_0(
+    owner: IdentityModel,
+    regex_experiment: ExperimentModel,
+):
+    session = await SessionModel.objects.acreate(owner=owner)
+    run = await RunModel.objects.acreate(
+        owner=owner,
+        experiment=regex_experiment,
+        session=session,
+        status=RunStatusChoices.COMPLETED,
+    )
+
+    result = await make_async(regex_match)(run)
+
+    assert result["score"] == 0
+    assert result["matched_row"] is None
