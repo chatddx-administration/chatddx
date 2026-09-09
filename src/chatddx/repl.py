@@ -124,6 +124,8 @@ def run_repl(session: SessionSpec, agent_branch: BranchSpec[AgentSpec]):
                         delta = value[len(content) :]
                         content = value
                         console.print(delta, end="", style="#886622")
+                    case ToolCallPart(value):
+                        console.print(f"<tool call: {value}>", end="", style="#886622")
                     case _:
                         raise ValueError(f"No handler for {type(part)}")
         print()
