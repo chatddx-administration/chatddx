@@ -1,10 +1,3 @@
-"""Runtime smoke tests that drive inspect_ai's eval() against a live vLLM
-deployment.
-
-Requires network access to the endpoint configured in
-data/test-llm-basics.toml.
-"""
-
 from pathlib import Path
 
 import pytest
@@ -86,7 +79,6 @@ def test_inspect_no_thinking(owner: IdentityModel):
     settings = spec.target.sampling_params.model_dump(
         exclude={"id", "timestamp", "fingerprint"},
     )
-    # {'extra_body': {'chat_template_kwargs': {'enable_thinking': False}}}
     provider_params = settings.pop("provider_params")
     stop_seqs = settings.pop("stop_sequences")
     settings.pop("n")  # sampling n is unsupported by GenerateConfig, drop it
@@ -122,7 +114,6 @@ def test_inspect_thinking(owner: IdentityModel):
     settings = spec.target.sampling_params.model_dump(
         exclude={"id", "timestamp", "fingerprint"},
     )
-    # {'extra_body': {'chat_template_kwargs': {'enable_thinking': False}}}
     provider_params = settings.pop("provider_params")
     stop_seqs = settings.pop("stop_sequences")
     settings.pop("n")  # sampling n is unsupported by GenerateConfig, drop it

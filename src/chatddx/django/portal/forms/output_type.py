@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/admin/forms/output_type.py
+# src/chatddx/django/portal/forms/output_type.py
 
 from typing import final
 

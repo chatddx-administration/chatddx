@@ -1,11 +1,3 @@
-"""The SuperAgent admin: a single form that composes an agent together with
-its connection, sampling_params, tool_group and output_type in one POST.
-
-See test_admin_branch_forms.py for the plain per-model admin forms this one
-sits on top of, and test_admin_timeline.py for version-history behavior
-shared across all branch-backed models.
-"""
-
 import pytest
 from django.test import Client
 from django.urls import reverse
@@ -24,12 +16,6 @@ def test_super_agent_change_recreates_dangling_connection_branch(
     branch_registry: BranchModelRegistry,
     admin_client: Client,
 ):
-    # "some-agent" is picked deliberately, by name rather than a branch id
-    # (primary keys aren't stable across test runs): it's the one entry in
-    # the fixture registry with a single, named connection/sampling_params/
-    # tool_group (unlike e.g. "swift", whose merged sampling_params list
-    # makes the admin page recreate branches, and thus emit messages, on
-    # every visit regardless of what this test does).
     agent = next(a for a in branch_registry["agent"].values() if a.name == "some-agent")
     fingerprint = agent.target.connection.fingerprint
 
@@ -51,9 +37,6 @@ def test_super_agent_change_recreates_dangling_connection_branch(
         f"'{fingerprint}' not found in: {[m.message for m in messages]}"
     )
 
-    # SuperAgentForm.get_initial() recreates any branch it can't find (see
-    # portal/forms/super_agent.py), so revisiting the same change page
-    # should find the connection branch back in place and stop warning.
     change_url = reverse("admin:orm_superagent_change", args=[agent.id])
     response = admin_client.get(change_url)
     assert response.status_code == 200

@@ -1,9 +1,3 @@
-"""Runtime tests for the ddx-management agent bundle against a live LLM.
-
-Requires network access to the endpoints configured in
-data/ddx-management.toml.
-"""
-
 import json
 from pathlib import Path
 

@@ -1,4 +1,4 @@
-# chatddx_backend/formats/en/formats.py
+# src/chatddx/django/settings/formats/en/formats.py
 
 DATETIME_FORMAT = "Y-m-d H:i"
 DATE_FORMAT = "Y-m-d"

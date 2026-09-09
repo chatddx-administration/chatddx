@@ -20,9 +20,6 @@ class ExperimentBase(BaseModel):
     @field_validator("tags", mode="before")
     @classmethod
     def _split_tags(cls, value: object) -> object:
-        # ExperimentModel.tags is a single comma-separated CharField (see
-        # chatddx.experiment.models for why this isn't a TagModel
-        # relation); split it back into the list callers actually want.
         if isinstance(value, str):
             return [tag.strip() for tag in value.split(",") if tag.strip()]
         return value

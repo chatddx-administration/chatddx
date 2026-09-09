@@ -1,11 +1,4 @@
 # pyright: basic
-"""End-to-end test of the /diagnose endpoint against a live LLM backend.
-
-Requires network access to the endpoint the "swift" agent resolves to in
-data/test-registry.toml. See test_diagnose_api.py (one level up) for the
-mocked, network-free version of this test.
-"""
-
 from pathlib import Path
 
 import pytest
@@ -47,7 +40,6 @@ async def test_swift_diagnose_endpoint_success(branch_registry, admin_user):
 
     assert response.status_code == 200
     data = response.json()
-    # (Path(__file__).parent.parent / "data/responses/swift.json").write_text(json.dumps(data))
 
     assert (
         data["acute_warning"]

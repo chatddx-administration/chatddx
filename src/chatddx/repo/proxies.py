@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/admin/proxies.py
+# src/chatddx/repo/proxies.py
 # pyright: basic
 from functools import cached_property
 from typing import final

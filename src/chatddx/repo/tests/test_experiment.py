@@ -26,10 +26,6 @@ def _target(branch: BranchModel):
     return branch.target
 
 
-# Branches are dumped with `target_id` set but no cached `.target` (see
-# dump_branch); fetching it is a lazy FK query, which Django refuses to run
-# synchronously from inside an async test/fixture. Route it through a
-# thread like every other sync ORM call in this codebase.
 target_async = make_async(_target)
 
 
@@ -59,9 +55,6 @@ async def expect_for_case_1(
     branches: dict[str, dict[int, BranchModel]],
     case_1: CaseTrailModel,
 ):
-    """The Expect every agent below shares: agent-1, agent-2 and agent-3 all
-    use `output_type-1` (see test-registry.toml), so one Expect against it
-    is enough to make all three scoreable against case-1."""
     output_type = await target_async(by_name(branches["output_type"], "output_type-1"))
     branch, _ = await dump_expect_async(
         case=case_1,
@@ -168,9 +161,6 @@ async def test_dump_experiments_is_idempotent_and_skips_bad_entries(
 
     dumped = await dump_experiments_async(experiments_dir, owner.name)
 
-    # Only "exp-1" builds cleanly; the other two entries in
-    # test-experiments.toml each name a gap (an unknown case branch, and a
-    # case/agent pair with no matching Expect) and are skipped.
     assert len(dumped) == 1
     assert await ExperimentModel.objects.filter(owner=owner).acount() == 1
 

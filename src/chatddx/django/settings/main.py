@@ -1,7 +1,4 @@
-"""
-Django 6.0.2
-"""
-
+# src/chatddx/django/settings/main.py
 import os
 
 DJANGO_MODE = os.environ["DJANGO_MODE"]

@@ -1,4 +1,4 @@
-# src/chatddx/django/runtime/runners.py
+# src/chatddx/runtime/runners.py
 import uuid
 from collections.abc import AsyncGenerator
 

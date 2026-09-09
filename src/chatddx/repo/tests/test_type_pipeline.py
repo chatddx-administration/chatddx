@@ -13,15 +13,6 @@ def test_pydantic_jsonschema():
     jsonschema = Repo("agent", BaseFormDataOut).model_json_schema(mode="serialization")
     assert jsonschema["properties"]["instructions"]["type"] == "string"
     assert jsonschema["properties"]["connection"]["type"] == "string"
-    # assert jsonschema["properties"]["connection"]["selector"] == "connection_template"
-    # assert jsonschema["properties"]["connection"]["fields"] == [
-    #    "id",
-    #    "name",
-    #    "provider",
-    #    "model",
-    #    "endpoint",
-    #    "profile",
-    # ]
 
     jsonschema = Repo("agent", BaseFormDataIn).model_json_schema()
     assert list(jsonschema.keys()) == [

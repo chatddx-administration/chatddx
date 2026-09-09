@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/admin/forms/connection.py
+# src/chatddx/django/portal/forms/connection.py
 from typing import Any, final, override
 
 from crispy_forms.helper import FormHelper, Layout

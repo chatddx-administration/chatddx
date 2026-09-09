@@ -1,17 +1,13 @@
-"""The Expect inline on the Case admin form.
-
-Expect has no ModelAdmin/form of its own -- see
-chatddx.repo.shufflers.expect and chatddx.django.portal.admin.expect -- it's
-only reachable through this inline, so its add/edit/idempotency behavior is
-exercised here rather than in a dedicated admin test module.
-"""
-
 import pytest
 from django.test import Client
 from django.urls import reverse
 
 from chatddx.core.models import IdentityModel
-from chatddx.repo.branch_models import CaseBranchModel, ExpectBranchModel, OutputTypeBranchModel
+from chatddx.repo.branch_models import (
+    CaseBranchModel,
+    ExpectBranchModel,
+    OutputTypeBranchModel,
+)
 from chatddx.repo.form_data_out import TemplateData
 
 
@@ -43,7 +39,6 @@ def test_expect_inline_add_then_edit_is_idempotent_and_versions(
     case_post_data = template_data.case["case-1"].model_dump(exclude_none=True)
     change_url = reverse("admin:orm_case_change", args=[case_branch.pk])
 
-    # Sanity: the inline's management form is present on the rendered page.
     get_response = admin_client.get(change_url)
     assert get_response.status_code == 200
     assert b"orm-expectbranchmodel-TOTAL_FORMS" in get_response.content
@@ -68,8 +63,6 @@ def test_expect_inline_add_then_edit_is_idempotent_and_versions(
     assert expects[0].target.output_type_id == output_type_branch.target.pk
     first_pk = expects[0].pk
 
-    # Resubmitting the exact same content is a no-op (fingerprint match),
-    # and now says so -- Expect had no admin message of its own before.
     response = admin_client.post(change_url, data=post_data, follow=True)
     assert response.status_code == 200
     expects = list(
@@ -83,7 +76,6 @@ def test_expect_inline_add_then_edit_is_idempotent_and_versions(
         "No changes detected for the" in m and "expectation" in m for m in messages
     )
 
-    # Editing the payload versions: a new canonical branch, old one kept.
     edited_post_data = _inline_post_data(
         case_post_data,
         output_type_branch.pk,
@@ -98,7 +90,7 @@ def test_expect_inline_add_then_edit_is_idempotent_and_versions(
         target__case_id=case_branch.target.pk,
         target__output_type_id=output_type_branch.target.pk,
     )
-    assert all_expects_for_pair.count() == 2  # both versions retained
+    assert all_expects_for_pair.count() == 2
 
     response = admin_client.get(change_url)
     assert response.status_code == 200

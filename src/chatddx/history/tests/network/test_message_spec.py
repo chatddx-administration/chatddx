@@ -1,9 +1,3 @@
-"""Verifies the shape of pydantic-ai message specs recorded from a real run.
-
-Requires network access to the endpoint configured in
-data/test-llm-basics.toml.
-"""
-
 import json
 from datetime import datetime
 from pathlib import Path
@@ -79,7 +73,6 @@ async def test_message_spec(owner: IdentityModel):
     assert req_msg["kind"] == "request"
     assert res_msg["kind"] == "response"
 
-    # e.g. 6d29a548-7ae2-4ed1-bfd6-bda4300939fa
     assert res_msg["run_id"] == req_msg["run_id"]
 
     (req_part,) = req_msg["parts"]
@@ -143,8 +136,6 @@ async def test_message_spec(owner: IdentityModel):
 
     assert res_provider["finish_reason"] == "stop"
 
-    # Timestamps
-    # e.g. 2026-02-27T19:59:09.600729Z
     req_msg_t = datetime.fromisoformat(req_msg["timestamp"])
     res_msg_t = datetime.fromisoformat(res_msg["timestamp"])
     assert req_msg_t < res_msg_t

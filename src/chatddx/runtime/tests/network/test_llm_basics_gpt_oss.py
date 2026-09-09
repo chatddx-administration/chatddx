@@ -1,10 +1,3 @@
-"""Runtime smoke tests against a live gpt-oss-20b vLLM deployment.
-
-Mirrors test_llm_basics_qwen3.py but against a different model backend;
-requires network access to the endpoint configured in
-data/test-llm-basics-gpt-oss.toml.
-"""
-
 from pathlib import Path
 
 import pytest

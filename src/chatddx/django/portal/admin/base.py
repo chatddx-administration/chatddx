@@ -1,4 +1,4 @@
-# src/chatddx/django/repo/admin/base.py
+# src/chatddx/django/portal/admin/base.py
 # pyright: basic
 import json
 from typing import Any, cast, no_type_check, override
