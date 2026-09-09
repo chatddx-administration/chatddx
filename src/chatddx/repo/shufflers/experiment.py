@@ -39,15 +39,15 @@ from chatddx.utils import make_async
 
 
 def find_expect(
-    agent: AgentTrailModel,
     case: CaseTrailModel,
+    scorer: str,
     owner_name: str,
 ) -> ExpectTrailModel | None:
-    """The Expect trail currently paired with `case` for `agent`'s output_type."""
+    """The Expect trail currently paired with `case` for `scorer`."""
     branch = qs_canon(
         ExpectBranchModel.objects.filter(
             target__case_id=case.pk,
-            target__output_type_id=agent.output_type.pk,
+            target__scorer=scorer,
         ),
         owner_name,
     ).first()
@@ -69,12 +69,13 @@ def create_experiment(
     Freeze one (agent, case) pair into a runnable, scoreable Experiment.
 
     `expect` isn't supplied by the caller: it's looked up from the
-    currently canonical Expect for `case` against `agent.output_type`, per
-    ExperimentModel's contract. There's no substitute for it -- an Expect
-    is what scoring the result *means* -- so when none exists yet for this
-    exact pairing, this refuses to fabricate an Experiment that could never
-    be scored, rather than leaving that gap for whoever runs it later to
-    discover.
+    currently canonical Expect for `case` against `scorer`, per
+    ExperimentModel's contract -- the same `scorer` this Experiment is
+    itself built with, since that's what will grade its completed Runs.
+    There's no substitute for it -- an Expect is what scoring the result
+    *means* -- so when none exists yet for this exact pairing, this refuses
+    to fabricate an Experiment that could never be scored, rather than
+    leaving that gap for whoever runs it later to discover.
 
     A missing deterministic seed is a softer gap: the Experiment can still
     be built (its inputs -- agent, case, expect -- are all pinned trails,
@@ -85,17 +86,17 @@ def create_experiment(
     `scorer` is a dotted import path to the function that will score this
     Experiment's completed Runs (see ExperimentModel.scorer and
     chatddx.experiment.worker.score_run). It's optional -- left blank, the
-    Experiment can still be run, just never scored.
+    Experiment is paired with the default Expect for `case` and can still
+    be run, just never scored.
     """
     owner = ensure_identity(owner_name)
 
-    expect = find_expect(agent, case, owner.name)
+    expect = find_expect(case, scorer, owner.name)
     if expect is None:
         raise ValueError(
-            f"no Expect for case {case.pk} against agent {agent.pk}'s output_type "
-            f"({agent.output_type.pk}): cannot build a scoreable Experiment. "
-            "Add an Expect for this (case, output_type) pair first -- see "
-            "chatddx.repo.shufflers.expect.dump_expect."
+            f"no Expect for case {case.pk} against scorer {scorer!r}: cannot "
+            "build a scoreable Experiment. Add an Expect for this (case, "
+            "scorer) pair first -- see chatddx.repo.shufflers.expect.dump_expect."
         )
 
     if agent.sampling_params.seed is None:
@@ -137,8 +138,9 @@ def dump_experiments(
     `dump_trail_registry` and `dump_cases` respectively) before this runs.
 
     An entry naming a branch that doesn't exist for `owner_name` is
-    skipped, as is one whose agent has no matching Expect yet -- both
-    logged rather than raised, so one bad sample doesn't block the rest.
+    skipped, as is one whose case has no Expect yet for its (optional)
+    `scorer` -- both logged rather than raised, so one bad sample doesn't
+    block the rest.
     Re-running this against an (owner, agent, case) pair that already has
     an Experiment is a no-op, so `chatddx init-data` stays safe to re-run.
     """

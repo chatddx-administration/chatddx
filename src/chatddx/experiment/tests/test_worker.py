@@ -64,11 +64,10 @@ async def experiment(
     # agent-2 merges in sampling_params-2, which fixes seed=0, so
     # create_experiment_async won't warn about a missing seed.
     agent = await target_async(by_name(branches["agent"], "agent-2"))
-    output_type = await target_async(by_name(branches["output_type"], "output_type-1"))
 
     _ = await dump_expect_async(
         case=case_1,
-        output_type=output_type,
+        scorer="",
         payload="the expected answer",
         owner_name=owner.name,
     )

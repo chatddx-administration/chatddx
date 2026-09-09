@@ -112,17 +112,17 @@ class CaseSchema(CaseBase, TrailSchema):
 
 class ExpectBase(BaseModel):
     payload: str
+    scorer: str = ""
 
 
 class ExpectSchema(ExpectBase, TrailSchema):
     case: CaseSchema
-    output_type: OutputTypeSchema
 
     @override
     def as_fingerprint(self):
         from chatddx.utils import generate_fingerprint
 
-        relations = {"case", "output_type"}
+        relations = {"case"}
 
         serialized = self.model_dump(exclude={"fingerprint"} | relations)
         fingerprints = {ref: getattr(self, ref).as_fingerprint() for ref in relations}

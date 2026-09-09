@@ -16,14 +16,13 @@ def _by_name(branches: dict[int, BranchModel], name: str) -> BranchModel:
 @pytest.fixture
 def experiment(owner: IdentityModel, branch_registry: BranchModelRegistry):
     case = _by_name(branch_registry["case"], "case-1").target
-    output_type = _by_name(branch_registry["output_type"], "output_type-1").target
     agent = _by_name(
         branch_registry["agent"], "agent-2"
     ).target  # output_type-1, seed=0
 
     dump_expect(
         case=case,
-        output_type=output_type,
+        scorer="",
         payload="the expected answer",
         owner_name=owner.name,
     )
@@ -80,12 +79,11 @@ def shared_experiment(
     branch_registry: BranchModelRegistry,
 ):
     case = _by_name(branch_registry["case"], "case-1").target
-    output_type = _by_name(branch_registry["output_type"], "output_type-1").target
     agent = _by_name(branch_registry["agent"], "agent-2").target
 
     dump_expect(
         case=case,
-        output_type=output_type,
+        scorer="",
         payload="the expected answer",
         owner_name=other_owner.name,
     )

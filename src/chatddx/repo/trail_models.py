@@ -156,13 +156,20 @@ class ExpectTrailModel(TrailModel):
         db_table = "agents_expect"
 
     payload = TextField()
+    scorer = CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text=(
+            "Dotted import path to the scorer function this expectation is "
+            "written for, e.g. 'chatddx.experiment.scorers.exact_match' (see "
+            "ExperimentModel.scorer). An Experiment's scorer is what "
+            "resolves which Expect pairs with its case -- left blank, this "
+            "is the default expectation for its case."
+        ),
+    )
     case = ForeignKey(
         CaseTrailModel,
-        on_delete=PROTECT,
-        related_name="expects",
-    )
-    output_type = ForeignKey(
-        OutputTypeTrailModel,
         on_delete=PROTECT,
         related_name="expects",
     )

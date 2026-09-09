@@ -55,10 +55,9 @@ async def expect_for_case_1(
     branches: dict[str, dict[int, BranchModel]],
     case_1: CaseTrailModel,
 ):
-    output_type = await target_async(by_name(branches["output_type"], "output_type-1"))
     branch, _ = await dump_expect_async(
         case=case_1,
-        output_type=output_type,
+        scorer="",
         payload="the expected answer",
         owner_name=owner.name,
     )
@@ -136,10 +135,10 @@ async def test_create_experiment_without_a_matching_expect_raises(
     branches: dict[str, dict[int, BranchModel]],
     case_1: CaseTrailModel,
 ):
-    # "swift" uses its own output_type; nothing has dumped an Expect for it.
+    # no Expect at all has been dumped for case_1 in this test.
     agent = await target_async(by_name(branches["agent"], "swift"))
 
-    assert await find_expect_async(agent, case_1, owner.name) is None
+    assert await find_expect_async(case_1, "", owner.name) is None
 
     with pytest.raises(ValueError, match="no Expect"):
         await create_experiment_async(

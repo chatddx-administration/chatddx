@@ -14,8 +14,9 @@ agent = "agent-2"
 case = "no-such-case"
 
 # "swift" pairs with case-1 fine as branches, but no Expect was ever
-# created for (case-1, output_type "swift"): exercises the "no Expect"
-# skip path.
+# created for (case-1, scorer "no-such-scorer"): exercises the "no
+# Expect" skip path.
 [experiment.exp-missing-expect]
 agent = "swift"
 case = "case-1"
+scorer = "chatddx.experiment.scorers.no_such_scorer"
