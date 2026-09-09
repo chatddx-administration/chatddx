@@ -61,11 +61,9 @@ async def experiment(
     case_1: CaseTrailModel,
     agent: AgentTrailModel,
 ) -> ExperimentModel:
-    output_type = await target_async(by_name(branches["output_type"], "output_type-1"))
-
     _ = await dump_expect_async(
         case=case_1,
-        output_type=output_type,
+        scorer="",
         payload="the expected answer",
         owner_name=owner.name,
     )

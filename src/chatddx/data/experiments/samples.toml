@@ -6,10 +6,9 @@
 # both are dumped earlier in `init-data`, from `registry.toml` and
 # `cases/` respectively. `expect` is never listed here: it's resolved at
 # creation time from the case's currently canonical Expect for the
-# agent's own output_type (see ExperimentModel), which is why every agent
-# below uses one of the "... free-text" registry variants -- the only
-# ones whose output_type matches the plain-text answers dumped from
-# `expects/` by the default `init-data` run.
+# experiment's own (optional) `scorer` (see ExperimentModel) -- none of
+# the entries below set one, so they all pair with the blank-scorer
+# Expects dumped from `expects/` by the default `init-data` run.
 #
 # `tags` are free-form, comma-joined labels on the Experiment itself (see
 # ExperimentModel.tags) -- unrelated to the case's own TagModel tags in

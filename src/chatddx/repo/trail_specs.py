@@ -33,7 +33,6 @@ class OutputTypeSpec(OutputTypeBase, TrailSpec):
 
 class ExpectSpec(ExpectBase, TrailSpec):
     case: CaseSpec
-    output_type: OutputTypeSpec
 
 
 class ToolSpec(ToolBase, TrailSpec):

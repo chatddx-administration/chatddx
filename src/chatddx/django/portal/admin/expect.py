@@ -2,28 +2,33 @@
 # pyright: basic
 from typing import Any, final
 
-from django.forms import CharField, ModelChoiceField, ModelForm
-from django.http import HttpRequest
+from django.forms import CharField, ModelForm
 from unfold.contrib.inlines.admin import NonrelatedTabularInline
 from unfold.contrib.inlines.forms import NonrelatedInlineModelFormSet
-from unfold.widgets import UnfoldAdminSelect2Widget, UnfoldAdminTextareaWidget
+from unfold.widgets import UnfoldAdminTextareaWidget, UnfoldAdminTextInputWidget
 
 from chatddx.repo import proxies
-from chatddx.repo.branch_models import ExpectBranchModel, OutputTypeBranchModel
+from chatddx.repo.branch_models import ExpectBranchModel
 from chatddx.repo.shufflers.expect import dump_expect, load_expects
-from chatddx.repo.shufflers.main import qs_canon
-
-
-class OutputTypeChoiceField(ModelChoiceField):
-    def label_from_instance(self, obj: OutputTypeBranchModel) -> str:
-        return obj.name or obj.target.fingerprint[:6]
 
 
 class ExpectInlineForm(ModelForm):
     payload = CharField(
         widget=UnfoldAdminTextareaWidget(attrs={"rows": 3}),
         label="Expected Payload",
-        help_text="The expected output for this Case/Output Type pair.",
+        help_text="The expected output for this Case/Scorer pair.",
+    )
+    scorer = CharField(
+        required=False,
+        widget=UnfoldAdminTextInputWidget(
+            attrs={"placeholder": "e.g., chatddx.experiment.scorers.exact_match"}
+        ),
+        label="Scorer",
+        help_text=(
+            "Dotted import path of the scorer function this expectation is "
+            "written for (see ExperimentModel.scorer). Leave blank for the "
+            "default expectation of this Case."
+        ),
     )
 
     class Meta:
@@ -36,13 +41,7 @@ class ExpectInlineForm(ModelForm):
         if self.instance.pk:
             target = self.instance.target
             self.initial.setdefault("payload", target.payload)
-
-            current = qs_canon(
-                OutputTypeBranchModel.objects.filter(target_id=target.output_type_id),
-                self.instance.owner.name,
-            ).first()
-            if current:
-                self.initial.setdefault("output_type", current.pk)
+            self.initial.setdefault("scorer", target.scorer)
 
 
 @final
@@ -50,15 +49,15 @@ class ExpectInlineFormSet(NonrelatedInlineModelFormSet):
     instance: proxies.Case
 
     def _dump(self, form: ExpectInlineForm) -> ExpectBranchModel:
-        output_type = form.cleaned_data["output_type"]
+        scorer = form.cleaned_data["scorer"]
         branch, created = dump_expect(
             case=self.instance.target,  # pyright: ignore
-            output_type=output_type.target,
+            scorer=scorer,
             payload=form.cleaned_data["payload"],
             owner_name=self.instance.owner.name,
         )
 
-        label = output_type.name or output_type.target.fingerprint[:6]
+        label = scorer or "default"
         results = getattr(self, "_expect_results", None)
         if results is None:
             results = self._expect_results = []
@@ -99,22 +98,3 @@ class ExpectInline(NonrelatedTabularInline):
         self, parent: proxies.Case, instance: ExpectBranchModel
     ) -> None:
         raise NotImplementedError
-
-    def get_formset(self, request: HttpRequest, obj: Any = None, **kwargs: Any):
-        owner_name = obj.owner.name if obj is not None else request.user.username
-
-        output_type_queryset = qs_canon(
-            OutputTypeBranchModel.objects.all(),
-            owner_name,
-        )
-
-        class BoundExpectInlineForm(self.form):
-            output_type = OutputTypeChoiceField(
-                queryset=output_type_queryset,
-                widget=UnfoldAdminSelect2Widget(),
-                label="Output Type",
-            )
-
-        kwargs["form"] = BoundExpectInlineForm
-
-        return super().get_formset(request, obj, **kwargs)

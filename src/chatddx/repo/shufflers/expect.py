@@ -1,7 +1,7 @@
 # src/chatddx/repo/shufflers/expect.py
 """
 Persistence for Expect: an immutable expectation (payload) pinned to an
-exact (Case trail, OutputType trail) pair.
+exact (Case trail, scorer) pair.
 
 Expect deliberately sits outside the RepoBundle/BundleName registry (it has
 no independent admin page or crispy-form UI -- it's only edited inline from
@@ -22,49 +22,41 @@ from pathlib import Path
 
 from django.db.models import QuerySet
 
-from chatddx.repo.branch_models import (
-    CaseBranchModel,
-    ExpectBranchModel,
-    OutputTypeBranchModel,
-)
+from chatddx.repo.branch_models import CaseBranchModel, ExpectBranchModel
 from chatddx.repo.shufflers.main import ensure_identity, qs_canon
-from chatddx.repo.trail_models import (
-    CaseTrailModel,
-    ExpectTrailModel,
-    OutputTypeTrailModel,
-)
-from chatddx.repo.trail_schemas import CaseSchema, ExpectSchema, OutputTypeSchema
+from chatddx.repo.trail_models import CaseTrailModel, ExpectTrailModel
+from chatddx.repo.trail_schemas import CaseSchema, ExpectSchema
 from chatddx.utils import make_async
 
 
-def expect_branch_name(case_id: int, output_type_id: int) -> str:
+def expect_branch_name(case_id: int, scorer: str) -> str:
     """
-    Deterministic branch name for a (case trail, output_type trail) pair, so
-    the same pair always canonicalizes to a single current ExpectBranchModel
-    row (via `qs_canon`) regardless of how many times its payload changes.
+    Deterministic branch name for a (case trail, scorer) pair, so the same
+    pair always canonicalizes to a single current ExpectBranchModel row (via
+    `qs_canon`) regardless of how many times its payload changes.
     """
-    return f"{case_id}:{output_type_id}"
+    return f"{case_id}:{scorer}"
 
 
 def dump_expect(
     case: CaseTrailModel,
-    output_type: OutputTypeTrailModel,
+    scorer: str,
     payload: str,
     owner_name: str,
 ) -> tuple[ExpectBranchModel, bool]:
     """
     Get-or-create the immutable Expect trail row for this exact content, and
     point a branch at it -- a no-op if the current canonical branch for this
-    (case, output_type) pair already has this exact payload.
+    (case, scorer) pair already has this exact payload.
     """
     schema = ExpectSchema(
         payload=payload,
+        scorer=scorer,
         case=CaseSchema.model_validate(case),
-        output_type=OutputTypeSchema.model_validate(output_type),
     )
 
     owner = ensure_identity(owner_name)
-    branch_name = expect_branch_name(case.pk, output_type.pk)
+    branch_name = expect_branch_name(case.pk, scorer)
 
     canon = qs_canon(
         ExpectBranchModel.objects.filter(name=branch_name),
@@ -78,8 +70,8 @@ def dump_expect(
         fingerprint=schema.fingerprint,
         defaults={
             "payload": schema.payload,
+            "scorer": schema.scorer,
             "case": case,
-            "output_type": output_type,
         },
     )
 
@@ -98,27 +90,18 @@ dump_expect_async = make_async(dump_expect)
 def dump_expects(
     expects_dir: Path,
     owner_name: str,
-    output_type_name: str = "free-text",
+    scorer: str = "",
 ) -> dict[int, ExpectBranchModel]:
     """
     Dump every file in `expects_dir` as an Expect, paired with the Case whose
     branch name matches the file's name -- mirroring `dump_cases` -- against
-    the `output_type_name` OutputType branch (see the registry's
-    `[output_type.free-text]` entry, dumped by `dump_trail_registry`).
+    `scorer`, the dotted import path of the function these expectations are
+    written for (see chatddx.experiment.scorers and ExperimentModel.scorer).
+    Left blank, they become the default expectation for their case.
 
     A file with no matching Case branch for `owner_name` is skipped.
     """
     owner = ensure_identity(owner_name)
-
-    output_type_branch = qs_canon(
-        OutputTypeBranchModel.objects.filter(name=output_type_name),
-        owner.name,
-    ).first()
-
-    if output_type_branch is None:
-        raise ValueError(
-            f"Output type '{output_type_name}' not found for owner '{owner_name}'"
-        )
 
     dumped_expects: dict[int, ExpectBranchModel] = {}
 
@@ -138,7 +121,7 @@ def dump_expects(
 
         branch, _ = dump_expect(
             case=case_branch.target,
-            output_type=output_type_branch.target,
+            scorer=scorer,
             payload=payload,
             owner_name=owner_name,
         )
@@ -152,11 +135,11 @@ dump_expects_async = make_async(dump_expects)
 
 
 def load_expects(case: CaseTrailModel, owner_name: str) -> QuerySet[ExpectBranchModel]:
-    """The current (canonical) Expect branches for every OutputType paired with `case`."""
+    """The current (canonical) Expect branches for every scorer paired with `case`."""
     return qs_canon(
         ExpectBranchModel.objects.filter(target__case_id=case.pk),
         owner_name,
-    ).select_related("target", "target__output_type")
+    ).select_related("target")
 
 
 load_expects_async = make_async(load_expects)
