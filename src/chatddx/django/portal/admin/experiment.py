@@ -1,15 +1,32 @@
 # pyright: basic
 from typing import Any, override
 
+from django import forms
 from django.contrib import admin
-from django.db.models import ForeignKey, QuerySet
+from django.db.models import ForeignKey, JSONField, QuerySet
 from django.http import HttpRequest
 
 from chatddx.core.choices import RunStatusChoices
 from chatddx.django.portal.admin.base import TypedModelAdmin
+from chatddx.django.portal.admin.utils import qs_experiments
 from chatddx.experiment.proxies import Experiment, Run, SharedExperiment, SharedRun
 from chatddx.history.proxies import Session
 from chatddx.repo.shufflers.main import ensure_identity
+
+
+class BlankableJSONField(forms.JSONField):
+    """Like forms.JSONField, but renders an unset value as an empty
+    widget instead of the literal text "null". Round-tripping is unaffected:
+    to_python() already treats an empty submission as None (Run.result is
+    null=True, blank=True), so this only changes what's displayed, not
+    what's saved.
+    """
+
+    @override
+    def prepare_value(self, value: Any) -> Any:
+        if value is None:
+            return ""
+        return super().prepare_value(value)
 
 
 @admin.register(Experiment)
@@ -17,9 +34,9 @@ class ExperimentAdmin(TypedModelAdmin[Experiment]):
     list_display = [
         "timestamp",
         "tags_display",
-        "agent",
-        "case",
-        "expect",
+        "agent_",
+        "case_",
+        "expect_",
         "scorer",
         "collaborators_csv",
     ]
@@ -28,10 +45,23 @@ class ExperimentAdmin(TypedModelAdmin[Experiment]):
 
     show_add_link = False
 
+    @admin.display(description="Agent")
+    def agent_(self, obj: Experiment):
+        return obj.agent_link
+
+    @admin.display(description="Case")
+    def case_(self, obj: Experiment):
+        return obj.case_link
+
+    @admin.display(description="Expect")
+    def expect_(self, obj: Experiment):
+        return obj.expect_link
+
     def get_queryset(self, request: HttpRequest):
         qs = super().get_queryset(request)
+        qs = qs.filter(owner__name=request.user.username).order_by("-timestamp")
 
-        return qs.filter(owner__name=request.user.username).order_by("-timestamp")
+        return qs_experiments(qs, request.user.username)
 
     @override
     def has_add_permission(self, request: HttpRequest):
@@ -58,10 +88,9 @@ class ExperimentAdmin(TypedModelAdmin[Experiment]):
 class SharedExperimentAdmin(ExperimentAdmin):
     def get_queryset(self, request: HttpRequest):
         qs = TypedModelAdmin.get_queryset(self, request)
+        qs = qs.filter(collaborators__name=request.user.username).order_by("-timestamp")
 
-        return qs.filter(
-            collaborators__name=request.user.username,
-        ).order_by("-timestamp")
+        return qs_experiments(qs, request.user.username)
 
 
 @admin.register(Run)
@@ -88,6 +117,9 @@ class RunAdmin(TypedModelAdmin[Run]):
     ]
     readonly_fields = ["timestamp"]
     list_filter = ["status"]
+    formfield_overrides = {
+        JSONField: {"form_class": BlankableJSONField},
+    }
 
     actions = ["requeue"]
 
@@ -114,7 +146,18 @@ class RunAdmin(TypedModelAdmin[Run]):
                 owner__name=request.user.username,
             )
 
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+        formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+        if db_field.name == "experiment":
+            formfield.label_from_instance = self._experiment_label
+
+        return formfield
+
+    @staticmethod
+    def _experiment_label(obj: Experiment) -> str:
+        timestamp = obj.timestamp.strftime("%Y-%m-%d %H:%M")
+        tags = obj.tags_display() or "no tags"
+        return f"{timestamp} — {tags}"
 
     def save_model(self, request: HttpRequest, obj: Run, form: Any, change: bool):
         if not change:

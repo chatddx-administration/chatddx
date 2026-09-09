@@ -157,3 +157,65 @@ def test_shared_run_visible_only_via_shared_tab(
     shared_response = admin_client.get(reverse("admin:orm_sharedrun_changelist"))
     assert shared_response.status_code == 200
     assert change_url.encode() in shared_response.content
+
+
+@pytest.mark.django_db
+def test_experiment_dropdown_shows_timestamp_and_tags(
+    experiment: ExperimentModel,
+    admin_client: Client,
+):
+    response = admin_client.get(reverse("admin:orm_run_add"))
+    content = response.content.decode()
+
+    timestamp = experiment.timestamp.strftime("%Y-%m-%d %H:%M")
+    assert f"{timestamp} — baseline" in content
+
+
+@pytest.mark.django_db
+def test_result_field_does_not_render_as_literal_null(
+    run: RunModel, admin_client: Client
+):
+    """Run.result is a nullable JSONField; a fresh Run has result=None, and
+    Django's stock JSONField form widget would otherwise pre-fill the
+    textarea with the literal text "null"."""
+    response = admin_client.get(reverse("admin:orm_run_change", args=[run.pk]))
+    content = response.content.decode()
+
+    idx = content.index('id="id_result"')
+    assert ">null<" not in content[idx : idx + 50]
+
+
+@pytest.mark.django_db
+def test_result_field_blank_submit_still_saves_none(
+    run: RunModel, admin_client: Client
+):
+    response = admin_client.post(
+        reverse("admin:orm_run_change", args=[run.pk]),
+        data={
+            "experiment": run.experiment_id,
+            "status": RunStatusChoices.STORED,
+            "collaborators": [],
+            "result": "",
+        },
+    )
+    assert response.status_code == 302
+
+    run.refresh_from_db()
+    assert run.result is None
+
+
+@pytest.mark.django_db
+def test_result_field_round_trips_actual_json(run: RunModel, admin_client: Client):
+    response = admin_client.post(
+        reverse("admin:orm_run_change", args=[run.pk]),
+        data={
+            "experiment": run.experiment_id,
+            "status": RunStatusChoices.STORED,
+            "collaborators": [],
+            "result": '{"score": 1}',
+        },
+    )
+    assert response.status_code == 302
+
+    run.refresh_from_db()
+    assert run.result == {"score": 1}
