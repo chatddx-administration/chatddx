@@ -7,11 +7,22 @@ from prompt_toolkit import prompt
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.history import FileHistory
 from pydantic_ai import (
+    AgentRunResultEvent,
+    FinalResultEvent,
+    FunctionToolCallEvent,
+    FunctionToolResultEvent,
     ModelMessage,
     ModelRequest,
     ModelResponse,
+    OutputToolCallEvent,
+    OutputToolResultEvent,
+    PartDeltaEvent,
+    PartEndEvent,
+    PartStartEvent,
     TextPart,
+    TextPartDelta,
     ThinkingPart,
+    ThinkingPartDelta,
     ToolCallPart,
     ToolReturnPart,
     UserPromptPart,
@@ -111,23 +122,46 @@ def run_repl(session: SessionSpec, agent_branch: BranchSpec[AgentSpec]):
             agent_spec=agent_spec,
         )
 
-        thunk = False
-        content = ""
-        async for chunk, _ in stream_gen:
-            for part in chunk.parts:
-                match part:
-                    case ThinkingPart(value):
-                        if not thunk:
-                            print("Thinking:", value)
-                            thunk = True
-                    case TextPart(value):
-                        delta = value[len(content) :]
-                        content = value
-                        console.print(delta, end="", style="#886622")
-                    case ToolCallPart(value):
-                        console.print(f"<tool call: {value}>", end="", style="#886622")
-                    case _:
-                        raise ValueError(f"No handler for {type(part)}")
+        thinking_started = False
+        async for event in stream_gen:
+            match event:
+                case PartStartEvent(part=TextPart(content=text)):
+                    console.print(text, end="", style="#886622")
+                case PartDeltaEvent(delta=TextPartDelta(content_delta=text)):
+                    console.print(text, end="", style="#886622")
+                case PartStartEvent(part=ThinkingPart(content=text)):
+                    if not thinking_started:
+                        console.print("Thinking:", end=" ", style="#226688")
+                        thinking_started = True
+                    console.print(text, end="", style="#226688")
+                case PartDeltaEvent(delta=ThinkingPartDelta(content_delta=text)) if text:
+                    console.print(text, end="", style="#226688")
+                case (
+                    FunctionToolCallEvent(part=part)
+                    | OutputToolCallEvent(part=part)
+                ):
+                    console.print(
+                        f"\n<tool call: {part.tool_name}({part.args})>",
+                        style="#662288",
+                    )
+                case (
+                    FunctionToolResultEvent(part=part)
+                    | OutputToolResultEvent(part=part)
+                ):
+                    console.print(
+                        f"<tool result ({part.tool_name}): {part.content}>",
+                        style="#662288",
+                    )
+                case (
+                    PartStartEvent()
+                    | PartDeltaEvent()
+                    | PartEndEvent()
+                    | FinalResultEvent()
+                    | AgentRunResultEvent()
+                ):
+                    pass
+                case _:
+                    raise ValueError(f"No handler for {type(event)}")
         print()
 
     while True:
