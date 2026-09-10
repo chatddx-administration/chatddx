@@ -14,6 +14,7 @@ from pydantic_ai import (
     ModelRequest,
     ModelResponse,
     NativeToolCallPart,
+    NativeToolReturnPart,
     TextPart,
     ThinkingPart,
     ToolCallPart,
@@ -33,6 +34,11 @@ from chatddx.utils import truncate_content
 class ToolCallSummary(NamedTuple):
     tool_name: str
     args_json: str
+
+
+class ToolReturnSummary(NamedTuple):
+    tool_name: str
+    content: str
 
 
 class Session(SessionModel):
@@ -207,6 +213,22 @@ class Message(MessageModel):
         return None
 
     @cached_property
+    def tool_return(self) -> ToolReturnSummary | None:
+        if not isinstance(self.spec.payload, ModelRequest):
+            return None
+
+        for part in self.spec.payload.parts:
+            if isinstance(part, (ToolReturnPart, NativeToolReturnPart)):
+                match part.content:
+                    case str() as text:
+                        content = text
+                    case _:
+                        content = json.dumps(part.content, indent=4)
+                return ToolReturnSummary(tool_name=part.tool_name, content=content)
+
+        return None
+
+    @cached_property
     def typed_content(self):
         if self.content is None:
             return None
@@ -240,13 +262,10 @@ class Message(MessageModel):
                             UserPromptPart,
                         )
                     case RoleChoices.TOOL:
-                        part_content = "[tool return]: " + truncate_content(
-                            get_part_content(
-                                request.parts,
-                                ToolReturnPart,
-                            ),
-                            20,
-                        )
+                        # Tool returns aren't plain text (and can be
+                        # structured); Message.tool_return reads them
+                        # directly off the part instead.
+                        part_content = None
                     case _:
                         raise NotImplementedError(f"unhandled value '{self.spec.role}'")
 
