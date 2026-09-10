@@ -4,7 +4,8 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
-from pydantic_ai import ModelResponse, TextPart, ThinkingPart
+from django.utils.html import escape
+from pydantic_ai import ModelResponse, TextPart, ThinkingPart, ToolCallPart
 from pydantic_core import to_jsonable_python
 
 from chatddx.core.choices import RoleChoices, SessionContextChoices
@@ -89,3 +90,43 @@ def test_session_view_omits_thinking_block_when_absent(
 
     assert "the answer" in content
     assert "Thinking" not in content
+
+
+@pytest.mark.django_db
+def test_session_view_renders_tool_call(
+    session: SessionModel,
+    agent_branch: BranchModel,
+    admin_client: Client,
+):
+    """A tool call is its own section, with the tool name in the summary and
+    the full (untruncated) args rendered as JSON in the details."""
+    response = ModelResponse(
+        parts=[ToolCallPart(tool_name="sentinel_op", args={"a": 12, "b": 8})]
+    )
+    _make_message(session, agent_branch, response)
+
+    admin_response = admin_client.get(
+        reverse("admin:orm_session_change", args=[session.pk])
+    )
+    content = admin_response.content.decode()
+
+    assert "Tool Call: sentinel_op" in content
+    assert escape('"a": 12') in content
+    assert escape('"b": 8') in content
+
+
+@pytest.mark.django_db
+def test_session_view_omits_tool_call_block_when_absent(
+    session: SessionModel,
+    agent_branch: BranchModel,
+    admin_client: Client,
+):
+    response = ModelResponse(parts=[TextPart(content="the answer")])
+    _make_message(session, agent_branch, response)
+
+    admin_response = admin_client.get(
+        reverse("admin:orm_session_change", args=[session.pk])
+    )
+    content = admin_response.content.decode()
+
+    assert "Tool Call:" not in content

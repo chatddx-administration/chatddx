@@ -37,7 +37,15 @@
       <summary class="cursor-pointer text-xs font-medium text-amber-700 dark:text-amber-400">
         {% translate "Thinking" %}
       </summary>
-      <pre class="mt-2 whitespace-pre-wrap text-xs text-amber-900 dark:text-amber-200">{{ instance.thinking }}</pre>
+      <pre class="mt-2 whitespace-pre-wrap break-words text-xs text-amber-900 dark:text-amber-200">{{ instance.thinking }}</pre>
+    </details>
+    {% endif %}
+    {% if instance.tool_call %}
+    <details class="rounded-md border border-sky-200 bg-sky-50 p-2 dark:border-sky-900 dark:bg-sky-950/40">
+      <summary class="cursor-pointer text-xs font-medium text-sky-700 dark:text-sky-400">
+        {% blocktranslate with tool_name=instance.tool_call.tool_name %}Tool Call: {{ tool_name }}{% endblocktranslate %}
+      </summary>
+      <pre class="mt-2 whitespace-pre-wrap break-words text-xs text-sky-900 dark:text-sky-200"><code class="language-json">{{ instance.tool_call.args_json }}</code></pre>
     </details>
     {% endif %}
     <div class="relative">
