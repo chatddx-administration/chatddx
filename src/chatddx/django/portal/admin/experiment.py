@@ -1,32 +1,15 @@
 # pyright: basic
 from typing import Any, override
 
-from django import forms
 from django.contrib import admin
-from django.db.models import ForeignKey, JSONField, QuerySet
+from django.db.models import ForeignKey, QuerySet
 from django.http import HttpRequest
 
 from chatddx.core.choices import RunStatusChoices
 from chatddx.django.orm.qs import qs_experiments
 from chatddx.django.portal.admin.base import TypedModelAdmin
 from chatddx.experiment.proxies import Experiment, Run, SharedExperiment, SharedRun
-from chatddx.history.proxies import Session
 from chatddx.repo.shufflers.main import ensure_identity
-
-
-class BlankableJSONField(forms.JSONField):
-    """Like forms.JSONField, but renders an unset value as an empty
-    widget instead of the literal text "null". Round-tripping is unaffected:
-    to_python() already treats an empty submission as None (Run.result is
-    null=True, blank=True), so this only changes what's displayed, not
-    what's saved.
-    """
-
-    @override
-    def prepare_value(self, value: Any) -> Any:
-        if value is None:
-            return ""
-        return super().prepare_value(value)
 
 
 @admin.register(Experiment)
@@ -97,7 +80,7 @@ class SharedExperimentAdmin(ExperimentAdmin):
 class RunAdmin(TypedModelAdmin[Run]):
     list_display = [
         "timestamp",
-        "experiment",
+        "experiment_",
         "status",
         "session",
         "result",
@@ -107,15 +90,12 @@ class RunAdmin(TypedModelAdmin[Run]):
         "timestamp",
         "experiment",
         "status",
-        "session",
-        "result",
+        "session_",
+        "result_",
         "collaborators",
     ]
-    readonly_fields = ["timestamp"]
+    readonly_fields = ["timestamp", "session_", "result_"]
     list_filter = ["status"]
-    formfield_overrides = {
-        JSONField: {"form_class": BlankableJSONField},
-    }
 
     actions = ["requeue"]
 
@@ -123,6 +103,23 @@ class RunAdmin(TypedModelAdmin[Run]):
         qs = super().get_queryset(request)
 
         return qs.filter(owner__name=request.user.username).order_by("-timestamp")
+
+    @admin.display(description="Experiment")
+    def experiment_(self, obj: Run):
+        # obj.experiment is an ExperimentModel instance (that's what
+        # RunModel.experiment is declared against), not the Experiment
+        # proxy, so it doesn't carry Experiment.__str__ -- re-fetch through
+        # the proxy for a timestamp + tags label, same as get_session() does
+        # for Message.session in MessageAdmin.
+        return Experiment.objects.get(pk=obj.experiment_id)
+
+    @admin.display(description="Session")
+    def session_(self, obj: Run):
+        return obj.session_link
+
+    @admin.display(description="Result")
+    def result_(self, obj: Run):
+        return obj.result_html
 
     @override
     def formfield_for_foreignkey(
@@ -137,23 +134,8 @@ class RunAdmin(TypedModelAdmin[Run]):
             kwargs["queryset"] = Experiment.objects.filter(
                 owner__name=request.user.username,
             )
-        elif db_field.name == "session":
-            kwargs["queryset"] = Session.objects.filter(
-                owner__name=request.user.username,
-            )
 
-        formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-        if db_field.name == "experiment":
-            formfield.label_from_instance = self._experiment_label
-
-        return formfield
-
-    @staticmethod
-    def _experiment_label(obj: Experiment) -> str:
-        timestamp = obj.timestamp.strftime("%Y-%m-%d %H:%M")
-        tags = obj.tags_display() or "no tags"
-        return f"{timestamp} — {tags}"
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request: HttpRequest, obj: Run, form: Any, change: bool):
         if not change:

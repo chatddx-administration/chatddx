@@ -1,5 +1,4 @@
 # pyright: basic
-import json
 from dataclasses import asdict
 from typing import Any
 
@@ -11,8 +10,8 @@ from unfold.utils import format_html
 
 from chatddx.django.orm.qs import qs_messages
 from chatddx.django.portal.admin.base import TypedModelAdmin
-from chatddx.history.proxies import Message, Session
-from chatddx.utils import get_step_nav, truncate_content
+from chatddx.history.proxies import Message
+from chatddx.utils import get_step_nav, render_json_html, truncate_content
 
 
 @admin.register(Message)
@@ -54,18 +53,13 @@ class MessageAdmin(TypedModelAdmin[Message]):
 
     @admin.display(description="Session")
     def get_session(self, message: Message):
-        return Session.objects.get(pk=message.session.pk)
+        return message.session_link
 
     def content_short(self, message: Message):
         return truncate_content(message.content, 55)  # type: ignore
 
     @admin.display(description="Content")
     def content(self, message: Message):
-        json_data_tpl = (
-            '<div class="highlight">'
-            '<pre class="white-space: pre-wrap; word-wrap: break-word;; line-height: 125%;">{}</pre>'
-            "</div>"
-        )
         markdown_tpl = '<div class="prose dark:prose-invert max-w-none">{}</div>'
 
         match message.typed_content:
@@ -78,8 +72,7 @@ class MessageAdmin(TypedModelAdmin[Message]):
                 )
                 return format_html(markdown_tpl, mark_safe(html))
             case _:
-                json_data = json.dumps(message.typed_content, indent=4)
-                return format_html(json_data_tpl, json_data)
+                return render_json_html(message.typed_content)
 
     def has_add_permission(self, request: HttpRequest):
         return False

@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import inspect
+import json
 from collections.abc import Awaitable, Coroutine, Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -14,6 +15,7 @@ from typing import (
 from asgiref.sync import sync_to_async
 from django.db.models import Model as DjangoModel
 from django.db.models import QuerySet
+from django.utils.html import format_html
 from pydantic import HttpUrl, JsonValue
 
 type Observer[T] = Callable[[T], None | Awaitable[None]]
@@ -144,3 +146,19 @@ def truncate_content(content: str | None, limit: int):
     if len(content) > limit:
         return content[:limit] + " (...)"
     return content
+
+
+def render_json_html(data: Any) -> str:
+    """Render a JSON-serializable value as a syntax-highlighted <pre> block,
+    the way MessageAdmin.content renders non-text message content. Returns
+    an empty string for None instead of the literal text "null"."""
+    if data is None:
+        return ""
+
+    json_data = json.dumps(data, indent=4)
+    return format_html(
+        '<div class="highlight">'
+        '<pre class="white-space: pre-wrap; word-wrap: break-word;; line-height: 125%;">{}</pre>'
+        "</div>",
+        json_data,
+    )

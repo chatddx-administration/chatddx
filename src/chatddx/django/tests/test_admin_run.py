@@ -5,6 +5,7 @@ from django.urls import reverse
 from chatddx.core.choices import RunStatusChoices
 from chatddx.core.models import IdentityModel
 from chatddx.experiment.models import ExperimentModel, RunModel
+from chatddx.history.models import SessionModel
 from chatddx.repo.base import BranchModel
 from chatddx.repo.branch_models import BranchModelRegistry
 from chatddx.repo.shufflers.expect import dump_expect
@@ -172,50 +173,56 @@ def test_experiment_dropdown_shows_timestamp_and_tags(
 
 
 @pytest.mark.django_db
-def test_result_field_does_not_render_as_literal_null(
-    run: RunModel, admin_client: Client
+def test_changelist_shows_experiment_timestamp_and_tags(
+    run: RunModel,
+    experiment: ExperimentModel,
+    admin_client: Client,
 ):
-    """Run.result is a nullable JSONField; a fresh Run has result=None, and
-    Django's stock JSONField form widget would otherwise pre-fill the
-    textarea with the literal text "null"."""
+    response = admin_client.get(reverse("admin:orm_run_changelist"))
+    content = response.content.decode()
+
+    timestamp = experiment.timestamp.strftime("%Y-%m-%d %H:%M")
+    assert f"{timestamp} — baseline" in content
+
+
+@pytest.mark.django_db
+def test_session_field_is_a_link_not_a_dropdown(run: RunModel, admin_client: Client):
+    session = SessionModel.objects.create(owner=run.owner)
+    run.session = session
+    run.save(update_fields=["session"])
+
     response = admin_client.get(reverse("admin:orm_run_change", args=[run.pk]))
     content = response.content.decode()
 
-    idx = content.index('id="id_result"')
-    assert ">null<" not in content[idx : idx + 50]
+    field_html = content.split(">Session</label>")[1][:500]
+    assert "<select" not in field_html
+    assert reverse("admin:orm_session_change", args=[session.pk]) in field_html
 
 
 @pytest.mark.django_db
-def test_result_field_blank_submit_still_saves_none(
+def test_result_field_is_read_only_and_json_highlighted(
     run: RunModel, admin_client: Client
 ):
-    response = admin_client.post(
-        reverse("admin:orm_run_change", args=[run.pk]),
-        data={
-            "experiment": run.experiment_id,
-            "status": RunStatusChoices.STORED,
-            "collaborators": [],
-            "result": "",
-        },
-    )
-    assert response.status_code == 302
+    run.result = {"score": 1}
+    run.save(update_fields=["result"])
 
-    run.refresh_from_db()
-    assert run.result is None
+    response = admin_client.get(reverse("admin:orm_run_change", args=[run.pk]))
+    content = response.content.decode()
+
+    field_html = content.split(">Result</label>")[1][:500]
+    assert 'name="result"' not in field_html
+    assert 'class="highlight"' in field_html
+    assert "score" in field_html
 
 
 @pytest.mark.django_db
-def test_result_field_round_trips_actual_json(run: RunModel, admin_client: Client):
-    response = admin_client.post(
-        reverse("admin:orm_run_change", args=[run.pk]),
-        data={
-            "experiment": run.experiment_id,
-            "status": RunStatusChoices.STORED,
-            "collaborators": [],
-            "result": '{"score": 1}',
-        },
-    )
-    assert response.status_code == 302
+def test_result_field_does_not_render_as_literal_null(
+    run: RunModel, admin_client: Client
+):
+    """Run.result is a nullable JSONField; a fresh Run has result=None,
+    and the read-only display shouldn't show the literal text "null"."""
+    response = admin_client.get(reverse("admin:orm_run_change", args=[run.pk]))
+    content = response.content.decode()
 
-    run.refresh_from_db()
-    assert run.result == {"score": 1}
+    field_html = content.split(">Result</label>")[1][:500]
+    assert ">null<" not in field_html
