@@ -125,44 +125,56 @@ def run_repl(session: SessionSpec, agent_branch: BranchSpec[AgentSpec]):
         )
 
         thinking_started = False
-        async for event in stream_gen:
-            match event:
-                case PartStartEvent(part=TextPart(content=text)):
-                    console.print(text, end="", style="#886622")
-                case PartDeltaEvent(delta=TextPartDelta(content_delta=text)):
-                    console.print(text, end="", style="#886622")
-                case PartStartEvent(part=ThinkingPart(content=text)):
-                    if not thinking_started:
-                        console.print("Thinking:", end=" ", style="#226688")
-                        thinking_started = True
-                    console.print(text, end="", style="#226688")
-                case PartDeltaEvent(delta=ThinkingPartDelta(content_delta=text)) if (
-                    text
-                ):
-                    console.print(text, end="", style="#226688")
-                case FunctionToolCallEvent(part=part) | OutputToolCallEvent(part=part):
-                    console.print(
-                        f"\n<tool call: {part.tool_name}({part.args})>",
-                        style="#662288",
-                    )
-                case (
-                    FunctionToolResultEvent(part=part)
-                    | OutputToolResultEvent(part=part)
-                ):
-                    console.print(
-                        f"<tool result ({part.tool_name}): {part.content}>",
-                        style="#662288",
-                    )
-                case (
-                    PartStartEvent()
-                    | PartDeltaEvent()
-                    | PartEndEvent()
-                    | FinalResultEvent()
-                    | AgentRunResultEvent()
-                ):
-                    pass
-                case _:
-                    raise ValueError(f"No handler for {type(event)}")
+        try:
+            async for event in stream_gen:
+                match event:
+                    case PartStartEvent(part=TextPart(content=text)):
+                        console.print(text, end="", style="#886622")
+                    case PartDeltaEvent(delta=TextPartDelta(content_delta=text)):
+                        console.print(text, end="", style="#886622")
+                    case PartStartEvent(part=ThinkingPart(content=text)):
+                        if not thinking_started:
+                            console.print("Thinking:", end=" ", style="#226688")
+                            thinking_started = True
+                        console.print(text, end="", style="#226688")
+                    case PartDeltaEvent(
+                        delta=ThinkingPartDelta(content_delta=text)
+                    ) if text:
+                        console.print(text, end="", style="#226688")
+                    case (
+                        FunctionToolCallEvent(part=part)
+                        | OutputToolCallEvent(part=part)
+                    ):
+                        console.print(
+                            f"\n<tool call: {part.tool_name}({part.args})>",
+                            style="#662288",
+                        )
+                    case (
+                        FunctionToolResultEvent(part=part)
+                        | OutputToolResultEvent(part=part)
+                    ):
+                        console.print(
+                            f"<tool result ({part.tool_name}): {part.content}>",
+                            style="#662288",
+                        )
+                    case (
+                        PartStartEvent()
+                        | PartDeltaEvent()
+                        | PartEndEvent()
+                        | FinalResultEvent()
+                        | AgentRunResultEvent()
+                    ):
+                        pass
+                    case _:
+                        raise ValueError(f"No handler for {type(event)}")
+        except Exception as e:
+            # The model or its serving backend misbehaved mid-run (e.g. a
+            # malformed streamed response). Surface it and return to the
+            # prompt instead of crashing the whole REPL session.
+            console.print(
+                f"\n[error] {type(e).__name__}: {e}",
+                style="bold red",
+            )
         print()
 
     while True:

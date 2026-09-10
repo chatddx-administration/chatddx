@@ -79,15 +79,26 @@ async def stream_from_session(
         output_type,
     )
 
-    async with agent.run_stream_events(
-        prompt,
-        deps=agent_context,
-        message_history=get_message_history(session),
-    ) as events:
-        async for event in events:
-            yield event
+    _ = dispatcher.subscribe(
+        on_error(
+            session.id,
+            agent_spec.id,
+        )
+    )
 
-        await dispatcher.publish(events.result)
+    try:
+        async with agent.run_stream_events(
+            prompt,
+            deps=agent_context,
+            message_history=get_message_history(session),
+        ) as events:
+            async for event in events:
+                yield event
+
+            await dispatcher.publish(events.result)
+
+    except Exception as e:
+        raise await publish_error(dispatcher, e)
 
 
 def get_message_history(session: SessionSpec):
@@ -157,26 +168,30 @@ async def run_from_session(
         await dispatcher.publish(result)
         return result
 
-    except UnexpectedModelBehavior as e:
-        if e.__cause__:
-            enhanced_message = (
-                f"{e}\n\n"
-                f"--- Original Root Cause ({type(e.__cause__).__name__}) ---\n"
-                f"{e.__cause__}"
-            )
-
-            new_exception = UnexpectedModelBehavior(enhanced_message)
-            new_exception.__cause__ = e.__cause__
-
-            await dispatcher.publish(new_exception)
-            raise new_exception
-
-        await dispatcher.publish(e)
-        raise e
-
     except Exception as e:
-        await dispatcher.publish(e)
-        raise e
+        raise await publish_error(dispatcher, e)
+
+
+async def publish_error(dispatcher: Dispatcher, error: Exception) -> Exception:
+    """Publish an agent-run failure to the dispatcher and return the exception to raise.
+
+    For an `UnexpectedModelBehavior` (pydantic-ai's catch-all for a model or
+    provider misbehaving mid-run, e.g. a malformed tool-call from the model
+    or a streaming error surfaced by the provider), the underlying cause is
+    folded into the message so it isn't lost behind pydantic-ai's generic
+    wrapper.
+    """
+    if isinstance(error, UnexpectedModelBehavior) and error.__cause__:
+        cause = error.__cause__
+        enhanced_message = (
+            f"{error}\n\n--- Original Root Cause ({type(cause).__name__}) ---\n{cause}"
+        )
+
+        error = UnexpectedModelBehavior(enhanced_message)
+        error.__cause__ = cause
+
+    await dispatcher.publish(error)
+    return error
 
 
 def on_prompt(session_id: int, agent_id: int):
