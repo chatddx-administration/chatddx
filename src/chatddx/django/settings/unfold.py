@@ -62,30 +62,10 @@ UNFOLD = {
         "show_all_applications": True,
         "navigation": [
             {
-                "title": _("Navigation"),
-                "separator": False,
+                "title": _("Lab"),
+                "separator": True,
                 "collapsible": False,
                 "items": [
-                    {
-                        "title": "Agents",
-                        "icon": "precision_manufacturing",
-                        "link": reverse_lazy("admin:orm_superagent_changelist"),
-                    },
-                    {
-                        "title": "Sessions",
-                        "icon": "view_timeline",
-                        "link": reverse_lazy("admin:orm_session_changelist"),
-                    },
-                    {
-                        "title": "Identities",
-                        "icon": "people",
-                        "link": reverse_lazy("admin:orm_identity_changelist"),
-                    },
-                    {
-                        "title": "Tools",
-                        "icon": "handyman",
-                        "link": reverse_lazy("admin:orm_tool_changelist"),
-                    },
                     {
                         "title": "Cases",
                         "icon": "folder_open",
@@ -101,10 +81,46 @@ UNFOLD = {
                         "icon": "play_circle",
                         "link": reverse_lazy("admin:orm_run_changelist"),
                     },
+                ],
+            },
+            {
+                "title": _("Config"),
+                "separator": True,
+                "collapsible": False,
+                "items": [
                     {
-                        "title": "Database",
-                        "icon": "database",
-                        "link": reverse_lazy("admin:index"),
+                        "title": "Agents",
+                        "icon": "precision_manufacturing",
+                        "link": reverse_lazy("admin:orm_superagent_changelist"),
+                    },
+                    {
+                        "title": "Tools",
+                        "icon": "handyman",
+                        "link": reverse_lazy("admin:orm_tool_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Admin"),
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "Identity",
+                        "icon": "people",
+                        "link": reverse_lazy("admin:orm_identity_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("History"),
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "Sessions",
+                        "icon": "view_timeline",
+                        "link": reverse_lazy("admin:orm_session_changelist"),
                     },
                 ],
             },
