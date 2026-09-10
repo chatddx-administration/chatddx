@@ -129,6 +129,22 @@ UNFOLD = {
     "TABS": [
         {
             "models": [
+                "orm.case",
+                "orm.sharedcase",
+            ],
+            "items": [
+                {
+                    "title": "My Cases",
+                    "link": reverse_lazy("admin:orm_case_changelist"),
+                },
+                {
+                    "title": "Shared with Me",
+                    "link": reverse_lazy("admin:orm_sharedcase_changelist"),
+                },
+            ],
+        },
+        {
+            "models": [
                 "orm.superagent",
                 "orm.sharedsuperagent",
             ],
