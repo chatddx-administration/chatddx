@@ -5,8 +5,10 @@ import pytest_asyncio
 
 from chatddx.core.models import IdentityModel
 from chatddx.repo.base import BranchModel
-from chatddx.repo.shufflers.main import (
+from chatddx.repo.shufflers.cases import (
     dump_cases_async,
+)
+from chatddx.repo.shufflers.main import (
     dump_trail_registry_async,
     ensure_identity_async,
     load_branch_async,

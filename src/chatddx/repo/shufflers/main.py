@@ -65,50 +65,6 @@ def dump_trail_registry(registry_path: Path, owner_name: str):
 dump_trail_registry_async = make_async(dump_trail_registry)
 
 
-def dump_cases(cases_dir: Path, owner_name: str) -> dict[int, BranchModel]:
-    dumped_cases: dict[int, BranchModel] = {}
-
-    for case_path in sorted(cases_dir.iterdir()):
-        if not case_path.is_file():
-            continue
-
-        payload = case_path.read_text(encoding="utf-8").rstrip("\n")
-
-        branch_model, _ = dump_branch(
-            bundle_name="case",
-            branch_name=case_path.stem,
-            owner_name=owner_name,
-            trail=CaseSchema(payload=payload),
-        )
-
-        dumped_cases[branch_model.pk] = branch_model
-
-    return dumped_cases
-
-
-dump_cases_async = make_async(dump_cases)
-
-
-def load_agents(
-    owner_name: str,
-    output_type: str | None = None,
-):
-
-    model_cls = Repo("agent", BranchModel)
-    qs = qs_canon(model_cls.objects.all(), owner_name)
-
-    qs = qs.filter(target__output_type__definition__title=output_type)
-
-    return load_branches(
-        bundle_name="agent",
-        owner_name=owner_name,
-        qs=qs,
-    )
-
-
-load_agents_async = make_async(load_agents)
-
-
 def load_branches(
     bundle_name: str,
     owner_name: str,
@@ -129,26 +85,6 @@ def load_branches(
         specs.append(spec_cls.model_validate(model))
 
     return specs
-
-
-def load_agent(
-    owner_name: str,
-    branch_name: str,
-    output_type: str | None = None,
-):
-    model_cls = Repo("agent", BranchModel)
-    qs = model_cls.objects.all()
-    if output_type:
-        qs = qs.filter(target__output_type__fingerprint=output_type)
-
-    return load_branch(
-        bundle_name="agent",
-        owner_name=owner_name,
-        qs=qs,
-    )
-
-
-load_agent_async = make_async(load_agent)
 
 
 # `bundle_name` picks the concrete Trail*Spec at runtime via `Repo()`, which

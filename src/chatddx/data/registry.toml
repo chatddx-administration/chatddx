@@ -15,8 +15,14 @@ sampling_params = ["standard-openai"]
 [agent."gpt-oss-20b"]
 partial = true
 connection = "gpt-oss-20b"
-instructions = "Give medical assistance\n\n{{ tool_group_instructions }}"
+instructions = "Give medical assistance"
 sampling_params = ["low-reasoning"]
+
+[agent."gpt-oss-20b web"]
+connection = "gpt-oss-20b"
+instructions = "Assist the user. \n\n{{ tool_group_instructions }}"
+output_type = "free-text"
+tool_group = "web"
 
 [agent."qwen-3b swift tool-coerced"]
 extends = ["qwen-3b"]
@@ -79,7 +85,6 @@ output_type = "free-text"
 extends = ["gpt-oss-20b"]
 sampling_params = ["deterministic", "low-reasoning"]
 output_type = "swift-tool"
-tool_group = "web"
 
 [connection.qwen3-8b]
 model = "Qwen/Qwen3-8B-AWQ"

@@ -34,7 +34,8 @@ from chatddx.history.schemas import SessionSpec
 from chatddx.history.session import refresh_messages, resume_session, start_session
 from chatddx.repo.base import BranchSpec
 from chatddx.repo.branch_models import AgentBranchModel
-from chatddx.repo.shufflers.main import ensure_identity
+from chatddx.repo.branch_spec import AgentBranchSpec
+from chatddx.repo.shufflers.main import ensure_identity, load_agent
 from chatddx.repo.trail_specs import AgentSpec
 from chatddx.runtime.runners import stream_from_session
 
@@ -80,11 +81,8 @@ def main(
             agent_branch = session.default_agent
 
     if agent_name:
-        agent_branch = BranchSpec[AgentSpec].model_validate(
-            AgentBranchModel.objects.filter(name=agent_name, owner_id=owner.pk).latest(
-                "timestamp"
-            )
-        )
+        agent_branch = load_agent(owner.name, agent_name)
+        assert agent_branch is not None
         if not session_uuid:
             session = asyncio.run(start_session(owner.pk, agent_branch.id))
 
@@ -134,12 +132,11 @@ def run_repl(session: SessionSpec, agent_branch: BranchSpec[AgentSpec]):
                         console.print("Thinking:", end=" ", style="#226688")
                         thinking_started = True
                     console.print(text, end="", style="#226688")
-                case PartDeltaEvent(delta=ThinkingPartDelta(content_delta=text)) if text:
-                    console.print(text, end="", style="#226688")
-                case (
-                    FunctionToolCallEvent(part=part)
-                    | OutputToolCallEvent(part=part)
+                case PartDeltaEvent(delta=ThinkingPartDelta(content_delta=text)) if (
+                    text
                 ):
+                    console.print(text, end="", style="#226688")
+                case FunctionToolCallEvent(part=part) | OutputToolCallEvent(part=part):
                     console.print(
                         f"\n<tool call: {part.tool_name}({part.args})>",
                         style="#662288",

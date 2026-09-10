@@ -4,9 +4,11 @@ import pytest
 import pytest_asyncio
 
 from chatddx.core.models import IdentityModel
+from chatddx.repo.shufflers.agent import (
+    load_agents_async,
+)
 from chatddx.repo.shufflers.main import (
     dump_trail_registry_async,
-    load_agents_async,
 )
 from chatddx.utils import Dispatcher
 

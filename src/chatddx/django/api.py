@@ -6,9 +6,11 @@ from pydantic_ai.exceptions import ModelHTTPError
 
 from chatddx.core.models import IdentityModel
 from chatddx.history.session import start_session
+from chatddx.repo.shufflers.agent import (
+    load_agents_async,
+)
 from chatddx.repo.shufflers.main import (
     ensure_identity,
-    load_agents_async,
     load_branch_async,
 )
 from chatddx.runtime.runners import run_from_session

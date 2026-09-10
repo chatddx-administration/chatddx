@@ -4,7 +4,8 @@ import pytest
 import pytest_asyncio
 
 from chatddx.core.models import IdentityModel, TagModel
-from chatddx.repo.shufflers.main import dump_cases_async, ensure_identity_async
+from chatddx.repo.shufflers.cases import dump_cases_async
+from chatddx.repo.shufflers.main import ensure_identity_async
 from chatddx.repo.shufflers.tags import (
     dump_case_tags_async,
     load_case_branches_by_tag_async,
