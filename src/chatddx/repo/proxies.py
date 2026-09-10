@@ -114,9 +114,17 @@ class Tool(BranchProxy, ToolBranchModel):
         verbose_name_plural = "Tools"
 
 
-class Case(BranchProxy, CaseBranchModel):
+class Case(BranchProxy, CaseBranchModel, Shared):
     class Meta:
         proxy = True
         app_label = "orm"
         verbose_name = "Case"
         verbose_name_plural = "Cases"
+
+
+class SharedCase(BranchProxy, CaseBranchModel, Shared):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Shared Case"
+        verbose_name_plural = "Shared Cases"
