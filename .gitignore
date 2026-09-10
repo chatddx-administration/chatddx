@@ -1,7 +1,9 @@
-result
-dumps
 .direnv
-__pycache__
 .env
+__pycache__
 .coverage
-history.txt
+
+/history.txt
+/static/
+/result
+/dumps

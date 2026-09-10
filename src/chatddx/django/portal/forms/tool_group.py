@@ -1,11 +1,10 @@
-# src/chatddx/django/portal/forms/tool_group.py
 from typing import Any, final, override
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, Row
 from django.forms import (
     CharField,
-    ModelChoiceField,
+    ChoiceField,
 )
 from unfold.fields import ModelMultipleChoiceField
 from unfold.layout import Hr
@@ -15,7 +14,7 @@ from unfold.widgets import (
     UnfoldAdminTextInputWidget,
 )
 
-from chatddx.django.orm.qs import qs_canon, qs_owned_trails
+from chatddx.django.orm.qs import qs_owned_trails
 from chatddx.django.portal.forms.base import BaseForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo import proxies
@@ -49,36 +48,25 @@ class ToolGroupForm(BaseForm):
 
     name = CharField(
         max_length=255,
-        widget=UnfoldAdminTextInputWidget(
-            attrs={"placeholder": "e.g., Web Search & Math Suite"}
-        ),
-        label="Tool Group Name",
-        help_text="Create a new tool group, or enter an existing name to update it. The latest save becomes the active version.",
+        widget=UnfoldAdminTextInputWidget(),
+        label="Name",
     )
-    template = ModelChoiceField(
-        queryset=proxies.ToolGroup.objects.none(),
+    template = ChoiceField(
         required=False,
-        empty_label="--- Start from scratch ---",
         widget=TemplateSelectWidget(),
-        label="Tool Group Template",
-        help_text="Optional. Select a pre-configured template to populate the tools and instructions below.",
+        label="Auto-fill from existing tool group",
+        help_text="This will overwrite all edited values in the tool group section!",
     )
     tools = ModelMultipleChoiceField(
         queryset=ToolTrailModel.objects.none(),
         widget=UnfoldAdminSelectMultipleWidget(),
         required=False,
         label="Available Tools",
-        help_text="Select the specific functions, APIs, or integrations this agent is permitted to execute.",
     )
     instructions = CharField(
         required=False,
-        widget=UnfoldAdminExpandableTextareaWidget(
-            attrs={
-                "placeholder": "e.g., Always use the web search tool before answering factual questions. Do not use the calculator for simple arithmetic."
-            }
-        ),
+        widget=UnfoldAdminExpandableTextareaWidget(),
         label="Tool Usage Instructions",
-        help_text="Specific guidelines dictating exactly when and how the agent should utilize the selected tools. This is appended to the main system prompt.",
     )
 
     helper = FormHelper()

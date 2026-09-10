@@ -82,7 +82,7 @@ class BaseForm(ModelForm):
         model_cls = cast(type[BranchModel], self._meta.model)
         owned = qs_canon(model_cls.objects.all(), owner)
 
-        self.fields["template"].choices = [("", "=== clear ===")] + [
+        self.fields["template"].choices = [("", "--- clear ---")] + [
             (model.target.pk, model.name) for model in owned
         ]
 

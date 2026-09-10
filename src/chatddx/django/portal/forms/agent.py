@@ -54,7 +54,7 @@ class AgentForm(BaseForm):
         owner = request.user.username
         owned = qs_canon(proxies.Agent.objects.all(), owner)
 
-        self.fields["template"].choices = [("", "=== clear ===")] + [
+        self.fields["template"].choices = [("", "--- clear ---")] + [
             (model.target.pk, model.name) for model in owned
         ]
 
@@ -123,22 +123,18 @@ class AgentForm(BaseForm):
     name = forms.CharField(
         max_length=255,
         widget=UnfoldAdminTextInputWidget(),
-        label="Agent name",
-        help_text="Create a new agent, or enter an existing name to update it. The latest save becomes the active version.",
+        label="Name",
     )
     template = forms.ChoiceField(
         required=False,
         widget=TemplateSelectWidget(),
-        label="Base Template",
-        help_text="Optional. Select a pre-configured template to quickly populate the settings below.",
+        label="Auto-fill from existing agent",
+        help_text="This will overwrite all edited values!",
     )
     instructions = forms.CharField(
         required=False,
-        widget=UnfoldAdminExpandableTextareaWidget(
-            attrs={"placeholder": "No instructions provided"}
-        ),
-        label="System instructions",
-        help_text="The core system prompt that dictates the agent's persona, rules, and boundaries.",
+        widget=UnfoldAdminExpandableTextareaWidget(),
+        label="Instructions",
     )
     collaborators = forms.ModelMultipleChoiceField(
         required=False,
@@ -180,7 +176,7 @@ class AgentForm(BaseForm):
         helper.include_media = False
 
         main_section = Fieldset(
-            "Agent Settings",
+            "Simple Agent Settings",
             Row(
                 Column(
                     "name",
@@ -193,7 +189,7 @@ class AgentForm(BaseForm):
             ),
             Row(
                 Column(
-                    "instructions",
+                    "owner",
                     css_class="w-1/2",
                 ),
                 Column(
@@ -203,7 +199,7 @@ class AgentForm(BaseForm):
             ),
             Row(
                 Column(
-                    "owner",
+                    "instructions",
                 ),
                 css_class="w-1/2",
             ),

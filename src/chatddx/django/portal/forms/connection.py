@@ -36,37 +36,36 @@ class ConnectionForm(BaseForm):
         max_length=255,
         widget=UnfoldAdminTextInputWidget(),
         label="Connection name",
-        help_text="Create a new connection, or enter an existing name to update it. The latest save becomes the active version.",
     )
     template = forms.ChoiceField(
         required=False,
         widget=TemplateSelectWidget(),
-        label="Prefill from existing",
-        help_text="Optional. Select a pre-configured connection to quickly populate the API settings below.",
+        label="Auto-fill from existing connection",
+        help_text="This will overwrite all edited values in the connection section!",
     )
     model = forms.CharField(
         max_length=255,
-        widget=UnfoldAdminTextInputWidget(),
+        widget=UnfoldAdminTextInputWidget(
+            attrs={"placeholder": "e.g. openai/gpt-oss-20b"}
+        ),
         label="Model ID",
-        help_text="The exact model identifier required by your chosen provider.",
     )
     provider = forms.ChoiceField(
         choices=ProviderChoices.choices,
         widget=UnfoldAdminSelect2Widget(),
         label="API Provider",
-        help_text="The service hosting the selected model.",
     )
     endpoint = forms.URLField(
         max_length=2048,
-        widget=UnfoldAdminURLInputWidget(),
+        widget=UnfoldAdminTextInputWidget(
+            attrs={"placeholder": "e.g. https://api.provider.com/v1/"}
+        ),
         label="API Endpoint URL",
-        help_text="The base URL for the provider's API.",
     )
     profile = forms.CharField(
         widget=UnfoldAdminExpandableTextareaWidget(),
         required=False,
-        label="Provider Parameters (TOML)",
-        help_text="Fine-tuning parameters passed to the model, formatted as valid TOML.",
+        label="Provider Parameters",
     )
 
     helper = FormHelper()

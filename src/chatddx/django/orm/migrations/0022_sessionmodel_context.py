@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("orm", "0021_scorertrailmodel_alter_expecttrailmodel_scorer_and_more"),
     ]
@@ -13,8 +12,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="sessionmodel",
             name="context",
-            # No default -- every Session-starting path (chat, repl,
-            # experiment) is expected to say why it exists.
             field=models.CharField(
                 choices=[
                     ("chat", "Chat"),

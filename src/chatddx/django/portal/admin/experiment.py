@@ -143,12 +143,6 @@ class RunAdmin(TypedModelAdmin[Run]):
         assert request is not None
 
         if db_field.name == "collaborators":
-            # The Run's owner is implicit -- they already have full access
-            # to it -- so they shouldn't show up as a choice in their own
-            # collaborators picker. Nothing stops a collaborator set from
-            # containing the owner (e.g. a Run shared back to its owner by
-            # someone else), this just keeps the owner off the default list
-            # of people *to add*.
             kwargs["queryset"] = IdentityModel.objects.exclude(
                 name=request.user.username,
             )

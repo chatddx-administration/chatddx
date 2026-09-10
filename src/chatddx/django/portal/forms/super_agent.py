@@ -219,15 +219,19 @@ class SuperAgentForm(BaseForm):
         max_length=255,
         widget=UnfoldAdminTextInputWidget(),
         label="Agent name",
-        help_text="Create a new agent, or enter an existing name to update it. The latest save becomes the active version.",
     )
-    template = forms.ModelChoiceField(
-        queryset=proxies.Agent.objects.none(),
+    template = forms.ChoiceField(
         required=False,
-        empty_label="--- Start from scratch ---",
         widget=TemplateSelectWidget(),
-        label="Base Template",
-        help_text="Optional. Select a pre-configured template to quickly populate the settings below.",
+        label="Auto-fill from existing agent",
+        help_text="This will overwrite all edited values!",
+    )
+    instructions = forms.CharField(
+        required=False,
+        widget=UnfoldAdminExpandableTextareaWidget(
+            attrs={"placeholder": "No instructions provided"}
+        ),
+        label="System instructions",
     )
     api_key = forms.CharField(
         max_length=255,
@@ -236,7 +240,7 @@ class SuperAgentForm(BaseForm):
             attrs={"placeholder": "Enter key or leave blank to use existing"}
         ),
         label="API Key",
-        help_text="Stored securely under your personal user account. It is <strong>not</strong> saved in the shared version history.",
+        help_text="Stored in the secrets of your identity.",
     )
     collaborators = forms.ModelMultipleChoiceField(
         required=False,
@@ -249,15 +253,6 @@ class SuperAgentForm(BaseForm):
         queryset=IdentityModel.objects.all(),
         widget=UnfoldAdminSelect2Widget(),
         label="Owner",
-    )
-
-    instructions = forms.CharField(
-        required=False,
-        widget=UnfoldAdminExpandableTextareaWidget(
-            attrs={"placeholder": "No instructions provided"}
-        ),
-        label="System instructions",
-        help_text="The core system prompt that dictates the agent's persona, rules, and boundaries.",
     )
 
     @property

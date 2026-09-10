@@ -6,7 +6,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, Row
 from django.forms import (
     CharField,
-    ModelChoiceField,
+    ChoiceField,
     ModelMultipleChoiceField,
 )
 from unfold.layout import Hr
@@ -59,21 +59,17 @@ class CaseForm(BaseForm):
     name = CharField(
         max_length=255,
         widget=UnfoldAdminTextInputWidget(),
-        label="Case Name",
-        help_text="Create a new case, or enter an existing name to update it. The latest save becomes the active version.",
+        label="Name",
     )
-    template = ModelChoiceField(
-        queryset=proxies.Case.objects.none(),
+    template = ChoiceField(
         required=False,
-        empty_label="--- Start from scratch ---",
         widget=TemplateSelectWidget(),
-        label="Case Template",
-        help_text="Optional. Select a pre-configured template to populate the payload below.",
+        label="Auto-fill from existing agent",
+        help_text="This will overwrite all edited values!",
     )
     payload = CharField(
         widget=UnfoldAdminExpandableTextareaWidget(),
         label="Payload",
-        help_text="The raw payload content for this case.",
     )
     tags = TagsField(
         queryset=TagModel.objects.all(),

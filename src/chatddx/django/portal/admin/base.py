@@ -77,7 +77,7 @@ class BranchModelAdmin[T: BranchModel](TypedModelAdmin[T]):
         ThroughModel = self.model.collaborators.through
 
         ThroughModel.objects.filter(
-            **{f"{self.name}branchmodel__name__in": names_subquery},
+            **{f"{self.name.replace('_', '')}branchmodel__name__in": names_subquery},
             identitymodel__name=request.user.username,
         ).delete()
 

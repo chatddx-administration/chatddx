@@ -38,23 +38,18 @@ class OutputTypeForm(BaseForm):
 
     name = CharField(
         max_length=255,
-        widget=UnfoldAdminTextInputWidget(
-            attrs={"placeholder": "e.g., JSON User Profile Extractor"}
-        ),
-        label="Output Profile Name",
-        help_text="Create a new output profile, or enter an existing name to update it. The latest save becomes the active version.",
+        widget=UnfoldAdminTextInputWidget(),
+        label="Name",
     )
-    template = ModelChoiceField(
-        queryset=proxies.OutputType.objects.none(),
+    template = ChoiceField(
         required=False,
         widget=TemplateSelectWidget(),
-        label="Output Template",
-        help_text="Use this to select a pre-configured template to populate the schema and strategies below, the value of this field will not be included in the form.",
+        label="Auto-fill from existing output type",
+        help_text="This will overwrite all edited values in the output type section!",
     )
     output_retries = IntegerField(
         widget=UnfoldAdminIntegerFieldWidget(),
         label="Output Retries",
-        help_text="Number of attempts to generate correct output, applies unconditionally to parsing error and also validation if set to 'retry' below.",
     )
     validation_strategy = ChoiceField(
         choices=ValidationChoices.choices,
@@ -66,17 +61,12 @@ class OutputTypeForm(BaseForm):
         choices=CoercionChoices.choices,
         widget=UnfoldAdminSelect2Widget(),
         label="Coerceion Strategy",
-        help_text="How the model is forced to follow the schema (e.g., via System Prompts, Native JSON decoding, or Tool/Function Calling).",
+        help_text="How the model is forced to follow the schema (system prompts, guided decoding, or tool call).",
     )
     definition = CharField(
         required=False,
-        widget=UnfoldAdminTextareaWidget(
-            attrs={
-                "placeholder": 'type = "object"\n\n[properties.summary]\ntype = "string"\n\n[properties.score]\ntype = "number"'
-            }
-        ),
-        label="Schema Definition (TOML)",
-        help_text="Define the required JSONSchema output structure using TOML formatting. Leave blank to accept unstructured plain text.",
+        widget=UnfoldAdminTextareaWidget(attrs={"placeholder": "[free text]"}),
+        label="Schema Definition",
     )
 
     helper = FormHelper()
