@@ -134,7 +134,6 @@ async def test_exact_match_scores_a_correct_reply_as_correct(
     assert result == {
         "correct": True,
         "expected": "the expected answer",
-        "actual": "the expected answer",
     }
 
 
@@ -158,7 +157,6 @@ async def test_exact_match_scores_a_wrong_reply_as_incorrect(
     assert result == {
         "correct": False,
         "expected": "the expected answer",
-        "actual": "a completely different answer",
     }
 
 
@@ -180,7 +178,6 @@ async def test_exact_match_treats_a_missing_reply_as_incorrect(
     assert result == {
         "correct": False,
         "expected": "the expected answer",
-        "actual": None,
     }
 
 
