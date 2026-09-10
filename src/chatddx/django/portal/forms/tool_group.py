@@ -11,13 +11,13 @@ from unfold.fields import ModelMultipleChoiceField
 from unfold.layout import Hr
 from unfold.widgets import (
     UnfoldAdminExpandableTextareaWidget,
-    UnfoldAdminSelect2Widget,
     UnfoldAdminSelectMultipleWidget,
     UnfoldAdminTextInputWidget,
 )
 
 from chatddx.django.orm.qs import qs_canon, qs_owned_trails
 from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import ToolGroupFormDataIn
 from chatddx.repo.form_data_out import ToolGroupFormDataOut
@@ -59,7 +59,7 @@ class ToolGroupForm(BaseForm):
         queryset=proxies.ToolGroup.objects.none(),
         required=False,
         empty_label="--- Start from scratch ---",
-        widget=UnfoldAdminSelect2Widget(),
+        widget=TemplateSelectWidget(),
         label="Tool Group Template",
         help_text="Optional. Select a pre-configured template to populate the tools and instructions below.",
     )

@@ -7,6 +7,7 @@ from django.http import HttpRequest
 from chatddx.django.portal.admin.base import BranchModelAdmin
 from chatddx.django.portal.admin.expect import ExpectInline
 from chatddx.django.portal.forms import CaseForm
+from chatddx.django.portal.utils import truncate_for_list_display
 from chatddx.repo import proxies
 
 
@@ -26,7 +27,7 @@ class CaseAdmin(BranchModelAdmin[proxies.Case]):
         ordering="target__payload",
     )
     def payload(self, obj: proxies.Case) -> str:
-        return str(obj.target.payload[:40])  # pyright: ignore
+        return truncate_for_list_display(obj.target.payload)  # pyright: ignore
 
     @admin.display(description="Tags")
     def tags_csv(self, obj: proxies.Case) -> str | None:

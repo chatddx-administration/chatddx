@@ -1,6 +1,7 @@
 # src/chatddx/history/session.py
 from uuid import UUID
 
+from chatddx.core.choices import SessionContextChoices
 from chatddx.core.django_fields import resolve_related_array_fields_async
 from chatddx.core.models import IdentityModel
 from chatddx.core.schemas import IdentitySpec
@@ -17,12 +18,14 @@ async def get_identity(name: str) -> IdentitySpec:
 async def start_session(
     owner_id: int,
     agent_id: int,
+    context: SessionContextChoices,
     description: str | None = None,
 ) -> SessionSpec:
 
     session_model = await SessionModel.objects.acreate(
         owner_id=owner_id,
         default_agent_id=agent_id,
+        context=context,
         description=description,
     )
 

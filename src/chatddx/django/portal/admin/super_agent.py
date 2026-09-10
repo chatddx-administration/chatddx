@@ -13,6 +13,7 @@ from chatddx.django.portal.forms import (
 from chatddx.django.portal.utils import (
     get_branch_link,
     load_template_data,
+    truncate_for_list_display,
 )
 from chatddx.repo import proxies
 from chatddx.repo.main import agent_relations
@@ -33,7 +34,7 @@ class SuperAgentAdmin(BranchModelAdmin[proxies.SuperAgent]):
 
     @admin.display(description="Instructions", ordering="target__instructions")
     def instructions(self, obj: proxies.Agent) -> str:
-        return str(obj.target.instructions[:20])  # pyright: ignore
+        return truncate_for_list_display(obj.target.instructions)  # pyright: ignore
 
     @admin.display(description="Connection", ordering="connection_name")
     def connection(self, obj: proxies.Agent):

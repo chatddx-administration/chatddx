@@ -4,6 +4,7 @@ from django.http import HttpRequest
 from ninja import NinjaAPI, Schema
 from pydantic_ai.exceptions import ModelHTTPError
 
+from chatddx.core.choices import SessionContextChoices
 from chatddx.core.models import IdentityModel
 from chatddx.history.session import start_session
 from chatddx.repo.shufflers.agent import (
@@ -77,7 +78,7 @@ async def swift_diagnose_endpoint(request: HttpRequest, payload: SwiftDiagnoseRe
         )
 
     api_key = owner.secrets.get("api-keys", {}).get(agent.name)
-    session = await start_session(owner.pk, agent.id)
+    session = await start_session(owner.pk, agent.id, SessionContextChoices.CHAT)
 
     try:
         run_result = await run_from_session(

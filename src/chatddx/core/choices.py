@@ -51,3 +51,9 @@ class RunStatusChoices(TextChoices):
     ERRORED = "errored", "Errored"
     COMPLETED = "completed", "Completed"
     SCORED = "scored", "Scored"
+
+
+class SessionContextChoices(TextChoices):
+    CHAT = "chat", "Chat"
+    REPL = "repl", "REPL"
+    EXPERIMENT = "experiment", "Experiment"

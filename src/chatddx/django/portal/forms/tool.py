@@ -18,6 +18,7 @@ from unfold.widgets import (
 
 from chatddx.core.choices import ToolChoices
 from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import ToolFormDataIn
 from chatddx.repo.form_data_out import ToolFormDataOut
@@ -43,7 +44,7 @@ class ToolForm(BaseForm):
         queryset=proxies.Tool.objects.none(),
         required=False,
         empty_label="--- Start from scratch ---",
-        widget=UnfoldAdminSelect2Widget(),
+        widget=TemplateSelectWidget(),
         label="Tool Template",
         help_text="Optional. Select a pre-configured template to populate the tools and instructions below.",
     )

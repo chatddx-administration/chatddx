@@ -15,6 +15,7 @@ from unfold.widgets import (
 from chatddx.core.choices import ProviderChoices
 from chatddx.core.models import IdentityModel
 from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import ConnectionFormDataIn
 from chatddx.repo.form_data_out import ConnectionFormDataOut
@@ -39,7 +40,7 @@ class ConnectionForm(BaseForm):
     )
     template = forms.ChoiceField(
         required=False,
-        widget=UnfoldAdminSelect2Widget(),
+        widget=TemplateSelectWidget(),
         label="Prefill from existing",
         help_text="Optional. Select a pre-configured connection to quickly populate the API settings below.",
     )

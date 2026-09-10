@@ -5,6 +5,7 @@
 
 {% block extrahead %}
     {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/template_field.css' %}">
     <script id="template-data" type="application/json">
         {{ template_data|safe }}
     </script>

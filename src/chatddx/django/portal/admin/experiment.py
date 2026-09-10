@@ -2,10 +2,11 @@
 from typing import Any, override
 
 from django.contrib import admin
-from django.db.models import ForeignKey, QuerySet
+from django.db.models import ForeignKey, ManyToManyField, QuerySet
 from django.http import HttpRequest
 
 from chatddx.core.choices import RunStatusChoices
+from chatddx.core.models import IdentityModel
 from chatddx.django.orm.qs import qs_experiments
 from chatddx.django.portal.admin.base import TypedModelAdmin
 from chatddx.experiment.proxies import Experiment, Run, SharedExperiment, SharedRun
@@ -131,6 +132,28 @@ class RunAdmin(TypedModelAdmin[Run]):
             )
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    @override
+    def formfield_for_manytomany(
+        self,
+        db_field: ManyToManyField,
+        request: HttpRequest | None,
+        **kwargs: Any,
+    ):
+        assert request is not None
+
+        if db_field.name == "collaborators":
+            # The Run's owner is implicit -- they already have full access
+            # to it -- so they shouldn't show up as a choice in their own
+            # collaborators picker. Nothing stops a collaborator set from
+            # containing the owner (e.g. a Run shared back to its owner by
+            # someone else), this just keeps the owner off the default list
+            # of people *to add*.
+            kwargs["queryset"] = IdentityModel.objects.exclude(
+                name=request.user.username,
+            )
+
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
 
     def save_model(self, request: HttpRequest, obj: Run, form: Any, change: bool):
         if not change:

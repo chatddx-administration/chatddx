@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 
+from chatddx.core.choices import SessionContextChoices
 from chatddx.core.models import IdentityModel
 from chatddx.history.session import start_session
 from chatddx.repo.shufflers.main import dump_trail_registry_async, load_branch_async
@@ -68,7 +69,7 @@ async def test_swift(owner: IdentityModel):
 
     assert spec is not None
 
-    session = await start_session(owner.pk, spec.id)
+    session = await start_session(owner.pk, spec.id, SessionContextChoices.CHAT)
 
     run_result = await run_from_session(
         session=session,
@@ -99,7 +100,7 @@ async def test_retry_prompt(owner: IdentityModel):
 
     assert spec is not None
 
-    session = await start_session(owner.pk, spec.id)
+    session = await start_session(owner.pk, spec.id, SessionContextChoices.CHAT)
 
     run_result = await run_from_session(
         session=session,
