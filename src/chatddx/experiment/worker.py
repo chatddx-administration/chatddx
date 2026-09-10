@@ -17,7 +17,7 @@ from pgqueuer.db import PsycopgDriver
 from pgqueuer.domain.types import QueueExecutionMode
 from pgqueuer.models import Job
 
-from chatddx.core.choices import RunStatusChoices
+from chatddx.core.choices import RunStatusChoices, SessionContextChoices
 from chatddx.django.orm.qs import qs_canon
 from chatddx.experiment.models import ExperimentModel, RunModel
 from chatddx.history.session import start_session
@@ -137,7 +137,8 @@ async def execute_run(run_id: int) -> None:
         session = await start_session(
             owner_id=run.owner_id,
             agent_id=agent_branch.pk,
-            description=f"Run {run.uuid}",
+            context=SessionContextChoices.EXPERIMENT,
+            description=f"Session {run.uuid}",
         )
         # Even if the agent run below fails, the session it failed in --
         # prompt and error message included -- is still worth keeping on

@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 
+from chatddx.core.choices import SessionContextChoices
 from chatddx.core.models import IdentityModel
 from chatddx.history.session import resume_session, start_session
 from chatddx.repo.shufflers.main import (
@@ -170,7 +171,7 @@ async def test_session(owner: IdentityModel):
     )
     assert spec is not None
 
-    session = await start_session(owner.pk, spec.id)
+    session = await start_session(owner.pk, spec.id, SessionContextChoices.CHAT)
 
     result = await run_from_session(session, "say 'aaa'")
 

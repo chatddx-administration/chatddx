@@ -7,7 +7,7 @@ from django.utils import timezone
 from pydantic_ai import ModelResponse, TextPart
 from pydantic_core import to_jsonable_python
 
-from chatddx.core.choices import RoleChoices
+from chatddx.core.choices import RoleChoices, SessionContextChoices
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import MessageModel, SessionModel
 from chatddx.repo.base import BranchModel
@@ -20,7 +20,11 @@ def _by_name(branches: dict[int, BranchModel], name: str) -> BranchModel:
 
 @pytest.fixture
 def session(owner: IdentityModel) -> SessionModel:
-    return SessionModel.objects.create(owner=owner, description="a session")
+    return SessionModel.objects.create(
+        owner=owner,
+        context=SessionContextChoices.CHAT,
+        description="a session",
+    )
 
 
 @pytest.fixture

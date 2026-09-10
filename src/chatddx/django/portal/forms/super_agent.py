@@ -21,6 +21,7 @@ from chatddx.django.portal.forms.connection import ConnectionForm
 from chatddx.django.portal.forms.output_type import OutputTypeForm
 from chatddx.django.portal.forms.sampling_params import SamplingParamsForm
 from chatddx.django.portal.forms.tool_group import ToolGroupForm
+from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.django.portal.utils import load_form_data
 from chatddx.repo import proxies
 from chatddx.repo.branch_spec import AgentBranchSpec
@@ -224,7 +225,7 @@ class SuperAgentForm(BaseForm):
         queryset=proxies.Agent.objects.none(),
         required=False,
         empty_label="--- Start from scratch ---",
-        widget=UnfoldAdminSelect2Widget(),
+        widget=TemplateSelectWidget(),
         label="Base Template",
         help_text="Optional. Select a pre-configured template to quickly populate the settings below.",
     )

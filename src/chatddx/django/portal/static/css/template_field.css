@@ -1,0 +1,31 @@
+/*
+ * Shared look for every "Template" field: Agent, Connection, Sampling
+ * Params, Output Type, Tool, Tool Group and Case all offer one -- a
+ * dropdown that pre-fills the rest of the form from an existing branch.
+ * Each one renders through TemplateSelectWidget
+ * (chatddx.django.portal.forms.widgets), which is the only thing that
+ * puts the chatddx-template-field class used below on the field, so this
+ * file is the one place to change how all of them look.
+ */
+
+select.chatddx-template-field + span.select2-container .select2-selection {
+    border-color: var(--color-primary-400, #818cf8);
+    background-color: color-mix(
+        in srgb,
+        var(--color-primary-500, #6366f1) 6%,
+        transparent
+    );
+}
+
+select.chatddx-template-field
+    + span.select2-container.select2-container--open
+    .select2-selection,
+select.chatddx-template-field + span.select2-container .select2-selection:focus {
+    border-color: var(--color-primary-600, #4f46e5);
+}
+
+div.group:has(> div > select.chatddx-template-field) {
+    border-left: 3px solid var(--color-primary-500, #6366f1);
+    border-radius: 0.25rem;
+    padding-left: 0.75rem;
+}

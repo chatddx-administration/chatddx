@@ -2,7 +2,7 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
-from chatddx.core.choices import RunStatusChoices
+from chatddx.core.choices import RunStatusChoices, SessionContextChoices
 from chatddx.core.models import IdentityModel
 from chatddx.experiment.models import ExperimentModel, RunModel
 from chatddx.history.models import SessionModel
@@ -161,6 +161,22 @@ def test_shared_run_visible_only_via_shared_tab(
 
 
 @pytest.mark.django_db
+def test_collaborators_field_excludes_owner(
+    owner: IdentityModel,
+    experiment: ExperimentModel,
+    admin_client: Client,
+):
+    other = IdentityModel.objects.create(name="collaborator")
+
+    response = admin_client.get(reverse("admin:orm_run_add"))
+    content = response.content.decode()
+
+    field_html = content.split('id="id_collaborators"')[1].split("</select>")[0]
+    assert f'value="{other.pk}"' in field_html
+    assert f'value="{owner.pk}"' not in field_html
+
+
+@pytest.mark.django_db
 def test_experiment_dropdown_shows_timestamp_and_tags(
     experiment: ExperimentModel,
     admin_client: Client,
@@ -187,7 +203,10 @@ def test_changelist_shows_experiment_timestamp_and_tags(
 
 @pytest.mark.django_db
 def test_session_field_is_a_link_not_a_dropdown(run: RunModel, admin_client: Client):
-    session = SessionModel.objects.create(owner=run.owner)
+    session = SessionModel.objects.create(
+        owner=run.owner,
+        context=SessionContextChoices.EXPERIMENT,
+    )
     run.session = session
     run.save(update_fields=["session"])
 

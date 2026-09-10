@@ -17,7 +17,7 @@ from django.db.models import (
     UUIDField,
 )
 
-from chatddx.core.choices import MessageKindChoices, RoleChoices
+from chatddx.core.choices import MessageKindChoices, RoleChoices, SessionContextChoices
 from chatddx.core.models import IdentityModel
 from chatddx.repo.branch_models import AgentBranchModel
 from chatddx.repo.trail_models import AgentTrailModel
@@ -39,6 +39,13 @@ class SessionModel(Model):
         blank=True,
     )
     timestamp = DateTimeField(auto_now_add=True)
+    # No default on purpose -- every path that starts a Session (chat, repl,
+    # experiment) knows why it's doing so, and should say so explicitly
+    # rather than silently falling back to some assumed context.
+    context = CharField(
+        max_length=255,
+        choices=SessionContextChoices.choices,
+    )
     owner = ForeignKey(
         IdentityModel,
         on_delete=PROTECT,

@@ -16,6 +16,7 @@ class SessionAdmin(TypedModelAdmin[Session]):
     add_form_template: str = "templates/session.html"
     fields = [
         "timestamp",
+        "context",
         "description",
         "status",
         "total_tokens",

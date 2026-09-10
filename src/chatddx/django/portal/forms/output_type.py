@@ -20,6 +20,7 @@ from unfold.widgets import (
 
 from chatddx.core.choices import CoercionChoices, ValidationChoices
 from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import OutputTypeFormDataIn
 from chatddx.repo.form_data_out import OutputTypeFormDataOut
@@ -46,7 +47,7 @@ class OutputTypeForm(BaseForm):
     template = ModelChoiceField(
         queryset=proxies.OutputType.objects.none(),
         required=False,
-        widget=UnfoldAdminSelect2Widget(),
+        widget=TemplateSelectWidget(),
         label="Output Template",
         help_text="Use this to select a pre-configured template to populate the schema and strategies below, the value of this field will not be included in the form.",
     )

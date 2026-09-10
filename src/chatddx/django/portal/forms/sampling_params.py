@@ -15,11 +15,11 @@ from unfold.widgets import (
     UnfoldAdminDecimalFieldWidget,
     UnfoldAdminExpandableTextareaWidget,
     UnfoldAdminIntegerFieldWidget,
-    UnfoldAdminSelect2Widget,
     UnfoldAdminTextInputWidget,
 )
 
 from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import SamplingParamsFormDataIn
 from chatddx.repo.form_data_out import SamplingParamsFormDataOut
@@ -47,7 +47,7 @@ class SamplingParamsForm(BaseForm):
         queryset=proxies.SamplingParams.objects.none(),
         required=False,
         empty_label="--- Start from scratch ---",
-        widget=UnfoldAdminSelect2Widget(),
+        widget=TemplateSelectWidget(),
         label="Sampling Template",
         help_text="Optional. Select a pre-configured template to populate the parameters below.",
     )

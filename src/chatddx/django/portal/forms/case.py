@@ -13,12 +13,12 @@ from unfold.layout import Hr
 from unfold.widgets import (
     UnfoldAdminExpandableTextareaWidget,
     UnfoldAdminSelect2MultipleWidget,
-    UnfoldAdminSelect2Widget,
     UnfoldAdminTextInputWidget,
 )
 
 from chatddx.core.models import IdentityModel, TagModel
 from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo import proxies
 from chatddx.repo.form_data_in import CaseFormDataIn
 from chatddx.repo.form_data_out import CaseFormDataOut
@@ -66,7 +66,7 @@ class CaseForm(BaseForm):
         queryset=proxies.Case.objects.none(),
         required=False,
         empty_label="--- Start from scratch ---",
-        widget=UnfoldAdminSelect2Widget(),
+        widget=TemplateSelectWidget(),
         label="Case Template",
         help_text="Optional. Select a pre-configured template to populate the payload below.",
     )

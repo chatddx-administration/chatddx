@@ -47,6 +47,29 @@ def load_template_data(owner_name: str):
     return TemplateData.model_validate(payload)
 
 
+def truncate_for_list_display(text: str | None, limit: int = 50) -> str:
+    """Preview a long text field in an admin list_display column: cut at a
+    word boundary at or before `limit` characters (instead of slicing mid-
+    word) and mark the cut with an ellipsis, so a shortened value still
+    reads as a preview instead of a truncated word. `limit` is capped at 50
+    regardless of what's passed in -- list view columns stay scannable, this
+    just keeps a single place to loosen or tighten that cap.
+    """
+    limit = min(limit, 50)
+
+    if not text:
+        return ""
+    if len(text) <= limit:
+        return text
+
+    truncated = text[:limit]
+    last_space = truncated.rfind(" ")
+    if last_space > 0:
+        truncated = truncated[:last_space]
+
+    return truncated.rstrip() + "…"
+
+
 def get_branch_link(obj: BranchModel, field_name: str):
     branch_id = getattr(obj, f"{field_name}_id")
     branch_name = getattr(obj, f"{field_name}_name")

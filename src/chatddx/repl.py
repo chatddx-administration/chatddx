@@ -29,6 +29,7 @@ from pydantic_ai import (
 )
 from rich.console import Console
 
+from chatddx.core.choices import SessionContextChoices
 from chatddx.history.models import SessionModel
 from chatddx.history.schemas import SessionSpec
 from chatddx.history.session import refresh_messages, resume_session, start_session
@@ -84,7 +85,9 @@ def main(
         agent_branch = load_agent(owner.name, agent_name)
         assert agent_branch is not None
         if not session_uuid:
-            session = asyncio.run(start_session(owner.pk, agent_branch.id))
+            session = asyncio.run(
+                start_session(owner.pk, agent_branch.id, SessionContextChoices.REPL)
+            )
 
     assert session is not None
     assert agent_branch is not None
