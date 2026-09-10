@@ -114,6 +114,15 @@ class Message(MessageModel):
         return trail_cache.get_sync(AgentSpec, self.agent.pk)
 
     @cached_property
+    def session_link(self):
+        url = reverse("admin:orm_session_change", args=[self.session.pk])
+        return format_html(
+            '<a href="{}">{}</a>',
+            url,
+            Session.objects.get(pk=self.session.pk),
+        )
+
+    @cached_property
     def agent_link(self):
         # agent_branch_id/agent_branch_name are annotated onto the queryset by
         # get_step_nav() (see django/portal/admin/utils.py); they aren't real
