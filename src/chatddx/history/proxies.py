@@ -2,7 +2,7 @@
 import json
 from datetime import timedelta
 from functools import cached_property
-from typing import cast, final, override
+from typing import NamedTuple, cast, final, override
 
 import jsonschema
 from django.contrib import admin
@@ -13,6 +13,7 @@ from django.utils.safestring import mark_safe
 from pydantic_ai import (
     ModelRequest,
     ModelResponse,
+    NativeToolCallPart,
     TextPart,
     ThinkingPart,
     ToolCallPart,
@@ -27,6 +28,11 @@ from chatddx.repo.trail_cache import trail_cache
 from chatddx.repo.trail_specs import AgentSpec
 from chatddx.runtime.utils import get_part_content
 from chatddx.utils import truncate_content
+
+
+class ToolCallSummary(NamedTuple):
+    tool_name: str
+    args_json: str
 
 
 class Session(SessionModel):
@@ -187,6 +193,20 @@ class Message(MessageModel):
             return part_content
 
     @cached_property
+    def tool_call(self) -> ToolCallSummary | None:
+        if not isinstance(self.spec.payload, ModelResponse):
+            return None
+
+        for part in self.spec.payload.parts:
+            if isinstance(part, (ToolCallPart, NativeToolCallPart)):
+                return ToolCallSummary(
+                    tool_name=part.tool_name,
+                    args_json=json.dumps(part.args_as_dict(), indent=4),
+                )
+
+        return None
+
+    @cached_property
     def typed_content(self):
         if self.content is None:
             return None
@@ -234,28 +254,10 @@ class Message(MessageModel):
                 response = cast(ModelResponse, self.spec.payload)
                 match self.spec.role:
                     case RoleChoices.ASSISTANT:
-                        part_text = get_part_content(
+                        part_content = get_part_content(
                             response.parts,
                             TextPart,
                         )
-
-                        part_tool_call = truncate_content(
-                            get_part_content(
-                                response.parts,
-                                ToolCallPart,
-                            ),
-                            20,
-                        )
-
-                        if part_text and part_tool_call:
-                            raise NotImplementedError(
-                                "unhandled combo part with both text and tool call"
-                            )
-
-                        if part_tool_call:
-                            part_content = f"[tool call]: {part_tool_call}"
-                        else:
-                            part_content = part_text
 
                     case _:
                         raise NotImplementedError(f"unhandled value '{self.spec.role}'")
