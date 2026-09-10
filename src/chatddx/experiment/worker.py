@@ -88,6 +88,12 @@ async def process_queued_runs() -> None:
         )
     ]
 
+    if not run_ids:
+        logger.debug("no queued runs to process")
+        return
+
+    logger.info("processing %d queued run(s)", len(run_ids))
+
     for run_id in run_ids:
         await execute_run(run_id)
 
@@ -106,7 +112,10 @@ async def execute_run(run_id: int) -> None:
         pk=run.pk, status=RunStatusChoices.QUEUED
     ).aupdate(status=RunStatusChoices.RUNNING)
     if not claimed:
+        logger.debug("run %s already claimed by another pass", run.uuid)
         return
+
+    logger.info("running run %s (experiment %s)", run.uuid, run.experiment_id)
 
     session_id: int | None = None
 
@@ -144,6 +153,7 @@ async def execute_run(run_id: int) -> None:
         )
 
         run.status = RunStatusChoices.COMPLETED
+        logger.info("run %s completed (session %s)", run.uuid, session_id)
 
     except Exception:
         logger.exception("run %s failed", run.uuid)
@@ -164,6 +174,12 @@ async def process_completed_runs() -> None:
             .values_list("id", flat=True)
         )
     ]
+
+    if not run_ids:
+        logger.debug("no completed runs to score")
+        return
+
+    logger.info("scoring %d completed run(s)", len(run_ids))
 
     for run_id in run_ids:
         await score_run(run_id)
@@ -190,7 +206,10 @@ async def score_run(run_id: int) -> None:
 
     scorer_trail = run.experiment.scorer
     if scorer_trail is None:
+        logger.debug("run %s has no scorer configured: leaving unscored", run.uuid)
         return
+
+    logger.info("scoring run %s with %s", run.uuid, scorer_trail.name)
 
     result: Any = None
 
@@ -202,6 +221,7 @@ async def score_run(run_id: int) -> None:
             else await asyncio.to_thread(scorer, run)
         )
         status = RunStatusChoices.SCORED
+        logger.info("run %s scored", run.uuid)
 
     except Exception:
         logger.exception("scoring run %s failed", run.uuid)
@@ -218,6 +238,8 @@ async def trigger() -> None:
     worker system is wired around -- call it, and every Run that was queued
     at that point gets run oldest first, and every Run that was (or just
     became) completed gets scored oldest first."""
+    logger.info("triggering worker pass")
+
     async with _connect() as connection:
         pgq = build_pgqueuer(connection)
 
@@ -229,3 +251,5 @@ async def trigger() -> None:
         )
 
         await pgq.qm.run(mode=QueueExecutionMode.drain)
+
+    logger.info("worker pass finished")
