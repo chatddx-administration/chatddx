@@ -19,7 +19,11 @@ def get_part_content(
     for part in parts:
         if isinstance(part, PartType):
             if isinstance(part, (ToolCallPart, NativeToolCallPart)):
-                content.append(f"{part.tool_name}: {part.args_as_json_str()}")
+                # Tool calls carry structured args, not plain text content;
+                # Message.tool_call reads them directly off the part instead.
+                raise NotImplementedError(
+                    f"unhandled part type '{type(part).__name__}'"
+                )
             elif isinstance(part, (ToolReturnPart, NativeToolReturnPart)):
                 content.append(f"{part.tool_name}: {part.content}")
             elif isinstance(part, ToolAvailabilityDeltaPart):
