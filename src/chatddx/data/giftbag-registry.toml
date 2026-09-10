@@ -1,0 +1,40 @@
+# src/chatddx/data/giftbag-registry.toml
+#
+# The "giftbag": a couple of ready-to-run gpt-oss-20b agents that
+# `chatddx init-data --with-giftbag` hands to OWNER on top of the base
+# registry (./registry.toml). Self-contained on purpose -- it doesn't
+# `extends` registry.toml -- so it can be dumped on its own and its
+# subconfigs (below) aren't confused with the base registry's.
+#
+# `archive` owns every Trail/Branch this file produces, same as the rest
+# of `init-data`; OWNER is added as a collaborator (see src/chatddx/main.py).
+
+[connection."giftbag-gpt-oss-20b"]
+model = "openai/gpt-oss-20b"
+provider = "vllm"
+endpoint = "http://malborg.km:12009/v1/"
+
+[connection."giftbag-gpt-oss-20b".profile]
+ignore_streamed_leading_whitespace = true
+supports_json_schema_output = true
+
+[sampling_params."giftbag-low-reasoning"]
+provider_params.openai_reasoning_effort = "low"
+
+[output_type."giftbag-swift-tool"]
+definition_path = "./output_types/swift.json"
+coercion_strategy = "tool"
+
+[output_type."giftbag-free-text"]
+# unstructured free text
+
+[agent."gpt-oss-20b tool-coerced low-reasoning swift"]
+connection = "giftbag-gpt-oss-20b"
+instructions = "Assist the user."
+sampling_params = ["giftbag-low-reasoning"]
+output_type = "giftbag-swift-tool"
+
+[agent."gpt-oss-20b free-text"]
+connection = "giftbag-gpt-oss-20b"
+instructions = "Assist the user."
+output_type = "giftbag-free-text"

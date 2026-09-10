@@ -17,6 +17,7 @@ from chatddx.repo.shufflers.expect import dump_expect, dump_expects
 from chatddx.repo.shufflers.experiment import dump_experiments
 from chatddx.repo.shufflers.main import (
     dump_trail_registry,
+    ensure_archive,
     ensure_identity,
 )
 from chatddx.repo.shufflers.scorer import DEFAULT_SCORER_NAMES, dump_scorers
@@ -97,25 +98,67 @@ def init_data_(
             help="location of sample experiment files",
         ),
     ] = CURRENT_DIR / "data/experiments",
+    with_giftbag: Annotated[
+        bool,
+        typer.Option(
+            "--with-giftbag",
+            help=(
+                "Also dump --giftbag-registry and add it to OWNER. archive "
+                "responds to this flag too: pass it when OWNER is archive "
+                "to give the giftbag to archive itself."
+            ),
+        ),
+    ] = False,
+    giftbag_registry: Annotated[
+        Path,
+        typer.Option(
+            "--giftbag-registry",
+            file_okay=True,
+            dir_okay=False,
+            exists=True,
+            help="location of the giftbag registry",
+        ),
+    ] = CURRENT_DIR / "data/giftbag-registry.toml",
 ):
-    _ = ensure_identity(owner)
+    """
+    `archive` owns everything this dumps -- creating it first if this is
+    the very first `init-data` run. OWNER is added as a collaborator on
+    all of it (unless OWNER *is* archive, which already owns it outright).
+    """
+    archive = ensure_archive()
+    collaborator = None if owner == archive.name else ensure_identity(owner)
+
+    def share(dumped) -> None:
+        """Add `collaborator` (OWNER, unless OWNER is archive) to every
+        Branch/Experiment `dumped` -- a model instance, or a dict of them
+        as returned by the various `dump_*` helpers above."""
+        if collaborator is None:
+            return
+        targets = dumped.values() if isinstance(dumped, dict) else [dumped]
+        for target in targets:
+            target.collaborators.add(collaborator)
 
     scorer_branches = {
         branch.name: branch
-        for branch in dump_scorers(DEFAULT_SCORER_NAMES, owner).values()
+        for branch in dump_scorers(DEFAULT_SCORER_NAMES, archive.name).values()
     }
+    share(scorer_branches)
     for branch in scorer_branches.values():
         print(f"{branch.target.fingerprint}: {branch.pk} scorer {branch.name}:")
 
-    for bundle, branches in dump_trail_registry(registry, owner).items():
+    for bundle, branches in dump_trail_registry(registry, archive.name).items():
+        share(branches)
         for branch_idx, branch in branches.items():
             print(f"{branch.target.fingerprint}: {branch_idx} {bundle} {branch.name}:")
 
-    case_branches = dump_cases(cases_dir, owner)
+    case_branches = dump_cases(cases_dir, archive.name)
+    share(case_branches)
     for branch_idx, branch in case_branches.items():
         print(f"{branch.target.fingerprint}: {branch_idx} case {branch.name}:")
 
-    for case_name, tags in dump_case_tags(tags_path, case_branches, owner).items():
+    for case_name, tags in dump_case_tags(
+        tags_path, case_branches, archive.name
+    ).items():
         tag_names = ", ".join(tag.name for tag in tags)
         print(f"tags: case {case_name}: {tag_names}")
 
@@ -124,9 +167,9 @@ def init_data_(
     # chatddx.experiment.scorers) -- so that's the scorer they're dumped
     # against by default.
     regex_match = scorer_branches["chatddx.experiment.scorers.regex_match"].target
-    for branch_idx, branch in dump_expects(
-        expects_dir, owner, scorer=regex_match
-    ).items():
+    expect_branches = dump_expects(expects_dir, archive.name, scorer=regex_match)
+    share(expect_branches)
+    for branch_idx, branch in expect_branches.items():
         print(f"{branch.target.fingerprint}: {branch_idx} expect {branch.name}:")
 
     # A small demo of the other bundled scorer, `exact_match`: a second,
@@ -143,14 +186,28 @@ def init_data_(
         case=demo_case,
         scorer=exact_match,
         payload="acute kidney injury",
-        owner_name=owner,
+        owner_name=archive.name,
     )
+    share(demo_branch)
     print(
         f"{demo_branch.target.fingerprint}: {demo_branch.pk} expect {demo_branch.name}:"
     )
 
-    for experiment_idx, experiment in dump_experiments(experiments_dir, owner).items():
+    experiments = dump_experiments(experiments_dir, archive.name)
+    share(experiments)
+    for experiment_idx, experiment in experiments.items():
         print(f"{experiment.uuid}: {experiment_idx} experiment {experiment.tags}")
+
+    if with_giftbag:
+        for bundle, branches in dump_trail_registry(
+            giftbag_registry, archive.name
+        ).items():
+            share(branches)
+            for branch_idx, branch in branches.items():
+                print(
+                    f"{branch.target.fingerprint}: {branch_idx} giftbag {bundle} "
+                    f"{branch.name}:"
+                )
 
 
 @app.command("wipe-data")

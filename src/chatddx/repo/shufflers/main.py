@@ -37,6 +37,19 @@ def ensure_identity(name: str) -> IdentityModel:
 
 ensure_identity_async = make_async(ensure_identity)
 
+# `archive` is the sole owner of everything `chatddx init-data` dumps --
+# every other identity named on that command is added as a collaborator
+# instead (see src/chatddx/main.py). Running `init-data` before `archive`
+# has ever been created just creates it here, same as any other identity.
+ARCHIVE_IDENTITY_NAME = "archive"
+
+
+def ensure_archive() -> IdentityModel:
+    return ensure_identity(ARCHIVE_IDENTITY_NAME)
+
+
+ensure_archive_async = make_async(ensure_archive)
+
 
 def dump_trail_registry(registry_path: Path, owner_name: str):
     registry = parse_registry(
