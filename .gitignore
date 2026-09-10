@@ -4,4 +4,4 @@ dumps
 __pycache__
 .env
 .coverage
-history
+history.txt

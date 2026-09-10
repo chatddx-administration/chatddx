@@ -1,4 +1,3 @@
-# src/chatddx/experiment/scorers.py
 from __future__ import annotations
 
 import re
@@ -22,8 +21,6 @@ def exact_match(run: RunModel) -> dict[str, Any]:
     actual = message.content if message else None
     expected = run.experiment.expect.payload
 
-    # The actual reply isn't duplicated here -- it's already on the Run's
-    # session (see RunModel.session).
     return {
         "correct": actual == expected,
         "expected": expected,
@@ -147,8 +144,6 @@ def regex_match(run: RunModel) -> dict[str, Any]:
                 matched_row = row
                 break
 
-    # The actual reply isn't duplicated here -- it's already on the Run's
-    # session (see RunModel.session).
     return {
         "score": score,
         "matched_row": matched_row,

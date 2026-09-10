@@ -68,9 +68,6 @@ async def owned_graph(
     case_1: CaseTrailModel,
     agent: AgentTrailModel,
 ) -> RunModel:
-    """A full graph of data owned by `owner`: a Scorer, an Expect and
-    Experiment built against it, a Run with a Session and a Message, and a
-    Tag -- everything `wipe_data` is expected to remove."""
     scorer_branch, _ = await dump_scorer_async(
         "chatddx.experiment.scorers.exact_match", owner.name
     )
@@ -140,9 +137,6 @@ async def test_wipe_data_leaves_shared_trail_content_alone(
     owned_graph: RunModel,
     case_1: CaseTrailModel,
 ):
-    """Trail rows are content-addressed and shared across owners -- wiping
-    one owner's Branches must never touch them (nor could it: the DB
-    refuses to delete TrailModel rows at all)."""
     scorer_count_before = await ScorerTrailModel.objects.acount()
     assert scorer_count_before > 0
 

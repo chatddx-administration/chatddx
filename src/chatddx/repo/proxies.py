@@ -1,7 +1,6 @@
 # src/chatddx/repo/proxies.py
 # pyright: basic
 from functools import cached_property
-from typing import final
 
 import tomli_w
 from django.contrib import admin
@@ -22,9 +21,6 @@ from chatddx.repo.trail_models import AgentTrailModel, ConnectionTrailModel
 
 
 class Shared:
-    # Provided by the `collaborators` ManyToManyField on whichever
-    # BranchModel this is mixed into alongside; declared here so `self` is
-    # typed for that access instead of just bare `Shared`.
     collaborators: Manager[IdentityModel]
 
     @admin.display(description="Collaborators")
@@ -33,8 +29,6 @@ class Shared:
 
 
 class SuperAgent(BranchProxy, AgentBranchModel, Shared):
-    # Narrows BranchProxy's generic `target: TrailModel` to what this
-    # branch's `target` FK actually points at.
     target: AgentTrailModel
 
     class Meta:
@@ -75,8 +69,6 @@ class SharedAgent(BranchProxy, AgentBranchModel, Shared):
 
 
 class Connection(BranchProxy, ConnectionBranchModel):
-    # Narrows BranchProxy's generic `target: TrailModel` to what this
-    # branch's `target` FK actually points at.
     target: ConnectionTrailModel
 
     class Meta:

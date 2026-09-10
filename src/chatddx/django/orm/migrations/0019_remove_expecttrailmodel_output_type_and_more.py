@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("orm", "0018_experimentmodel_scorer_runmodel_result_and_more"),
     ]
@@ -20,7 +19,6 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 blank=True,
                 default="",
-                help_text="Dotted import path to the scorer function this expectation is written for, e.g. 'chatddx.experiment.scorers.exact_match' (see ExperimentModel.scorer). An Experiment's scorer is what resolves which Expect pairs with its case -- left blank, this is the default expectation for its case.",
                 max_length=255,
             ),
         ),

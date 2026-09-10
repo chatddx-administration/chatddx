@@ -35,7 +35,8 @@ from chatddx.history.session import refresh_messages, resume_session, start_sess
 from chatddx.repo.base import BranchSpec
 from chatddx.repo.branch_models import AgentBranchModel
 from chatddx.repo.branch_spec import AgentBranchSpec
-from chatddx.repo.shufflers.main import ensure_identity, load_agent
+from chatddx.repo.shufflers.agent import load_agent
+from chatddx.repo.shufflers.main import ensure_identity
 from chatddx.repo.trail_specs import AgentSpec
 from chatddx.runtime.runners import stream_from_session
 

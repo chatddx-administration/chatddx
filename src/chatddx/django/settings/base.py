@@ -51,11 +51,6 @@ DATABASES = {
     },
 }
 
-# The single knob for how chatty the whole application is -- Django itself,
-# the chatddx code running inside it (views, admin, ...), and the pgqueuer
-# worker process started by `chatddx worker run` (which also goes through
-# django.setup(), and with it this LOGGING config; see
-# chatddx.experiment.worker). Unset in the environment, it defaults to INFO.
 CHATDDX_LOG_LEVEL = os.environ.get("CHATDDX_LOG_LEVEL", "INFO")
 
 LOGGING = {

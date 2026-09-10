@@ -1,4 +1,3 @@
-# src/chatddx/django/settings/prod.py
 import os
 from pathlib import Path
 

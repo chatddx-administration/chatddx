@@ -106,11 +106,6 @@ class RunAdmin(TypedModelAdmin[Run]):
 
     @admin.display(description="Experiment")
     def experiment_(self, obj: Run):
-        # obj.experiment is an ExperimentModel instance (that's what
-        # RunModel.experiment is declared against), not the Experiment
-        # proxy, so it doesn't carry Experiment.__str__ -- re-fetch through
-        # the proxy for a timestamp + tags label, same as get_session() does
-        # for Message.session in MessageAdmin.
         return Experiment.objects.get(pk=obj.experiment_id)
 
     @admin.display(description="Session")

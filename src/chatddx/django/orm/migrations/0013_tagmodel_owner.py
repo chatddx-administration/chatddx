@@ -5,15 +5,6 @@ from django.db import migrations, models
 
 
 def split_tags_by_owner(apps, schema_editor):
-    """Backfill TagModel.owner, splitting any tag shared across owners.
-
-    Tags predate owner-scoping and were looked up by name alone, so the
-    same row could be (and, via CaseForm's get-or-create-by-name, easily
-    was) attached to case branches owned by different identities. For each
-    existing tag: give it to the owner of its first referencing branch,
-    and for every *other* owner referencing it, clone a same-named tag row
-    for that owner and re-point just that owner's branches at the clone.
-    """
     TagModel = apps.get_model("orm", "TagModel")
     CaseBranchModel = apps.get_model("orm", "CaseBranchModel")
 
@@ -26,8 +17,6 @@ def split_tags_by_owner(apps, schema_editor):
         )
 
         if not owner_ids:
-            # Unreferenced -- there is no branch left to infer an owner
-            # from, so the row is dead weight.
             tag.delete()
             continue
 
@@ -35,9 +24,7 @@ def split_tags_by_owner(apps, schema_editor):
         tag.save(update_fields=["owner_id"])
 
         for owner_id in owner_ids[1:]:
-            clone, _ = TagModel.objects.get_or_create(
-                name=tag.name, owner_id=owner_id
-            )
+            clone, _ = TagModel.objects.get_or_create(name=tag.name, owner_id=owner_id)
             branches = CaseBranchModel.objects.filter(tags=tag, owner_id=owner_id)
             for branch in branches:
                 branch.tags.remove(tag)
@@ -45,7 +32,6 @@ def split_tags_by_owner(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("orm", "0012_tagmodel_casebranchmodel_tags"),
     ]

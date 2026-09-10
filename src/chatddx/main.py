@@ -10,10 +10,12 @@ import typer
 django.setup()
 from chatddx.experiment import worker as run_worker
 from chatddx.repl import app as repl_app
+from chatddx.repo.shufflers.cases import (
+    dump_cases,
+)
 from chatddx.repo.shufflers.expect import dump_expect, dump_expects
 from chatddx.repo.shufflers.experiment import dump_experiments
 from chatddx.repo.shufflers.main import (
-    dump_cases,
     dump_trail_registry,
     ensure_identity,
 )

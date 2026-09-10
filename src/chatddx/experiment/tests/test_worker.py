@@ -34,10 +34,6 @@ async def owner():
 
 @pytest_asyncio.fixture
 async def stray_owner():
-    """An identity with no branches of its own -- resolving a session's
-    agent branch for a Run owned by this identity always comes up empty,
-    which is what lets the "no branch found" path be tested without
-    reaching the network."""
     return await ensure_identity_async("bob")
 
 
@@ -62,8 +58,6 @@ async def experiment(
     branches: dict[str, dict[int, BranchModel]],
     case_1: CaseTrailModel,
 ) -> ExperimentModel:
-    # agent-2 merges in sampling_params-2, which fixes seed=0, so
-    # create_experiment_async won't warn about a missing seed.
     agent = await target_async(by_name(branches["agent"], "agent-2"))
 
     _ = await dump_expect_async(
@@ -94,9 +88,6 @@ async def test_execute_run_without_a_resolvable_branch_is_recorded_as_errored(
     stray_owner: IdentityModel,
     experiment: ExperimentModel,
 ):
-    """`stray_owner` owns no branch of the experiment's agent, so execution
-    fails before ever reaching the network -- and that failure still has to
-    land on the Run as a status, per the worker's contract."""
     run = await queue_run(owner=stray_owner, experiment=experiment)
 
     await worker.execute_run(run.pk)
@@ -111,8 +102,6 @@ async def test_execute_run_skips_a_run_that_is_no_longer_queued(
     stray_owner: IdentityModel,
     experiment: ExperimentModel,
 ):
-    """A Run already claimed (by a concurrent pass, or simply not queued in
-    the first place) must be left untouched."""
     run = await queue_run(owner=stray_owner, experiment=experiment)
     run.status = RunStatusChoices.RUNNING
     await run.asave(update_fields=["status"])
@@ -209,8 +198,6 @@ async def test_score_run_with_no_scorer_configured_is_left_alone(
     stray_owner: IdentityModel,
     experiment: ExperimentModel,
 ):
-    """`experiment` (see the fixture above) has no `scorer` set -- scoring
-    it is a no-op, not an error."""
     run = await complete_run(owner=stray_owner, experiment=experiment)
 
     await worker.score_run(run.pk)

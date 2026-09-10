@@ -21,10 +21,6 @@ class Experiment(ExperimentModel):
 
     @override
     def __str__(self):
-        # Same format as the "experiment" dropdown on Run's form (see
-        # RunAdmin.formfield_for_foreignkey) -- there's no more informative
-        # identifier than an Experiment's timestamp and tags, so both use
-        # this format via this __str__.
         timestamp = self.timestamp.strftime("%Y-%m-%d %H:%M")
         tags = self.tags_display() or "no tags"
         return f"{timestamp} — {tags}"
@@ -39,9 +35,6 @@ class Experiment(ExperimentModel):
 
     @cached_property
     def agent_link(self):
-        # agent_branch_id/agent_branch_name are annotated onto the queryset
-        # by qs_experiments() (see django/portal/admin/utils.py); they
-        # aren't real model fields, so django-types can't see them.
         if self.agent_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
             url = reverse(
                 "admin:orm_superagent_change",
@@ -59,9 +52,6 @@ class Experiment(ExperimentModel):
 
     @cached_property
     def case_link(self):
-        # case_branch_id/case_branch_name are annotated onto the queryset by
-        # qs_experiments() (see django/portal/admin/utils.py); they aren't
-        # real model fields, so django-types can't see them.
         if self.case_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
             url = reverse(
                 "admin:orm_case_change",
@@ -79,12 +69,6 @@ class Experiment(ExperimentModel):
 
     @cached_property
     def expect_link(self):
-        # expect_branch_name/expect_case_branch_id are annotated onto the
-        # queryset by qs_experiments() (see django/portal/admin/utils.py);
-        # they aren't real model fields, so django-types can't see them. An
-        # Expect has no admin page of its own -- it's only ever edited
-        # inline on its Case (see ExpectInline) -- so this links to that
-        # Case's change page instead.
         short_hash = self.expect.fingerprint[:6]
         expect_branch_name = self.expect_branch_name  # pyright: ignore[reportAttributeAccessIssue]
         label = (

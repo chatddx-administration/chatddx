@@ -68,9 +68,6 @@ class ExperimentModel(Model):
     )
     expect_id: int
 
-    # The worker resolves and calls this once per completed Run (see
-    # chatddx.experiment.worker.score_run); left unset, completed Runs of
-    # this experiment are never scored.
     scorer = ForeignKey(
         ScorerTrailModel,
         on_delete=PROTECT,
@@ -133,9 +130,4 @@ class RunModel(Model):
         default=None,
         null=True,
         blank=True,
-        help_text=(
-            "Whatever the experiment's scorer function returned for this "
-            "Run (see ExperimentModel.scorer); set once the Run reaches "
-            "RunStatusChoices.SCORED."
-        ),
     )

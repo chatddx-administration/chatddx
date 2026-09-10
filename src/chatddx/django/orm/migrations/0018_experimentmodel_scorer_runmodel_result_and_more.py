@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("orm", "0017_pgqueuer_schema"),
     ]
@@ -16,7 +15,6 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 blank=True,
                 default="",
-                help_text="Dotted import path to the function that scores this experiment's completed Runs, e.g. 'chatddx.experiment.scorers.exact_match'. The worker resolves and calls it once per completed Run (see chatddx.experiment.worker.score_run); left blank, completed Runs of this experiment are never scored.",
                 max_length=255,
             ),
         ),
@@ -26,7 +24,6 @@ class Migration(migrations.Migration):
             field=models.JSONField(
                 blank=True,
                 default=None,
-                help_text="Whatever the experiment's scorer function returned for this Run (see ExperimentModel.scorer); set once the Run reaches RunStatusChoices.SCORED.",
                 null=True,
             ),
         ),

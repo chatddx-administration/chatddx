@@ -85,9 +85,6 @@ async def run_with_reply(
     agent: AgentTrailModel,
     content: str,
 ) -> RunModel:
-    """A COMPLETED Run whose session has a single assistant reply, the way
-    a real Run's session looks once `run_from_session` has recorded its
-    result (see chatddx.runtime.runners.on_result)."""
     agent_branch = by_name(branches["agent"], "agent-2")
 
     session = await SessionModel.objects.acreate(

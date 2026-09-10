@@ -1,5 +1,3 @@
-# src/chatddx/experiment/worker.py
-
 from __future__ import annotations
 
 import asyncio
@@ -28,17 +26,11 @@ from chatddx.runtime.runners import run_from_session
 
 logger = logging.getLogger(__name__)
 
-# Entrypoint name for the pgqueuer job, and the dedupe key used to enqueue
-# it -- while a trigger job is already queued or in flight, re-triggering
-# just no-ops instead of piling up redundant passes.
 ENTRYPOINT = "chatddx.process_queued_runs"
 DEDUPE_KEY = "process_queued_runs"
 
 
 def _connection_kwargs() -> dict[str, Any]:
-    """The subset of Django's DATABASES["default"] psycopg needs, built the
-    same way Django's own postgres backend does it (skip anything unset and
-    let libpq fall back to its own defaults/env for the rest)."""
     settings_dict = connections["default"].settings_dict
     kwargs: dict[str, Any] = {"dbname": settings_dict["NAME"]}
 
@@ -78,7 +70,6 @@ def build_pgqueuer(connection: psycopg.AsyncConnection) -> PgQueuer:
 
 
 async def process_queued_runs() -> None:
-    """Run every currently queued Run, oldest first."""
     run_ids = [
         run_id
         async for run_id in (
@@ -99,15 +90,8 @@ async def process_queued_runs() -> None:
 
 
 async def execute_run(run_id: int) -> None:
-    """Run one Run: build a session from its Experiment's agent and case,
-    execute the agent, and store the resulting session and status back onto
-    the Run. Errors are caught and recorded as a status rather than raised,
-    so one bad Run doesn't stop the rest of the pass."""
-
     run = await RunModel.objects.select_related("owner").aget(pk=run_id)
 
-    # Claim the Run atomically -- if it's no longer queued (already picked
-    # up by a concurrent pass), there's nothing to do.
     claimed = await RunModel.objects.filter(
         pk=run.pk, status=RunStatusChoices.QUEUED
     ).aupdate(status=RunStatusChoices.RUNNING)
@@ -139,9 +123,6 @@ async def execute_run(run_id: int) -> None:
             agent_id=agent_branch.pk,
             description=f"Run {run.uuid}",
         )
-        # Even if the agent run below fails, the session it failed in --
-        # prompt and error message included -- is still worth keeping on
-        # the Run for debugging.
         session_id = session.id
 
         agent_spec = await trail_cache.get_async(AgentSpec, experiment.agent_id)
@@ -165,7 +146,6 @@ async def execute_run(run_id: int) -> None:
 
 
 async def process_completed_runs() -> None:
-    """Score every currently completed Run, oldest first."""
     run_ids = [
         run_id
         async for run_id in (
@@ -186,20 +166,6 @@ async def process_completed_runs() -> None:
 
 
 async def score_run(run_id: int) -> None:
-    """Score one completed Run: resolve its Experiment's `scorer` (see
-    ExperimentModel.scorer, a ScorerTrailModel whose `name` is a dotted
-    import path) and call it with the Run, storing whatever it returns on
-    Run.result. Like execute_run, a scoring failure is caught and recorded
-    as a status rather than raised, so one bad Run doesn't stop the rest of
-    the pass.
-
-    An Experiment with no `scorer` configured is left alone -- not every
-    Experiment needs to be scored, so an unset `scorer` isn't an error.
-
-    The final write is conditioned on the Run still being COMPLETED, which
-    is what stands in for a claim here: if a concurrent pass already scored
-    this Run, this one's write is simply a no-op.
-    """
     run = await RunModel.objects.select_related(
         "experiment", "experiment__expect", "experiment__scorer"
     ).aget(pk=run_id)
@@ -233,11 +199,6 @@ async def score_run(run_id: int) -> None:
 
 
 async def trigger() -> None:
-    """Enqueue one trigger job and drain the pgqueuer queue: process it (and
-    anything else already queued) and return. This is the "on trigger" the
-    worker system is wired around -- call it, and every Run that was queued
-    at that point gets run oldest first, and every Run that was (or just
-    became) completed gets scored oldest first."""
     logger.info("triggering worker pass")
 
     async with _connect() as connection:
