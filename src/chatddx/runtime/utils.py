@@ -25,7 +25,12 @@ def get_part_content(
                     f"unhandled part type '{type(part).__name__}'"
                 )
             elif isinstance(part, (ToolReturnPart, NativeToolReturnPart)):
-                content.append(f"{part.tool_name}: {part.content}")
+                # Tool returns can carry structured content, not just plain
+                # text; Message.tool_return reads them directly off the part
+                # instead.
+                raise NotImplementedError(
+                    f"unhandled part type '{type(part).__name__}'"
+                )
             elif isinstance(part, ToolAvailabilityDeltaPart):
                 raise NotImplementedError(
                     f"unhandled part type '{type(part).__name__}'"

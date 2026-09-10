@@ -48,13 +48,23 @@
       <pre class="mt-2 whitespace-pre-wrap break-words text-xs text-sky-900 dark:text-sky-200"><code class="language-json">{{ instance.tool_call.args_json }}</code></pre>
     </details>
     {% endif %}
+    {% if instance.tool_return %}
+    <details class="rounded-md border border-emerald-200 bg-emerald-50 p-2 dark:border-emerald-900 dark:bg-emerald-950/40">
+      <summary class="cursor-pointer text-xs font-medium text-emerald-700 dark:text-emerald-400">
+        {% blocktranslate with tool_name=instance.tool_return.tool_name %}Tool Return: {{ tool_name }}{% endblocktranslate %}
+      </summary>
+      <pre class="mt-2 whitespace-pre-wrap break-words text-xs text-emerald-900 dark:text-emerald-200"><code class="language-json">{{ instance.tool_return.content }}</code></pre>
+    </details>
+    {% endif %}
+    {% if instance.kind == 'prompt' or instance.kind == 'error' %}
     <div class="relative">
-      {% if instance.kind == 'prompt' or instance.kind == 'error' %}
       <code class="language-json">{{ instance.payload.content }}</code>
-      {% else %}
-      <code class="language-json">{{ instance.content }}</code>
-      {% endif %}
     </div>
+    {% elif instance.content %}
+    <div class="relative">
+      <code class="language-json">{{ instance.content }}</code>
+    </div>
+    {% endif %}
   </div>
 </div>
 <style>
