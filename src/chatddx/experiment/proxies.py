@@ -7,6 +7,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from chatddx.experiment.models import ExperimentModel, RunModel
+from chatddx.history.proxies import Session
+from chatddx.utils import render_json_html
 
 
 class Experiment(ExperimentModel):
@@ -19,7 +21,13 @@ class Experiment(ExperimentModel):
 
     @override
     def __str__(self):
-        return f"[{self.uuid}]"
+        # Same format as the "experiment" dropdown on Run's form (see
+        # RunAdmin.formfield_for_foreignkey) -- there's no more informative
+        # identifier than an Experiment's timestamp and tags, so both use
+        # this format via this __str__.
+        timestamp = self.timestamp.strftime("%Y-%m-%d %H:%M")
+        tags = self.tags_display() or "no tags"
+        return f"{timestamp} — {tags}"
 
     @admin.display(description="Tags")
     def tags_display(self):
@@ -114,6 +122,22 @@ class Run(RunModel):
     @admin.display(description="Collaborators")
     def collaborators_csv(self):
         return ", ".join(str(c) for c in self.collaborators.all()) or None
+
+    @cached_property
+    def session_link(self):
+        if not self.session_id:
+            return None
+
+        url = reverse("admin:orm_session_change", args=[self.session_id])
+        return format_html(
+            '<a href="{}">{}</a>',
+            url,
+            Session.objects.get(pk=self.session_id),
+        )
+
+    @cached_property
+    def result_html(self):
+        return render_json_html(self.result)
 
 
 class SharedRun(Run):
