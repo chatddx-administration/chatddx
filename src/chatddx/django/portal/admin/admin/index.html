@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+
+{% load i18n unfold %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+    {% url 'admin:orm_superagent_add' as create_agent_url %}
+    {% firstof user.get_full_name user.get_username as display_name %}
+
+    {% component "unfold/components/card.html" with class="max-w-2xl" %}
+        {% component "unfold/components/title.html" with class="mb-3" %}
+            {% blocktranslate %}Welcome {{ display_name }}!{% endblocktranslate %}
+        {% endcomponent %}
+
+        {% component "unfold/components/text.html" with class="mb-6 text-base-500 dark:text-base-400" %}
+            {% translate "ChatDDX is where you assemble agents from Tools, wire up Cases and Experiments, and review the Runs and Sessions that come out of them. Use the sidebar to jump into the Lab to work with your data, Config to shape your Agents and Tools, or History to look back over past Sessions." %}
+        {% endcomponent %}
+
+        {% component "unfold/components/button.html" with href=create_agent_url variant="primary" icon="add" %}
+            {% translate "New agent" %}
+        {% endcomponent %}
+    {% endcomponent %}
+{% endblock %}
