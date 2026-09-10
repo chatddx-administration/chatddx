@@ -4,7 +4,7 @@ from typing import Any
 from django.contrib import admin, messages
 from django.http import HttpRequest
 
-from chatddx.django.portal.admin.base import BranchModelAdmin
+from chatddx.django.portal.admin.base import BranchModelAdmin, TypedModelAdmin
 from chatddx.django.portal.admin.expect import ExpectInline
 from chatddx.django.portal.forms import CaseForm
 from chatddx.django.portal.utils import truncate_for_list_display
@@ -20,7 +20,15 @@ class CaseAdmin(BranchModelAdmin[proxies.Case]):
     list_display = BranchModelAdmin.list_display + [  # pyright: ignore
         "payload",
         "tags_csv",
+        "collaborators_csv",
     ]
+
+    def get_queryset(self, request: HttpRequest):
+        qs = super().get_queryset(request)
+
+        return qs.filter(
+            owner__name=request.user.username,
+        )
 
     @admin.display(
         description="Payload",
@@ -79,3 +87,19 @@ class CaseAdmin(BranchModelAdmin[proxies.Case]):
                     "The current version is up to date.",
                     level=messages.INFO,
                 )
+
+
+@admin.register(proxies.SharedCase)
+class SharedCaseAdmin(CaseAdmin):
+    list_display = list(CaseAdmin.list_display) + ["owner"]
+
+    def get_queryset(self, request: HttpRequest):
+        # Bypass CaseAdmin's (and BranchModelAdmin's) owner-only qs_canon
+        # scoping entirely -- same as SharedAgentAdmin/SharedSuperAgentAdmin
+        # /SharedExperimentAdmin/SharedRunAdmin -- so cases owned by someone
+        # else and shared with this user via `collaborators` show up here.
+        qs = super(TypedModelAdmin, self).get_queryset(request)
+
+        return qs.filter(
+            collaborators__name=request.user.username,
+        )

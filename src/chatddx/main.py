@@ -27,10 +27,8 @@ from chatddx.repo.shufflers.wipe import wipe_data
 CURRENT_DIR = Path(__file__).resolve().parent
 app = typer.Typer()
 
-init_data = typer.Typer(invoke_without_command=True)
 worker = typer.Typer()
 
-app.add_typer(init_data, name="init-data")
 app.add_typer(repl_app, name="repl")
 app.add_typer(worker, name="worker")
 
@@ -45,7 +43,13 @@ def main():
     pass
 
 
-@init_data.callback()
+# A plain @app.command, not a nested `typer.Typer(invoke_without_command=True)`
+# mounted via add_typer: init-data has no subcommands of its own, and mounting
+# it as a group made Click parse it as `init-data [OPTIONS] {owner} COMMAND
+# [ARGS]...` -- any option placed *after* OWNER (e.g. the natural `init-data
+# alex --with-giftbag`) was then read as a stray COMMAND and rejected with
+# "Missing argument 'owner'", silently short-circuiting the whole run.
+@app.command("init-data")
 def init_data_(
     owner: Annotated[str, typer.Argument()],
     registry: Annotated[
