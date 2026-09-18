@@ -19,7 +19,6 @@ from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.expect.django import Expect
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
 from chatddx.repo.entities.scorer.django import Scorer
-from chatddx.repo.families.django import TrailModel
 from chatddx.repo.families.pydantic import BaseFormDataIn, BranchSchemaDetails
 from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers.branch import commit, get_branch_model
@@ -84,11 +83,12 @@ class ExpectInlineForm(ModelForm):
 
 class ExpectInlineFormSet(BranchFormSet):
     """
-    Commit every row as an `expect` branch and link its trail to the case.
+    Commit every row as an `expect` branch and give the case the set of trails
+    the rows describe.
 
     `instance` is the case branch that `BranchModelAdmin.save_model` just made
-    canon (see `BranchModelAdmin.save_related`), so the rows always land on the
-    case's current trail, also when the case itself got a new version.
+    canon (see `BranchModelAdmin.save_related`); its expects are the owner's,
+    so the rows can be set as they stand, without regard for anyone else.
     """
 
     instance: CaseBranchModel
@@ -113,12 +113,13 @@ class ExpectInlineFormSet(BranchFormSet):
     def save(self, commit: bool = True) -> list[Expect]:
         saved = super().save(commit=commit)
 
-        # Rows the user left untouched are skipped by the formset's own save,
-        # but their trail still has to be linked to the case trail, which is a
-        # different one whenever the case payload changed.
-        for form in self.live_forms():
-            if form not in self.committed:
-                self._link(form.instance.target)
+        # The case's expects are exactly what the inline shows: the rows the
+        # formset skipped as untouched, the freshly committed version of the
+        # edited ones, and none of the deleted ones. Setting them also covers
+        # a rename, where the new branch has no version to inherit from.
+        self.instance.expects.set(
+            [self._branch(form).target for form in self.live_forms()]
+        )
 
         return saved
 
@@ -131,13 +132,13 @@ class ExpectInlineFormSet(BranchFormSet):
         instance: Expect,
         commit: bool = True,
     ) -> Expect:
-        return self._dump(form, instance.name, previous=instance.target)
+        return self._dump(form, instance.name)
 
     def delete_existing(self, obj: Expect, commit: bool = True) -> None:
         """
-        Unlink rather than delete: the branch is history, the link is not.
+        A deleted row drops out of the case's expects (see `save()`); the
+        branch it was rendered from is history and stays.
         """
-        self._unlink(obj.target)
 
     def live_forms(self) -> list[ExpectInlineForm]:
         """
@@ -152,15 +153,19 @@ class ExpectInlineFormSet(BranchFormSet):
 
         return [form for form in forms if not self._is_deleted(form)]
 
+    def _branch(self, form: ExpectInlineForm) -> Expect:
+        """
+        The branch a row stands for: the version just committed for the rows
+        that changed, the one the row was rendered from for the rest.
+        """
+        committed = self.committed.get(form)
+
+        return committed if committed is not None else cast(Expect, form.instance)
+
     def _is_deleted(self, form: ExpectInlineForm) -> bool:
         return self.can_delete and bool(form.cleaned_data.get(DELETION_FIELD_NAME))
 
-    def _dump(
-        self,
-        form: ExpectInlineForm,
-        branch_name: str,
-        previous: TrailModel | None = None,
-    ) -> Expect:
+    def _dump(self, form: ExpectInlineForm, branch_name: str) -> Expect:
         data = form.validated_data
 
         if data is None:
@@ -190,12 +195,6 @@ class ExpectInlineFormSet(BranchFormSet):
         # consistency check
         assert schema.fingerprint == canon.target.fingerprint
 
-        self._link(canon.target)
-
-        # a new version of the row replaces the one it was rendered from
-        if previous is not None and previous.pk != canon.target.pk:
-            self._unlink(previous)
-
         self.committed[form] = canon
         self.outcomes.append((form.cleaned_data["scorer"].name, created))
 
@@ -204,12 +203,6 @@ class ExpectInlineFormSet(BranchFormSet):
     def _branch_name(self, form: ExpectInlineForm) -> str:
         # sibling in src/chatddx/repo/parsers/inventory.py
         return f"{self.instance.name}|{form.cleaned_data['scorer'].name}"
-
-    def _link(self, trail: TrailModel) -> None:
-        self.instance.target.expects.add(trail)
-
-    def _unlink(self, trail: TrailModel) -> None:
-        self.instance.target.expects.remove(trail)
 
     def _form_data(self, form: ExpectInlineForm) -> dict[str, Any]:
         data = dict(form.cleaned_data)

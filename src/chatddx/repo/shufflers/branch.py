@@ -5,6 +5,7 @@ from chatddx.core import settings
 from chatddx.core.utils import ensure_identity, ensure_tag
 from chatddx.django.orm.qs import qs_canon
 from chatddx.repo.bundles import bundle_of
+from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import (
     BranchSchemaDetails,
@@ -168,6 +169,9 @@ def commit(
     ).first()
 
     if canon and trail.fingerprint == canon.target.fingerprint:
+        # The expects are not part of the fingerprint, so they can change
+        # while the canon stays put.
+        commit_expects(canon, canon, branch_details)
         return False
 
     match trail:
@@ -193,7 +197,44 @@ def commit(
     branch_model.collaborators.set(collaborators)
     branch_model.tags.set(tags)
 
+    commit_expects(branch_model, canon, branch_details)
+
     return True
 
 
 commit_async = make_async(commit)
+
+
+def commit_expects(
+    branch_model: BranchModel,
+    previous: BranchModel | None,
+    branch_details: BranchSchemaDetails,
+) -> None:
+    """
+    Give `branch_model` the expects named in `branch_details`, or, when it
+    names none, the ones the version it supersedes carried.
+
+    A case's expects hang off the case branch, not off its trail: they are the
+    owner's, not the payload's (see `CaseBranchModel.expects`), and every
+    version keeps the set it was saved with.
+    """
+    if not isinstance(branch_model, CaseBranchModel):
+        return
+
+    if branch_details.expects is None:
+        if not isinstance(previous, CaseBranchModel):
+            return
+        if previous.pk == branch_model.pk:
+            return
+        trails = list(previous.expects.all())
+    else:
+        trails = [
+            get_branch_model(
+                entity_name="expect",
+                owner_name=branch_details.owner,
+                branch_name=name,
+            ).target
+            for name in branch_details.expects
+        ]
+
+    branch_model.expects.set(trails)

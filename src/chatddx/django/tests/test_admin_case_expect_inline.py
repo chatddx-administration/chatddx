@@ -6,8 +6,11 @@ from django.test import Client
 from django.urls import reverse
 
 from chatddx.core.models import IdentityModel
+from chatddx.core.utils import ensure_identity
 from chatddx.repo.entities.case.django import CaseBranchModel, CaseTrailModel
+from chatddx.repo.entities.case.pydantic import CaseTrailSchema
 from chatddx.repo.entities.expect.django import ExpectBranchModel
+from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
 from chatddx.repo.entities.scorer.django import ScorerBranchModel
 from chatddx.repo.entities.scorer.pydantic import ScorerTrailSchema
 from chatddx.repo.families.pydantic import BranchSchemaDetails
@@ -75,9 +78,7 @@ def case_branch(owner: IdentityModel, name: str = "case-1") -> CaseBranchModel:
 
 def linked_expects(case: CaseBranchModel) -> list[ExpectBranchModel]:
     return list(
-        ExpectBranchModel.objects.filter(target__cases=case.target.pk).order_by(
-            "timestamp"
-        )
+        ExpectBranchModel.objects.filter(target__cases=case.pk).order_by("timestamp")
     )
 
 
@@ -240,7 +241,7 @@ def test_expect_inline_edit_versions_the_expect_branch(
         expect_b.pk,
         versions[1].pk,
     ]
-    assert first_trail not in case.target.expects.all()
+    assert first_trail not in case.expects.all()
 
     response = user_client.get(change_url)
     assert inline_payloads(response) == [
@@ -403,3 +404,123 @@ def test_expect_inline_on_the_add_form(
     assert expect.target.payload == "expected output for a new case"
 
     assert CaseTrailModel.objects.filter(payload="case payload 3").count() == 1
+
+
+@pytest.mark.django_db
+def test_an_older_case_version_keeps_the_expects_it_was_saved_with(
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    owner: IdentityModel,
+):
+    first = case_branch(owner)
+
+    expect_a, expect_b = linked_expects(first)
+    scorer_a = ScorerBranchModel.objects.get(owner=owner, name="scorer-a")
+    scorer_b = ScorerBranchModel.objects.get(owner=owner, name="scorer-b")
+
+    rows = (
+        expect_row("expect payload 1 for scorer a", scorer_a, expect_a),
+        expect_row("expect payload 1 for scorer b", scorer_b, expect_b),
+    )
+
+    post_data = case_post_data(inventory_fixture_fdo, "case-1", *rows, initial=2)
+    post_data["payload"] = "case payload 1, rewritten"
+
+    response = user_client.post(
+        reverse("admin:orm_case_change", args=[first.pk]),
+        data=post_data,
+        follow=True,
+    )
+    assert response.status_code == 200
+
+    second = case_branch(owner)
+    assert second.pk != first.pk
+
+    post_data = case_post_data(
+        inventory_fixture_fdo,
+        "case-1",
+        expect_row("expect payload 1 edited", scorer_a, expect_a),
+        rows[1],
+        initial=2,
+    )
+    post_data["payload"] = "case payload 1, rewritten"
+
+    response = user_client.post(
+        reverse("admin:orm_case_change", args=[second.pk]),
+        data=post_data,
+        follow=True,
+    )
+    assert response.status_code == 200
+
+    assert sorted(expect.target.payload for expect in linked_expects(second)) == [
+        "expect payload 1 edited",
+        "expect payload 1 for scorer b",
+    ]
+
+    # editing an expectation on the newer version leaves the older one alone
+    assert sorted(expect.target.payload for expect in linked_expects(first)) == [
+        "expect payload 1 for scorer a",
+        "expect payload 1 for scorer b",
+    ]
+
+
+@pytest.mark.django_db
+def test_a_collaborators_edit_leaves_the_owners_expects_alone(
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    owner: IdentityModel,
+):
+    other = ensure_identity("olof")
+    scorer = ScorerTrailSchema(command="scorer-a command")
+
+    for trail, name in (
+        (scorer, "scorer-a"),
+        (ExpectTrailSchema(payload="their expectation", scorer=scorer), "shared|a"),
+    ):
+        _ = commit(
+            trail=trail,
+            branch_details=BranchSchemaDetails(name=name, owner=other.name),
+        )
+
+    _ = commit(
+        trail=CaseTrailSchema(payload="shared payload"),
+        branch_details=BranchSchemaDetails(
+            name="shared-case",
+            owner=other.name,
+            collaborators=[owner.name],
+            expects=["shared|a"],
+        ),
+    )
+
+    theirs = CaseBranchModel.objects.get(owner=other, name="shared-case")
+    change_url = reverse("admin:orm_sharedcase_change", args=[theirs.pk])
+
+    response = user_client.get(change_url)
+    assert response.status_code == 200
+    assert inline_payloads(response) == ["their expectation"]
+
+    their_expect = ExpectBranchModel.objects.get(owner=other, name="shared|a")
+    their_scorer = ScorerBranchModel.objects.get(owner=other, name="scorer-a")
+
+    post_data = case_post_data(
+        inventory_fixture_fdo,
+        "case-1",
+        expect_row("my expectation", their_scorer, their_expect),
+        initial=1,
+    )
+    post_data["name"] = "shared-case"
+    post_data["payload"] = "shared payload"
+
+    response = user_client.post(change_url, data=post_data, follow=True)
+    assert response.status_code == 200
+
+    mine = CaseBranchModel.objects.get(owner=owner, name="shared-case")
+
+    # both own a branch of the same case, each with their own expectations
+    assert mine.target.pk == theirs.target.pk
+    assert [expect.target.payload for expect in linked_expects(mine)] == [
+        "my expectation"
+    ]
+    assert [expect.target.payload for expect in linked_expects(theirs)] == [
+        "their expectation"
+    ]

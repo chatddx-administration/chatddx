@@ -1,7 +1,6 @@
 from pydantic import Field
 
 from chatddx.core.fields import CoercedStr
-from chatddx.repo.entities.expect import ExpectTrailSchema
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSpec
 from chatddx.repo.families import (
     BaseFormDataIn,
@@ -20,10 +19,7 @@ class CaseTrailBase(BaseTrail):
 
 
 class CaseTrailSchema(CaseTrailBase, TrailSchema):
-    expects: list[ExpectTrailSchema] = Field(
-        json_schema_extra={"exclude_from_fingerprint": True},
-        default_factory=list,
-    )
+    pass
 
 
 class CaseTrailSchemaRef(
@@ -34,15 +30,17 @@ class CaseTrailSchemaRef(
 
 
 class CaseTrailSpec(CaseTrailBase, TrailSpec):
-    expects: list[ExpectTrailSpec]
+    pass
 
 
 class CaseBranchSchema(BranchSchema[CaseTrailSchema]):
+    # `expects` comes from BranchSchemaDetails, as the branch names of the
+    # expectations this version of the case carries.
     pass
 
 
 class CaseBranchSpec(BranchSpec[CaseTrailSpec]):
-    pass
+    expects: list[ExpectTrailSpec] = Field(default_factory=list)
 
 
 class CaseFormDataIn(CaseTrailBase, BaseFormDataIn):
