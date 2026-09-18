@@ -1,6 +1,6 @@
-# src/chatddx/django/portal/forms/case.py
+# pyright: basic
 
-from typing import Any, final
+from typing import Any
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, Row
@@ -17,12 +17,10 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import IdentityModel, TagModel
-from chatddx.django.portal.forms.base import BaseForm
+from chatddx.core.utils import ensure_identity
+from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
-from chatddx.repo import proxies
-from chatddx.repo.form_data_in import CaseFormDataIn
-from chatddx.repo.form_data_out import CaseFormDataOut
-from chatddx.repo.shufflers.main import ensure_identity
+from chatddx.repo.entities.case.django import Case
 
 
 class TagsField(ModelMultipleChoiceField):
@@ -46,15 +44,11 @@ class TagsField(ModelMultipleChoiceField):
         return tags
 
 
-@final
-class CaseForm(BaseForm):
-    form_data_in = CaseFormDataIn
-    form_data_out = CaseFormDataOut
-    bundle_name = "case"
+class CaseForm(BranchForm):
+    entity_name = "case"
 
-    @final
-    class Meta(BaseForm.Meta):
-        model = proxies.Case
+    class Meta(BranchForm.Meta):
+        model = Case
 
     name = CharField(
         max_length=255,
@@ -83,9 +77,12 @@ class CaseForm(BaseForm):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
+
         owner = ensure_identity(self.request.user.username)
         tags_field = self.fields["tags"]
+
         assert isinstance(tags_field, TagsField)
+
         tags_field.queryset = TagModel.objects.filter(owner=owner)
         tags_field.owner = owner
 

@@ -2,17 +2,17 @@
 from uuid import UUID
 
 from chatddx.core.choices import SessionContextChoices
-from chatddx.core.django_fields import resolve_related_array_fields_async
 from chatddx.core.models import IdentityModel
-from chatddx.core.schemas import IdentitySpec
+from chatddx.core.schemas import IdentitySchemaOut
 from chatddx.history.models import MessageModel, SessionModel
 from chatddx.history.schemas import MessageSpec, SessionSpec
-from chatddx.repo.branch_models import AgentBranchModel
+from chatddx.repo.entities.agent.django import AgentBranchModel
+from chatddx.repo.utils import resolve_trail_async
 
 
-async def get_identity(name: str) -> IdentitySpec:
+async def get_identity(name: str) -> IdentitySchemaOut:
     identity = await IdentityModel.objects.aget(name=name)
-    return IdentitySpec.model_validate(identity)
+    return IdentitySchemaOut.model_validate(identity)
 
 
 async def start_session(
@@ -40,9 +40,15 @@ async def resume_session(
 
     session_model = (
         await SessionModel.objects.select_related(
-            "default_agent", "default_agent__target"
+            "default_agent",
+            "default_agent__target",
+            "default_agent__owner",
         )
-        .prefetch_related("messages", "default_agent__collaborators")
+        .prefetch_related(
+            "messages",
+            "default_agent__collaborators",
+            "default_agent__tags",
+        )
         .aget(
             uuid__startswith=uuid,
             owner_id=owner_id,
@@ -55,7 +61,7 @@ async def resume_session(
     if session_model.default_agent is None:
         raise ValueError("Cannot resume a session without an agent")
 
-    session_model.default_agent.target = await resolve_related_array_fields_async(
+    session_model.default_agent.target = await resolve_trail_async(
         session_model.default_agent.target
     )
 

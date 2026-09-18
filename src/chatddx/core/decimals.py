@@ -51,4 +51,4 @@ class DecimalEncoder(json.JSONEncoder):
 
 class DecimalDecoder(json.JSONDecoder):
     def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(parse_float=Decimal, *args, **kwargs)
+        super().__init__(*args, **kwargs, parse_float=Decimal)

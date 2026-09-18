@@ -16,7 +16,7 @@ from pydantic_core import to_jsonable_python
 from chatddx.core.choices import RoleChoices
 from chatddx.history.models import MessageModel
 from chatddx.history.schemas import SessionSpec
-from chatddx.repo.trail_specs import AgentSpec
+from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
 from chatddx.runtime.context import AgentContext, OutputType
 from chatddx.utils import Dispatcher
 
@@ -27,7 +27,7 @@ from .builder import (
 
 
 async def run_from_spec(
-    agent_spec: AgentSpec,
+    agent_spec: AgentTrailSpec,
     prompt: str,
     dispatcher: Dispatcher | None = None,
 ) -> AgentRunResult[OutputType]:
@@ -50,7 +50,7 @@ async def stream_from_session(
     session: SessionSpec,
     prompt: str,
     dispatcher: Dispatcher | None = None,
-    agent_spec: AgentSpec | None = None,
+    agent_spec: AgentTrailSpec | None = None,
 ) -> AsyncGenerator[AgentStreamEvent | AgentRunResultEvent[OutputType], None]:
 
     if not dispatcher:
@@ -98,7 +98,8 @@ async def stream_from_session(
             await dispatcher.publish(events.result)
 
     except Exception as e:
-        raise await publish_error(dispatcher, e)
+        _ = await publish_error(dispatcher, e)
+        raise
 
 
 def get_message_history(session: SessionSpec):
@@ -113,7 +114,7 @@ async def run_from_session(
     session: SessionSpec,
     prompt: str,
     dispatcher: Dispatcher | None = None,
-    agent_spec: AgentSpec | None = None,
+    agent_spec: AgentTrailSpec | None = None,
     api_key: str | None = None,
 ) -> AgentRunResult[OutputType]:
 
@@ -169,29 +170,24 @@ async def run_from_session(
         return result
 
     except Exception as e:
-        raise await publish_error(dispatcher, e)
+        await publish_error(dispatcher, e)
+        raise
 
 
-async def publish_error(dispatcher: Dispatcher, error: Exception) -> Exception:
-    """Publish an agent-run failure to the dispatcher and return the exception to raise.
+async def publish_error(dispatcher: Dispatcher, error: Exception) -> None:
+    if isinstance(error, UnexpectedModelBehavior):
+        root_cause = error.__cause__
 
-    For an `UnexpectedModelBehavior` (pydantic-ai's catch-all for a model or
-    provider misbehaving mid-run, e.g. a malformed tool-call from the model
-    or a streaming error surfaced by the provider), the underlying cause is
-    folded into the message so it isn't lost behind pydantic-ai's generic
-    wrapper.
-    """
-    if isinstance(error, UnexpectedModelBehavior) and error.__cause__:
-        cause = error.__cause__
-        enhanced_message = (
-            f"{error}\n\n--- Original Root Cause ({type(cause).__name__}) ---\n{cause}"
-        )
+        log_payload = {
+            "type": "llm_model_error",
+            "message": str(error),
+            "root_cause_type": type(root_cause).__name__ if root_cause else None,
+            "root_cause_detail": str(root_cause) if root_cause else None,
+        }
 
-        error = UnexpectedModelBehavior(enhanced_message)
-        error.__cause__ = cause
-
-    await dispatcher.publish(error)
-    return error
+        await dispatcher.publish(log_payload)
+    else:
+        await dispatcher.publish(error)
 
 
 def on_prompt(session_id: int, agent_id: int):
@@ -211,7 +207,7 @@ def on_prompt(session_id: int, agent_id: int):
 
 def on_error(session_id: int, agent_id: int):
     async def _on_error(error: Exception):
-        error_message = f"Agent execution failed: {type(error).__name__} - {str(error)}"
+        error_message = f"Agent execution failed: {type(error).__name__} - {error}"
 
         _ = await MessageModel.objects.acreate(
             agent_id=agent_id,
@@ -252,7 +248,7 @@ def on_result(session_id: int, agent_id: int):
     return _on_result
 
 
-def infer_role(msg) -> str:
+def infer_role(msg: ModelResponse | ModelRequest) -> str:
     if isinstance(msg, ModelResponse):
         return RoleChoices.ASSISTANT
 

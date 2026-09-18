@@ -1,0 +1,1 @@
+extends = ["../../../data/test/test-inventory.toml"]

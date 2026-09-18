@@ -1,4 +1,4 @@
-from typing import final
+# pyright: basic
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, Row
@@ -14,22 +14,16 @@ from unfold.widgets import (
 )
 
 from chatddx.core.choices import ToolChoices
-from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
-from chatddx.repo import proxies
-from chatddx.repo.form_data_in import ToolFormDataIn
-from chatddx.repo.form_data_out import ToolFormDataOut
+from chatddx.repo.entities.tool.django import Tool
 
 
-@final
-class ToolForm(BaseForm):
-    form_data_in = ToolFormDataIn
-    form_data_out = ToolFormDataOut
-    bundle_name = "tool"
+class ToolForm(BranchForm):
+    entity_name = "tool"
 
-    @final
-    class Meta(BaseForm.Meta):
-        model = proxies.Tool
+    class Meta(BranchForm.Meta):
+        model = Tool
 
     name = CharField(
         max_length=255,

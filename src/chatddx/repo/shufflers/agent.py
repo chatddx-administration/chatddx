@@ -1,45 +1,47 @@
-from chatddx.django.orm.qs import qs_canon
-from chatddx.repo.base import BranchModel
-from chatddx.repo.main import Repo
-from chatddx.repo.shufflers.main import load_branch, load_branches
+from typing import cast
+
+from django.db.models import QuerySet
+
+from chatddx.repo.entities.agent.django import AgentBranchModel
+from chatddx.repo.entities.agent.pydantic import AgentBranchSpec
+from chatddx.repo.families.django import BranchModel
+from chatddx.repo.shufflers.branch import (
+    get_branch_spec,
+    select_branch_specs,
+)
 from chatddx.utils import make_async
 
 
-def load_agent(
+def get_agent(
     owner_name: str,
     branch_name: str,
-    output_type: str | None = None,
-):
-    model_cls = Repo("agent", BranchModel)
-    qs = model_cls.objects.filter(name=branch_name)
-    if output_type:
-        qs = qs.filter(target__output_type__fingerprint=output_type)
+    qs: QuerySet[AgentBranchModel] | None = None,
+) -> AgentBranchSpec:
 
-    return load_branch(
-        bundle_name="agent",
+    agent = get_branch_spec(
+        entity_name="agent",
         owner_name=owner_name,
-        qs=qs,
+        branch_name=branch_name,
+        qs=cast(QuerySet[BranchModel], qs),
     )
 
+    return cast(AgentBranchSpec, agent)
 
-load_agent_async = make_async(load_agent)
+
+get_agent_async = make_async(get_agent)
 
 
-def load_agents(
+def select_agents(
     owner_name: str,
-    output_type: str | None = None,
-):
+    qs: QuerySet[AgentBranchModel] | None = None,
+) -> list[AgentBranchSpec]:
 
-    model_cls = Repo("agent", BranchModel)
-    qs = qs_canon(model_cls.objects.all(), owner_name)
-
-    qs = qs.filter(target__output_type__definition__title=output_type)
-
-    return load_branches(
-        bundle_name="agent",
+    agents = select_branch_specs(
+        entity_name="agent",
         owner_name=owner_name,
-        qs=qs,
+        qs=cast(QuerySet[BranchModel], qs),
     )
+    return cast(list[AgentBranchSpec], agents)
 
 
-load_agents_async = make_async(load_agents)
+select_agents_async = make_async(select_agents)

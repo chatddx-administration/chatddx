@@ -1,3 +1,4 @@
+# pyright: basic
 from django.db.models import (
     Count,
     F,
@@ -7,17 +8,20 @@ from django.db.models import (
     Subquery,
 )
 
-from chatddx.experiment.proxies import Experiment
+from chatddx.history.models import ExperimentModel
 from chatddx.history.proxies import Message
-from chatddx.repo.base import BranchModel, TrailModel
-from chatddx.repo.branch_models import ExpectBranchModel
-from chatddx.repo.main import Repo, agent_relations
-from chatddx.repo.proxies import Agent, Case
+from chatddx.repo.bundles import bundle_of
+from chatddx.repo.entities.agent.django import Agent
+from chatddx.repo.entities.case.django import Case
+from chatddx.repo.entities.expect.django import Expect, ExpectBranchModel
+from chatddx.repo.families.django import BranchModel, TrailModel
+from chatddx.repo.registry import EntityName
+from chatddx.repo.todo import agent_relations
 
 
 def qs_super_agent[T: BranchModel](qs: QuerySet[T], owner_name: str):
-    def subquery(owner_name: str, model: str, column: str):
-        branch_model_cls = Repo(model, BranchModel)
+    def subquery(owner_name: str, model: EntityName, column: str):
+        branch_model_cls = bundle_of(model).branch_model
 
         return branch_model_cls.objects.filter(
             target=OuterRef(f"target__{model}"),
@@ -107,20 +111,8 @@ def qs_messages(qs: QuerySet[Message], owner_name: str):
     return qs.order_by("timestamp")
 
 
-def qs_experiments(qs: QuerySet[Experiment], owner_name: str):
-    """Annotate `qs` with the branch id/name for each of an Experiment's
-    pinned targets (agent, case, expect), scoped to `owner_name` -- see
-    Experiment.agent_link/case_link/expect_link (chatddx/experiment/proxies.py)
-    for how these are turned into links.
-
-    An Expect has no admin page of its own (it's only ever edited inline on
-    its Case -- see ExpectInline), so `expect_case_branch_id` locates the
-    Case branch that owns it instead of an Expect branch.
-    """
-
-    def branch_subquery(
-        model: type[Agent | Case | ExpectBranchModel], target_field: str
-    ):
+def qs_experiments(qs: QuerySet[ExperimentModel], owner_name: str):
+    def branch_subquery(model: type[Agent | Case | Expect], target_field: str):
         return model.objects.filter(
             target=OuterRef(target_field),
             owner__name=owner_name,
@@ -128,8 +120,7 @@ def qs_experiments(qs: QuerySet[Experiment], owner_name: str):
 
     agent_branch = branch_subquery(Agent, "agent")
     case_branch = branch_subquery(Case, "case")
-    expect_branch = branch_subquery(ExpectBranchModel, "expect")
-    expect_case_branch = branch_subquery(Case, "expect__case")
+    expect_branch = branch_subquery(Expect, "expect")
 
     return qs.annotate(
         agent_branch_id=Subquery(agent_branch.values("id")[:1]),
@@ -137,5 +128,5 @@ def qs_experiments(qs: QuerySet[Experiment], owner_name: str):
         case_branch_id=Subquery(case_branch.values("id")[:1]),
         case_branch_name=Subquery(case_branch.values("name")[:1]),
         expect_branch_name=Subquery(expect_branch.values("name")[:1]),
-        expect_case_branch_id=Subquery(expect_case_branch.values("id")[:1]),
+        expect_branch_id=Subquery(expect_branch.values("id")[:1]),
     )

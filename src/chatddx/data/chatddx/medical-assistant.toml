@@ -1,0 +1,33 @@
+extends = ["connections.toml", "lib.toml"]
+
+[agent.medical-assistant]
+partial = true
+instructions = "fill in the management plan based on the case"
+
+[agent."gpt-oss-20b management_plan_v1 seed-locked low-reasoning"]
+extends = ["medical-assistant"]
+connection = "gpt-oss-20b"
+sampling_params = ["seed-locked", "low-reasoning"]
+output_type = "management_plan_v1"
+
+[agent."qwen3-8b management_plan_v1 seed-locked disable-thinking"]
+extends = ["medical-assistant"]
+connection = "qwen3-8b"
+sampling_params = ["seed-locked", "disable-thinking"]
+output_type = "management_plan_v1"
+
+[output_type.management_plan_v1]
+definition_path = "./output_types/management_plan_v1.toml"
+partial = true
+
+[output_type."management_plan_v1 tool"]
+extends = ["management_plan_v1"]
+coercion_strategy = "tool"
+
+[output_type."management_plan_v1 native"]
+extends = ["management_plan_v1"]
+coercion_strategy = "native"
+
+[output_type."management_plan_v1 prompted"]
+extends = ["management_plan_v1"]
+coercion_strategy = "prompted"

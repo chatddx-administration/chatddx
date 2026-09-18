@@ -7,40 +7,22 @@ from django.utils import timezone
 from pydantic_ai import ModelResponse, TextPart
 from pydantic_core import to_jsonable_python
 
-from chatddx.core.choices import RoleChoices, SessionContextChoices
+from chatddx.core.choices import RoleChoices
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import MessageModel, SessionModel
-from chatddx.repo.base import BranchModel
-from chatddx.repo.branch_models import BranchModelRegistry
-
-
-def _by_name(branches: dict[int, BranchModel], name: str) -> BranchModel:
-    return next(branch for branch in branches.values() if branch.name == name)
-
-
-@pytest.fixture
-def session(owner: IdentityModel) -> SessionModel:
-    return SessionModel.objects.create(
-        owner=owner,
-        context=SessionContextChoices.CHAT,
-        description="a session",
-    )
-
-
-@pytest.fixture
-def agent_branch(branch_registry: BranchModelRegistry) -> BranchModel:
-    return _by_name(branch_registry["agent"], "agent-2")
+from chatddx.repo.families.django import BranchModel
+from chatddx.repo.inventories import InventoryBranchModel
 
 
 @pytest.fixture
 def message(
     owner: IdentityModel,
     session: SessionModel,
-    agent_branch: BranchModel,
+    inventory_fixture_bm: InventoryBranchModel,
 ) -> MessageModel:
     response = ModelResponse(parts=[TextPart(content="hello")])
     return MessageModel.objects.create(
-        agent_id=agent_branch.target.pk,
+        agent_id=inventory_fixture_bm["agent"]["agent-1"].target.pk,
         session=session,
         kind=response.kind,
         run_id=uuid.uuid4(),
@@ -54,9 +36,9 @@ def message(
 def test_session_field_is_a_link(
     message: MessageModel,
     session: SessionModel,
-    admin_client: Client,
+    user_client: Client,
 ):
-    response = admin_client.get(reverse("admin:orm_message_change", args=[message.pk]))
+    response = user_client.get(reverse("admin:orm_message_change", args=[message.pk]))
     content = response.content.decode()
 
     field_html = content.split(">Session</label>")[1][:500]
@@ -66,10 +48,11 @@ def test_session_field_is_a_link(
 @pytest.mark.django_db
 def test_agent_field_is_a_link(
     message: MessageModel,
-    agent_branch: BranchModel,
-    admin_client: Client,
+    inventory_fixture_bm: InventoryBranchModel,
+    user_client: Client,
 ):
-    response = admin_client.get(reverse("admin:orm_message_change", args=[message.pk]))
+    agent_branch = inventory_fixture_bm["agent"]["agent-1"]
+    response = user_client.get(reverse("admin:orm_message_change", args=[message.pk]))
     content = response.content.decode()
 
     field_html = content.split(">Agent </label>")[1][:500]

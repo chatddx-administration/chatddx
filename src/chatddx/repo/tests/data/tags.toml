@@ -1,5 +1,0 @@
-[case.case-alpha]
-tags = ["respiratory", "fever"]
-
-[case.case-beta]
-tags = ["abdominal"]

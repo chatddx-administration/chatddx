@@ -1,7 +1,7 @@
-# src/chatddx/django/portal/forms/super_agent.py
 # pyright: basic
+
 from copy import deepcopy
-from typing import Any, cast, final, override
+from typing import Any
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, LayoutObject, Row
@@ -16,23 +16,22 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import IdentityModel
-from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.connection import ConnectionForm
 from chatddx.django.portal.forms.output_type import OutputTypeForm
 from chatddx.django.portal.forms.sampling_params import SamplingParamsForm
 from chatddx.django.portal.forms.tool_group import ToolGroupForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.django.portal.utils import load_form_data
-from chatddx.repo import proxies
-from chatddx.repo.branch_spec import AgentBranchSpec
-from chatddx.repo.form_data_in import SuperAgentFormDataIn
-from chatddx.repo.form_data_out import SuperAgentFormDataOut
-from chatddx.repo.main import BundleName, agent_relations
-from chatddx.repo.shufflers.main import (
-    dump_branch,
-    load_branch,
-)
-from chatddx.repo.trail_models import ToolTrailModel
+from chatddx.repo.entities.agent.django import Agent
+from chatddx.repo.entities.agent.pydantic import AgentBranchSpec
+from chatddx.repo.entities.super_agent.django import SuperAgent
+from chatddx.repo.entities.super_agent.pydantic import SuperAgentFormDataOut
+from chatddx.repo.entities.tool.django import ToolTrailModel
+from chatddx.repo.families.pydantic import BranchSchemaDetails
+from chatddx.repo.registry import EntityName
+from chatddx.repo.shufflers import branch
+from chatddx.repo.todo import agent_relations
 
 OPTIONAL_FIELDS = {
     "connection_name",
@@ -41,7 +40,7 @@ OPTIONAL_FIELDS = {
     "tool_group_name",
 }
 
-SUBFORMS: list[tuple[BundleName, type[BaseForm]]] = [
+SUBFORMS: list[tuple[EntityName, type[BranchForm]]] = [
     ("connection", ConnectionForm),
     ("sampling_params", SamplingParamsForm),
     ("output_type", OutputTypeForm),
@@ -85,28 +84,20 @@ def flatten_form_data(data: dict[str, Any]):
     }
 
 
-@final
-class SuperAgentForm(BaseForm):
-    @final
-    class Meta(BaseForm.Meta):
-        model = proxies.Agent
+class SuperAgentForm(BranchForm):
+    class Meta(BranchForm.Meta):
+        model = Agent
 
-    form_data_in = SuperAgentFormDataIn
-    form_data_out = SuperAgentFormDataOut
-    bundle_name = "agent"
+    entity_name = "agent"
 
-    subforms: dict[BundleName, BaseForm]
+    subforms: dict[EntityName, BranchForm]
 
-    @override
     def save(self, commit: bool = True) -> Any:
         instance = super().save(commit=commit)
         if instance and instance.get("api_key") and self.validated_data:
             owner_spec = self.validated_data.owner
             assert owner_spec is not None
 
-            # validated_data.owner is the pydantic snapshot used for form
-            # validation; the live IdentityModel is what actually persists
-            # secrets.
             owner = IdentityModel.objects.get(pk=owner_spec.id)
             owner_api_keys = owner.secrets.get("api-keys", {})
             agent_name = self.validated_data.name or ""
@@ -127,7 +118,6 @@ class SuperAgentForm(BaseForm):
                     f"Updated API-key for identity {owner.name} and connection {agent_name}.",
                 )
 
-    @override
     def clean(self):
         for subform_name, subform_instance in self.subforms.items():
             is_valid = subform_instance.is_valid()
@@ -154,10 +144,7 @@ class SuperAgentForm(BaseForm):
                 self.data.pop(f"{field_name}_template", None)
 
         for prefix, cls in SUBFORMS:
-            # self.data is a QueryDict at runtime (built from request.POST);
-            # Form.data is typed more loosely since a plain dict is also
-            # accepted by the base ModelForm constructor.
-            sub_form_data = get_subform_data(cast(QueryDict, self.data), prefix)
+            sub_form_data = get_subform_data(self.data, prefix)  # pyright: ignore[reportArgumentType]
             self.subforms[prefix] = cls(
                 data=sub_form_data,
                 request=self.request,
@@ -171,7 +158,7 @@ class SuperAgentForm(BaseForm):
 
                 self.fields[name] = field
 
-    def get_initial(self, instance: proxies.SuperAgent):
+    def get_initial(self, instance: SuperAgent):
         # `tools` is stored as a list of ids, but is hydrated into model
         # instances here for the form's initial data.
         instance.target.tool_group.tools = list(  # pyright: ignore[reportAttributeAccessIssue]
@@ -189,28 +176,42 @@ class SuperAgentForm(BaseForm):
 
         for relation, _ in SUBFORMS:
             agent_trail = instance.target
-            branch_model = load_branch(
-                bundle_name=relation,
-                owner_name=owner_name,
-                trail=getattr(agent_trail, relation),
-            )
-            if branch_model is None:
-                relation_trail = getattr(agent_trail, relation)
-                branch_name = str(relation_trail.fingerprint)[:6]
-                branch_model, _ = dump_branch(
-                    relation,
-                    branch_name,
-                    owner_name,
-                    relation_trail,
+
+            relation_trail = getattr(agent_trail, relation)
+            relation_fingerprint = relation_trail.fingerprint
+
+            try:
+                branch_model = branch.get_branch_model(
+                    entity_name=relation,
+                    owner_name=owner_name,
+                    fingerprint=relation_fingerprint,
                 )
+            except branch.BranchNotFoundError:
+                branch_name = str(relation_trail.fingerprint)[:6]
+
+                created = branch.commit(
+                    branch_details=BranchSchemaDetails(
+                        name=branch_name,
+                        owner=owner_name,
+                    ),
+                    trail=relation_trail,
+                )
+
+                branch_model = branch.get_branch_model(
+                    entity_name=relation,
+                    owner_name=owner_name,
+                    fingerprint=relation_fingerprint,
+                )
+
+                # consistency check
+                assert created == True
+
                 messages.info(
                     self.request,
                     f"Recreated a branch for trail '{relation}' with fingerprint '{relation_trail.fingerprint[:6]}' fyi 👇",
                 )
 
-            relations_dict[relation] = load_form_data(branch_model).model_dump(
-                by_alias=True
-            )
+            relations_dict[relation] = load_form_data(branch_model)
 
         initial = agent_dict | flatten_form_data(relations_dict)
         return initial

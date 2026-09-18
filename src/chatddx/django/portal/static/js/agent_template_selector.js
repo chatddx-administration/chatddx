@@ -27,7 +27,22 @@
           choice = Object.keys(selectorData)[0]; // boldly expect at least one row exists
         }
 
-        $.each(selectorData[choice] || {}, function(key, value) {
+        const choiceData = selectorData ? selectorData[choice] : undefined;
+
+        const unexpected =
+          choiceData === undefined ||
+          choiceData === null ||
+          typeof choiceData !== 'object' ||
+          Array.isArray(choiceData);
+
+        if (unexpected) {
+          console.warn(
+            `choice "${choice}" missing/unexpected for key "${selector.key}: ${choiceData}".`,
+            { selectorKey: selector.key, choice, choiceData }
+          );
+        }
+
+        $.each(choiceData || {}, function(key, value) {
           const fieldId = `#id_${fieldPrefix}${maps[key] || key}`;
           if (fieldId === selector.target) return;
           populateField($(fieldId), clear ? "" : value);

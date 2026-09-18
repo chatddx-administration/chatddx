@@ -1,12 +1,12 @@
 from collections import OrderedDict
 from typing import cast
 
-from chatddx.core.django_fields import (
-    resolve_related_array_fields,
-    resolve_related_array_fields_async,
+from chatddx.repo.bundles import bundle_of
+from chatddx.repo.families import TrailSpec
+from chatddx.repo.utils import (
+    resolve_trail,
+    resolve_trail_async,
 )
-from chatddx.repo.base import TrailModel, TrailSpec
-from chatddx.repo.main import Repo
 
 
 class TrailCache:
@@ -17,7 +17,7 @@ class TrailCache:
         self.cache = OrderedDict()
 
     def get_sync[T: TrailSpec](self, Spec: type[T], pk: int) -> T:
-        trail_model_cls = Repo(Spec, TrailModel)
+        trail_model_cls = bundle_of(Spec).trail_model
         key = (Spec, pk)
 
         if key in self.cache:
@@ -25,11 +25,11 @@ class TrailCache:
             return cast(T, self.cache[key])
 
         trail_model = trail_model_cls.objects.get(pk=pk)
-        trail_model = resolve_related_array_fields(trail_model)
+        trail_model = resolve_trail(trail_model)
         return Spec.model_validate(trail_model)
 
     async def get_async[T: TrailSpec](self, Spec: type[T], pk: int) -> T:
-        trail_model_cls = Repo(Spec, TrailModel)
+        trail_model_cls = bundle_of(Spec).trail_model
         key = (Spec, pk)
 
         if key in self.cache:
@@ -37,7 +37,7 @@ class TrailCache:
             return cast(T, self.cache[key])
 
         trail_model = await trail_model_cls.objects.select_related().aget(pk=pk)
-        trail_model = await resolve_related_array_fields_async(trail_model)
+        trail_model = await resolve_trail_async(trail_model)
         spec = Spec.model_validate(trail_model)
 
         self.cache[key] = spec

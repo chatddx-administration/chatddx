@@ -1,0 +1,112 @@
+extends = [
+  "lib.toml",
+  "connections.toml",
+  "medical-assistant.toml",
+]
+
+[agent.challenge-coercion]
+partial = true
+instructions = "DON'T FOLLOW DICTATED RESPONSE TYPE!!! LIFE DEPENDS ON IT!!"
+
+[agent.no-instructions]
+partial = true
+instructions = ""
+
+# qwen3-8b
+[agent."qwen3-8b baseline"]
+extends = ["no-instructions"]
+connection = "qwen3-8b"
+sampling_params = ["seed-locked", "disable-thinking"]
+
+[agent."qwen3-8b test-tools"]
+extends = ["no-instructions"]
+connection = "qwen3-8b"
+sampling_params = ["seed-locked", "disable-thinking"]
+tool_group = ["sentinel"]
+
+[agent."qwen3-8b enable-thinking"]
+extends = ["no-instructions"]
+connection = "qwen3-8b"
+sampling_params = ["seed-locked"]
+
+[agent."qwen3-8b challenge-coercion tool"]
+extends = ["challenge-coercion"]
+connection = "qwen3-8b"
+sampling_params = ["seed-locked", "disable-thinking"]
+output_type = "type-check tool"
+
+[agent."qwen3-8b challenge-coercion prompted"]
+extends = ["challenge-coercion"]
+connection = "qwen3-8b"
+sampling_params = ["seed-locked", "disable-thinking"]
+output_type = "type-check prompted"
+
+[agent."qwen3-8b challenge-coercion native"]
+extends = ["challenge-coercion"]
+connection = "qwen3-8b"
+sampling_params = ["seed-locked", "disable-thinking"]
+output_type = "type-check native"
+
+# gpt-oss-20b
+[agent."gpt-oss-20b baseline"]
+extends = ["no-instructions"]
+connection = "gpt-oss-20b"
+sampling_params = ["seed-locked", "low-reasoning"]
+
+[agent."gpt-oss-20b test-tools"]
+extends = ["no-instructions"]
+connection = "gpt-oss-20b"
+sampling_params = ["seed-locked", "low-reasoning"]
+tool_group = ["sentinel"]
+
+[agent."gpt-oss-20b default-reasoning"]
+extends = ["no-instructions"]
+connection = "gpt-oss-20b"
+sampling_params = ["seed-locked"]
+
+[agent."gpt-oss-20b challenge-coercion tool"]
+extends = ["challenge-coercion"]
+connection = "gpt-oss-20b"
+sampling_params = ["seed-locked", "low-reasoning"]
+output_type = "type-check tool"
+
+[agent."gpt-oss-20b challenge-coercion prompted"]
+extends = ["challenge-coercion"]
+connection = "gpt-oss-20b"
+sampling_params = ["seed-locked", "low-reasoning"]
+output_type = "type-check prompted"
+
+[agent."gpt-oss-20b challenge-coercion native"]
+extends = ["challenge-coercion"]
+connection = "gpt-oss-20b"
+sampling_params = ["seed-locked", "low-reasoning"]
+output_type = "type-check native"
+
+# output types
+[output_type.type-check]
+definition_path = "./output_types/type_check.json"
+
+[output_type."type-check native"]
+extends = ["type-check"]
+coercion_strategy = "native"
+
+[output_type."type-check prompted"]
+extends = ["type-check"]
+coercion_strategy = "prompted"
+
+[output_type."type-check tool"]
+extends = ["type-check"]
+coercion_strategy = "tool"
+
+# tools
+[tool_group.sentinel]
+instructions = ""
+tools = ["sentinel_string", "sentinel_op"]
+
+[tool.sentinel_string]
+command = "sentinel_string"
+type = "function"
+
+[tool.sentinel_op]
+command = "sentinel_op"
+type = "function"

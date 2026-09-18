@@ -1,6 +1,4 @@
-# src/chatddx/django/portal/forms/sampling_params.py
-
-from typing import final
+# pyright: basic
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, Row
@@ -18,22 +16,16 @@ from unfold.widgets import (
     UnfoldAdminTextInputWidget,
 )
 
-from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
-from chatddx.repo import proxies
-from chatddx.repo.form_data_in import SamplingParamsFormDataIn
-from chatddx.repo.form_data_out import SamplingParamsFormDataOut
+from chatddx.repo.entities.sampling_params.django import SamplingParams
 
 
-@final
-class SamplingParamsForm(BaseForm):
-    form_data_in = SamplingParamsFormDataIn
-    form_data_out = SamplingParamsFormDataOut
-    bundle_name = "sampling_params"
+class SamplingParamsForm(BranchForm):
+    entity_name = "sampling_params"
 
-    @final
-    class Meta(BaseForm.Meta):
-        model = proxies.SamplingParams
+    class Meta(BranchForm.Meta):
+        model = SamplingParams
 
     name = CharField(
         max_length=255,

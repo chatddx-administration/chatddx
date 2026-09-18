@@ -6,12 +6,12 @@ import tomli_w
 from pydantic import BeforeValidator, JsonValue, PlainSerializer
 
 
-def str_or_int(v: Any):
+def str_or_int(v: Any) -> str | Any:
     if isinstance(v, dict) and "id" in v:
-        return str(v["id"])
+        return str(v["id"])  # pyright: ignore[reportUnknownArgumentType]
     if isinstance(v, int):
         return str(v)
-    return v
+    return v  # pyright: ignore[reportUnknownVariableType]
 
 
 def empty_str_to_none(v: Any):
@@ -64,7 +64,7 @@ def parse_text_or_list(v: Any) -> list[str] | None:
 def dict_to_toml(v: Any) -> str:
     match v:
         case dict():
-            return tomli_w.dumps(v).strip()
+            return tomli_w.dumps(v).strip()  # pyright: ignore[reportUnknownArgumentType]
         case str():
             return v
         case None:
@@ -76,13 +76,17 @@ def dict_to_toml(v: Any) -> str:
 def list_to_text(v: Any) -> str:
     match v:
         case list():
-            return "\n".join(v)
+            return "\n".join(v)  # pyright: ignore[reportUnknownArgumentType]
         case str():
             return v
         case None:
             return ""
         case _:
             raise ValueError(f"Unexpected type: {v}")
+
+
+TomlString = Annotated[str, BeforeValidator(dict_to_toml)]
+TextListSimple = Annotated[str, BeforeValidator(list_to_text)]
 
 
 TomlDict = Annotated[

@@ -1,6 +1,5 @@
-# src/chatddx/django/portal/forms/agent.py
 # pyright: basic
-from typing import Any, final
+from typing import Any
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, Row
@@ -15,36 +14,32 @@ from unfold.widgets import (
 
 from chatddx.core.models import IdentityModel
 from chatddx.django.orm.qs import qs_canon, qs_owned_trails
-from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.django.portal.utils import load_form_data
-from chatddx.repo import proxies
-from chatddx.repo.branch_spec import AgentBranchSpec
-from chatddx.repo.form_data_in import AgentFormDataIn
-from chatddx.repo.form_data_out import AgentFormDataOut
-from chatddx.repo.main import agent_relations
-from chatddx.repo.shufflers.main import (
-    dump_branch,
-    load_branch,
+from chatddx.repo.entities.agent.django import Agent
+from chatddx.repo.entities.agent.pydantic import (
+    AgentBranchSpec,
+    AgentFormDataOut,
 )
-from chatddx.repo.trail_models import (
-    ConnectionTrailModel,
-    OutputTypeTrailModel,
-    SamplingParamsTrailModel,
-    ToolGroupTrailModel,
-    ToolTrailModel,
+from chatddx.repo.entities.connection.django import ConnectionTrailModel
+from chatddx.repo.entities.output_type.django import OutputTypeTrailModel
+from chatddx.repo.entities.sampling_params.django import SamplingParamsTrailModel
+from chatddx.repo.entities.tool.django import ToolTrailModel
+from chatddx.repo.entities.tool_group.django import ToolGroupTrailModel
+from chatddx.repo.shufflers.branch import (
+    BranchNotFoundError,
+    commit,
+    get_branch_model,
 )
+from chatddx.repo.todo import agent_relations
 
 
-@final
-class AgentForm(BaseForm):
-    form_data_in = AgentFormDataIn
-    form_data_out = AgentFormDataOut
-    bundle_name = "agent"
+class AgentForm(BranchForm):
+    entity_name = "agent"
 
-    @final
-    class Meta(BaseForm.Meta):
-        model = proxies.Agent
+    class Meta(BranchForm.Meta):
+        model = Agent
 
     def __init__(self, *args: Any, **kwargs: Any):
         request = kwargs["request"]
@@ -52,7 +47,7 @@ class AgentForm(BaseForm):
         super().__init__(*args, **kwargs)
 
         owner = request.user.username
-        owned = qs_canon(proxies.Agent.objects.all(), owner)
+        owned = qs_canon(Agent.objects.all(), owner)
 
         self.fields["template"].choices = [("", "--- clear ---")] + [
             (model.target.pk, model.name) for model in owned
@@ -71,7 +66,7 @@ class AgentForm(BaseForm):
             ToolGroupTrailModel.objects.all(), owner
         )
 
-    def get_initial(self, instance: proxies.Agent):
+    def get_initial(self, instance: Agent):
         # `tools` is stored as a list of ids, but is hydrated into model
         # instances here for the form's initial data.
         instance.target.tool_group.tools = list(  # pyright: ignore[reportAttributeAccessIssue]
@@ -89,23 +84,28 @@ class AgentForm(BaseForm):
 
         for relation in agent_relations:
             agent_trail = instance.target
-            branch_model = load_branch(
-                bundle_name=relation,
-                owner_name=owner_name,
-                trail=getattr(agent_trail, relation),
-            )
-            if branch_model is None:
+            try:
+                branch_model = get_branch_model(
+                    entity_name=relation,
+                    owner_name=owner_name,
+                    fingerprint=getattr(agent_trail, relation).fingerprint,
+                )
+            except BranchNotFoundError:
                 relation_trail = getattr(agent_trail, relation)
                 branch_name = str(relation_trail.fingerprint)[:6]
-                branch_model, _ = dump_branch(
+
+                created = commit(
                     relation,
                     branch_name,
                     owner_name,
                     relation_trail,
                 )
-                relations_dict[relation] = load_form_data(
-                    branch=branch_model
-                ).model_dump(by_alias=True)
+
+                # consitency check
+                assert created == True
+
+                relations_dict[relation] = load_form_data(branch_model)
+
                 messages.info(
                     self.request,
                     f"Recreated a branch for trail '{relation}' with fingerprint '{relation_trail.fingerprint[:6]}' fyi 👇",

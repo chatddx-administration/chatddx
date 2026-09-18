@@ -8,9 +8,7 @@ from pydantic import BaseModel
 from pydantic_ai import ModelRequest, ModelResponse
 
 from chatddx.core.choices import MessageKindChoices, RoleChoices, SessionContextChoices
-from chatddx.repo.base import BranchSchema, BranchSpec
-from chatddx.repo.trail_schemas import AgentSchema
-from chatddx.repo.trail_specs import AgentSpec
+from chatddx.repo.entities.agent.pydantic import AgentBranchSchema, AgentBranchSpec
 
 
 class SessionBase(BaseModel):
@@ -22,12 +20,12 @@ class SessionBase(BaseModel):
 
 
 class SessionSchema(SessionBase):
-    default_agent: BranchSchema[AgentSchema]
+    default_agent: AgentBranchSchema
 
 
 class SessionSpec(SessionBase, NinjaSchema):
     id: int
-    default_agent: BranchSpec[AgentSpec]
+    default_agent: AgentBranchSpec
     messages: list[MessageSpec]
 
 

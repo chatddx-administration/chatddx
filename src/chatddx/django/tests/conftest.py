@@ -1,71 +1,110 @@
-"""Shared fixtures for the admin form/timeline tests in this package.
-
-test_diagnose_api.py and network/test_diagnose_api.py define their own
-narrower owner/branch_registry fixtures and are unaffected by these.
-"""
-
-from collections import defaultdict
-from pathlib import Path
 from typing import Any
 
 import pytest
 from django.contrib.auth.models import User
+from django.test.client import Client
 
+from chatddx.core.choices import SessionContextChoices
 from chatddx.core.models import IdentityModel
-from chatddx.django.portal.utils import load_form_data
-from chatddx.repo.branch_models import BranchModelRegistry
-from chatddx.repo.form_data_out import TemplateData
-from chatddx.repo.shufflers.main import dump_trail_registry
-
-
-@pytest.fixture(autouse=True)
-def branch_registry(owner: IdentityModel) -> BranchModelRegistry:
-    path = Path(__file__).parent / "data/test-registry.toml"
-    return dump_trail_registry(path, owner_name=owner.name)
+from chatddx.core.utils import ensure_identity
+from chatddx.history.models import ExperimentModel, RunModel, SessionModel
+from chatddx.repo.inventories import InventoryBranchModel, InventoryFormDataOut
 
 
 @pytest.fixture
-def owner(admin_user: User) -> IdentityModel:
-    owner, _created = IdentityModel.objects.get_or_create(name=admin_user.username)
-    return owner
+def user_client(client: Client, django_user_model: User):
+    django_user = django_user_model.objects.create_superuser(
+        username="alex",
+        email="alex@kompismoln.se",
+        password="password",
+    )
+    client.force_login(django_user)
+
+    return client
+
+
+@pytest.fixture
+def session(owner: IdentityModel) -> SessionModel:
+    return SessionModel.objects.create(
+        owner=owner,
+        context=SessionContextChoices.CHAT,
+        description="a session",
+    )
 
 
 @pytest.fixture
 def collaborators() -> list[IdentityModel]:
-    owner1, _created = IdentityModel.objects.get_or_create(name="alex")
-    owner2, _created = IdentityModel.objects.get_or_create(name="olof")
-    return [owner1, owner2]
+    return [
+        ensure_identity("collaborator-1"),
+        ensure_identity("collaborator-2"),
+    ]
 
 
 @pytest.fixture
-def template_data(branch_registry: BranchModelRegistry) -> TemplateData:
-    form_data: dict[str, Any] = defaultdict(dict)
-
-    for bundle, branches in branch_registry.items():
-        for branch_model in branches.values():
-            form_data[bundle][branch_model.name] = load_form_data(branch_model)
-
-    return TemplateData.model_validate(form_data)
-
-
-@pytest.fixture
-def superagent_post_data(template_data: TemplateData) -> dict[str, Any]:
+def superagent_post_data(inventory_fixture_fdo: InventoryFormDataOut) -> dict[str, Any]:
     post_data_relations: dict[str, dict[str, Any]] = {
-        "connection_": template_data.connection["some-connection"].model_dump(
+        "connection_": inventory_fixture_fdo.connection["some-connection"].model_dump(
             exclude_none=True
         ),
-        "sampling_params_": template_data.sampling_params[
+        "sampling_params_": inventory_fixture_fdo.sampling_params[
             "some-sampling_params"
         ].model_dump(exclude_none=True),
-        "tool_group_": template_data.tool_group["some-tool_group"].model_dump(
+        "tool_group_": inventory_fixture_fdo.tool_group["some-tool_group"].model_dump(
             exclude_none=True
         ),
-        "output_type_": template_data.output_type["some-output_type"].model_dump(
-            exclude_none=True
-        ),
+        "output_type_": inventory_fixture_fdo.output_type[
+            "some-output_type"
+        ].model_dump(exclude_none=True),
     }
-    return template_data.agent["some-agent"].model_dump(exclude_none=True) | {
+    return inventory_fixture_fdo.agent["some-agent"].model_dump(exclude_none=True) | {
         f"{outer}{inner}": value
         for outer, inner_dict in post_data_relations.items()
         for inner, value in inner_dict.items()
     }
+
+
+@pytest.fixture
+def experiment(
+    owner: IdentityModel,
+    inventory_fixture_bm: InventoryBranchModel,
+):
+    case = inventory_fixture_bm["case"]["case-1"].target
+    agent = inventory_fixture_bm["agent"]["agent-2"].target
+
+    return ExperimentModel.objects.create(
+        owner=owner,
+        agent=agent,
+        case=case,
+        expect=case.expects.first(),
+        tags="baseline",
+        scorer=case.expects.first().scorer,
+    )
+
+
+@pytest.fixture
+def shared_experiment(
+    other_owner: IdentityModel,
+    owner: IdentityModel,
+    collaborators: list[IdentityModel],
+    inventory_fixture_bm: InventoryBranchModel,
+):
+    case = inventory_fixture_bm["case"]["case-1"].target
+    agent = inventory_fixture_bm["agent"]["agent-2"].target
+
+    experiment = ExperimentModel.objects.create(
+        owner=other_owner,
+        agent=agent,
+        case=case,
+        expect=case.expects.first(),
+        tags="shared-with-me",
+        scorer=case.expects.first().scorer,
+    )
+
+    experiment.collaborators.set(collaborators + [owner])
+
+    return experiment
+
+
+@pytest.fixture
+def run(owner: IdentityModel, experiment: ExperimentModel):
+    return RunModel.objects.create(owner=owner, experiment=experiment)

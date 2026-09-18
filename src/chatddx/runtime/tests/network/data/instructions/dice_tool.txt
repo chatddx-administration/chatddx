@@ -1,2 +1,0 @@
-dice_tool
-instructions

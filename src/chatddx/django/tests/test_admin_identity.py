@@ -72,14 +72,16 @@ def test_restricted_group_cannot_reach_another_identity(
 
 
 @pytest.mark.django_db
-def test_superuser_changelist_lists_all_identities(admin_client: Client):
+def test_superuser_changelist_lists_all_identities(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+    admin_client: Client,
+):
     """Superusers keep the ordinary list view, covering every identity."""
-    IdentityModel.objects.create(name="alex")
-    IdentityModel.objects.create(name="olof")
 
     response = admin_client.get(reverse("admin:orm_identity_changelist"))
 
     assert response.status_code == 200
     content = response.content.decode()
-    assert "alex" in content
-    assert "olof" in content
+    assert owner.name in content
+    assert other_owner.name in content
