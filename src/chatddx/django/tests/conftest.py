@@ -68,16 +68,18 @@ def experiment(
     owner: IdentityModel,
     inventory_fixture_bm: InventoryBranchModel,
 ):
-    case = inventory_fixture_bm["case"]["case-1"].target
+    case = inventory_fixture_bm["case"]["case-1"]
     agent = inventory_fixture_bm["agent"]["agent-2"].target
+    expect = case.expects.first()
+    assert expect is not None
 
     return ExperimentModel.objects.create(
         owner=owner,
         agent=agent,
-        case=case,
-        expect=case.expects.first(),
+        case=case.target,
+        expect=expect,
         tags="baseline",
-        scorer=case.expects.first().scorer,
+        scorer=expect.scorer,
     )
 
 
@@ -88,16 +90,18 @@ def shared_experiment(
     collaborators: list[IdentityModel],
     inventory_fixture_bm: InventoryBranchModel,
 ):
-    case = inventory_fixture_bm["case"]["case-1"].target
+    case = inventory_fixture_bm["case"]["case-1"]
     agent = inventory_fixture_bm["agent"]["agent-2"].target
+    expect = case.expects.first()
+    assert expect is not None
 
     experiment = ExperimentModel.objects.create(
         owner=other_owner,
         agent=agent,
-        case=case,
-        expect=case.expects.first(),
+        case=case.target,
+        expect=expect,
         tags="shared-with-me",
-        scorer=case.expects.first().scorer,
+        scorer=expect.scorer,
     )
 
     experiment.collaborators.set(collaborators + [owner])

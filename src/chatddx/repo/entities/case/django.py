@@ -21,6 +21,22 @@ class CaseTrailModel(TrailModel):
 
     payload = TextField()
 
+
+class CaseBranchModel(BranchModel):
+    class Meta(BranchModel.Meta):
+        app_label = "orm"
+        db_table = "agents_case_branch"
+
+    target = ForeignKey(
+        CaseTrailModel,
+        on_delete=PROTECT,
+        related_name="branches",
+    )
+
+    # Which expectations a case carries is not part of the case payload, so it
+    # belongs to the owner's version of the case rather than to the (shared,
+    # content-addressed) trail. Each version snapshots the set it was saved
+    # with, see `chatddx.repo.shufflers.branch.commit`.
     expects = ManyToManyField(
         ExpectTrailModel,
         through="CaseExpect",
@@ -34,20 +50,8 @@ class CaseExpect(Model):
         app_label = "orm"
         db_table = "agents_case_expect_link"
 
-    case = ForeignKey(CaseTrailModel, on_delete=CASCADE)
+    case = ForeignKey(CaseBranchModel, on_delete=CASCADE)
     expect = ForeignKey(ExpectTrailModel, on_delete=CASCADE)
-
-
-class CaseBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_case_branch"
-
-    target = ForeignKey(
-        CaseTrailModel,
-        on_delete=PROTECT,
-        related_name="branches",
-    )
 
 
 class Case(BranchProxy, CaseBranchModel, Sharable):

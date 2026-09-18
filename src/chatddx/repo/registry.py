@@ -127,6 +127,8 @@ from chatddx.repo.families import (
     TrailSpec,
 )
 
+# `all_entities` iterates this, and an entity that is referenced by branch
+# name (a case's expects) has to be committed before the one referencing it.
 type EntityName = Literal[
     "agent",
     "connection",
@@ -134,9 +136,9 @@ type EntityName = Literal[
     "output_type",
     "tool",
     "tool_group",
-    "case",
     "scorer",
     "expect",
+    "case",
     "super_agent",
 ]
 

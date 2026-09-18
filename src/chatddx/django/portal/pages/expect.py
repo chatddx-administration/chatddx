@@ -25,7 +25,7 @@ class ExpectInline(BranchModelInlineAdmin):
             return Expect.objects.none()
 
         return qs_canon(
-            Expect.objects.filter(target__cases=obj.target.pk),
+            Expect.objects.filter(target__cases=obj.pk),
             obj.owner.name,
         ).select_related("target")
 

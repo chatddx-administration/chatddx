@@ -82,6 +82,11 @@ class BranchSchemaDetails(BaseModel):
     collaborators: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
 
+    # Branch names of the trails this branch references without owning them as
+    # content. Only `case` has such a relation (its expects); None means the
+    # new version inherits the set from the one it supersedes.
+    expects: list[str] | None = None
+
 
 class BranchDetailsPatch(BaseModel):
     name: str | None = None
@@ -89,6 +94,7 @@ class BranchDetailsPatch(BaseModel):
 
     collaborators: list[str] | None = None
     tags: list[str] | None = None
+    expects: list[str] | None = None
 
 
 class BaseBranch[T: BaseTrail](BaseBranchTarget[T]):
