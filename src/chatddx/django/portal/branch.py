@@ -201,12 +201,21 @@ class BranchModelAdmin[T: BranchProxy](
         request_contexts[request] = RequestContext(canon=canon, created=created)
 
     def save_related(
-        self, request: HttpRequest, form: BranchForm, formsets, change: bool
+        self,
+        request: HttpRequest,
+        form: BranchForm,
+        formsets: list[Any],
+        change: bool,
     ) -> None:
         outcome = request_contexts[request]
         outcome.changed += self._sync_collaborators(outcome.canon, form)
-        # for formset in formsets:
-        #    self.save_formset(request, form, formset, change=change)
+
+        for formset in formsets:
+            # `form.instance` is the version the change form was rendered
+            # from, `outcome.canon` is the one `save_model()` just made canon,
+            # which is what the inlines have to attach themselves to.
+            formset.instance = outcome.canon
+            self.save_formset(request, form, formset, change=change)
 
     def _sync_collaborators(self, canon: Any, form: BranchForm) -> list[str]:
         wanted = self._validated_data(form).collaborators
@@ -259,10 +268,10 @@ class BranchModelAdmin[T: BranchProxy](
         return super().response_add(request, obj, post_url_continue)
 
     def response_change(self, request: HttpRequest, obj: DjangoModel):
+        self._announce_outcome(request)
+
         if "_continue" not in request.POST:
             return super().response_change(request, obj)
-
-        self._announce_outcome(request)
 
         opts = self.model._meta
 
