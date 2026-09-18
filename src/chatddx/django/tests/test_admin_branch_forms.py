@@ -11,6 +11,54 @@ from chatddx.repo.inventories import InventoryFormDataOut
 pytestmark = pytest.mark.django_db(transaction=True)
 
 
+@pytest.mark.django_db
+def test_tool_add_missing_required_field_shows_single_error(
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    owner: IdentityModel,
+):
+    data = inventory_fixture_fdo.tool
+    some_key, *_rest = data.keys()
+
+    post_data = data[some_key].model_dump(exclude_none=True)
+    post_data["name"] = "a-new-tool"
+    post_data["command"] = ""
+
+    response = user_client.post(
+        reverse("admin:orm_tool_add"),
+        data=post_data,
+        follow=True,
+    )
+    assert response.status_code == 200
+
+    form_errors = response.context["adminform"].form.errors["command"]
+    assert len(form_errors) == 1
+
+
+@pytest.mark.django_db
+def test_connection_add_missing_required_field_shows_single_error(
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    owner: IdentityModel,
+):
+    data = inventory_fixture_fdo.connection
+    some_key, *_rest = data.keys()
+
+    post_data = data[some_key].model_dump(exclude_none=True)
+    post_data["name"] = "a-new-connection"
+    post_data["model"] = ""
+
+    response = user_client.post(
+        reverse("admin:orm_connection_add"),
+        data=post_data,
+        follow=True,
+    )
+    assert response.status_code == 200
+
+    form_errors = response.context["adminform"].form.errors["model"]
+    assert len(form_errors) == 1
+
+
 def test_tool_edit_versions_then_delete_removes_it(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,

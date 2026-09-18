@@ -84,7 +84,14 @@ class BranchForm(ModelForm):
                 print_pydantic_errors(e, logger)
 
             for error in e.errors():
-                self.add_error(str(error["loc"][0]), error["msg"])
+                field_name = str(error["loc"][0])
+                if field_name in self.errors:
+                    # Django's own field-level validation (e.g. a required
+                    # CharField left blank) already reported an error for
+                    # this field; don't pile a second, differently-worded
+                    # one (pydantic's "Field required") on top of it.
+                    continue
+                self.add_error(field_name, error["msg"])
 
     def clean(self):
         cleaned = super().clean()
