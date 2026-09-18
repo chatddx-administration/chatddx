@@ -1,6 +1,4 @@
-# src/chatddx/django/portal/forms/connection.py
-from typing import Any, final, override
-
+# pyright: basic
 from crispy_forms.helper import FormHelper, Layout
 from crispy_forms.layout import Column, Fieldset, Row
 from django import forms
@@ -9,27 +7,19 @@ from unfold.widgets import (
     UnfoldAdminExpandableTextareaWidget,
     UnfoldAdminSelect2Widget,
     UnfoldAdminTextInputWidget,
-    UnfoldAdminURLInputWidget,
 )
 
 from chatddx.core.choices import ProviderChoices
-from chatddx.core.models import IdentityModel
-from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
-from chatddx.repo import proxies
-from chatddx.repo.form_data_in import ConnectionFormDataIn
-from chatddx.repo.form_data_out import ConnectionFormDataOut
+from chatddx.repo.entities.connection.django import Connection
 
 
-@final
-class ConnectionForm(BaseForm):
-    form_data_in = ConnectionFormDataIn
-    form_data_out = ConnectionFormDataOut
-    bundle_name = "connection"
+class ConnectionForm(BranchForm):
+    entity_name = "connection"
 
-    @final
-    class Meta(BaseForm.Meta):
-        model = proxies.Connection
+    class Meta(BranchForm.Meta):
+        model = Connection
 
     name = forms.CharField(
         required=False,

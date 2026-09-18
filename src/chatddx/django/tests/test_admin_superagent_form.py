@@ -1,5 +1,4 @@
 # pyright: basic
-from typing import cast
 
 import pytest
 from django.test import Client
@@ -7,28 +6,22 @@ from django.urls import reverse
 
 from chatddx.core.fields import dict_to_toml, parse_toml_or_dict
 from chatddx.core.models import IdentityModel
-from chatddx.repo.branch_models import (
-    AgentBranchModel,
-    BranchModelRegistry,
-    ConnectionBranchModel,
-)
+from chatddx.repo.entities.agent.django import AgentBranchModel
+from chatddx.repo.entities.connection.django import ConnectionBranchModel
+from chatddx.repo.inventories import InventoryBranchModel
+
+pytestmark = pytest.mark.django_db(transaction=True)
 
 
-@pytest.mark.django_db
 def test_super_agent_change_recreates_dangling_connection_branch(
-    branch_registry: BranchModelRegistry,
-    admin_client: Client,
+    inventory_fixture_bm: InventoryBranchModel,
+    user_client: Client,
 ):
-    # branch_registry is keyed generically, but the "agent" bucket only
-    # ever holds AgentBranchModel rows.
-    agent = cast(
-        AgentBranchModel,
-        next(a for a in branch_registry["agent"].values() if a.name == "some-agent"),
-    )
+    agent = inventory_fixture_bm["agent"]["some-agent"]
     fingerprint = agent.target.connection.fingerprint
 
     change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
-    response = admin_client.get(change_url)
+    response = user_client.get(change_url)
     assert response.status_code == 200
 
     assert not response.context["messages"]
@@ -36,7 +29,7 @@ def test_super_agent_change_recreates_dangling_connection_branch(
     _ = ConnectionBranchModel.objects.filter(target=agent.target.connection).delete()
 
     change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
-    response = admin_client.get(change_url)
+    response = user_client.get(change_url)
     assert response.status_code == 200
 
     messages = list(response.context["messages"])
@@ -46,7 +39,7 @@ def test_super_agent_change_recreates_dangling_connection_branch(
     )
 
     change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
-    response = admin_client.get(change_url)
+    response = user_client.get(change_url)
     assert response.status_code == 200
 
     assert not response.context["messages"]
@@ -55,12 +48,12 @@ def test_super_agent_change_recreates_dangling_connection_branch(
 @pytest.mark.django_db
 def test_super_agent_add_and_versioning(
     owner: IdentityModel,
-    admin_client: Client,
+    user_client: Client,
     superagent_post_data,
 ):
     post_data = superagent_post_data
     assert post_data["instructions"] == "some instructions"
-    assert len(post_data["tool_group_tools"]) == 2
+    assert len(post_data["tool_group_tools"]) == 1
     assert isinstance(post_data["tool_group_tools"][0], str)
 
     existing = AgentBranchModel.objects.filter(
@@ -70,7 +63,7 @@ def test_super_agent_add_and_versioning(
 
     assert existing.count() == 1
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_superagent_add"),
         data=post_data,
         follow=True,
@@ -88,7 +81,7 @@ def test_super_agent_add_and_versioning(
     some_agent = existing.first()
     assert some_agent is not None
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_superagent_change", args=[some_agent.pk]),
         data=post_data,
         follow=True,
@@ -116,7 +109,7 @@ def test_super_agent_add_and_versioning(
 
     post_data["output_type_definition"] = dict_to_toml(output_type_def)
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_superagent_change", args=[some_agent.pk]),
         data=post_data,
         follow=True,
@@ -137,7 +130,7 @@ def test_super_agent_add_and_versioning(
     output_type_def["properties"]["age"]["minimum"] = 1
     post_data["output_type_definition"] = dict_to_toml(output_type_def)
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_superagent_change", args=[some_agent.pk]),
         data=post_data,
         follow=True,
@@ -156,7 +149,7 @@ def test_super_agent_add_and_versioning(
     assert some_agent is not None
 
     post_data["output_type_definition"] = "asdf"
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_superagent_change", args=[some_agent.pk]),
         data=post_data,
         follow=True,
@@ -169,30 +162,28 @@ def test_super_agent_add_and_versioning(
         )
 
 
-@pytest.mark.django_db
 def test_superagent_owners(
-    admin_client: Client,
+    user_client: Client,
     collaborators,
     superagent_post_data,
 ):
     superagent_post_data["owner"] = collaborators[0].pk
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_superagent_add"),
         data=superagent_post_data,
         follow=True,
     )
 
     agent = AgentBranchModel.objects.get(name="some-agent", owner=collaborators[0])
-    assert agent.owner.name == "alex"
+    assert agent.owner.name == "collaborator-1"
 
     assert response.status_code == 200
     if "adminform" in response.context:
         assert response.context["adminform"].form.errors == ""
 
 
-@pytest.mark.django_db
 def test_superagent_collaborators(
-    admin_client: Client,
+    user_client: Client,
     collaborators,
     superagent_post_data,
 ):
@@ -204,7 +195,7 @@ def test_superagent_collaborators(
     post_data_with_collaborators = post_data.copy()
     post_data_with_collaborators["collaborators"] = [c.pk for c in collaborators]
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_superagent_add"),
         data=post_data_with_collaborators,
         follow=True,

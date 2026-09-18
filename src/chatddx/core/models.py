@@ -1,3 +1,4 @@
+# pyright: basic
 from typing import Any
 
 from django.conf import settings
@@ -25,7 +26,7 @@ class IdentityModel(Model):
         max_length=255,
         unique=True,
     )
-    secrets: dict[str, Any] = EncryptedJSONField(default=dict)  # type: ignore[assignment]
+    secrets: dict[str, Any] = EncryptedJSONField(default=dict)  # pyright: ignore[reportAssignmentType]
     guest_id = UUIDField(
         default=None,
         null=True,
@@ -40,25 +41,42 @@ class IdentityModel(Model):
     )
 
 
-class TagModel(Model):
-    class Meta:
+class Identity(IdentityModel):
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+        proxy = True
         app_label = "orm"
-        db_table = "agents_tag"
-        constraints = [
-            UniqueConstraint(fields=["owner", "name"], name="unique_tag_per_owner"),
-        ]
+        verbose_name = "Identity"
+        verbose_name_plural = "Identities"
 
     def __str__(self):
         return self.name
 
+
+class TagModel(Model):
+    class Meta:
+        app_label = "orm"
+        db_table = "agents_tag"
+        constraints = (
+            UniqueConstraint(
+                fields=["owner", "name", "entity"],
+                name="unique_tag_per_owner_and_entity",
+            ),
+        )
+
+    def __str__(self):
+        return self.name
+
+    owner_id: int
     owner = ForeignKey(
         IdentityModel,
         on_delete=PROTECT,
         related_name="tags",
     )
-    # Django synthesizes this alongside `owner`, but django-types doesn't
-    # model that.
-    owner_id: int
+
+    entity = CharField(
+        max_length=255,
+    )
+
     name = CharField(
         max_length=255,
     )

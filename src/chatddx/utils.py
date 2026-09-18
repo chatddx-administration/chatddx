@@ -2,27 +2,62 @@ import asyncio
 import hashlib
 import inspect
 import json
-from collections.abc import Awaitable, Coroutine, Mapping
+from collections.abc import Awaitable, Callable, Coroutine, Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import (
     Any,
-    Callable,
     cast,
+    get_args,
     get_type_hints,
 )
 
 from asgiref.sync import sync_to_async
-from django.db.models import Model as DjangoModel
-from django.db.models import QuerySet
+from django.db.models import Model as DjangoModel, QuerySet
 from django.utils.html import format_html
-from pydantic import HttpUrl, JsonValue
+from pydantic import BaseModel, Field, HttpUrl, JsonValue, create_model
 
 type Observer[T] = Callable[[T], None | Awaitable[None]]
+
+from typing import Annotated
+
+
+def make_fields_optional(model_cls: type[BaseModel]) -> type[BaseModel]:
+    new_fields = {}
+    for f_name, f_info in model_cls.model_fields.items():
+        f_dct = f_info.asdict()
+        new_fields[f_name] = (
+            Annotated[
+                f_dct["annotation"] | None,
+                *f_dct["metadata"],
+                Field(**f_dct["attributes"]),
+            ],
+            None,
+        )
+    return create_model(
+        f"{model_cls.__name__}Optional",
+        __base__=model_cls,
+        **new_fields,
+    )
 
 
 def make_async[**P, R](func: Callable[P, R]) -> Callable[P, Coroutine[None, None, R]]:
     return sync_to_async(func)
+
+
+def is_target_in_annotation(annotation: type, target_schema: type[BaseModel]) -> bool:
+    if annotation == target_schema:
+        return True
+
+    if issubclass(annotation, target_schema):
+        return True
+
+    args = get_args(annotation)
+    for arg in args:
+        if is_target_in_annotation(arg, target_schema):
+            return True
+
+    return False
 
 
 @dataclass
@@ -61,9 +96,8 @@ def one_or_list_of[T](t: type[T], value: object) -> OneOf[T] | ListOf[T] | None:
     if isinstance(value, t):
         return OneOf(value)
 
-    if isinstance(value, list):
-        if not value or all(isinstance(x, t) for x in value):  # pyright: ignore[reportUnknownVariableType]
-            return ListOf(cast(list[T], value))
+    if isinstance(value, list) and (not value or all(isinstance(x, t) for x in value)):  # pyright: ignore[reportUnknownVariableType]
+        return ListOf(cast(list[T], value))
 
 
 class Dispatcher:
@@ -149,16 +183,13 @@ def truncate_content(content: str | None, limit: int):
 
 
 def render_json_html(data: Any) -> str:
-    """Render a JSON-serializable value as a syntax-highlighted <pre> block,
-    the way MessageAdmin.content renders non-text message content. Returns
-    an empty string for None instead of the literal text "null"."""
     if data is None:
         return ""
 
     json_data = json.dumps(data, indent=4)
     return format_html(
         '<div class="highlight">'
-        '<pre class="white-space: pre-wrap; word-wrap: break-word;; line-height: 125%;">{}</pre>'
-        "</div>",
+        + '<pre class="white-space: pre-wrap; word-wrap: break-word;; line-height: 125%;">{}</pre>'
+        + "</div>",
         json_data,
     )

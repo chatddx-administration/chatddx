@@ -1,0 +1,158 @@
+type = "object"
+title = "management_plan_v1"
+required = [
+  "acute_warning",
+  "diagnoses",
+  "management",
+  "sources",
+]
+
+["$defs".WorkupItem]
+type = "object"
+title = "WorkupItem"
+required = [
+  "type",
+  "investigations",
+  "priority",
+]
+
+["$defs".WorkupItem.properties.type]
+enum = [
+  "Lab",
+  "Radiology",
+  "Physiology",
+  "Other",
+]
+type = "string"
+title = "Type"
+
+["$defs".WorkupItem.properties.priority]
+enum = [
+  "urgent",
+  "prompt",
+  "elective",
+]
+type = "string"
+title = "Priority"
+
+["$defs".WorkupItem.properties.investigations]
+type = "array"
+title = "Investigations"
+description = "List of specific diagnostic investigations (e.g. ['CBC/CRP', 'Point-of-care Ultrasound'])."
+
+["$defs".WorkupItem.properties.investigations.items]
+type = "string"
+
+["$defs".ManagementSection]
+type = "object"
+title = "ManagementSection"
+required = [
+  "workup",
+  "empirical_treatment",
+  "disposition",
+]
+
+["$defs".ManagementSection.properties.workup]
+type = "array"
+title = "Diagnostic Workup Steps"
+
+["$defs".ManagementSection.properties.workup.items]
+"$ref" = "#/$defs/WorkupItem"
+
+["$defs".ManagementSection.properties.disposition]
+type = "string"
+title = "Disposition"
+description = "Primary destination or clinical disposition (e.g., 'Admission/Observation/Home with follow-up')."
+
+["$defs".ManagementSection.properties.empirical_treatment]
+type = "array"
+title = "Empirical Treatments"
+
+["$defs".ManagementSection.properties.empirical_treatment.items]
+"$ref" = "#/$defs/EmpiricalTreatmentItem"
+
+["$defs".IndividualDiagnosis]
+type = "object"
+title = "IndividualDiagnosis"
+required = [
+  "diagnosis",
+  "probability",
+  "critical",
+  "short_rationale",
+]
+
+["$defs".IndividualDiagnosis.properties.critical]
+type = "boolean"
+title = "Critical"
+description = "Whether this is a high-stakes, life-threatening emergency condition."
+
+["$defs".IndividualDiagnosis.properties.diagnosis]
+type = "string"
+title = "Diagnosis"
+description = "Diagnosis name (ONE word if possible)."
+
+["$defs".IndividualDiagnosis.properties.probability]
+enum = [
+  "high",
+  "medium",
+  "low",
+]
+type = "string"
+title = "Probability"
+description = "The assessed likelihood of this condition."
+
+["$defs".IndividualDiagnosis.properties.short_rationale]
+type = "string"
+title = "Short Rationale"
+description = "One sentence on why this diagnosis is considered based on history/exam findings, including relevant key negatives."
+
+["$defs".EmpiricalTreatmentItem]
+type = "object"
+title = "EmpiricalTreatmentItem"
+required = [
+  "indication",
+  "treatment",
+  "important",
+]
+
+["$defs".EmpiricalTreatmentItem.properties.important]
+type = "string"
+title = "Important Warnings"
+description = "Any key contraindications, warning signs, or monitoring parameters."
+
+["$defs".EmpiricalTreatmentItem.properties.treatment]
+type = "string"
+title = "Treatment"
+description = "Specific treatment intervention with dosages if relevant (e.g., 'Ceftriaxone 2g IV')."
+
+["$defs".EmpiricalTreatmentItem.properties.indication]
+type = "string"
+title = "Indication"
+description = "The specific suspected condition prompting this intervention (e.g., 'If suspecting Sepsis')."
+
+[properties.sources]
+type = "array"
+title = "Medical Sources"
+description = "List of peer-reviewed guidelines or reference tools utilized (e.g. 'UpToDate', 'NICE guidelines')."
+
+[properties.sources.items]
+type = "string"
+
+[properties.diagnoses]
+type = "array"
+title = "Differential Diagnoses"
+description = "Prioritized differential diagnoses ranked by probability. Include critical rules even if low probability."
+
+[properties.diagnoses.items]
+"$ref" = "#/$defs/IndividualDiagnosis"
+
+[properties.management]
+"$ref" = "#/$defs/ManagementSection"
+
+[properties.acute_warning]
+type = [
+  "string",
+  "null",
+]
+title = "Acute Warning"
+description = "Red flag signs of an immediate, life-threatening emergency state. Return null if none."

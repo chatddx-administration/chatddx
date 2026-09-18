@@ -1,8 +1,9 @@
 # pyright: basic
+
 import json
 from datetime import timedelta
 from functools import cached_property
-from typing import NamedTuple, cast, final, override
+from typing import NamedTuple, cast
 
 import jsonschema
 from django.contrib import admin
@@ -23,12 +24,12 @@ from pydantic_ai import (
 )
 
 from chatddx.core.choices import MessageKindChoices, RoleChoices
-from chatddx.history.models import MessageModel, SessionModel
+from chatddx.history.models import ExperimentModel, MessageModel, RunModel, SessionModel
 from chatddx.history.schemas import ErrorPayload, MessageSpec, PromptPayload
+from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
 from chatddx.repo.trail_cache import trail_cache
-from chatddx.repo.trail_specs import AgentSpec
 from chatddx.runtime.utils import get_part_content
-from chatddx.utils import truncate_content
+from chatddx.utils import render_json_html, truncate_content
 
 
 class ToolCallSummary(NamedTuple):
@@ -41,15 +42,115 @@ class ToolReturnSummary(NamedTuple):
     content: str
 
 
+class Experiment(ExperimentModel):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Experiment"
+        verbose_name_plural = "Experiments"
+
+    def __str__(self):
+        timestamp = self.timestamp.strftime("%Y-%m-%d %H:%M")
+        tags = self.tags_display() or "no tags"
+        return f"{timestamp} — {tags}"
+
+    @admin.display(description="Tags")
+    def tags_display(self):
+        return ", ".join(self.tag_list) or None
+
+    @admin.display(description="Collaborators")
+    def collaborators_csv(self):
+        return ", ".join(str(c) for c in self.collaborators.all()) or None
+
+    @cached_property
+    def agent_link(self):
+        if self.agent_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
+            url = reverse(
+                "admin:orm_superagent_change",
+                args=[self.agent_branch_id],  # pyright: ignore[reportAttributeAccessIssue]
+            )
+            label = f"{self.agent_branch_name} ({self.agent.fingerprint[:6]})"  # pyright: ignore[reportAttributeAccessIssue]
+        else:
+            url = (
+                reverse("admin:orm_superagent_add")
+                + f"?agent_fingerprint={self.agent.fingerprint}"
+            )
+            label = self.agent.fingerprint[:6]
+
+        return format_html('<a href="{}">{}</a>', url, label)
+
+    @cached_property
+    def case_link(self):
+        if self.case_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
+            url = reverse(
+                "admin:orm_case_change",
+                args=[self.case_branch_id],  # pyright: ignore[reportAttributeAccessIssue]
+            )
+            label = f"{self.case_branch_name} ({self.case.fingerprint[:6]})"  # pyright: ignore[reportAttributeAccessIssue]
+        else:
+            url = (
+                reverse("admin:orm_case_add")
+                + f"?case_fingerprint={self.case.fingerprint}"
+            )
+            label = self.case.fingerprint[:6]
+
+        return format_html('<a href="{}">{}</a>', url, label)
+
+
+class SharedExperiment(Experiment):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Shared Experiment"
+        verbose_name_plural = "Shared Experiments"
+
+
+class Run(RunModel):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Run"
+        verbose_name_plural = "Runs"
+
+    def __str__(self):
+        return f"[{self.uuid}]"
+
+    @admin.display(description="Collaborators")
+    def collaborators_csv(self):
+        return ", ".join(str(c) for c in self.collaborators.all()) or None
+
+    @cached_property
+    def session_link(self):
+        if not self.session_id:
+            return None
+
+        url = reverse("admin:orm_session_change", args=[self.session_id])
+        return format_html(
+            '<a href="{}">{}</a>',
+            url,
+            Session.objects.get(pk=self.session_id),
+        )
+
+    @cached_property
+    def result_html(self):
+        return render_json_html(self.result)
+
+
+class SharedRun(Run):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Shared Run"
+        verbose_name_plural = "Shared Runs"
+
+
 class Session(SessionModel):
-    @final
     class Meta:
         proxy = True
         app_label = "orm"
         verbose_name = "Session"
         verbose_name_plural = "Sessions"
 
-    @override
     def __str__(self):
         if self.description:
             return self.description[:100]
@@ -106,14 +207,12 @@ class SharedSession(Session):
 
 
 class Message(MessageModel):
-    @final
     class Meta:
         proxy = True
         app_label = "orm"
         verbose_name = "Message"
         verbose_name_plural = "Messages"
 
-    @override
     def __str__(self):
         return f"[{self.role}]: " + truncate_content(self.content, 55)
 
@@ -122,8 +221,8 @@ class Message(MessageModel):
         return MessageSpec.model_validate(self)
 
     @cached_property
-    def agent_spec(self) -> AgentSpec:
-        return trail_cache.get_sync(AgentSpec, self.agent.pk)
+    def agent_spec(self) -> AgentTrailSpec:
+        return trail_cache.get_sync(AgentTrailSpec, self.agent.pk)
 
     @cached_property
     def session_link(self):

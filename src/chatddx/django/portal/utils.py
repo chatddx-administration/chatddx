@@ -1,60 +1,45 @@
-from collections import defaultdict
-from typing import get_args
+from typing import Any
 
 from django.urls import reverse
 from django.utils.html import format_html
 
-from chatddx.core.django_fields import resolve_related_array_fields
-from chatddx.repo.base import BaseFormDataOut, BranchModel, BranchSpec
-from chatddx.repo.form_data_out import TemplateData
-from chatddx.repo.main import BundleName, Repo
-from chatddx.repo.shufflers.main import load_branches
+from chatddx.repo.bundles import bundle_of
+from chatddx.repo.families.django import BranchModel
+from chatddx.repo.families.pydantic import BranchSpec, TrailSpec
+from chatddx.repo.inventories import InventoryBranchSpec
+from chatddx.repo.shufflers import inventory
+from chatddx.repo.utils import resolve_trail
+
+
+def inventory_form_data_out(owner_name: str) -> str:
+    inventory_form_data_out = inventory.form_data_out(
+        InventoryBranchSpec.model_validate(
+            inventory.owned_inventory(owner_name, index_key="trail_id")
+        )
+    )
+    return inventory_form_data_out.model_dump_json(by_alias=True)
 
 
 def load_form_data(
-    branch: BranchModel | BranchSpec,
-) -> BaseFormDataOut:
+    branch: BranchModel | BranchSpec[TrailSpec],
+) -> dict[str, Any]:
 
     match branch:
         case BranchModel():
-            branch.target = resolve_related_array_fields(branch.target)
-            branch_spec = Repo(branch, BranchSpec).model_validate(branch)
+            branch.target = resolve_trail(branch.target)
+            branch_spec = bundle_of(branch).branch_spec.model_validate(branch)
         case BranchSpec():
             branch_spec = branch
 
     branch_dict = branch_spec.model_dump()
-    form_data = Repo(branch, BaseFormDataOut).model_validate(
+
+    form_data = bundle_of(branch).form_data_out.model_validate(
         branch_dict | branch_dict["target"]
     )
-    return form_data
-
-
-def load_template_data(owner_name: str):
-
-    payload: dict[BundleName, dict[str, BaseFormDataOut]] = defaultdict(dict)
-
-    for bundle in get_args(BundleName):
-        form_data_cls = Repo(bundle, BaseFormDataOut)
-        branch_specs = load_branches(bundle, owner_name)
-
-        for branch_spec in branch_specs:
-            branch_dict = branch_spec.model_dump()
-            form_data = branch_dict | branch_dict["target"]
-            payload[bundle][str(form_data["id"])] = form_data_cls.model_validate(
-                form_data
-            )
-
-    return TemplateData.model_validate(payload)
+    return form_data.model_dump(by_alias=True)
 
 
 def truncate_for_list_display(text: str | None, limit: int = 50) -> str:
-    """Preview a long text field in an admin list_display column: cut at a
-    word boundary at or before `limit` characters (instead of slicing mid-
-    word) and mark the cut with an ellipsis, so a shortened value still
-    reads as a preview instead of a truncated word. `limit` is capped at 50
-    regardless of what's passed in -- list view columns stay scannable, this
-    just keeps a single place to loosen or tighten that cap.
-    """
     limit = min(limit, 50)
 
     if not text:

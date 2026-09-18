@@ -6,17 +6,17 @@ from pydantic_ai.exceptions import ModelHTTPError
 
 from chatddx.core.choices import SessionContextChoices
 from chatddx.core.models import IdentityModel
+from chatddx.core.utils import ensure_identity
+from chatddx.django.orm.qs import qs_canon
 from chatddx.history.session import start_session
-from chatddx.repo.shufflers.agent import (
-    load_agents_async,
-)
-from chatddx.repo.shufflers.main import (
-    ensure_identity,
-    load_branch_async,
+from chatddx.repo.bundles import bundle_of
+from chatddx.repo.shufflers.agent import get_agent_async, select_agents_async
+from chatddx.repo.shufflers.branch import (
+    BranchNotFoundError,
 )
 from chatddx.runtime.runners import run_from_session
 
-api = NinjaAPI(title="ChatDDx Swift API", version="1.0.0")
+api = NinjaAPI(title="ChatDDX Swift API", version="0.0.0+dev")
 User = get_user_model()
 
 
@@ -45,7 +45,17 @@ def get_authenticated_username(request: HttpRequest) -> IdentityModel:
 async def get_agents_endpoint(request: HttpRequest, output_type: str | None = None):
     owner = await sync_to_async(get_authenticated_username)(request)
 
-    agents = await load_agents_async(owner_name=owner.name, output_type=output_type)
+    if output_type:
+        model_cls = bundle_of("agent").branch_model
+        qs = qs_canon(model_cls.objects.all(), owner.name)
+        qs = qs.filter(target__output_type__definition__title=output_type)
+    else:
+        qs = None
+
+    agents = await select_agents_async(
+        owner_name=owner.name,
+        qs=qs,
+    )
 
     options = [{"value": agent.name, "label": agent.name} for agent in agents]
 
@@ -57,18 +67,13 @@ async def swift_diagnose_endpoint(request: HttpRequest, payload: SwiftDiagnoseRe
     owner = await sync_to_async(get_authenticated_username)(request)
 
     try:
-        agent = await load_branch_async(
-            bundle_name="agent",
+        agent_branch = await get_agent_async(
             owner_name=owner.name,
             branch_name=payload.model,
         )
-
-        if not agent:
-            raise ValueError(f"No configuration branch found named '{payload.model}'")
-
-        agent_spec = agent.target
-
-    except Exception as e:
+    except BranchNotFoundError:
+        raise ValueError(f"No configuration branch found named '{payload.model}'")
+    except Exception as e:  # ruff: ignore[BLE001]
         return api.create_response(
             request,
             {
@@ -77,14 +82,16 @@ async def swift_diagnose_endpoint(request: HttpRequest, payload: SwiftDiagnoseRe
             status=400,
         )
 
-    api_key = owner.secrets.get("api-keys", {}).get(agent.name)
-    session = await start_session(owner.pk, agent.id, SessionContextChoices.CHAT)
+    api_key = owner.secrets.get("api-keys", {}).get(agent_branch.name)
+    session = await start_session(
+        owner.pk, agent_branch.target.id, SessionContextChoices.CHAT
+    )
 
     try:
         run_result = await run_from_session(
             session=session,
             prompt=payload.symptoms,
-            agent_spec=agent_spec,
+            agent_spec=agent_branch.target,
             api_key=api_key,
         )
         return run_result.output

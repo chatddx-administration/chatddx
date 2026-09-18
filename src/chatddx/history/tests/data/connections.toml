@@ -1,0 +1,8 @@
+[connection.qwen3-8b]
+model = "Qwen/Qwen3-8B-AWQ"
+provider = "vllm"
+endpoint = "http://pelle.km:12009/v1/"
+
+[connection.qwen3-8b.profile]
+supports_json_schema_output = true
+ignore_streamed_leading_whitespace = true

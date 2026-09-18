@@ -1,4 +1,6 @@
-from typing import Any, final, override
+# pyright: basic
+
+from typing import Any
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Fieldset, Layout, Row
@@ -15,33 +17,27 @@ from unfold.widgets import (
 )
 
 from chatddx.django.orm.qs import qs_owned_trails
-from chatddx.django.portal.forms.base import BaseForm
+from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
-from chatddx.repo import proxies
-from chatddx.repo.form_data_in import ToolGroupFormDataIn
-from chatddx.repo.form_data_out import ToolGroupFormDataOut
-from chatddx.repo.trail_models import ToolTrailModel
+from chatddx.repo.entities.tool.django import ToolTrailModel
+from chatddx.repo.entities.tool_group.django import ToolGroup
 
 
-@final
-class ToolGroupForm(BaseForm):
-    form_data_in = ToolGroupFormDataIn
-    form_data_out = ToolGroupFormDataOut
-    bundle_name = "tool_group"
+class ToolGroupForm(BranchForm):
+    entity_name = "tool_group"
 
-    @final
-    class Meta(BaseForm.Meta):
-        model = proxies.ToolGroup
+    class Meta(BranchForm.Meta):
+        model = ToolGroup
 
     def __init__(self, *args: Any, **kwargs: Any):
         request = kwargs["request"]
 
         super().__init__(*args, **kwargs)
+
         self.fields["tools"].queryset = qs_owned_trails(  # pyright: ignore[reportAttributeAccessIssue]
             ToolTrailModel.objects.all(), request.user.username
         )
 
-    @override
     def clean(self):
         cleaned = super().clean()
         return cleaned

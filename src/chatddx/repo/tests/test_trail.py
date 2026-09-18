@@ -1,28 +1,17 @@
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 from django.db import ProgrammingError
 
-from chatddx.registry.main import parse_registry
-from chatddx.repo.base import (
-    TrailModel,
-    TrailSchema,
-    TrailSpec,
-)
-from chatddx.repo.main import BundleName, Repo
-from chatddx.repo.shufflers.main import dump_trail_async, load_trail_async
+from chatddx.repo.bundles import bundle_of
+from chatddx.repo.entities.agent.django import AgentTrailModel
+from chatddx.repo.inventories import InventoryTrailSchema
+from chatddx.repo.registry import EntityName
+from chatddx.repo.shufflers.trail import dump_trail_async, load_trail_async
 from chatddx.repo.tests import identity_boundary
-from chatddx.repo.trail_models import AgentTrailModel
-from chatddx.repo.trail_schemas import TrailRegistry
 
-registry: TrailRegistry = parse_registry(
-    Path(__file__).parent / "data/test-registry.toml",
-    schema=TrailRegistry,
-)
-
-schemas = (
+schemas: tuple[tuple[EntityName, str], ...] = (
     ("connection", "connection-1"),
     ("sampling_params", "sampling_params-1"),
     ("tool_group", "tool_group-1"),
@@ -32,28 +21,32 @@ schemas = (
     ("agent", "agent-2"),
     ("agent", "agent-3"),
     ("case", "case-1"),
+    ("expect", "expect-1-a"),
+    ("scorer", "scorer-a"),
 )
 
 fields = [
-    (bundle, record, field)
+    (bundle, record, field_name)
     for bundle, record in schemas
-    for field in Repo(bundle, TrailSchema).model_fields
+    for field_name, field_info in bundle_of(bundle).trail_schema.model_fields.items()
+    if not (field_info.json_schema_extra or {}).get("exclude_from_fingerprint")
 ]
 
 
 @pytest.mark.asyncio
 @pytest.mark.django_db
 @pytest.mark.parametrize("bundle, branch_name, field_name", fields)
-@pytest.mark.time_machine(datetime(1970, 1, 1), tick=False)
+@pytest.mark.time_machine(datetime(1970, 1, 1, tzinfo=UTC), tick=False)
 async def test_identity_boundary(
+    inventory_fixture_ts: InventoryTrailSchema,
     time_machine: Any,
-    bundle: BundleName,
+    bundle: EntityName,
     branch_name: str,
     field_name: str,
 ):
-    Model = Repo(bundle, TrailModel)
-    Spec = Repo(bundle, TrailSpec)
-    Schema = Repo(bundle, TrailSchema)
+    Model = bundle_of(bundle).trail_model
+    Spec = bundle_of(bundle).trail_spec
+    Schema = bundle_of(bundle).trail_schema
 
     field = Model._meta.get_field(field_name)
 
@@ -65,7 +58,7 @@ async def test_identity_boundary(
     if test_key not in identity_boundary.field_types:
         pytest.fail(f"No test defined for type combination {test_key} on {field_name}")
 
-    schema = getattr(registry, bundle)[branch_name]
+    schema = getattr(inventory_fixture_ts, bundle)[branch_name]
     _ = await dump_trail_async(Model, schema)
     spec = await load_trail_async(bundle, schema.fingerprint, Spec)
 
@@ -73,13 +66,13 @@ async def test_identity_boundary(
         getattr(schema, field_name)
     )
 
-    for value, altered in (
+    for v, altered in (
         (value, False),
         (altered_value, True),
         (value, False),
     ):
         time_machine.shift(timedelta(days=1))
-        raw_copy = schema.model_copy(update={field_name: value})
+        raw_copy = schema.model_copy(update={field_name: v})
 
         test_schema = Schema.model_validate(raw_copy.model_dump())
         _ = await dump_trail_async(Model, test_schema)
@@ -96,8 +89,8 @@ async def test_identity_boundary(
 
 @pytest.mark.asyncio
 @pytest.mark.django_db()
-async def test_immutability_trigger():
-    agent_schema = registry.agent["agent-1"]
+async def test_immutability_trigger(inventory_fixture_ts: InventoryTrailSchema):
+    agent_schema = inventory_fixture_ts.agent["agent-1"]
     agent_model = await dump_trail_async(AgentTrailModel, agent_schema)
 
     with pytest.raises(ProgrammingError):

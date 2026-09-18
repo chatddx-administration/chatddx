@@ -11,9 +11,9 @@ class IdentityBase(BaseModel):
     secrets: dict[str, JsonValue] = Field(default_factory=dict)
 
 
-class IdentitySchema(IdentityBase):
+class IdentitySchemaIn(IdentityBase):
     pass
 
 
-class IdentitySpec(IdentityBase, NinjaSchema):
+class IdentitySchemaOut(IdentityBase, NinjaSchema):
     id: int

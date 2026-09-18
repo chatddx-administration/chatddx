@@ -4,27 +4,29 @@ from typing import Any, get_args
 
 import jsonschema
 from jinja2 import Template
-from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import (
+    Agent as PydanticAgent,
     ModelProfile,
     ModelRetry,
     ModelSettings,
     RunContext,
     StructuredDict,
+    Tool as PydanticTool,
 )
-from pydantic_ai import Tool as PydanticTool
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.output import StructuredOutputMode
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from chatddx.core.choices import ToolChoices, ValidationChoices
-from chatddx.repo.trail_specs import AgentSpec, SamplingParamsSpec, ToolGroupSpec
+from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
+from chatddx.repo.entities.sampling_params.pydantic import SamplingParamsTrailSpec
+from chatddx.repo.entities.tool_group.pydantic import ToolGroupTrailSpec
 from chatddx.runtime import tools
 from chatddx.runtime.context import AgentContext, OutputType
 
 
 def build_agent(
-    agent_spec: AgentSpec,
+    agent_spec: AgentTrailSpec,
     output_type: type[OutputType],
     api_key: str | None = None,
 ) -> PydanticAgent[AgentContext, OutputType]:
@@ -54,7 +56,7 @@ def build_agent(
 
 
 def build_model(
-    agent_spec: AgentSpec,
+    agent_spec: AgentTrailSpec,
     api_key: str | None = None,
 ):
     model_kwargs: dict[str, Any] = {}
@@ -76,10 +78,15 @@ def build_model(
     return OpenAIChatModel(**model_kwargs)
 
 
-def build_config(sampling_params_spec: SamplingParamsSpec) -> ModelSettings:
+def build_config(sampling_params_spec: SamplingParamsTrailSpec) -> ModelSettings:
+    exclude: set[str] = set()
+
+    if not sampling_params_spec.logit_bias:
+        exclude |= {"logit_bias"}
+
     settings = sampling_params_spec.model_dump(
         exclude_none=True,
-        exclude={"id", "timestamp", "fingerprint"},
+        exclude={"id", "timestamp", "fingerprint"} | exclude,
     )
     provider_params = settings.pop("provider_params")
 
@@ -87,7 +94,7 @@ def build_config(sampling_params_spec: SamplingParamsSpec) -> ModelSettings:
 
 
 def build_tools(
-    tool_group_spec: ToolGroupSpec,
+    tool_group_spec: ToolGroupTrailSpec,
 ) -> tuple[str, list[PydanticTool]]:
     return tool_group_spec.instructions, [
         PydanticTool(
@@ -99,7 +106,7 @@ def build_tools(
     ]
 
 
-def build_output_type(agent_spec: AgentSpec) -> type[OutputType]:
+def build_output_type(agent_spec: AgentTrailSpec) -> type[OutputType]:
     schema = agent_spec.output_type.definition
     match schema.get("type"):
         case "bool":

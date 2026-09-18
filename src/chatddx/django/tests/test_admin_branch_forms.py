@@ -4,17 +4,19 @@ from django.test import Client
 from django.urls import reverse
 
 from chatddx.core.models import IdentityModel
-from chatddx.repo.branch_models import AgentBranchModel, ToolBranchModel
-from chatddx.repo.form_data_out import TemplateData
+from chatddx.repo.entities.agent.django import AgentBranchModel
+from chatddx.repo.entities.tool.django import ToolBranchModel
+from chatddx.repo.inventories import InventoryFormDataOut
+
+pytestmark = pytest.mark.django_db(transaction=True)
 
 
-@pytest.mark.django_db
 def test_tool_edit_versions_then_delete_removes_it(
-    template_data: TemplateData,
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
     owner: IdentityModel,
-    admin_client: Client,
 ):
-    data = template_data.tool
+    data = inventory_fixture_fdo.tool
     some_key = "some-tool"
 
     post_data = data[some_key].model_dump()
@@ -31,9 +33,9 @@ def test_tool_edit_versions_then_delete_removes_it(
     some_tool = existing.first()
     assert some_tool is not None
 
-    post_data["command"] = "some-command"
+    post_data["command"] = "some-command-asdf"
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_tool_change", args=[some_tool.pk]),
         data=post_data,
         follow=True,
@@ -54,7 +56,7 @@ def test_tool_edit_versions_then_delete_removes_it(
     some_tool = existing.first()
     assert some_tool is not None
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_tool_delete", args=[some_tool.pk]),
         data={"post": "yes"},
         follow=True,
@@ -69,7 +71,7 @@ def test_tool_edit_versions_then_delete_removes_it(
     some_tool = existing.first()
     assert some_tool is not None
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_tool_delete", args=[some_tool.pk]),
         data={"post": "yes"},
         follow=True,
@@ -79,9 +81,9 @@ def test_tool_edit_versions_then_delete_removes_it(
 
 @pytest.mark.django_db
 def test_agent_change_view_renders(
-    template_data: TemplateData,
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
     owner: IdentityModel,
-    admin_client: Client,
 ):
     versions = list(
         AgentBranchModel.objects.filter(
@@ -91,16 +93,17 @@ def test_agent_change_view_renders(
     )
 
     v2_url = reverse("admin:orm_agent_change", args=[versions[0].pk])
-    response = admin_client.get(v2_url)
+    response = user_client.get(v2_url)
     assert response.status_code == 200
 
 
 @pytest.mark.django_db
 def test_output_type_add(
-    template_data: TemplateData,
-    admin_client: Client,
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    owner: IdentityModel,
 ):
-    data = template_data.output_type
+    data = inventory_fixture_fdo.output_type
     some_key, *_rest = data.keys()
 
     post_data = data[some_key].model_dump(exclude_none=True)
@@ -108,7 +111,7 @@ def test_output_type_add(
     assert isinstance(post_data["definition"], str)
     post_data["definition"] = "asdf=1"
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_outputtype_add"),
         data=post_data,
         follow=True,
@@ -119,8 +122,12 @@ def test_output_type_add(
 
 
 @pytest.mark.django_db
-def test_tool_group_add(template_data: TemplateData, admin_client: Client):
-    data = template_data.tool_group
+def test_tool_group_add(
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    owner: IdentityModel,
+):
+    data = inventory_fixture_fdo.tool_group
     add_url = reverse("admin:orm_toolgroup_add")
     some_key = "tool_group-1"
 
@@ -128,10 +135,10 @@ def test_tool_group_add(template_data: TemplateData, admin_client: Client):
     post_data["name"] = some_key
 
     assert isinstance(post_data["instructions"], str)
-    assert post_data["instructions"] == "use these tools"
+    assert post_data["instructions"] == "Tool group instructions 1"
     assert len(post_data["tools"]) == 3
 
-    response = admin_client.post(
+    response = user_client.post(
         add_url,
         data=post_data,
         follow=True,
@@ -145,8 +152,12 @@ def test_tool_group_add(template_data: TemplateData, admin_client: Client):
 
 
 @pytest.mark.django_db
-def test_agent_add(template_data: TemplateData, admin_client: Client):
-    data = template_data.agent
+def test_agent_add(
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    owner: IdentityModel,
+):
+    data = inventory_fixture_fdo.agent
     some_key = "some-agent"
 
     post_data = data[some_key].model_dump(by_alias=True)
@@ -162,7 +173,7 @@ def test_agent_add(template_data: TemplateData, admin_client: Client):
         == "some instructions"
     )
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_agent_add"),
         data=post_data,
         follow=True,
@@ -177,11 +188,12 @@ def test_agent_add(template_data: TemplateData, admin_client: Client):
 
 @pytest.mark.django_db
 def test_agent_add_with_collaborators(
-    template_data: TemplateData,
-    admin_client: Client,
-    collaborators,
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    owner: IdentityModel,
+    collaborators: list[IdentityModel],
 ):
-    data = template_data.agent
+    data = inventory_fixture_fdo.agent
     some_key = "some-agent"
 
     post_data = data[some_key].model_dump(by_alias=True)
@@ -195,7 +207,7 @@ def test_agent_add_with_collaborators(
     agent_branch = AgentBranchModel.objects.get(name=some_key)
     assert agent_branch.target.instructions == "some instructions"
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_agent_add"),
         data=post_data,
         follow=True,
@@ -210,7 +222,7 @@ def test_agent_add_with_collaborators(
     post_data_with_collaborators = post_data.copy()
     post_data_with_collaborators["collaborators"] = [c.pk for c in collaborators]
 
-    response = admin_client.post(
+    response = user_client.post(
         reverse("admin:orm_agent_add"),
         data=post_data_with_collaborators,
         follow=True,

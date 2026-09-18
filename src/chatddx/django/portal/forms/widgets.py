@@ -1,4 +1,3 @@
-# src/chatddx/django/portal/forms/widgets.py
 from typing import Any
 
 from unfold.widgets import UnfoldAdminSelect2Widget

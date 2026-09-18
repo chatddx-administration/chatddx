@@ -15,7 +15,7 @@ class OrmConfig(AppConfig):
 def install_trail_triggers(sender, **kwargs):
     from django.db import connections
 
-    from chatddx.repo.base import TrailModel
+    from chatddx.repo.families.django import TrailModel
 
     functions_tpl = (
         Path(__file__).parent.parent.parent / "repo/sql/trail_functions.sql"
