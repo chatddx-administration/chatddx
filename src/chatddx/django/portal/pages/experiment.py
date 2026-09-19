@@ -10,6 +10,7 @@ from unfold.decorators import action
 from chatddx.core.choices import RunStatusChoices
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
+from chatddx.core.worker import wake_on_commit
 from chatddx.django.orm.qs import qs_experiments, qs_owned_trails
 from chatddx.django.portal.forms.experiment import NO_RUN, ExperimentForm
 from chatddx.django.portal.typing import TypedModelAdmin
@@ -205,6 +206,10 @@ class ExperimentAdmin(BaseExperimentAdmin):
             experiment=obj,
             status=status,
         )
+
+        if status == RunStatusChoices.QUEUED:
+            wake_on_commit()
+
         self.message_user(
             request,
             f"Run {run.uuid} created with status {RunStatusChoices(status).label}.",
@@ -303,9 +308,14 @@ class RunAdmin(TypedModelAdmin[Run]):
     @admin.action(description="Queue selected runs")
     def requeue(self, request: HttpRequest, queryset: QuerySet[Run]):
         updated = queryset.update(status=RunStatusChoices.QUEUED)
+
+        if updated:
+            wake_on_commit()
+
         self.message_user(
             request,
-            f"{updated} run(s) queued. Run `chatddx worker run` to process them.",
+            f"{updated} run(s) queued. The worker picks them up; with none "
+            + "running, `chatddx worker run` processes them here and now.",
         )
 
 
