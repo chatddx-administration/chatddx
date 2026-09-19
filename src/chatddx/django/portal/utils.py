@@ -3,7 +3,7 @@ from typing import Any
 from django.urls import reverse
 from django.utils.html import format_html
 
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of, view_of
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.families.pydantic import BranchSpec, TrailSpec
 from chatddx.repo.inventories import InventoryBranchSpec
@@ -27,13 +27,13 @@ def load_form_data(
     match branch:
         case BranchModel():
             branch.target = resolve_trail(branch.target)
-            branch_spec = bundle_of(branch).branch_spec.model_validate(branch)
+            branch_spec = entity_of(branch).branch_spec.model_validate(branch)
         case BranchSpec():
             branch_spec = branch
 
     branch_dict = branch_spec.model_dump()
 
-    form_data = bundle_of(branch).form_data_out.model_validate(
+    form_data = view_of(branch).form_data_out.model_validate(
         branch_dict | branch_dict["target"]
     )
     return form_data.model_dump(by_alias=True)

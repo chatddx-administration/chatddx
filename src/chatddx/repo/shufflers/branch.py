@@ -6,14 +6,15 @@ from pydantic import ValidationError
 from chatddx.core import settings
 from chatddx.core.utils import ensure_identity, ensure_tag
 from chatddx.django.orm.qs import qs_canon
-from chatddx.repo.bundles import bundle_of
-from chatddx.repo.entities.case.django import CaseBranchModel
+from chatddx.core.models import IdentityModel
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import (
     BranchSchemaDetails,
     BranchSpec,
     TrailSchema,
     TrailSpec,
+    relation_fields,
 )
 from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers.trail import dump_trail
@@ -43,7 +44,7 @@ def get_branch_model(
     assert branch_name or fingerprint
 
     if not qs:
-        model_cls = bundle_of(entity_name).branch_model
+        model_cls = entity_of(entity_name).branch_model
         qs = model_cls.objects.all()
 
     if fingerprint:
@@ -74,7 +75,7 @@ def select_branch_models(
     `qs`: Start from custom queryset (default: all)
     """
     if qs is None:
-        model_cls = bundle_of(entity_name).branch_model
+        model_cls = entity_of(entity_name).branch_model
         qs = qs_canon(
             model_cls.objects.all(),
             owner_name,
@@ -111,7 +112,7 @@ def get_branch_spec(
         qs,
     )
 
-    spec_cls = bundle_of(entity_name).branch_spec
+    spec_cls = entity_of(entity_name).branch_spec
 
     try:
         return spec_cls.model_validate(model)
@@ -137,7 +138,7 @@ def select_branch_specs(
     """
 
     models = select_branch_models(entity_name, owner_name, qs)
-    spec_cls = bundle_of(entity_name).branch_spec
+    spec_cls = entity_of(entity_name).branch_spec
 
     specs: list[BranchSpec[TrailSpec]] = []
     for model in models:
@@ -158,8 +159,16 @@ def commit(
     True: Canon changed
     False: Canon not changed, the trail was already canon in the branch
     """
-    branch_model_cls = bundle_of(trail).branch_model
-    trail_model_cls = bundle_of(trail).trail_model
+    entity = entity_of(trail)
+    branch_model_cls = entity.branch_model
+    trail_model_cls = entity.trail_model
+
+    # A caller that says nothing about what this kind of branch carries hands
+    # over the base details; widening it to the entity's own leaves every
+    # relation at None, which still means "inherit from the superseded
+    # version". A caller that names something the entity does not carry is
+    # rejected here rather than ignored.
+    branch_details = entity.branch_details.model_validate(branch_details.model_dump())
 
     qs = branch_model_cls.objects.all()
 
@@ -194,6 +203,26 @@ def commit(
 commit_async = make_async(commit)
 
 
+# How a branch-details field turns each name it holds into the row that name
+# stands for, keyed by the `relation` the field is tagged with; see
+# `chatddx.repo.families.pydantic.RELATION`.
+RELATION_RESOLVERS: dict[
+    str,
+    Callable[[IdentityModel, EntityName], Callable[[str], Model]],
+] = {
+    "identity": lambda owner, entity: ensure_identity,
+    "tag": lambda owner, entity: lambda name: ensure_tag(owner, entity, name),
+    # a case names expect branches, not their trails: two cases that expect
+    # the same thing share one content-addressed trail, so a trail cannot say
+    # whose expectation it is
+    "expect": lambda owner, entity: lambda name: get_branch_model(
+        entity_name="expect",
+        owner_name=owner.name,
+        branch_name=name,
+    ),
+}
+
+
 def commit_relations(
     branch_model: BranchModel,
     previous: BranchModel | None,
@@ -206,37 +235,21 @@ def commit_relations(
     None of this is part of the trail: collaborators, tags and a case's
     expects belong to the owner's version of the entity, not to its payload,
     and every version keeps the set it was saved with.
+
+    Which relations a branch has is the details model's to say -- every field
+    it tags with a `relation` -- so an entity that carries something extra
+    declares it there instead of being a special case here.
     """
     owner = branch_model.owner
-    entity = bundle_of(branch_model).name
+    entity = entity_of(branch_model).name
 
-    _commit_relation(
-        branch_model,
-        previous,
-        "collaborators",
-        branch_details.collaborators,
-        ensure_identity,
-    )
-
-    _commit_relation(
-        branch_model,
-        previous,
-        "tags",
-        branch_details.tags,
-        lambda name: ensure_tag(owner, entity, name),
-    )
-
-    if isinstance(branch_model, CaseBranchModel):
+    for field_name, resolver in relation_fields(type(branch_details)):
         _commit_relation(
             branch_model,
             previous,
-            "expects",
-            branch_details.expects,
-            lambda name: get_branch_model(
-                entity_name="expect",
-                owner_name=owner.name,
-                branch_name=name,
-            ),
+            field_name,
+            getattr(branch_details, field_name),
+            RELATION_RESOLVERS[resolver](owner, entity),
         )
 
 

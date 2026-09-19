@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 from django.db import ProgrammingError
 
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.django import AgentTrailModel
 from chatddx.repo.inventories import InventoryTrailSchema
 from chatddx.repo.registry import EntityName
@@ -28,7 +28,7 @@ schemas: tuple[tuple[EntityName, str], ...] = (
 fields = [
     (bundle, record, field_name)
     for bundle, record in schemas
-    for field_name, field_info in bundle_of(bundle).trail_schema.model_fields.items()
+    for field_name, field_info in entity_of(bundle).trail_schema.model_fields.items()
     if not (field_info.json_schema_extra or {}).get("exclude_from_fingerprint")
 ]
 
@@ -44,9 +44,9 @@ async def test_identity_boundary(
     branch_name: str,
     field_name: str,
 ):
-    Model = bundle_of(bundle).trail_model
-    Spec = bundle_of(bundle).trail_spec
-    Schema = bundle_of(bundle).trail_schema
+    Model = entity_of(bundle).trail_model
+    Spec = entity_of(bundle).trail_spec
+    Schema = entity_of(bundle).trail_schema
 
     field = Model._meta.get_field(field_name)
 

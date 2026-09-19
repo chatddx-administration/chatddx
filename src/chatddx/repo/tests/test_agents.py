@@ -2,7 +2,7 @@ import pytest
 
 from chatddx.core.models import IdentityModel
 from chatddx.django.orm.qs import qs_canon
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.shufflers.agent import select_agents_async
 
 
@@ -14,7 +14,7 @@ async def test_load_agents_by_output_type_title(
 ):
     _ = inventory_fixture_commit
 
-    model_cls = bundle_of("agent").branch_model
+    model_cls = entity_of("agent").branch_model
 
     qs = qs_canon(model_cls.objects.all(), owner.name)
 
