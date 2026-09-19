@@ -160,8 +160,9 @@ def test_expect_inline_add_commits_a_branch_and_links_its_trail(
     # the case itself is untouched by its expects
     assert CaseBranchModel.objects.filter(owner=owner, name="case-1").count() == 1
 
+    # this post carries no tags either, so they go along with the expects
     messages = [str(message) for message in response.context["messages"]]
-    assert any("updated expects" in message for message in messages)
+    assert any("expects" in message for message in messages)
 
 
 @pytest.mark.django_db

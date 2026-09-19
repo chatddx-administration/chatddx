@@ -7,7 +7,6 @@ from ninja import Schema as NinjaSchema
 from pydantic import (
     BaseModel,
     BeforeValidator,
-    Field,
     computed_field,
 )
 
@@ -79,12 +78,12 @@ class BranchSchemaDetails(BaseModel):
     name: str
     owner: str
 
-    collaborators: list[str] = Field(default_factory=list)
-    tags: list[str] = Field(default_factory=list)
-
-    # Branch names of the trails this branch references without owning them as
-    # content. Only `case` has such a relation (its expects); None means the
-    # new version inherits the set from the one it supersedes.
+    # What a branch carries besides its content, by name: who it is shared
+    # with, how it is labelled, and -- for a case -- which expectations it
+    # names. None means the new version inherits the set from the one it
+    # supersedes, a list means exactly that set.
+    collaborators: list[str] | None = None
+    tags: list[str] | None = None
     expects: list[str] | None = None
 
 
@@ -118,7 +117,10 @@ class BranchSpec[T: TrailSpec](BaseBranch[T], NinjaSchema):
 class BaseFormDataIn(NinjaSchema):
     name: NullableStr = None
     owner: IdentitySchemaOut | None = None
-    collaborators: list[IdentitySchemaOut] = Field(default_factory=list)
+
+    # None where the form has no field for it, and so nothing to say about it
+    collaborators: list[IdentitySchemaOut] | None = None
+    tags: list[Annotated[str, BeforeValidator(str)]] | None = None
 
 
 class BaseFormDataOut(BaseModel):

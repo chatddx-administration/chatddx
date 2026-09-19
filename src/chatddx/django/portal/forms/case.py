@@ -16,7 +16,7 @@ from unfold.widgets import (
     UnfoldAdminTextInputWidget,
 )
 
-from chatddx.core.models import IdentityModel, TagModel
+from chatddx.core.models import TagModel
 from chatddx.core.utils import ensure_identity
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
@@ -24,9 +24,13 @@ from chatddx.repo.entities.case.django import Case
 
 
 class TagsField(ModelMultipleChoiceField):
-    owner: IdentityModel | None = None
-
-    def clean(self, value: Any) -> list[TagModel]:
+    def clean(self, value: Any) -> list[TagModel | str]:
+        """
+        Existing tags come in as pks and are looked up in the queryset, which
+        is the owner's tags for this entity and nothing else. A typed one
+        comes in as its name and stays a name: tags are created where every
+        other branch relation is, when the branch is saved.
+        """
         pks: list[str] = []
         names: list[str] = []
 
@@ -36,12 +40,7 @@ class TagsField(ModelMultipleChoiceField):
                 continue
             (pks if raw.isdigit() else names).append(raw)
 
-        tags = list(self.queryset.filter(pk__in=pks))
-        tags += [
-            TagModel.objects.get_or_create(name=name, owner=self.owner)[0]
-            for name in names
-        ]
-        return tags
+        return list(self.queryset.filter(pk__in=pks)) + names
 
 
 class CaseForm(BranchForm):
@@ -83,8 +82,19 @@ class CaseForm(BranchForm):
 
         assert isinstance(tags_field, TagsField)
 
-        tags_field.queryset = TagModel.objects.filter(owner=owner)
-        tags_field.owner = owner
+        # a tag is the owner's label for one kind of entity, so cases are only
+        # ever offered, and only ever keep, the case tags of their owner
+        tags_field.queryset = TagModel.objects.filter(
+            owner=owner,
+            entity=self.entity_name,
+        )
+
+    def get_initial(self, instance: Case) -> dict[str, Any]:
+        # tags live on the branch, not in its form data, and the widget wants
+        # them as the pks of its own choices
+        return super().get_initial(instance) | {
+            "tags": list(instance.tags.values_list("pk", flat=True)),
+        }
 
     helper = FormHelper()
     helper.include_media = False

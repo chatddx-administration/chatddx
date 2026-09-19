@@ -72,6 +72,7 @@ def test_agent_jsonschema():
         "name",
         "owner",
         "collaborators",
+        "tags",
         "instructions",
         "connection",
         "sampling_params",
