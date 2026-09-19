@@ -1,4 +1,4 @@
-extends = ["chatddx/medical-assistant.toml"]
+extends = ["chatddx/medical-assistant.toml", "cases.toml"]
 
 [tool.web_search]
 command = "web_search"

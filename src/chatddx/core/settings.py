@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-MODE = os.environ["CHATDDX_MODE"]
+MODE = os.environ.get("CHATDDX_MODE")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 

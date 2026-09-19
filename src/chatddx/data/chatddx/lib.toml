@@ -6,3 +6,6 @@ provider_params_path = "./provider_params/disable_thinking.json"
 
 [sampling_params.low-reasoning]
 provider_params.openai_reasoning_effort = "low"
+
+[output_type.free-text]
+# unstructured free text

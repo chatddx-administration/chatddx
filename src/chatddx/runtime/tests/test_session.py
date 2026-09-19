@@ -6,6 +6,8 @@ from chatddx.history.session import resume_session, start_session
 from chatddx.repo.inventories import InventoryBranchSpec
 from chatddx.runtime.runners import run_from_session
 
+pytestmark = pytest.mark.network
+
 
 @pytest.mark.asyncio
 @pytest.mark.django_db()

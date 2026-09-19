@@ -1,20 +1,36 @@
 extends = ["connections.toml", "lib.toml"]
 
-[agent.medical-assistant]
+[agent.medical-assistant-form]
 partial = true
 instructions = "fill in the management plan based on the case"
 
+[agent.medical-assistant-free-text]
+partial = true
+instructions = "list plausible diagnoses"
+
 [agent."gpt-oss-20b management_plan_v1 seed-locked low-reasoning"]
-extends = ["medical-assistant"]
+extends = ["medical-assistant-form"]
 connection = "gpt-oss-20b"
 sampling_params = ["seed-locked", "low-reasoning"]
 output_type = "management_plan_v1"
 
 [agent."qwen3-8b management_plan_v1 seed-locked disable-thinking"]
-extends = ["medical-assistant"]
+extends = ["medical-assistant-form"]
 connection = "qwen3-8b"
 sampling_params = ["seed-locked", "disable-thinking"]
 output_type = "management_plan_v1"
+
+[agent."gpt-oss-20b free-text seed-locked low-reasoning"]
+extends = ["medical-assistant-free-text"]
+connection = "gpt-oss-20b"
+sampling_params = ["seed-locked", "low-reasoning"]
+output_type = "free-text"
+
+[agent."qwen3-8b free-text seed-locked disable-thinking"]
+extends = ["medical-assistant-free-text"]
+connection = "qwen3-8b"
+sampling_params = ["seed-locked", "disable-thinking"]
+output_type = "free-text"
 
 [output_type.management_plan_v1]
 definition_path = "./output_types/management_plan_v1.toml"

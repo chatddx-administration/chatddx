@@ -1,7 +1,9 @@
 # pyright: basic
 import os
 
-match os.environ["CHATDDX_MODE"]:
+DJANGO_MODE = os.environ.get("CHATDDX_MODE", os.environ["DJANGO_MODE"])
+
+match DJANGO_MODE:
     case "main":
         from chatddx.django.settings.base import *  # pyright: ignore[reportWildcardImportFromLibrary]
         from chatddx.django.settings.prod import *  # pyright: ignore[reportWildcardImportFromLibrary]
@@ -13,7 +15,7 @@ match os.environ["CHATDDX_MODE"]:
     case "collectstatic":
         pass
     case _:
-        raise Exception(f"Unknown CHATDDX_MODE {CHATDDX_MODE}")
+        raise Exception(f"Unknown DJANGO_MODE {DJANGO_MODE}")
 
 INSTALLED_APPS = [
     "unfold",
