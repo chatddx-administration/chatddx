@@ -78,8 +78,6 @@ def experiment(
         agent=agent,
         case=case.target,
         expect=expect,
-        tags="baseline",
-        scorer=expect.scorer,
     )
 
 
@@ -100,8 +98,6 @@ def shared_experiment(
         agent=agent,
         case=case.target,
         expect=expect,
-        tags="shared-with-me",
-        scorer=expect.scorer,
     )
 
     experiment.collaborators.set(collaborators + [owner])

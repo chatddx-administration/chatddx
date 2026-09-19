@@ -27,7 +27,6 @@ from chatddx.core.models import IdentityModel
 from chatddx.repo.entities.agent.django import AgentBranchModel, AgentTrailModel
 from chatddx.repo.entities.case.django import CaseTrailModel
 from chatddx.repo.entities.expect.django import ExpectTrailModel
-from chatddx.repo.entities.scorer.django import ScorerTrailModel
 
 
 class ExperimentModel(Model):
@@ -51,8 +50,6 @@ class ExperimentModel(Model):
         related_name="shared_experiments",
     )
 
-    tags = CharField(max_length=255, blank=True, default="")
-
     agent = ForeignKey(
         AgentTrailModel,
         on_delete=PROTECT,
@@ -71,20 +68,6 @@ class ExperimentModel(Model):
         related_name="experiments",
     )
     expect_id: int
-
-    scorer = ForeignKey(
-        ScorerTrailModel,
-        on_delete=PROTECT,
-        default=None,
-        null=True,
-        blank=True,
-        related_name="experiments",
-    )
-    scorer_id: int | None
-
-    @property
-    def tag_list(self) -> list[str]:
-        return [tag.strip() for tag in self.tags.split(",") if tag.strip()]
 
 
 class SessionModel(Model):

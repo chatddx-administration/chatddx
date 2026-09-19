@@ -124,7 +124,7 @@ def test_collaborators_field_excludes_owner(
 
 
 @pytest.mark.django_db
-def test_experiment_dropdown_shows_timestamp_and_tags(
+def test_experiment_dropdown_shows_timestamp_and_uuid(
     experiment: ExperimentModel,
     user_client: Client,
 ):
@@ -132,11 +132,11 @@ def test_experiment_dropdown_shows_timestamp_and_tags(
     content = response.content.decode()
 
     timestamp = experiment.timestamp.strftime("%Y-%m-%d %H:%M")
-    assert f"{timestamp} — baseline" in content
+    assert f"{timestamp} — {str(experiment.uuid)[:8]}" in content
 
 
 @pytest.mark.django_db
-def test_changelist_shows_experiment_timestamp_and_tags(
+def test_changelist_shows_experiment_timestamp_and_uuid(
     run: RunModel,
     experiment: ExperimentModel,
     user_client: Client,
@@ -145,7 +145,7 @@ def test_changelist_shows_experiment_timestamp_and_tags(
     content = response.content.decode()
 
     timestamp = experiment.timestamp.strftime("%Y-%m-%d %H:%M")
-    assert f"{timestamp} — baseline" in content
+    assert f"{timestamp} — {str(experiment.uuid)[:8]}" in content
 
 
 @pytest.mark.django_db

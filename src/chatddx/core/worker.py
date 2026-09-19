@@ -166,13 +166,12 @@ async def process_completed_runs() -> None:
 
 async def score_run(run_id: int) -> None:
     run = await RunModel.objects.select_related(
-        "experiment", "experiment__expect", "experiment__scorer"
+        "experiment", "experiment__expect", "experiment__expect__scorer"
     ).aget(pk=run_id)
 
-    scorer_trail = run.experiment.scorer
-    if scorer_trail is None:
-        logger.debug("run %s has no scorer configured: leaving unscored", run.uuid)
-        return
+    # An experiment doesn't pick a scorer of its own: how an expectation is
+    # judged is part of the expectation.
+    scorer_trail = run.experiment.expect.scorer
 
     logger.info("scoring run %s with %s", run.uuid, scorer_trail.command)
 
