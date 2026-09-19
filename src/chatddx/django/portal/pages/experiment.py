@@ -1,25 +1,33 @@
 # pyright: basic
-from typing import Any, override
+from typing import Any, cast, override
 
 from django.contrib import admin
 from django.db.models import ForeignKey, ManyToManyField, QuerySet
-from django.http import HttpRequest
+from django.http import Http404, HttpRequest, HttpResponseRedirect
+from django.urls import reverse
+from unfold.decorators import action
 
 from chatddx.core.choices import RunStatusChoices
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
-from chatddx.django.orm.qs import qs_experiments
+from chatddx.django.orm.qs import qs_experiments, qs_owned_trails
+from chatddx.django.portal.forms.experiment import NO_RUN, ExperimentForm
 from chatddx.django.portal.typing import TypedModelAdmin
+from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.history.proxies import Experiment, Run, SharedExperiment, SharedRun
+from chatddx.repo.families.django import TrailModel
+
+# Which trail a relation of an experiment points at, for narrowing the add
+# form's choices down to the ones the user has a branch of.
+EXPERIMENT_TRAIL_FIELDS = ("agent", "case", "expect")
 
 
 class BaseExperimentAdmin(TypedModelAdmin[Experiment]):
     list_display = (
         "timestamp",
-        "tags_display",
         "agent_",
         "case_",
-        "scorer",
+        "expect_",
         "collaborators_csv",
     )
     fields = list_display
@@ -34,6 +42,10 @@ class BaseExperimentAdmin(TypedModelAdmin[Experiment]):
     @admin.display(description="Case")
     def case_(self, obj: Experiment):
         return obj.case_link
+
+    @admin.display(description="Expect")
+    def expect_(self, obj: Experiment):
+        return obj.expect_label
 
     @override
     def has_add_permission(self, request: HttpRequest):
@@ -58,14 +70,147 @@ class BaseExperimentAdmin(TypedModelAdmin[Experiment]):
     def get_queryset(self, request: HttpRequest):
         qs = TypedModelAdmin.get_queryset(self, request)
         return qs_experiments(qs, request.user.username)
-        qs = qs.filter(collaborators__name=request.user.username).order_by("-timestamp")
 
 
 @admin.register(Experiment)
 class ExperimentAdmin(BaseExperimentAdmin):
+    """
+    An experiment is a record of what was run, so it never changes once it
+    exists: the change form only ever shows it, and the way to act on it is to
+    queue another run (see `queue`).
+    """
+
+    form = ExperimentForm
+
+    show_add_link = True
+
+    # Fields the add form offers; the change form keeps the read-only set
+    # `BaseExperimentAdmin` declares.
+    add_fields = (
+        "agent",
+        "case",
+        "expect",
+        "collaborators",
+        "initial_run_status",
+    )
+
+    actions_detail = ("queue",)
+
     def get_queryset(self, request: HttpRequest):
         qs = super().get_queryset(request)
         return qs.filter(owner__name=request.user.username).order_by("-timestamp")
+
+    @override
+    def has_add_permission(self, request: HttpRequest):
+        return True
+
+    @override
+    def get_fields(self, request: HttpRequest, obj: Experiment | None = None):
+        if obj is None:
+            return self.add_fields
+
+        return super().get_fields(request, obj)
+
+    @override
+    def get_readonly_fields(
+        self,
+        request: HttpRequest,
+        obj: Experiment | None = None,
+    ):
+        if obj is None:
+            return ()
+
+        return super().get_readonly_fields(request, obj)
+
+    @override
+    def formfield_for_foreignkey(
+        self,
+        db_field: ForeignKey[Any],
+        request: HttpRequest | None,
+        **kwargs: Any,
+    ):
+        assert request is not None
+
+        if db_field.name in EXPERIMENT_TRAIL_FIELDS:
+            trails = cast(
+                QuerySet[TrailModel],
+                db_field.remote_field.model._default_manager.all(),  # pyright: ignore[reportPrivateUsage]
+            )
+            kwargs["queryset"] = qs_owned_trails(trails, request.user.username)
+
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    @override
+    def formfield_for_manytomany(
+        self,
+        db_field: ManyToManyField,
+        request: HttpRequest | None,
+        **kwargs: Any,
+    ):
+        assert request is not None
+
+        if db_field.name == "collaborators":
+            kwargs["queryset"] = IdentityModel.objects.exclude(
+                name=request.user.username,
+            )
+
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Experiment,
+        form: Any,
+        change: bool,
+    ):
+        if not change:
+            obj.owner = ensure_identity(request.user.username)
+
+        super().save_model(request, obj, form, change)
+
+        if change:
+            return
+
+        status: str = form.cleaned_data["initial_run_status"]
+        if status == NO_RUN:
+            return
+
+        self._create_run(request, obj, status)
+
+    @action(description="Queue")
+    def queue(self, request: HttpRequest, object_id: int):
+        """
+        Queue another run of this experiment. Deliberately not idempotent: a
+        second click is a second run.
+        """
+        try:
+            experiment = self.get_queryset(request).get(pk=object_id)
+        except Experiment.DoesNotExist as e:
+            raise Http404 from e
+
+        self._create_run(request, experiment, RunStatusChoices.QUEUED)
+
+        return HttpResponseRedirect(
+            reverse("admin:orm_experiment_change", args=[object_id])
+        )
+
+    def _create_run(
+        self,
+        request: HttpRequest,
+        obj: ExperimentModel,
+        status: str,
+    ):
+        run = RunModel.objects.create(
+            owner=ensure_identity(request.user.username),
+            experiment=obj,
+            status=status,
+        )
+        self.message_user(
+            request,
+            f"Run {run.uuid} created with status {RunStatusChoices(status).label}.",
+        )
+
+        return run
 
 
 @admin.register(SharedExperiment)

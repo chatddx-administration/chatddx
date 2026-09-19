@@ -51,12 +51,7 @@ class Experiment(ExperimentModel):
 
     def __str__(self):
         timestamp = self.timestamp.strftime("%Y-%m-%d %H:%M")
-        tags = self.tags_display() or "no tags"
-        return f"{timestamp} — {tags}"
-
-    @admin.display(description="Tags")
-    def tags_display(self):
-        return ", ".join(self.tag_list) or None
+        return f"{timestamp} — {str(self.uuid)[:8]}"
 
     @admin.display(description="Collaborators")
     def collaborators_csv(self):
@@ -95,6 +90,15 @@ class Experiment(ExperimentModel):
             label = self.case.fingerprint[:6]
 
         return format_html('<a href="{}">{}</a>', url, label)
+
+    @cached_property
+    def expect_label(self):
+        # Expect has no admin page of its own -- it's only ever edited inline
+        # on its case -- so it reads as a name, not as a link.
+        short_hash = self.expect.fingerprint[:6]
+        name = self.expect_branch_name  # pyright: ignore[reportAttributeAccessIssue]
+
+        return f"{name} ({short_hash})" if name else short_hash
 
 
 class SharedExperiment(Experiment):
