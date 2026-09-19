@@ -2,7 +2,7 @@ from typing import Any
 
 from django.db import transaction
 
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.families.django import TrailModel
 from chatddx.repo.families.pydantic import TrailSchema, TrailSpec
 from chatddx.repo.registry import EntityName
@@ -15,7 +15,7 @@ def load_trail(
     fingerprint: str,
     as_schema: type[TrailModel] | type[TrailSpec],
 ) -> TrailModel | TrailSpec:
-    trail_model_cls = bundle_of(bundle).trail_model
+    trail_model_cls = entity_of(bundle).trail_model
     trail_model = trail_model_cls.objects.get(fingerprint=fingerprint)
 
     trail_model = resolve_trail(trail_model)

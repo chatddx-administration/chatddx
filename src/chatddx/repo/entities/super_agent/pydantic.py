@@ -2,23 +2,13 @@ from pydantic import Field
 
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.entities.agent.pydantic import AgentTrailBase
-from chatddx.repo.entities.connection import ConnectionFormDataIn
-from chatddx.repo.entities.output_type import OutputTypeFormDataIn
-from chatddx.repo.entities.sampling_params import SamplingParamsFormDataIn
-from chatddx.repo.entities.tool_group import ToolGroupFormDataIn
 from chatddx.repo.families import (
-    BaseFormDataIn,
     BaseFormDataOut,
 )
 
 
-class SuperAgentFormDataIn(AgentTrailBase, BaseFormDataIn):
-    connection: ConnectionFormDataIn
-    sampling_params: SamplingParamsFormDataIn
-    output_type: OutputTypeFormDataIn
-    tool_group: ToolGroupFormDataIn
-
-
+# There is no SuperAgentFormDataIn: the flat form validates as an agent
+# (see `SuperAgentForm.entity_name`), and only what it renders differs.
 class SuperAgentFormDataOut(AgentTrailBase, BaseFormDataOut):
     id: CoercedStr = Field(serialization_alias="template")
     connection: CoercedStr = Field(serialization_alias="connection_template")

@@ -12,7 +12,7 @@ from django.db.models import (
 
 from chatddx.history.models import ExperimentModel
 from chatddx.history.proxies import Message
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.django import Agent
 from chatddx.repo.entities.case.django import Case, CaseExpect
 from chatddx.repo.entities.expect.django import Expect, ExpectBranchModel
@@ -23,7 +23,7 @@ from chatddx.repo.todo import agent_relations
 
 def qs_super_agent[T: BranchModel](qs: QuerySet[T], owner_name: str):
     def subquery(owner_name: str, model: EntityName, column: str):
-        branch_model_cls = bundle_of(model).branch_model
+        branch_model_cls = entity_of(model).branch_model
 
         return branch_model_cls.objects.filter(
             target=OuterRef(f"target__{model}"),
@@ -83,7 +83,7 @@ def qs_canon[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
     )
 
     canonical_ids = (
-        owned_qs.order_by("owner_id", "name", "-timestamp")
+        owned_qs.order_by("owner_id", "name", "-timestamp", "-id")
         .distinct("owner_id", "name")
         .values_list("id", flat=True)
     )
@@ -106,7 +106,7 @@ def qs_canon_col[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T
     )
 
     canonical_ids = (
-        owned_qs.order_by("owner_id", "name", "-timestamp")
+        owned_qs.order_by("owner_id", "name", "-timestamp", "-id")
         .distinct("owner_id", "name")
         .values_list("id", flat=True)
     )

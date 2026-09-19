@@ -13,7 +13,7 @@ from chatddx.core.utils import ensure_identity
 from chatddx.django.orm.qs import qs_canon
 from chatddx.django.portal.utils import load_form_data
 from chatddx.dx.error_handling import print_pydantic_errors
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of, view_of
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import BaseFormDataIn
 from chatddx.repo.registry import EntityName
@@ -49,7 +49,7 @@ class BranchForm(ModelForm):
         if instance:
             kwargs["initial"] = self.get_initial(instance)
         elif fingerprint:
-            new_branch = bundle_of(self.entity_name).branch_model(
+            new_branch = entity_of(self.entity_name).branch_model(
                 id=0,
                 name=fingerprint[:6],
                 target=load_trail(self.entity_name, fingerprint, TrailModel),
@@ -74,7 +74,7 @@ class BranchForm(ModelForm):
 
     def validate(self, data: dict[str, Any]):
         try:
-            validated_data = bundle_of(self.entity_name).form_data_in.model_validate(
+            validated_data = view_of(self.entity_name).form_data_in.model_validate(
                 data
             )
             return validated_data

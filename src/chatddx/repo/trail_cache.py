@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from typing import cast
 
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.families import TrailSpec
 from chatddx.repo.utils import (
     resolve_trail,
@@ -17,7 +17,7 @@ class TrailCache:
         self.cache = OrderedDict()
 
     def get_sync[T: TrailSpec](self, Spec: type[T], pk: int) -> T:
-        trail_model_cls = bundle_of(Spec).trail_model
+        trail_model_cls = entity_of(Spec).trail_model
         key = (Spec, pk)
 
         if key in self.cache:
@@ -29,7 +29,7 @@ class TrailCache:
         return Spec.model_validate(trail_model)
 
     async def get_async[T: TrailSpec](self, Spec: type[T], pk: int) -> T:
-        trail_model_cls = bundle_of(Spec).trail_model
+        trail_model_cls = entity_of(Spec).trail_model
         key = (Spec, pk)
 
         if key in self.cache:

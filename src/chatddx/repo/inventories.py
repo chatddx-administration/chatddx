@@ -46,7 +46,6 @@ from chatddx.repo.entities.scorer.pydantic import (
     ScorerFormDataOut,
     ScorerTrailSchema,
 )
-from chatddx.repo.entities.super_agent.pydantic import SuperAgentFormDataOut
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.entities.tool.pydantic import (
     ToolBranchSpec,
@@ -72,7 +71,6 @@ class ParsedInventory(BaseModel):
     case: dict[str, tuple[CaseTrailSchema, BranchDetailsPatch]]
     scorer: dict[str, tuple[ScorerTrailSchema, BranchDetailsPatch]]
     expect: dict[str, tuple[ExpectTrailSchema, BranchDetailsPatch]]
-    super_agent: dict[str, tuple[AgentTrailSchema, BranchDetailsPatch]]
 
 
 class InventoryTrailSchema(BaseModel):
@@ -85,7 +83,6 @@ class InventoryTrailSchema(BaseModel):
     case: dict[str, CaseTrailSchema]
     scorer: dict[str, ScorerTrailSchema]
     expect: dict[str, ExpectTrailSchema]
-    super_agent: dict[str, AgentTrailSchema]
 
 
 class InventoryFormDataOut(BaseModel):
@@ -98,7 +95,6 @@ class InventoryFormDataOut(BaseModel):
     case: dict[str, CaseFormDataOut]
     scorer: dict[str, ScorerFormDataOut]
     expect: dict[str, ExpectFormDataOut]
-    super_agent: dict[str, SuperAgentFormDataOut]
 
 
 class InventoryBranchSpec(BaseModel):
@@ -111,7 +107,6 @@ class InventoryBranchSpec(BaseModel):
     case: dict[str, CaseBranchSpec]
     scorer: dict[str, ScorerBranchSpec]
     expect: dict[str, ExpectBranchSpec]
-    super_agent: dict[str, AgentBranchSpec]
 
 
 class InventoryBranchModel(TypedDict):
@@ -124,4 +119,3 @@ class InventoryBranchModel(TypedDict):
     case: dict[str, CaseBranchModel]
     scorer: dict[str, ScorerBranchModel]
     expect: dict[str, ExpectBranchModel]
-    super_agent: dict[str, AgentBranchModel]
