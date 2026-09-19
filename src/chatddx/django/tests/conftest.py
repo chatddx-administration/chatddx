@@ -70,8 +70,9 @@ def experiment(
 ):
     case = inventory_fixture_bm["case"]["case-1"]
     agent = inventory_fixture_bm["agent"]["agent-2"].target
-    expect = case.expects.first()
-    assert expect is not None
+    expect_branch = case.expects.first()
+    assert expect_branch is not None
+    expect = expect_branch.target
 
     return ExperimentModel.objects.create(
         owner=owner,
@@ -90,8 +91,9 @@ def shared_experiment(
 ):
     case = inventory_fixture_bm["case"]["case-1"]
     agent = inventory_fixture_bm["agent"]["agent-2"].target
-    expect = case.expects.first()
-    assert expect is not None
+    expect_branch = case.expects.first()
+    assert expect_branch is not None
+    expect = expect_branch.target
 
     experiment = ExperimentModel.objects.create(
         owner=other_owner,

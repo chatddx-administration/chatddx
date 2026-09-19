@@ -53,14 +53,15 @@ def expects_by_case(owner_name: str) -> dict[int, list[int]]:
     """
     Which expectation trails each case trail carries, for `owner_name`.
 
-    Expectations hang off a case *branch* (see `CaseBranchModel.expects`),
-    while an experiment pairs a case *trail* with an expect trail. A trail's
-    set is therefore the union over the branches the owner has of it: every
-    pairing any version of their case has stood for, and nobody else's.
+    Expectations hang off a case *branch* and name expect branches (see
+    `CaseBranchModel.expects`), while an experiment pairs a case *trail* with
+    an expect trail. A trail's set is therefore the union over the branches
+    the owner has of it: every pairing any version of their case has stood
+    for, and nobody else's.
     """
     links = (
         CaseExpect.objects.filter(case__owner__name=owner_name)
-        .values_list("case__target_id", "expect_id")
+        .values_list("case__target_id", "expect__target_id")
         .distinct()
     )
 

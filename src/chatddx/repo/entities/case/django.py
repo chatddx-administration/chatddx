@@ -10,7 +10,7 @@ from django.db.models import (
 )
 
 from chatddx.django.orm.utils import Sharable
-from chatddx.repo.entities.expect.django import ExpectTrailModel
+from chatddx.repo.entities.expect.django import ExpectBranchModel
 from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
@@ -37,8 +37,12 @@ class CaseBranchModel(BranchModel):
     # belongs to the owner's version of the case rather than to the (shared,
     # content-addressed) trail. Each version snapshots the set it was saved
     # with, see `chatddx.repo.shufflers.branch.commit`.
+    #
+    # The set names expect *branches*, not their trails: two cases that expect
+    # the same payload for the same scorer share one content-addressed trail,
+    # so a trail cannot say which expectation of whose case it stands for.
     expects = ManyToManyField(
-        ExpectTrailModel,
+        ExpectBranchModel,
         through="CaseExpect",
         through_fields=("case", "expect"),
         related_name="cases",
@@ -51,7 +55,7 @@ class CaseExpect(Model):
         db_table = "agents_case_expect_link"
 
     case = ForeignKey(CaseBranchModel, on_delete=CASCADE)
-    expect = ForeignKey(ExpectTrailModel, on_delete=CASCADE)
+    expect = ForeignKey(ExpectBranchModel, on_delete=CASCADE)
 
 
 class Case(BranchProxy, CaseBranchModel, Sharable):
