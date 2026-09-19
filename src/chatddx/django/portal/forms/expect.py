@@ -83,8 +83,8 @@ class ExpectInlineForm(ModelForm):
 
 class ExpectInlineFormSet(BranchFormSet):
     """
-    Commit every row as an `expect` branch and give the case the set of trails
-    the rows describe.
+    Commit every row as an `expect` branch and give the case the set of
+    branches the rows describe.
 
     `instance` is the case branch that `BranchModelAdmin.save_model` just made
     canon (see `BranchModelAdmin.save_related`); its expects are the owner's,
@@ -117,9 +117,7 @@ class ExpectInlineFormSet(BranchFormSet):
         # formset skipped as untouched, the freshly committed version of the
         # edited ones, and none of the deleted ones. Setting them also covers
         # a rename, where the new branch has no version to inherit from.
-        self.instance.expects.set(
-            [self._branch(form).target for form in self.live_forms()]
-        )
+        self.instance.expects.set([self._branch(form) for form in self.live_forms()])
 
         return saved
 
