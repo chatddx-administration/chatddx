@@ -13,6 +13,7 @@ from chatddx.core.utils import ensure_identity
 from chatddx.core.worker import wake_on_commit
 from chatddx.django.orm.qs import qs_experiments, qs_owned_trails
 from chatddx.django.portal.forms.experiment import NO_RUN, ExperimentForm
+from chatddx.django.portal.mixins import ModelAdminFormWithRequest
 from chatddx.django.portal.typing import TypedModelAdmin
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.history.proxies import Experiment, Run, SharedExperiment, SharedRun
@@ -74,7 +75,7 @@ class BaseExperimentAdmin(TypedModelAdmin[Experiment]):
 
 
 @admin.register(Experiment)
-class ExperimentAdmin(BaseExperimentAdmin):
+class ExperimentAdmin(ModelAdminFormWithRequest, BaseExperimentAdmin):
     """
     An experiment is a record of what was run, so it never changes once it
     exists: the change form only ever shows it, and the way to act on it is to

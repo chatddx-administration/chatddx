@@ -1,4 +1,6 @@
 # pyright: basic
+from collections import defaultdict
+
 from django.db.models import (
     Count,
     F,
@@ -12,7 +14,7 @@ from chatddx.history.models import ExperimentModel
 from chatddx.history.proxies import Message
 from chatddx.repo.bundles import bundle_of
 from chatddx.repo.entities.agent.django import Agent
-from chatddx.repo.entities.case.django import Case
+from chatddx.repo.entities.case.django import Case, CaseExpect
 from chatddx.repo.entities.expect.django import Expect, ExpectBranchModel
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.registry import EntityName
@@ -45,6 +47,28 @@ def qs_owned_trails[T: TrailModel](qs: QuerySet[T], owner_name: str) -> QuerySet
         .order_by("id")
         .distinct("id")
     )
+
+
+def expects_by_case(owner_name: str) -> dict[int, list[int]]:
+    """
+    Which expectation trails each case trail carries, for `owner_name`.
+
+    Expectations hang off a case *branch* (see `CaseBranchModel.expects`),
+    while an experiment pairs a case *trail* with an expect trail. A trail's
+    set is therefore the union over the branches the owner has of it: every
+    pairing any version of their case has stood for, and nobody else's.
+    """
+    links = (
+        CaseExpect.objects.filter(case__owner__name=owner_name)
+        .values_list("case__target_id", "expect_id")
+        .distinct()
+    )
+
+    by_case: dict[int, list[int]] = defaultdict(list)
+    for case_trail_id, expect_trail_id in links:
+        by_case[case_trail_id].append(expect_trail_id)
+
+    return {case_id: sorted(expect_ids) for case_id, expect_ids in by_case.items()}
 
 
 def qs_canon[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
