@@ -3,6 +3,9 @@ extends = ["cases.toml", "chatddx/test-inventory.toml"]
 [scorer.regex_match]
 command = "regex_match"
 
+[scorer.exact_match]
+command = "exact_match"
+
 [output_type.free-text]
 # unstructured free text
 
