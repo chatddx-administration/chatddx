@@ -1,18 +1,31 @@
 import asyncio
 
+import django
 import typer
+
+django.setup()
 
 from chatddx.core import provisioning, worker
 
 app = typer.Typer()
 
+worker_app = typer.Typer(help="Run queued experiments.")
+_ = app.add_typer(worker_app, name="worker")
+
 _ = app.command("init-data")(provisioning.init_data)
 _ = app.command("wipe-data")(provisioning.wipe_data)
 
 
-@app.command("run")
+@worker_app.command("run")
 def worker_run():
-    asyncio.run(worker.trigger())
+    """Process the queue once and exit."""
+    asyncio.run(worker.drain())
+
+
+@worker_app.command("serve")
+def worker_serve():
+    """Process the queue until killed. This is the production service."""
+    asyncio.run(worker.serve())
 
 
 @app.callback()

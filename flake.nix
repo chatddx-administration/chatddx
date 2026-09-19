@@ -72,6 +72,19 @@
       django-app =
         system: (pythonSets.${system}.mkVirtualEnv "${name}-django-${version}" workspace.deps.default);
 
+      # The queue worker, as an executable of its own: a host wires this into a
+      # service unit next to the Django one and never has to know how the
+      # subcommand is spelled. It runs until killed and needs the same
+      # environment Django does -- DB_*, CHATDDX_MODE, DJANGO_SETTINGS_MODULE.
+      worker =
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        pkgs.writeShellScriptBin "chatddx-worker" ''
+          exec ${django-app system}/bin/chatddx worker serve "$@"
+        '';
+
       scripts =
         system:
         let
@@ -81,6 +94,7 @@
           mkdir -p $out/bin
           ln -s ${django-app system}/bin/chatddx $out/bin/chatddx
           ln -s ${django-app system}/bin/django $out/bin/chatddx-django
+          ln -s ${worker system}/bin/chatddx-worker $out/bin/chatddx-worker
         '';
 
     in
@@ -90,6 +104,14 @@
       packages = forAllSystems (system: {
         django-app = django-app system;
         scripts = scripts system;
+        worker = worker system;
+      });
+
+      apps = forAllSystems (system: {
+        worker = {
+          type = "app";
+          program = "${worker system}/bin/chatddx-worker";
+        };
       });
 
       devShells = forAllSystems (
