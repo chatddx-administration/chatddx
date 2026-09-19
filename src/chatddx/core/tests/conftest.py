@@ -18,14 +18,14 @@ def experiment(
     inventory_fixture_bm: InventoryBranchModel,
 ) -> ExperimentModel:
     case = inventory_fixture_bm["case"]["scored-case"]
-    expect_branch = case.expects.first()
-    assert expect_branch is not None
+    expect = case.expects.first()
+    assert expect is not None
 
     return ExperimentModel.objects.create(
         owner=owner,
         agent=inventory_fixture_bm["agent"]["agent-2"].target,
         case=case.target,
-        expect=expect_branch.target,
+        expect=expect,
     )
 
 

@@ -77,7 +77,9 @@ def case_branch(owner: IdentityModel, name: str = "case-1") -> CaseBranchModel:
 
 
 def linked_expects(case: CaseBranchModel) -> list[ExpectBranchModel]:
-    return list(ExpectBranchModel.objects.filter(cases=case.pk).order_by("timestamp"))
+    return list(
+        ExpectBranchModel.objects.filter(target__cases=case.pk).order_by("timestamp")
+    )
 
 
 @pytest.fixture
@@ -523,56 +525,3 @@ def test_a_collaborators_edit_leaves_the_owners_expects_alone(
     assert [expect.target.payload for expect in linked_expects(theirs)] == [
         "their expectation"
     ]
-
-
-@pytest.mark.django_db
-def test_the_inline_leaves_out_another_cases_identical_expectation(
-    user_client: Client,
-    inventory_fixture_fdo: InventoryFormDataOut,
-    owner: IdentityModel,
-):
-    """
-    Two cases expecting the same payload for the same scorer share one
-    content-addressed trail; neither case's inline may show the other's row.
-    """
-
-    case = case_branch(owner)
-    expect_a, _ = linked_expects(case)
-
-    scorer = ScorerTrailSchema(command="scorer-a command")
-
-    _ = commit(
-        trail=ExpectTrailSchema(payload=expect_a.target.payload, scorer=scorer),
-        branch_details=BranchSchemaDetails(name="case-2|scorer-a", owner=owner.name),
-    )
-    _ = commit(
-        trail=CaseTrailSchema(payload="case payload 2"),
-        branch_details=BranchSchemaDetails(
-            name="case-2",
-            owner=owner.name,
-            expects=["case-2|scorer-a"],
-        ),
-    )
-
-    other = case_branch(owner, "case-2")
-    twin = ExpectBranchModel.objects.get(owner=owner, name="case-2|scorer-a")
-
-    # same payload, same scorer, so the two expectations are one trail
-    assert twin.target.pk == expect_a.target.pk
-
-    assert [expect.name for expect in linked_expects(case)] == [
-        "expect-1-a",
-        "expect-1-b",
-    ]
-    assert [expect.name for expect in linked_expects(other)] == ["case-2|scorer-a"]
-
-    response = user_client.get(reverse("admin:orm_case_change", args=[case.pk]))
-    assert response.status_code == 200
-    assert inline_payloads(response) == [
-        "expect payload 1 for scorer a",
-        "expect payload 1 for scorer b",
-    ]
-
-    response = user_client.get(reverse("admin:orm_case_change", args=[other.pk]))
-    assert response.status_code == 200
-    assert inline_payloads(response) == ["expect payload 1 for scorer a"]

@@ -232,10 +232,12 @@ def commit_relations(
             previous,
             "expects",
             branch_details.expects,
-            lambda name: get_branch_model(
-                entity_name="expect",
-                owner_name=owner.name,
-                branch_name=name,
+            lambda name: (
+                get_branch_model(
+                    entity_name="expect",
+                    owner_name=owner.name,
+                    branch_name=name,
+                ).target
             ),
         )
 

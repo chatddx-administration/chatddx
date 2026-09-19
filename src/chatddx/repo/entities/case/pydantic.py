@@ -1,7 +1,7 @@
 from pydantic import Field
 
 from chatddx.core.fields import CoercedStr
-from chatddx.repo.entities.expect.pydantic import ExpectBranchSpec
+from chatddx.repo.entities.expect.pydantic import ExpectTrailSpec
 from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
@@ -40,7 +40,7 @@ class CaseBranchSchema(BranchSchema[CaseTrailSchema]):
 
 
 class CaseBranchSpec(BranchSpec[CaseTrailSpec]):
-    expects: list[ExpectBranchSpec] = Field(default_factory=list)
+    expects: list[ExpectTrailSpec] = Field(default_factory=list)
 
 
 class CaseFormDataIn(CaseTrailBase, BaseFormDataIn):
