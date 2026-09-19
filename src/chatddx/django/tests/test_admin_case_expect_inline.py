@@ -8,7 +8,7 @@ from django.urls import reverse
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
 from chatddx.repo.entities.case.django import CaseBranchModel, CaseTrailModel
-from chatddx.repo.entities.case.pydantic import CaseTrailSchema
+from chatddx.repo.entities.case.pydantic import CaseBranchDetails, CaseTrailSchema
 from chatddx.repo.entities.expect.django import ExpectBranchModel
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
 from chatddx.repo.entities.scorer.django import ScorerBranchModel
@@ -485,7 +485,7 @@ def test_a_collaborators_edit_leaves_the_owners_expects_alone(
 
     _ = commit(
         trail=CaseTrailSchema(payload="shared payload"),
-        branch_details=BranchSchemaDetails(
+        branch_details=CaseBranchDetails(
             name="shared-case",
             owner=other.name,
             collaborators=[owner.name],

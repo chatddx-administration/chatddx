@@ -5,7 +5,11 @@ import pytest
 from chatddx.core.models import IdentityModel, TagModel
 from chatddx.core.utils import ensure_tag
 from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchSpec, CaseTrailSchema
+from chatddx.repo.entities.case.pydantic import (
+    CaseBranchDetails,
+    CaseBranchSpec,
+    CaseTrailSchema,
+)
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
 from chatddx.repo.entities.scorer.pydantic import ScorerTrailSchema
 from chatddx.repo.families.pydantic import BranchSchemaDetails
@@ -86,7 +90,7 @@ async def test_expects_belong_to_the_owner_not_to_the_payload(
     )
     _ = await commit_async(
         trail=CaseTrailSchema(payload=PAYLOAD_1),
-        branch_details=BranchSchemaDetails(
+        branch_details=CaseBranchDetails(
             name="case-1",
             owner=other_owner.name,
             expects=["case-1|scorer-x"],
@@ -168,7 +172,7 @@ async def test_named_expects_reach_the_canon_of_an_unchanged_case(
 ):
     created = await commit_async(
         trail=CaseTrailSchema(payload=PAYLOAD_1),
-        branch_details=BranchSchemaDetails(
+        branch_details=CaseBranchDetails(
             name="case-1",
             owner=owner.name,
             expects=["expect-1-a"],

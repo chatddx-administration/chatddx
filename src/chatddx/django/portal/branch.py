@@ -16,7 +16,7 @@ from chatddx.django.portal.mixins import ModelAdminFormWithRequest
 from chatddx.django.portal.request_context import RequestContext, request_contexts
 from chatddx.django.portal.typing import TypedModelAdmin
 from chatddx.django.portal.utils import inventory_form_data_out
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of, view_of
 from chatddx.repo.families.django import BranchProxy
 from chatddx.repo.families.pydantic import BranchSchemaDetails
 from chatddx.repo.registry import EntityName
@@ -166,14 +166,14 @@ class BranchModelAdmin[T: BranchProxy](
     ) -> BranchProxy:
         self._validated_data(form)
 
-        return bundle_of(self.name).proxy()
+        return view_of(self.name).proxy()
 
     def save_model(
         self, request: HttpRequest, obj: BranchProxy, form: BranchForm, change: Any
     ):
 
         data = self._validated_data(form)
-        schema_cls = bundle_of(self.name).trail_schema
+        schema_cls = entity_of(self.name).trail_schema
 
         schema = schema_cls.model_validate(data.model_dump())
         branch_name = data.name or ""

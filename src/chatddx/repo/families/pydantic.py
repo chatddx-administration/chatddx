@@ -7,6 +7,8 @@ from ninja import Schema as NinjaSchema
 from pydantic import (
     BaseModel,
     BeforeValidator,
+    ConfigDict,
+    Field,
     computed_field,
 )
 
@@ -74,26 +76,78 @@ class BaseBranchTarget[T: BaseTrail](BaseModel):
     target: T
 
 
+# Marks a field of a branch-details model as naming rows of another table
+# rather than holding a value. The name is a key into
+# `chatddx.repo.shufflers.branch.RELATION_RESOLVERS`, which turns each name
+# into the row it stands for.
+#
+# sibling idiom in `TrailSchema.as_fingerprint` above
+RELATION = "relation"
+
+
+def relation_fields(details: type[BaseModel]) -> list[tuple[str, str]]:
+    """
+    The `(field_name, resolver_name)` pairs of a branch-details model, i.e.
+    what this kind of branch carries beside its content.
+    """
+    fields: list[tuple[str, str]] = []
+
+    for field_name, field_info in details.model_fields.items():
+        extra = field_info.json_schema_extra
+
+        if not isinstance(extra, dict):
+            continue
+
+        resolver = extra.get(RELATION)
+
+        if resolver is not None:
+            fields.append((field_name, str(resolver)))
+
+    return fields
+
+
 class BranchSchemaDetails(BaseModel):
+    """
+    What a branch carries besides its content, by name.
+
+    Every entity has a name, an owner, collaborators and tags. An entity that
+    carries more subclasses this and adds it, so that naming something an
+    entity does not carry is an error rather than a silent no-op -- see
+    `chatddx.repo.entities.case.pydantic.CaseBranchDetails`.
+
+    For a relation field, None means the new version inherits the set from
+    the one it supersedes, and a list means exactly that set.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     owner: str
 
-    # What a branch carries besides its content, by name: who it is shared
-    # with, how it is labelled, and -- for a case -- which expectations it
-    # names. None means the new version inherits the set from the one it
-    # supersedes, a list means exactly that set.
-    collaborators: list[str] | None = None
-    tags: list[str] | None = None
-    expects: list[str] | None = None
+    collaborators: list[str] | None = Field(
+        default=None,
+        json_schema_extra={RELATION: "identity"},
+    )
+    tags: list[str] | None = Field(
+        default=None,
+        json_schema_extra={RELATION: "tag"},
+    )
 
 
 class BranchDetailsPatch(BaseModel):
+    """
+    `BranchSchemaDetails` with nothing required, for an inventory that names
+    only some of what a branch carries. Its per-entity counterparts live
+    beside the details model they patch.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
     name: str | None = None
     owner: str | None = None
 
     collaborators: list[str] | None = None
     tags: list[str] | None = None
-    expects: list[str] | None = None
 
 
 class BaseBranch[T: BaseTrail](BaseBranchTarget[T]):

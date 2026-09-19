@@ -4,7 +4,7 @@ import pytest
 
 from chatddx.core.choices import ToolChoices
 from chatddx.core.models import IdentityModel
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of, view_of
 from chatddx.repo.entities.agent import (
     AgentBranchSpec,
     AgentTrailSchema,
@@ -16,24 +16,24 @@ from chatddx.repo.shufflers.branch import commit, get_branch_model
 
 
 def test_simple():
-    agent_trail_schema = bundle_of("agent").trail_schema
+    agent_trail_schema = entity_of("agent").trail_schema
 
     assert repr(agent_trail_schema) == repr(AgentTrailSchema)
     _ = assert_type(agent_trail_schema, type[AgentTrailSchema])
 
-    agent_trail_spec = bundle_of(agent_trail_schema).trail_spec
+    agent_trail_spec = entity_of(agent_trail_schema).trail_spec
 
     assert repr(agent_trail_spec) == repr(AgentTrailSpec)
     _ = assert_type(agent_trail_spec, type[AgentTrailSpec])
 
-    agent_branch_spec = bundle_of(agent_trail_spec).branch_spec
+    agent_branch_spec = entity_of(agent_trail_spec).branch_spec
 
     assert repr(agent_branch_spec) == repr(AgentBranchSpec)
     _ = assert_type(agent_branch_spec, type[AgentBranchSpec])
 
 
 def test_super_agent_jsonschema():
-    jsonschema = bundle_of("super_agent").form_data_out.model_json_schema(
+    jsonschema = view_of("super_agent").form_data_out.model_json_schema(
         mode="serialization"
     )
     assert jsonschema["properties"]["instructions"]["type"] == "string"
@@ -41,13 +41,13 @@ def test_super_agent_jsonschema():
 
 
 def test_agent_jsonschema():
-    jsonschema = bundle_of("agent").form_data_out.model_json_schema(
+    jsonschema = view_of("agent").form_data_out.model_json_schema(
         mode="serialization"
     )
     assert jsonschema["properties"]["instructions"]["type"] == "string"
     assert jsonschema["properties"]["connection"]["type"] == "string"
 
-    jsonschema = bundle_of("agent").form_data_in.model_json_schema()
+    jsonschema = view_of("agent").form_data_in.model_json_schema()
     assert list(jsonschema.keys()) == [
         "$defs",
         "properties",
@@ -88,7 +88,7 @@ def test_agent_jsonschema():
 
 
 def test_type_pipeline():
-    tool_schema_cls = bundle_of("tool").trail_schema
+    tool_schema_cls = entity_of("tool").trail_schema
     tool = tool_schema_cls.model_validate(
         {
             "command": "cmd",
@@ -97,7 +97,7 @@ def test_type_pipeline():
     )
     assert tool.command == "cmd"
 
-    assert bundle_of("tool").form_data_out.model_validate
+    assert view_of("tool").form_data_out.model_validate
 
 
 @pytest.mark.django_db

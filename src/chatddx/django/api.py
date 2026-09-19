@@ -9,7 +9,7 @@ from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
 from chatddx.django.orm.qs import qs_canon
 from chatddx.history.session import start_session
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.shufflers.agent import get_agent_async, select_agents_async
 from chatddx.repo.shufflers.branch import (
     BranchNotFoundError,
@@ -52,7 +52,7 @@ async def get_agents_endpoint(request: HttpRequest, output_type: str | None = No
     owner = await sync_to_async(get_authenticated_username)(request)
 
     if output_type:
-        model_cls = bundle_of("agent").branch_model
+        model_cls = entity_of("agent").branch_model
         qs = qs_canon(model_cls.objects.all(), owner.name)
         qs = qs.filter(target__output_type__definition__title=output_type)
     else:

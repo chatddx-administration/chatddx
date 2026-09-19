@@ -13,7 +13,6 @@ from typing import (
     cast,
     get_args,
     get_origin,
-    get_type_hints,
 )
 
 from pydantic import (
@@ -24,9 +23,9 @@ from pydantic import (
 from rich.pretty import pretty_repr
 
 from chatddx.core import settings
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.families.pydantic import BranchDetailsPatch
-from chatddx.repo.inventories import InventoryTrailSchema, ParsedInventory
+from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.registry import EntityName
 from chatddx.repo.todo import all_entities
 
@@ -52,18 +51,31 @@ class EntityContext:
     schema: type[BaseModel]
 
 
+def branch_details_keys(entity: EntityName) -> set[str]:
+    """
+    What this entity carries beside its content, by name. A key an entity
+    does not carry is not branch details, so it falls through to the trail
+    schema -- where it is an unknown field and says so.
+    """
+    return set(entity_of(entity).branch_details_patch.model_fields.keys())
+
+
 def find_field(schema: type[Any] | None) -> EntityName | None:
-    bundle = None
+    """
+    The entity a trail schema belongs to, or None for anything that is not
+    one (a plain value, a nested non-entity model).
 
-    resolved_hints = get_type_hints(InventoryTrailSchema)
+    This asks the registry rather than reverse-searching the inventory's
+    field types, so there is one answer to "which entity is this class?"
+    and not two that can drift apart.
+    """
+    if not isinstance(schema, type):
+        return None
 
-    for field_name, field_type in resolved_hints.items():
-        _, arg = get_args(field_type)
-        if arg is schema:
-            bundle = cast(EntityName, field_name)
-            break
-
-    return bundle
+    try:
+        return entity_of(schema).name
+    except (KeyError, TypeError):
+        return None
 
 
 def parse_entity(
@@ -76,7 +88,7 @@ def parse_entity(
     base_data: dict[str, Any] = {}
 
     for field_name, field_value in values.items():
-        if field_name in KEYWORDS | BranchDetailsPatch.model_fields.keys():
+        if field_name in KEYWORDS | branch_details_keys(entity):
             base_data[field_name] = field_value
             continue
 
@@ -187,7 +199,7 @@ def parse(
         if entity not in data:
             continue
 
-        entity_schema = bundle_of(entity).trail_schema
+        entity_schema = entity_of(entity).trail_schema
 
         for name, values in data[entity].items():
             if isinstance(values, dict) and values.get("partial"):  # pyright: ignore[reportUnknownMemberType]
@@ -202,8 +214,17 @@ def parse(
             )
 
             try:
-                entity_branch_details = BranchDetailsPatch.model_validate(
-                    entity_data | branch_details.model_dump(exclude_none=True)
+                # `entity_data` holds the trail's fields too, so hand the
+                # patch only the keys it declares
+                details_cls = entity_of(entity).branch_details_patch
+                named = {
+                    key: value
+                    for key, value in entity_data.items()
+                    if key in branch_details_keys(entity)
+                }
+
+                entity_branch_details = details_cls.model_validate(
+                    named | branch_details.model_dump(exclude_none=True)
                 )
 
                 trail = entity_schema.model_validate(entity_data)

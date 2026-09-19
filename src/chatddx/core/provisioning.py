@@ -8,7 +8,7 @@ from chatddx.core import settings
 
 django.setup()
 from chatddx.core.utils import ensure_identity
-from chatddx.repo.bundles import bundle_of
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.parsers.inventory import parse
 from chatddx.repo.shufflers import inventory
@@ -27,7 +27,7 @@ def wipe_data(
     for entity in all_entities:
         shared_field = f"shared_{entity.replace('_', '')}branchmodel"
 
-        d, _ = bundle_of(entity).branch_model.objects.filter(owner=user).delete()
+        d, _ = entity_of(entity).branch_model.objects.filter(owner=user).delete()
         msg = f"[{entity}]: removed {d}"
 
         if hasattr(user, shared_field):
