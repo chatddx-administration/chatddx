@@ -1,10 +1,16 @@
+import json
+
 import pytest
 from django.test import Client
 from django.urls import reverse
 
 from chatddx.core.choices import RunStatusChoices
 from chatddx.core.models import IdentityModel
-from chatddx.django.portal.forms.experiment import NO_RUN
+from chatddx.django.portal.forms.experiment import (
+    MISMATCHED_EXPECT,
+    NO_CASE_LABEL,
+    NO_RUN,
+)
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.repo.inventories import InventoryBranchModel
 
@@ -254,3 +260,73 @@ def test_change_view_shows_branch_names_and_links_for_agent_and_case(
 
     assert reverse("admin:orm_superagent_change", args=[agent_branch.pk]) in content
     assert reverse("admin:orm_case_change", args=[case_branch.pk]) in content
+
+
+def expect_widget(response):
+    """The select the `expect` field renders as, past the admin's wrapper."""
+    widget = response.context["adminform"].form.fields["expect"].widget
+
+    return getattr(widget, "widget", widget)
+
+
+@pytest.mark.django_db
+def test_add_form_disables_expect_until_a_case_is_chosen(
+    inventory_fixture_bm: InventoryBranchModel,
+    user_client: Client,
+):
+    response = user_client.get(reverse("admin:orm_experiment_add"))
+
+    assert response.status_code == 200
+    assert expect_widget(response).attrs["disabled"] is True
+    assert b"data-expects-by-case" in response.content
+    assert NO_CASE_LABEL.encode() in response.content
+
+
+@pytest.mark.django_db
+def test_add_form_maps_every_case_to_its_own_expects(
+    inventory_fixture_bm: InventoryBranchModel,
+    user_client: Client,
+):
+    response = user_client.get(reverse("admin:orm_experiment_add"))
+    by_case = json.loads(expect_widget(response).attrs["data-expects-by-case"])
+
+    for name in ("case-1", "case-2"):
+        case = inventory_fixture_bm["case"][name]
+        assert sorted(by_case[str(case.target.pk)]) == sorted(
+            case.expects.values_list("pk", flat=True)
+        )
+
+
+@pytest.mark.django_db
+def test_add_form_rejects_an_expect_of_another_case(
+    add_post_data: dict,
+    inventory_fixture_bm: InventoryBranchModel,
+    user_client: Client,
+):
+    other_expect = inventory_fixture_bm["case"]["case-2"].expects.first()
+    assert other_expect is not None
+    assert other_expect.pk != add_post_data["expect"]
+
+    add_post_data["expect"] = other_expect.pk
+
+    response = user_client.post(reverse("admin:orm_experiment_add"), add_post_data)
+
+    assert response.status_code == 200
+    assert response.context["adminform"].form.errors["expect"] == [MISMATCHED_EXPECT]
+    assert not ExperimentModel.objects.exists()
+    assert not RunModel.objects.exists()
+
+
+@pytest.mark.django_db
+def test_add_form_leaves_expect_enabled_once_a_case_is_posted(
+    add_post_data: dict,
+    user_client: Client,
+):
+    # A post that comes back with errors keeps the case it was sent with, so
+    # the field it belongs to stays open for business.
+    add_post_data["initial_run_status"] = RunStatusChoices.COMPLETED.value
+
+    response = user_client.post(reverse("admin:orm_experiment_add"), add_post_data)
+
+    assert response.status_code == 200
+    assert "disabled" not in expect_widget(response).attrs
