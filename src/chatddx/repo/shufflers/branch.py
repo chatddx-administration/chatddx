@@ -1,4 +1,6 @@
-from django.db.models import QuerySet
+from collections.abc import Callable
+
+from django.db.models import Model, QuerySet
 from pydantic import ValidationError
 
 from chatddx.core import settings
@@ -159,8 +161,6 @@ def commit(
     branch_model_cls = bundle_of(trail).branch_model
     trail_model_cls = bundle_of(trail).trail_model
 
-    entity = bundle_of(trail).name
-
     qs = branch_model_cls.objects.all()
 
     canon = qs_canon(
@@ -169,9 +169,9 @@ def commit(
     ).first()
 
     if canon and trail.fingerprint == canon.target.fingerprint:
-        # The expects are not part of the fingerprint, so they can change
-        # while the canon stays put.
-        commit_expects(canon, canon, branch_details)
+        # What a branch carries besides its content is not fingerprinted, so
+        # it can change while the canon stays put.
+        commit_relations(canon, canon, branch_details)
         return False
 
     match trail:
@@ -180,24 +180,13 @@ def commit(
         case TrailModel():
             target = trail
 
-    owner = ensure_identity(branch_details.owner)
-
-    collaborators = [
-        ensure_identity(name) for name in branch_details.collaborators or []
-    ]
-
-    tags = [ensure_tag(owner, entity, name) for name in branch_details.tags or []]
-
     branch_model = branch_model_cls.objects.create(
         name=branch_details.name,
-        owner=owner,
+        owner=ensure_identity(branch_details.owner),
         target=target,
     )
 
-    branch_model.collaborators.set(collaborators)
-    branch_model.tags.set(tags)
-
-    commit_expects(branch_model, canon, branch_details)
+    commit_relations(branch_model, canon, branch_details)
 
     return True
 
@@ -205,36 +194,66 @@ def commit(
 commit_async = make_async(commit)
 
 
-def commit_expects(
+def commit_relations(
     branch_model: BranchModel,
     previous: BranchModel | None,
     branch_details: BranchSchemaDetails,
 ) -> None:
     """
-    Give `branch_model` the expects named in `branch_details`, or, when it
-    names none, the ones the version it supersedes carried.
+    Give `branch_model` what `branch_details` names beside its content, and
+    for everything it doesn't name, what the version it supersedes carried.
 
-    A case's expects hang off the case branch, not off its trail: they are the
-    owner's, not the payload's (see `CaseBranchModel.expects`), and every
-    version keeps the set it was saved with.
+    None of this is part of the trail: collaborators, tags and a case's
+    expects belong to the owner's version of the entity, not to its payload,
+    and every version keeps the set it was saved with.
     """
-    if not isinstance(branch_model, CaseBranchModel):
-        return
+    owner = branch_model.owner
+    entity = bundle_of(branch_model).name
 
-    if branch_details.expects is None:
-        if not isinstance(previous, CaseBranchModel):
+    _commit_relation(
+        branch_model,
+        previous,
+        "collaborators",
+        branch_details.collaborators,
+        ensure_identity,
+    )
+
+    _commit_relation(
+        branch_model,
+        previous,
+        "tags",
+        branch_details.tags,
+        lambda name: ensure_tag(owner, entity, name),
+    )
+
+    if isinstance(branch_model, CaseBranchModel):
+        _commit_relation(
+            branch_model,
+            previous,
+            "expects",
+            branch_details.expects,
+            lambda name: (
+                get_branch_model(
+                    entity_name="expect",
+                    owner_name=owner.name,
+                    branch_name=name,
+                ).target
+            ),
+        )
+
+
+def _commit_relation(
+    branch_model: BranchModel,
+    previous: BranchModel | None,
+    field_name: str,
+    names: list[str] | None,
+    resolve: Callable[[str], Model],
+) -> None:
+    if names is None:
+        if previous is None or previous.pk == branch_model.pk:
             return
-        if previous.pk == branch_model.pk:
-            return
-        trails = list(previous.expects.all())
+        related = list(getattr(previous, field_name).all())
     else:
-        trails = [
-            get_branch_model(
-                entity_name="expect",
-                owner_name=branch_details.owner,
-                branch_name=name,
-            ).target
-            for name in branch_details.expects
-        ]
+        related = [resolve(name) for name in names]
 
-    branch_model.expects.set(trails)
+    getattr(branch_model, field_name).set(related)

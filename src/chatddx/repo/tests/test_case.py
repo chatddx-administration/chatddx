@@ -2,7 +2,8 @@ from typing import cast
 
 import pytest
 
-from chatddx.core.models import IdentityModel
+from chatddx.core.models import IdentityModel, TagModel
+from chatddx.core.utils import ensure_tag
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import CaseBranchSpec, CaseTrailSchema
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
@@ -34,6 +35,16 @@ async def case_canon(owner_name: str, name: str = "case-1") -> CaseBranchSpec:
 @make_async
 def expect_payloads(branch: CaseBranchModel) -> list[str]:
     return [expect.payload for expect in branch.expects.all()]
+
+
+@make_async
+def tag_of(owner: IdentityModel, entity: str, name: str) -> TagModel:
+    return TagModel.objects.get(owner=owner, entity=entity, name=name)
+
+
+@make_async
+def tag_names(branch: CaseBranchModel) -> list[str]:
+    return sorted(branch.tags.values_list("name", flat=True))
 
 
 @make_async
@@ -93,7 +104,7 @@ async def test_expects_belong_to_the_owner_not_to_the_payload(
 
 
 @pytest.mark.asyncio
-async def test_a_new_case_version_snapshots_the_expects_it_supersedes(
+async def test_a_new_case_version_snapshots_what_it_supersedes(
     inventory_fixture_commit: object,
     owner: IdentityModel,
 ):
@@ -105,11 +116,49 @@ async def test_a_new_case_version_snapshots_the_expects_it_supersedes(
 
     canon = await case_canon(owner.name)
     assert canon.target.payload == "case payload 1, rewritten"
-    assert [expect.payload for expect in canon.expects] == [EXPECT_1_A, EXPECT_1_B]
 
-    # the version it superseded keeps its own set
+    # neither the expectations nor the tags are the case's content, and a new
+    # version carries both over from the one it supersedes
+    assert [expect.payload for expect in canon.expects] == [EXPECT_1_A, EXPECT_1_B]
+    assert canon.tags == ["tag-1", "tag-2"]
+
     superseded = await oldest_version(owner)
     assert await expect_payloads(superseded) == [EXPECT_1_A, EXPECT_1_B]
+    assert await tag_names(superseded) == ["tag-1", "tag-2"]
+
+
+@pytest.mark.asyncio
+async def test_a_tag_belongs_to_one_owner_and_one_entity(
+    inventory_fixture_commit: object,
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    agent_tag = await make_async(ensure_tag)(owner, "agent", "clinical")
+
+    _ = await commit_async(
+        trail=CaseTrailSchema(payload=PAYLOAD_1),
+        branch_details=BranchSchemaDetails(
+            name="case-1",
+            owner=owner.name,
+            tags=["clinical"],
+        ),
+    )
+    _ = await commit_async(
+        trail=CaseTrailSchema(payload=PAYLOAD_1),
+        branch_details=BranchSchemaDetails(
+            name="case-1",
+            owner=other_owner.name,
+            tags=["clinical"],
+        ),
+    )
+
+    mine = await tag_of(owner, "case", "clinical")
+    theirs = await tag_of(other_owner, "case", "clinical")
+
+    assert len({agent_tag.pk, mine.pk, theirs.pk}) == 3
+
+    assert (await case_canon(owner.name)).tags == ["clinical"]
+    assert (await case_canon(other_owner.name)).tags == ["clinical"]
 
 
 @pytest.mark.asyncio

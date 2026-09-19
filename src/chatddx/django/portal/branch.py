@@ -9,6 +9,7 @@ from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
 from unfold.contrib.inlines.admin import NonrelatedTabularInline
 
+from chatddx.core.utils import ensure_tag
 from chatddx.django.orm.qs import qs_canon
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.mixins import ModelAdminFormWithRequest
@@ -209,6 +210,7 @@ class BranchModelAdmin[T: BranchProxy](
     ) -> None:
         outcome = request_contexts[request]
         outcome.changed += self._sync_collaborators(outcome.canon, form)
+        outcome.changed += self._sync_tags(outcome.canon, form)
 
         for formset in formsets:
             # `form.instance` is the version the change form was rendered
@@ -229,6 +231,23 @@ class BranchModelAdmin[T: BranchProxy](
 
         canon.collaborators.set(target_ids)
         return ["collaborators"]
+
+    def _sync_tags(self, canon: Any, form: BranchForm) -> list[str]:
+        wanted = self._validated_data(form).tags
+        if wanted is None:
+            return []
+
+        # the form hands over names; a tag is only ever the owner's, for this
+        # kind of entity, so this is where a typed one comes into being
+        tags = [ensure_tag(canon.owner, self.name, name) for name in wanted]
+
+        current_ids = set(canon.tags.values_list("pk", flat=True))
+        target_ids = {tag.pk for tag in tags}
+        if current_ids == target_ids:
+            return []
+
+        canon.tags.set(target_ids)
+        return ["tags"]
 
     def _validated_data(self, form: BranchForm):
         data = form.validated_data
