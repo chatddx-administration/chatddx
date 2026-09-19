@@ -1,7 +1,9 @@
 # pyright: basic
 import os
 
-DJANGO_MODE = os.environ.get("CHATDDX_MODE", os.environ["DJANGO_MODE"])
+DJANGO_MODE = os.environ.get("CHATDDX_MODE") or os.environ.get(
+    "DJANGO_MODE", "default_value"
+)
 
 match DJANGO_MODE:
     case "main":

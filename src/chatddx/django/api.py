@@ -41,6 +41,12 @@ def get_authenticated_username(request: HttpRequest) -> IdentityModel:
     return owner
 
 
+@api.get("/me", response=str)
+async def get_identity(request: HttpRequest):
+    identity = await sync_to_async(get_authenticated_username)(request)
+    return identity.name
+
+
 @api.get("/agents", response=list[ModelOptionResponse])
 async def get_agents_endpoint(request: HttpRequest, output_type: str | None = None):
     owner = await sync_to_async(get_authenticated_username)(request)
