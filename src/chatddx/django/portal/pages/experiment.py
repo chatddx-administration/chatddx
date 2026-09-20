@@ -248,6 +248,8 @@ class RunAdmin(TypedModelAdmin[Run]):
     )
     readonly_fields = ("timestamp", "session_", "result_")
     list_filter = ("status",)
+    # experiment_ and session_ link through these, once per row.
+    list_select_related = ("experiment", "session")
 
     actions = ("requeue",)
 

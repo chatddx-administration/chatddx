@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from chatddx.core.choices import RunStatusChoices, SessionContextChoices
 from chatddx.core.models import IdentityModel
+from chatddx.django.portal.links import LINK_CLASS
 from chatddx.history.models import ExperimentModel, RunModel, SessionModel
 from chatddx.repo.inventories import InventoryBranchModel
 
@@ -167,8 +168,8 @@ def test_changelist_links_experiment_and_session(
     experiment_url = reverse("admin:orm_experiment_change", args=[experiment.pk])
     session_url = reverse("admin:orm_session_change", args=[session.pk])
 
-    assert f'<a href="{experiment_url}">' in content
-    assert f'<a href="{session_url}">' in content
+    assert f'<a class="{LINK_CLASS}" href="{experiment_url}">' in content
+    assert f'<a class="{LINK_CLASS}" href="{session_url}">' in content
 
 
 @pytest.mark.django_db
