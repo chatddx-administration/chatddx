@@ -1,5 +1,6 @@
 from chatddx.django.portal.pages.agent import *
 from chatddx.django.portal.pages.auth import *
+from chatddx.django.portal.pages.batch import *
 from chatddx.django.portal.pages.case import *
 from chatddx.django.portal.pages.connection import *
 from chatddx.django.portal.pages.expect import *
