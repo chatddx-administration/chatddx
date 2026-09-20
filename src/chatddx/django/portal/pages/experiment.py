@@ -234,7 +234,7 @@ class RunAdmin(TypedModelAdmin[Run]):
         "timestamp",
         "experiment_",
         "status",
-        "session",
+        "session_",
         "result",
         "collaborators_csv",
     )
@@ -258,7 +258,7 @@ class RunAdmin(TypedModelAdmin[Run]):
 
     @admin.display(description="Experiment")
     def experiment_(self, obj: Run):
-        return Experiment.objects.get(pk=obj.experiment_id)
+        return obj.experiment_link
 
     @admin.display(description="Session")
     def session_(self, obj: Run):

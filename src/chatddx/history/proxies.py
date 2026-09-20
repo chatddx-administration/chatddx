@@ -124,6 +124,15 @@ class Run(RunModel):
         return ", ".join(str(c) for c in self.collaborators.all()) or None
 
     @cached_property
+    def experiment_link(self):
+        url = reverse("admin:orm_experiment_change", args=[self.experiment_id])
+        return format_html(
+            '<a href="{}">{}</a>',
+            url,
+            Experiment.objects.get(pk=self.experiment_id),
+        )
+
+    @cached_property
     def session_link(self):
         if not self.session_id:
             return None
