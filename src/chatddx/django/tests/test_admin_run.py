@@ -149,6 +149,29 @@ def test_changelist_shows_experiment_timestamp_and_uuid(
 
 
 @pytest.mark.django_db
+def test_changelist_links_experiment_and_session(
+    run: RunModel,
+    experiment: ExperimentModel,
+    user_client: Client,
+):
+    session = SessionModel.objects.create(
+        owner=run.owner,
+        context=SessionContextChoices.EXPERIMENT,
+    )
+    run.session = session
+    run.save(update_fields=["session"])
+
+    response = user_client.get(reverse("admin:orm_run_changelist"))
+    content = response.content.decode()
+
+    experiment_url = reverse("admin:orm_experiment_change", args=[experiment.pk])
+    session_url = reverse("admin:orm_session_change", args=[session.pk])
+
+    assert f'<a href="{experiment_url}">' in content
+    assert f'<a href="{session_url}">' in content
+
+
+@pytest.mark.django_db
 def test_session_field_is_a_link_not_a_dropdown(run: RunModel, user_client: Client):
     session = SessionModel.objects.create(
         owner=run.owner,
