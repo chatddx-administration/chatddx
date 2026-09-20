@@ -13,36 +13,25 @@ from chatddx.repo.inventories import InventoryBranchModel
 pytestmark = pytest.mark.django_db(transaction=True)
 
 
-def test_super_agent_change_recreates_dangling_connection_branch(
+def test_super_agent_change_recreates_no_branch(
     inventory_fixture_bm: InventoryBranchModel,
     user_client: Client,
 ):
+    """
+    Every trail an agent reaches was given a branch when the agent was
+    committed (`commit_closure`), so rendering the change form is a lookup:
+    it writes nothing and has nothing to report.
+    """
     agent = inventory_fixture_bm["agent"]["some-agent"]
-    fingerprint = agent.target.connection.fingerprint
+
+    before = ConnectionBranchModel.objects.count()
 
     change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
     response = user_client.get(change_url)
-    assert response.status_code == 200
 
+    assert response.status_code == 200
     assert not response.context["messages"]
-
-    _ = ConnectionBranchModel.objects.filter(target=agent.target.connection).delete()
-
-    change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
-    response = user_client.get(change_url)
-    assert response.status_code == 200
-
-    messages = list(response.context["messages"])
-
-    assert any(fingerprint[:6] in str(m.message) for m in messages), (
-        f"'{fingerprint}' not found in: {[m.message for m in messages]}"
-    )
-
-    change_url = reverse("admin:orm_superagent_change", args=[agent.pk])
-    response = user_client.get(change_url)
-    assert response.status_code == 200
-
-    assert not response.context["messages"]
+    assert ConnectionBranchModel.objects.count() == before
 
 
 @pytest.mark.django_db

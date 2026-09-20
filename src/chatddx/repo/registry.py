@@ -152,15 +152,20 @@ from chatddx.repo.families import (
     TrailSpec,
 )
 
-# `all_entities` iterates this, and an entity that is referenced by branch
-# name (a case's expects) has to be committed before the one referencing it.
+# `all_entities` iterates this, and what an entity references has to be
+# committed before it: a case's expects, because they are named by branch
+# name, and everything an entity reaches through its trail, because
+# `commit()` gives a branchless trail in its closure a generated name (see
+# `chatddx.repo.names`). Commit an agent before its connection and the
+# connection ends up with that generated name as well as the one the
+# inventory gave it.
 type EntityName = Literal[
-    "agent",
     "connection",
     "sampling_params",
     "output_type",
     "tool",
     "tool_group",
+    "agent",
     "scorer",
     "expect",
     "case",

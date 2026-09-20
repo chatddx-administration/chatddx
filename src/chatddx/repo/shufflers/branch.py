@@ -16,9 +16,10 @@ from chatddx.repo.families.pydantic import (
     TrailSpec,
     relation_fields,
 )
+from chatddx.repo.names import resolve_branch_name
 from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers.trail import dump_trail
-from chatddx.repo.utils import resolve_trail
+from chatddx.repo.utils import resolve_trail, trail_closure
 from chatddx.utils import make_async
 
 
@@ -181,6 +182,7 @@ def commit(
         # What a branch carries besides its content is not fingerprinted, so
         # it can change while the canon stays put.
         commit_relations(canon, canon, branch_details)
+        _ = commit_closure(canon.target, branch_details.owner)
         return False
 
     match trail:
@@ -196,11 +198,69 @@ def commit(
     )
 
     commit_relations(branch_model, canon, branch_details)
+    _ = commit_closure(target, branch_details.owner)
 
     return True
 
 
 commit_async = make_async(commit)
+
+
+def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
+    """
+    Give every trail `target` reaches a branch of `owner_name`'s, and answer
+    with the names of the ones that had to be made.
+
+    A trail an owner holds only through another -- an agent's connection, a
+    tool group's tools -- is as much in their possession as the one they
+    named, and anything that offers to show or edit it needs a branch to say
+    *which* one it is. So a commit is not finished until the closure of what
+    it committed is committed too.
+
+    Only a trail the owner has *no* branch of gets one. Where they already
+    have one, which of their versions is canon and what it is called is
+    theirs, and a save of something referencing it is not the place to
+    revisit that.
+
+    These branches are made on the owner's behalf rather than saved by them,
+    so they carry nothing beside their content: no tags, no collaborators,
+    and for a case no expects. A collaborator saving a shared model commits
+    under the owner's name, and what the owner's version of a connection is
+    tagged with is not the collaborator's to write -- so it is dropped,
+    silently and on purpose.
+    """
+    committed: list[str] = []
+
+    for trail in trail_closure(target):
+        entity = entity_of(trail)
+
+        has_branch = entity.branch_model.objects.filter(
+            target=trail,
+            owner__name=owner_name,
+        ).exists()
+
+        if has_branch:
+            # Skipped, not stepped over: what this trail reaches is still
+            # walked, so an owner left holding a tool group whose tools have
+            # no branches is repaired rather than kept out of reach.
+            continue
+
+        branch_name = resolve_branch_name(entity.name, trail.fingerprint)
+
+        _ = commit(
+            trail=trail,
+            branch_details=BranchSchemaDetails(
+                name=branch_name,
+                owner=owner_name,
+            ),
+        )
+
+        committed.append(branch_name)
+
+    return committed
+
+
+commit_closure_async = make_async(commit_closure)
 
 
 # How a branch-details field turns each name it holds into the row that name
