@@ -28,6 +28,12 @@ from chatddx.repo.entities.expect.pydantic import (
     ExpectFormDataOut,
     ExpectTrailSchema,
 )
+from chatddx.repo.entities.instruction.django import InstructionBranchModel
+from chatddx.repo.entities.instruction.pydantic import (
+    InstructionBranchSpec,
+    InstructionFormDataOut,
+    InstructionTrailSchema,
+)
 from chatddx.repo.entities.output_type.django import OutputTypeBranchModel
 from chatddx.repo.entities.output_type.pydantic import (
     OutputTypeBranchSpec,
@@ -63,6 +69,7 @@ from chatddx.repo.families.pydantic import BranchDetailsPatch
 
 class ParsedInventory(BaseModel):
     agent: dict[str, tuple[AgentTrailSchema, BranchDetailsPatch]]
+    instruction: dict[str, tuple[InstructionTrailSchema, BranchDetailsPatch]]
     connection: dict[str, tuple[ConnectionTrailSchema, BranchDetailsPatch]]
     sampling_params: dict[str, tuple[SamplingParamsTrailSchema, BranchDetailsPatch]]
     tool_group: dict[str, tuple[ToolGroupTrailSchema, BranchDetailsPatch]]
@@ -75,6 +82,7 @@ class ParsedInventory(BaseModel):
 
 class InventoryTrailSchema(BaseModel):
     agent: dict[str, AgentTrailSchema]
+    instruction: dict[str, InstructionTrailSchema]
     connection: dict[str, ConnectionTrailSchema]
     sampling_params: dict[str, SamplingParamsTrailSchema]
     tool_group: dict[str, ToolGroupTrailSchema]
@@ -87,6 +95,7 @@ class InventoryTrailSchema(BaseModel):
 
 class InventoryFormDataOut(BaseModel):
     agent: dict[str, AgentFormDataOut]
+    instruction: dict[str, InstructionFormDataOut]
     connection: dict[str, ConnectionFormDataOut]
     sampling_params: dict[str, SamplingParamsFormDataOut]
     output_type: dict[str, OutputTypeFormDataOut]
@@ -99,6 +108,7 @@ class InventoryFormDataOut(BaseModel):
 
 class InventoryBranchSpec(BaseModel):
     agent: dict[str, AgentBranchSpec]
+    instruction: dict[str, InstructionBranchSpec]
     connection: dict[str, ConnectionBranchSpec]
     sampling_params: dict[str, SamplingParamsBranchSpec]
     output_type: dict[str, OutputTypeBranchSpec]
@@ -111,6 +121,7 @@ class InventoryBranchSpec(BaseModel):
 
 class InventoryBranchModel(TypedDict):
     agent: dict[str, AgentBranchModel]
+    instruction: dict[str, InstructionBranchModel]
     connection: dict[str, ConnectionBranchModel]
     sampling_params: dict[str, SamplingParamsBranchModel]
     output_type: dict[str, OutputTypeBranchModel]

@@ -10,5 +10,5 @@ def test_properties(inventory_fixture_ts: InventoryTrailSchema):
     agent_1_ = inventory_fixture_ts.agent["agent-1"]
     assert agent_1_.fingerprint == fingerprint
 
-    agent_1_.instructions += "a"
+    agent_1_.instruction.definition += "a"
     assert agent_1_.fingerprint != fingerprint

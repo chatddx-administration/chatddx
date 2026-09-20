@@ -210,14 +210,14 @@ def test_agent_add(
 
     post_data = data[some_key].model_dump(by_alias=True)
 
-    assert isinstance(post_data["instructions"], str)
-    assert post_data["instructions"] == "some instructions"
+    assert isinstance(post_data["instruction"], str)
+    assert post_data["instruction"] == "some instructions"
 
     assert "connection_id" not in post_data
     assert post_data["connection"] is not None
 
     assert (
-        AgentBranchModel.objects.get(name=some_key).target.instructions
+        AgentBranchModel.objects.get(name=some_key).target.instruction.definition
         == "some instructions"
     )
 
@@ -246,14 +246,14 @@ def test_agent_add_with_collaborators(
 
     post_data = data[some_key].model_dump(by_alias=True)
 
-    assert isinstance(post_data["instructions"], str)
-    assert post_data["instructions"] == "some instructions"
+    assert isinstance(post_data["instruction"], str)
+    assert post_data["instruction"] == "some instructions"
 
     assert "connection_id" not in post_data
     assert post_data["connection"] is not None
 
     agent_branch = AgentBranchModel.objects.get(name=some_key)
-    assert agent_branch.target.instructions == "some instructions"
+    assert agent_branch.target.instruction.definition == "some instructions"
 
     response = user_client.post(
         reverse("admin:orm_agent_add"),

@@ -33,9 +33,12 @@ class SuperAgentAdmin(BranchModelAdmin[SuperAgent]):
         "collaborators_csv",
     ]
 
-    @admin.display(description="Instructions", ordering="target__instructions")
+    @admin.display(
+        description="Instructions",
+        ordering="target__instruction__definition",
+    )
     def instructions(self, obj: Agent) -> str:
-        return truncate_for_list_display(obj.target.instructions)
+        return truncate_for_list_display(obj.target.instruction.definition)
 
     @admin.display(description="Connection", ordering="connection_name")
     def connection(self, obj: Agent):

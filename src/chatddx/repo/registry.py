@@ -71,6 +71,18 @@ from chatddx.repo.entities.expect import (
     ExpectTrailSchemaRef,
     ExpectTrailSpec,
 )
+from chatddx.repo.entities.instruction import (
+    Instruction as InstructionProxy,
+    InstructionBranchModel,
+    InstructionBranchSchema,
+    InstructionBranchSpec,
+    InstructionFormDataIn,
+    InstructionFormDataOut,
+    InstructionTrailModel,
+    InstructionTrailSchema,
+    InstructionTrailSchemaRef,
+    InstructionTrailSpec,
+)
 from chatddx.repo.entities.output_type import (
     OutputType as OutputTypeProxy,
     OutputTypeBranchModel,
@@ -160,6 +172,7 @@ from chatddx.repo.families import (
 # connection ends up with that generated name as well as the one the
 # inventory gave it.
 type EntityName = Literal[
+    "instruction",
     "connection",
     "sampling_params",
     "output_type",
@@ -266,6 +279,28 @@ type AgentMember = (
     | AgentTrailSchemaRef
     | AgentTrailModel
     | AgentBranchModel
+)
+
+
+type InstructionEntity = Entity[
+    InstructionBranchSchema,
+    InstructionBranchSpec,
+    InstructionTrailSchema,
+    InstructionTrailSpec,
+    InstructionTrailSchemaRef,
+    BranchSchemaDetails,
+    BranchDetailsPatch,
+    InstructionTrailModel,
+    InstructionBranchModel,
+]
+type InstructionMember = (
+    InstructionBranchSchema
+    | InstructionBranchSpec
+    | InstructionTrailSchema
+    | InstructionTrailSpec
+    | InstructionTrailSchemaRef
+    | InstructionTrailModel
+    | InstructionBranchModel
 )
 
 
@@ -487,6 +522,19 @@ AGENT: AgentEntity = Entity(
     branch_model=AgentBranchModel,
 )
 
+INSTRUCTION: InstructionEntity = Entity(
+    name="instruction",
+    branch_schema=InstructionBranchSchema,
+    branch_spec=InstructionBranchSpec,
+    trail_schema=InstructionTrailSchema,
+    trail_spec=InstructionTrailSpec,
+    trail_schema_ref=InstructionTrailSchemaRef,
+    branch_details=BranchSchemaDetails,
+    branch_details_patch=BranchDetailsPatch,
+    trail_model=InstructionTrailModel,
+    branch_model=InstructionBranchModel,
+)
+
 CONNECTION: ConnectionEntity = Entity(
     name="connection",
     branch_schema=ConnectionBranchSchema,
@@ -612,6 +660,21 @@ SUPER_AGENT_VIEW: View[SuperAgentProxy, AgentFormDataIn, SuperAgentFormDataOut] 
     shared_proxy=SharedSuperAgentProxy,
     form_data_in=AgentFormDataIn,
     form_data_out=SuperAgentFormDataOut,
+)
+
+# An instruction has no page of its own: it is rendered inline, as the one
+# textarea on both agent forms. The view is here because every entity has
+# one of its name, and because the template registry the forms read is built
+# from `form_data_out` per entity.
+INSTRUCTION_VIEW: View[
+    InstructionProxy, InstructionFormDataIn, InstructionFormDataOut
+] = View(
+    name="instruction",
+    entity=INSTRUCTION,
+    proxy=InstructionProxy,
+    shared_proxy=None,
+    form_data_in=InstructionFormDataIn,
+    form_data_out=InstructionFormDataOut,
 )
 
 CONNECTION_VIEW: View[

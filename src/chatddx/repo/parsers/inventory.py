@@ -310,6 +310,10 @@ def preprocess(raw_data: dict[str, Any]) -> dict[str, Any]:
 
     data = deepcopy(raw_data)
 
+    agents = data.get("agent", {})
+    for agent, agent_data in agents.items():
+        bundle_the_instruction(agent, agent_data)
+
     cases = data.get("case", {})
     for case, case_data in cases.items():
         if "payload" not in case_data:
@@ -329,6 +333,35 @@ def preprocess(raw_data: dict[str, Any]) -> dict[str, Any]:
                 case_data["expects"].append(expect_name)
 
     return data
+
+
+def bundle_the_instruction(agent: str, agent_data: Record) -> None:
+    """
+    Read `instructions = "..."` on an agent as the instruction it names.
+
+    An agent's instruction is a bundle of its own (see
+    `chatddx.repo.entities.instruction`), and an inventory writes it inline
+    and flat, the way it always has. `instructions_path` is carried over
+    with it, because this runs before imports are resolved.
+
+    An agent is free to name an instruction the long way instead -- a
+    record of its own, or an inline `[agent.x.instruction]` table -- so
+    saying it both ways is an error rather than one silently winning.
+    """
+    for flat, bundled in (
+        ("instructions", "definition"),
+        ("instructions_path", "definition_path"),
+    ):
+        if flat not in agent_data:
+            continue
+
+        if "instruction" in agent_data:
+            raise ParseError(
+                f"Both '{flat}' and 'instruction' are defined on agent "
+                + f"'{agent}', pick one."
+            )
+
+        agent_data["instruction"] = {bundled: agent_data.pop(flat)}
 
 
 def extend_registries(base: DictRegistry, update: DictRegistry):

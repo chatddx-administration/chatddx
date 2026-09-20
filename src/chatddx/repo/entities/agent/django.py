@@ -3,11 +3,11 @@
 from django.db.models import (
     PROTECT,
     ForeignKey,
-    TextField,
 )
 
 from chatddx.django.orm.utils import Sharable
 from chatddx.repo.entities.connection.django import ConnectionTrailModel
+from chatddx.repo.entities.instruction.django import InstructionTrailModel
 from chatddx.repo.entities.output_type.django import OutputTypeTrailModel
 from chatddx.repo.entities.sampling_params.django import SamplingParamsTrailModel
 from chatddx.repo.entities.tool_group.django import ToolGroupTrailModel
@@ -19,7 +19,10 @@ class AgentTrailModel(TrailModel):
         app_label = "orm"
         db_table = "agents_agent"
 
-    instructions = TextField()
+    instruction = ForeignKey(
+        InstructionTrailModel,
+        on_delete=PROTECT,
+    )
     connection = ForeignKey(
         ConnectionTrailModel,
         on_delete=PROTECT,

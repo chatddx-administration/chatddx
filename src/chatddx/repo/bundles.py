@@ -17,6 +17,7 @@ class RegistryCollisionError(Exception):
 
 ALL_ENTITIES: tuple[AnyEntity, ...] = (
     AGENT,
+    INSTRUCTION,
     CONNECTION,
     SAMPLING_PARAMS,
     OUTPUT_TYPE,
@@ -30,6 +31,7 @@ ALL_ENTITIES: tuple[AnyEntity, ...] = (
 ALL_VIEWS: tuple[AnyView, ...] = (
     AGENT_VIEW,
     SUPER_AGENT_VIEW,
+    INSTRUCTION_VIEW,
     CONNECTION_VIEW,
     SAMPLING_PARAMS_VIEW,
     OUTPUT_TYPE_VIEW,
@@ -95,6 +97,12 @@ def _by_mro[T](index: dict[type, T], x: object) -> T | None:
 def entity_of(
     x: AgentMember | type[AgentMember] | Literal["agent"],
 ) -> AgentEntity: ...
+
+
+@overload
+def entity_of(
+    x: InstructionMember | type[InstructionMember] | Literal["instruction"],
+) -> InstructionEntity: ...
 
 
 @overload

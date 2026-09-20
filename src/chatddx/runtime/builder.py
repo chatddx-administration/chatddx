@@ -35,7 +35,7 @@ def build_agent(
     model_settings = build_config(agent_spec.sampling_params)
     tool_group_instructions, tools = build_tools(agent_spec.tool_group)
 
-    instructions = Template(agent_spec.instructions).render(
+    instructions = Template(agent_spec.instruction.definition).render(
         tool_group_instructions=tool_group_instructions,
     )
 
