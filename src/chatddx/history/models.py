@@ -23,10 +23,59 @@ from chatddx.core.choices import (
     RunStatusChoices,
     SessionContextChoices,
 )
-from chatddx.core.models import IdentityModel
+from chatddx.core.models import IdentityModel, TagModel
 from chatddx.repo.entities.agent.django import AgentBranchModel, AgentTrailModel
 from chatddx.repo.entities.case.django import CaseTrailModel
 from chatddx.repo.entities.expect.django import ExpectTrailModel
+from chatddx.repo.entities.scorer.django import ScorerBranchModel
+
+
+class BatchModel(Model):
+    """
+    One standing order for experiments: an agent, the case tags to draw cases
+    from, and the scorers to score them with.
+
+    The order is kept, not its outcome, so the same batch can be generated
+    from more than once (see `chatddx.history.batches`) and every experiment
+    it ever made points back at it through `ExperimentModel.batch`.
+    """
+
+    class Meta:
+        app_label = "orm"
+        db_table = "agents_batch"
+
+    uuid = UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+    )
+    timestamp = DateTimeField(auto_now_add=True)
+    owner = ForeignKey(
+        IdentityModel,
+        on_delete=PROTECT,
+    )
+    owner_id: int
+
+    agent = ForeignKey(
+        AgentTrailModel,
+        on_delete=PROTECT,
+        related_name="batches",
+    )
+    agent_id: int
+
+    case_tags = ManyToManyField(
+        TagModel,
+        related_name="batches",
+    )
+
+    # An empty set is not "no scorers" but "every scorer the cases carry";
+    # see `chatddx.history.batches.plan`.
+    scorers = ManyToManyField(
+        ScorerBranchModel,
+        blank=True,
+        related_name="batches",
+    )
+
+    experiments: QuerySet[ExperimentModel]
 
 
 class ExperimentModel(Model):
@@ -68,6 +117,18 @@ class ExperimentModel(Model):
         related_name="experiments",
     )
     expect_id: int
+
+    # The batch that generated this experiment, where one did: an experiment
+    # added by hand has none.
+    batch = ForeignKey(
+        BatchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="experiments",
+    )
+    batch_id: int | None
 
 
 class SessionModel(Model):

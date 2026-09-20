@@ -30,6 +30,7 @@ class BaseExperimentAdmin(TypedModelAdmin[Experiment]):
         "agent_",
         "case_",
         "expect_",
+        "batch_",
         "collaborators_csv",
     )
     fields = list_display
@@ -48,6 +49,11 @@ class BaseExperimentAdmin(TypedModelAdmin[Experiment]):
     @admin.display(description="Expect")
     def expect_(self, obj: Experiment):
         return obj.expect_label
+
+    @admin.display(description="Batch")
+    def batch_(self, obj: Experiment):
+        # Only an experiment a batch generated has one to point back at.
+        return obj.batch_link
 
     @override
     def has_add_permission(self, request: HttpRequest):

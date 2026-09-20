@@ -40,6 +40,7 @@ class TrailModel(Model):
 
 class BranchModel(Model):
     target: Field[Any, Any]
+    target_id: int
 
     name = CharField(max_length=255)
 

@@ -1,0 +1,93 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n unfold %}
+
+{% block content %}
+    <div class="border border-base-200 rounded-default shadow-xs dark:border-base-800">
+        <p class="font-semibold p-4 text-font-important-light dark:text-font-important-dark">
+            {{ headline }}
+        </p>
+
+        {% if plan.excluded %}
+            <div class="border-base-200 border-t p-4 dark:border-base-800">
+                <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+                    {% translate "Cases left out" %}
+                </h2>
+
+                <p class="mb-2 text-sm">
+                    {% blocktranslate count counter=plan.excluded|length %}{{ counter }} case carries none of the chosen scorers and is left out of the batch:{% plural %}{{ counter }} cases carry none of the chosen scorers and are left out of the batch:{% endblocktranslate %}
+                </p>
+
+                <ul class="leading-relaxed text-sm">
+                    {% for name in plan.excluded_shown %}
+                        <li>{{ name }}</li>
+                    {% endfor %}
+                    {% if plan.excluded_rest %}
+                        <li>{% blocktranslate count counter=plan.excluded_rest %}and {{ counter }} more{% plural %}and {{ counter }} more{% endblocktranslate %}</li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="border-base-200 border-t p-4 dark:border-base-800">
+            <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+                {% translate "Experiments to generate" %}
+            </h2>
+
+            <table class="border border-base-200 rounded-default text-sm w-full dark:border-base-800">
+                <thead>
+                    <tr>
+                        <th class="border-b border-base-200 font-semibold px-3 py-2 text-left dark:border-base-800">{% translate "Case tag" %}</th>
+                        <th class="border-b border-base-200 font-semibold px-3 py-2 text-left dark:border-base-800">{% translate "Scorer" %}</th>
+                        <th class="border-b border-base-200 font-semibold px-3 py-2 text-right dark:border-base-800">{% translate "Experiments" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in plan.rows %}
+                        <tr>
+                            <td class="border-b border-base-200 px-3 py-2 dark:border-base-800">{{ row.tag }}</td>
+                            <td class="border-b border-base-200 px-3 py-2 dark:border-base-800">{{ row.scorer }}</td>
+                            <td class="border-b border-base-200 px-3 py-2 text-right dark:border-base-800">{{ row.count }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td class="border-b border-base-200 px-3 py-2 dark:border-base-800" colspan="3">
+                                {% translate "Nothing to run: no case carries the chosen tags and scorers." %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    <tr>
+                        <td class="font-semibold px-3 py-2 text-font-important-light dark:text-font-important-dark" colspan="2">{% translate "Total" %}</td>
+                        <td class="font-semibold px-3 py-2 text-right text-font-important-light dark:text-font-important-dark">{{ plan.total }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            {% if plan.overlapping %}
+                <p class="mt-2 text-sm">
+                    {% translate "A case carrying more than one of the chosen tags is counted under each of them, but only run once." %}
+                </p>
+            {% endif %}
+        </div>
+
+        <form method="post" action="{{ action_url }}" class="border-base-200 border-t px-4 py-3 dark:border-base-800">
+            {% csrf_token %}
+
+            {% for name, value in hidden %}
+                <input type="hidden" name="{{ name }}" value="{{ value }}">
+            {% endfor %}
+
+            <div class="flex flex-col gap-3 items-center w-full lg:flex-row">
+                {% component "unfold/components/button.html" with href=cancel_url variant="default" class="w-full lg:mb-0 lg:w-auto" %}
+                    {% translate "No, take me back" %}
+                {% endcomponent %}
+
+                {% if plan.total %}
+                    {% component "unfold/components/button.html" with submit=1 name=confirm_field value="yes" class="w-full lg:ml-auto lg:w-auto" %}
+                        {{ confirm_label }}
+                    {% endcomponent %}
+                {% endif %}
+            </div>
+        </form>
+    </div>
+{% endblock %}

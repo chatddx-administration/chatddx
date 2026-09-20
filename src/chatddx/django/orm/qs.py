@@ -10,7 +10,7 @@ from django.db.models import (
     Subquery,
 )
 
-from chatddx.history.models import ExperimentModel
+from chatddx.history.models import BatchModel, ExperimentModel
 from chatddx.history.proxies import Message
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.django import Agent
@@ -154,4 +154,23 @@ def qs_experiments(qs: QuerySet[ExperimentModel], owner_name: str):
         case_branch_name=Subquery(case_branch.values("name")[:1]),
         expect_branch_name=Subquery(expect_branch.values("name")[:1]),
         expect_branch_id=Subquery(expect_branch.values("id")[:1]),
+    )
+
+
+def qs_batches(qs: QuerySet[BatchModel], owner_name: str):
+    """
+    Batches with the agent named as the viewer knows it.
+
+    A batch points at an agent *trail*, the same way an experiment does (see
+    `qs_experiments`), so the name has to come from the branch the viewer has
+    of it.
+    """
+    agent_branch = Agent.objects.filter(
+        target=OuterRef("agent"),
+        owner__name=owner_name,
+    ).order_by("-timestamp")
+
+    return qs.annotate(
+        agent_branch_id=Subquery(agent_branch.values("id")[:1]),
+        agent_branch_name=Subquery(agent_branch.values("name")[:1]),
     )

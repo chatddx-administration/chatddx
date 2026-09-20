@@ -24,7 +24,13 @@ from pydantic_ai import (
 
 from chatddx.core.choices import MessageKindChoices, RoleChoices
 from chatddx.django.portal.links import add_link, change_link, named
-from chatddx.history.models import ExperimentModel, MessageModel, RunModel, SessionModel
+from chatddx.history.models import (
+    BatchModel,
+    ExperimentModel,
+    MessageModel,
+    RunModel,
+    SessionModel,
+)
 from chatddx.history.schemas import ErrorPayload, MessageSpec, PromptPayload
 from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
 from chatddx.repo.entities.case.django import Case
@@ -32,6 +38,9 @@ from chatddx.repo.entities.super_agent.django import SuperAgent
 from chatddx.repo.trail_cache import trail_cache
 from chatddx.runtime.utils import get_part_content
 from chatddx.utils import render_json_html, truncate_content
+
+# What a batch that named no scorer reads as, wherever its scorers are shown.
+ALL_SCORERS = "All scorers"
 
 
 class ToolCallSummary(NamedTuple):
@@ -60,6 +69,49 @@ def as_proxy[T: Model](proxy: type[T], instance: Model) -> T:
         [f.attname for f in fields],
         [getattr(instance, f.attname) for f in fields],
     )
+
+
+class Batch(BatchModel):
+    class Meta:
+        proxy = True
+        app_label = "orm"
+        verbose_name = "Batch"
+        verbose_name_plural = "Batches"
+
+    def __str__(self):
+        timestamp = self.timestamp.strftime("%Y-%m-%d %H:%M")
+        return f"{timestamp} — {str(self.uuid)[:8]}"
+
+    # `agent_branch_*` is annotated onto the queryset by qs_batches() (see
+    # django/orm/qs.py); it isn't a real model field, so django-types can't
+    # see it.
+    @cached_property
+    def agent_link(self):
+        trail = named(self.agent, self.agent_branch_name)  # pyright: ignore[reportAttributeAccessIssue]
+
+        if self.agent_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
+            return change_link(
+                SuperAgent(pk=self.agent_branch_id),  # pyright: ignore[reportAttributeAccessIssue]
+                trail,
+            )
+
+        return add_link(SuperAgent, trail, agent_fingerprint=trail.fingerprint)
+
+    @admin.display(description="Case tags")
+    def case_tags_csv(self):
+        return ", ".join(str(tag) for tag in self.case_tags.all()) or None
+
+    @admin.display(description="Scorers")
+    def scorers_csv(self):
+        # The set names scorer branches, which read as their name (the way
+        # `BranchProxy` has them read); no scorer named is not an empty batch
+        # but an open one: every scorer its cases carry (see
+        # `chatddx.history.batches.plan`).
+        return ", ".join(scorer.name for scorer in self.scorers.all()) or ALL_SCORERS
+
+    @admin.display(description="Experiments")
+    def experiment_count(self):
+        return self.experiments.count()
 
 
 class Experiment(ExperimentModel):
@@ -103,6 +155,15 @@ class Experiment(ExperimentModel):
             )
 
         return add_link(Case, trail, case_fingerprint=trail.fingerprint)
+
+    @cached_property
+    def batch_link(self):
+        if not self.batch_id:
+            return None
+
+        assert self.batch is not None
+
+        return change_link(as_proxy(Batch, self.batch))
 
     @cached_property
     def expect_label(self):
