@@ -28,7 +28,6 @@ from chatddx.repo.entities.agent.pydantic import AgentBranchSpec
 from chatddx.repo.entities.super_agent.django import SuperAgent
 from chatddx.repo.entities.super_agent.pydantic import SuperAgentFormDataOut
 from chatddx.repo.entities.tool.django import ToolTrailModel
-from chatddx.repo.families.pydantic import BranchSchemaDetails
 from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers import branch
 from chatddx.repo.todo import agent_relations
@@ -175,41 +174,14 @@ class SuperAgentForm(BranchForm):
         owner_name = self.request.user.username
 
         for relation, _ in SUBFORMS:
-            agent_trail = instance.target
-
-            relation_trail = getattr(agent_trail, relation)
-            relation_fingerprint = relation_trail.fingerprint
-
-            try:
-                branch_model = branch.get_branch_model(
-                    entity_name=relation,
-                    owner_name=owner_name,
-                    fingerprint=relation_fingerprint,
-                )
-            except branch.BranchNotFoundError:
-                branch_name = str(relation_trail.fingerprint)[:6]
-
-                created = branch.commit(
-                    branch_details=BranchSchemaDetails(
-                        name=branch_name,
-                        owner=owner_name,
-                    ),
-                    trail=relation_trail,
-                )
-
-                branch_model = branch.get_branch_model(
-                    entity_name=relation,
-                    owner_name=owner_name,
-                    fingerprint=relation_fingerprint,
-                )
-
-                # consistency check
-                assert created == True
-
-                messages.info(
-                    self.request,
-                    f"Recreated a branch for trail '{relation}' with fingerprint '{relation_trail.fingerprint[:6]}' fyi 👇",
-                )
+            # Every trail the agent reaches was given a branch when the agent
+            # was committed -- see `branch.commit_closure` -- so this is a
+            # lookup and not a place to invent one.
+            branch_model = branch.get_branch_model(
+                entity_name=relation,
+                owner_name=owner_name,
+                fingerprint=getattr(instance.target, relation).fingerprint,
+            )
 
             relations_dict[relation] = load_form_data(branch_model)
 

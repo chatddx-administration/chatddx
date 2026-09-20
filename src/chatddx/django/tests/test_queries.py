@@ -70,11 +70,21 @@ def test_ownership(
 def test_sampling_params(inventory_fixture_fdo: InventoryFormDataOut):
     data = inventory_fixture_fdo.sampling_params
 
-    assert data.keys() == {
+    named = {
         "sampling_params-2",
         "sampling_params-1",
         "some-sampling_params",
     }
+
+    # agent-2 asks for the two of them merged, which is a trail of its own
+    # that the inventory never named. The owner reaches it through the agent,
+    # so committing the agent gave it a branch under a generated name -- see
+    # `chatddx.repo.names` and `commit_closure`.
+    generated = data.keys() - named
+
+    assert len(generated) == 1
+    assert generated.pop().startswith("sampling_params ")
+
     assert data["some-sampling_params"].stop_sequences == ""
     assert data["sampling_params-1"].stop_sequences == "\\n\\n\nEND"
     assert data["sampling_params-2"].stop_sequences == "END"
