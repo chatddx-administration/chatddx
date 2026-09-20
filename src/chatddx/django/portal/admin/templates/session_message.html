@@ -19,14 +19,8 @@
       {% render_status_badge instance %}
     </div>
       <div class="text-xs font-mono text-gray-500 dark:text-gray-400">
-      Agent:
-      <span class="a-link">
-        {{ instance.agent_link }}
-      </span>
-      Message:
-      <span class="a-link">
-        {{ instance.link }}
-      </span>
+      Agent: {{ instance.agent_link }}
+      Message: {{ instance.link }}
       </div>
 
   </div>
@@ -67,20 +61,3 @@
     {% endif %}
   </div>
 </div>
-<style>
-  .a-link a {
-    color: #2563eb;
-    text-decoration: underline;
-  }
-  .a-link a:hover {
-    color: #1d4ed8;
-  }
-  @media (prefers-color-scheme: dark) {
-    .a-link a {
-      color: #60a5fa;
-    }
-    .a-link a:hover {
-      color: #93c5fd;
-    }
-  }
-</style>

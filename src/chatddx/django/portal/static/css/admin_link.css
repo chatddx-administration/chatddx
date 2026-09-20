@@ -1,0 +1,53 @@
+/*
+ * The look of a reference from one record to another -- an experiment's
+ * agent, a run's session, a message's run. Every one of them is rendered by
+ * chatddx.django.portal.links, which is the only thing that puts the
+ * chatddx-link class below on an anchor, so this file is the one place to
+ * change how all of them read.
+ *
+ * Deliberately quiet: a changelist row is mostly references, and colouring
+ * each one turns the table into a wall of blue. Resting state keeps the
+ * text colour and carries a faint underline; hover and keyboard focus are
+ * what light it up.
+ */
+
+.chatddx-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 30%, transparent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition:
+        color 120ms ease,
+        text-decoration-color 120ms ease;
+}
+
+.chatddx-link:hover,
+.chatddx-link:focus-visible {
+    color: var(--color-primary-600, #4f46e5);
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
+}
+
+.chatddx-link:focus-visible {
+    outline: 2px solid var(--color-primary-500, #6366f1);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/*
+ * Unfold toggles dark mode with a class on <html>, so the primary shade has
+ * to step up for contrast there; the media query covers the same page
+ * before that class lands.
+ */
+.dark .chatddx-link:hover,
+.dark .chatddx-link:focus-visible {
+    color: var(--color-primary-400, #a78bfa);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not(.light) .chatddx-link:hover,
+    :root:not(.light) .chatddx-link:focus-visible {
+        color: var(--color-primary-400, #a78bfa);
+    }
+}

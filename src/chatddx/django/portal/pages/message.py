@@ -28,7 +28,7 @@ class MessageAdmin(TypedModelAdmin[Message]):
         "agent_",
     ]
     fields = list_display + [
-        "run_id",
+        "run_",
         "get_session",
         "thinking",
         "content",
@@ -49,7 +49,12 @@ class MessageAdmin(TypedModelAdmin[Message]):
         qs = super().get_queryset(request)
         qs = qs_messages(qs, owner_name)
         qs = qs.filter(session__owner__name=owner_name)
-        return qs
+        # agent_ and get_session link through these, once per row.
+        return qs.select_related("agent", "session")
+
+    @admin.display(description="Run")
+    def run_(self, message: Message):
+        return message.run_link
 
     @admin.display(description="Session")
     def get_session(self, message: Message):

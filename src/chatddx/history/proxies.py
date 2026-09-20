@@ -7,9 +7,8 @@ from typing import NamedTuple, cast
 
 import jsonschema
 from django.contrib import admin
+from django.db.models import Model
 from django.template.loader import render_to_string
-from django.urls import reverse
-from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from pydantic_ai import (
     ModelRequest,
@@ -24,9 +23,12 @@ from pydantic_ai import (
 )
 
 from chatddx.core.choices import MessageKindChoices, RoleChoices
+from chatddx.django.portal.links import add_link, change_link, named
 from chatddx.history.models import ExperimentModel, MessageModel, RunModel, SessionModel
 from chatddx.history.schemas import ErrorPayload, MessageSpec, PromptPayload
 from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
+from chatddx.repo.entities.case.django import Case
+from chatddx.repo.entities.super_agent.django import SuperAgent
 from chatddx.repo.trail_cache import trail_cache
 from chatddx.runtime.utils import get_part_content
 from chatddx.utils import render_json_html, truncate_content
@@ -40,6 +42,24 @@ class ToolCallSummary(NamedTuple):
 class ToolReturnSummary(NamedTuple):
     tool_name: str
     content: str
+
+
+def as_proxy[T: Model](proxy: type[T], instance: Model) -> T:
+    """
+    A row in hand, re-read as its proxy.
+
+    A proxy shares its model's table and fields, so nothing has to be
+    fetched: only the Python class differs, and with it the `__str__` that
+    says how the record reads. Values are taken by `attname`, so a foreign
+    key stays the id it already is instead of fetching what it points at.
+    """
+    fields = instance._meta.concrete_fields  # pyright: ignore[reportAttributeAccessIssue]
+
+    return proxy.from_db(
+        instance._state.db,
+        [f.attname for f in fields],
+        [getattr(instance, f.attname) for f in fields],
+    )
 
 
 class Experiment(ExperimentModel):
@@ -57,48 +77,39 @@ class Experiment(ExperimentModel):
     def collaborators_csv(self):
         return ", ".join(str(c) for c in self.collaborators.all()) or None
 
+    # `*_branch_id`/`*_branch_name` are annotated onto the queryset by
+    # qs_experiments() (see django/orm/qs.py); they aren't real model fields,
+    # so django-types can't see them.
     @cached_property
     def agent_link(self):
-        if self.agent_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
-            url = reverse(
-                "admin:orm_superagent_change",
-                args=[self.agent_branch_id],  # pyright: ignore[reportAttributeAccessIssue]
-            )
-            label = f"{self.agent_branch_name} ({self.agent.fingerprint[:6]})"  # pyright: ignore[reportAttributeAccessIssue]
-        else:
-            url = (
-                reverse("admin:orm_superagent_add")
-                + f"?agent_fingerprint={self.agent.fingerprint}"
-            )
-            label = self.agent.fingerprint[:6]
+        trail = named(self.agent, self.agent_branch_name)  # pyright: ignore[reportAttributeAccessIssue]
 
-        return format_html('<a href="{}">{}</a>', url, label)
+        if self.agent_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
+            return change_link(
+                SuperAgent(pk=self.agent_branch_id),  # pyright: ignore[reportAttributeAccessIssue]
+                trail,
+            )
+
+        return add_link(SuperAgent, trail, agent_fingerprint=trail.fingerprint)
 
     @cached_property
     def case_link(self):
-        if self.case_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
-            url = reverse(
-                "admin:orm_case_change",
-                args=[self.case_branch_id],  # pyright: ignore[reportAttributeAccessIssue]
-            )
-            label = f"{self.case_branch_name} ({self.case.fingerprint[:6]})"  # pyright: ignore[reportAttributeAccessIssue]
-        else:
-            url = (
-                reverse("admin:orm_case_add")
-                + f"?case_fingerprint={self.case.fingerprint}"
-            )
-            label = self.case.fingerprint[:6]
+        trail = named(self.case, self.case_branch_name)  # pyright: ignore[reportAttributeAccessIssue]
 
-        return format_html('<a href="{}">{}</a>', url, label)
+        if self.case_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
+            return change_link(
+                Case(pk=self.case_branch_id),  # pyright: ignore[reportAttributeAccessIssue]
+                trail,
+            )
+
+        return add_link(Case, trail, case_fingerprint=trail.fingerprint)
 
     @cached_property
     def expect_label(self):
         # Expect has no admin page of its own -- it's only ever edited inline
-        # on its case -- so it reads as a name, not as a link.
-        short_hash = self.expect.fingerprint[:6]
-        name = self.expect_branch_name  # pyright: ignore[reportAttributeAccessIssue]
-
-        return f"{name} ({short_hash})" if name else short_hash
+        # on its case -- so it reads as a name, not as a link. The name is
+        # still the one `__str__` gives every other reference.
+        return str(named(self.expect, self.expect_branch_name))  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class SharedExperiment(Experiment):
@@ -125,24 +136,16 @@ class Run(RunModel):
 
     @cached_property
     def experiment_link(self):
-        url = reverse("admin:orm_experiment_change", args=[self.experiment_id])
-        return format_html(
-            '<a href="{}">{}</a>',
-            url,
-            Experiment.objects.get(pk=self.experiment_id),
-        )
+        return change_link(as_proxy(Experiment, self.experiment))
 
     @cached_property
     def session_link(self):
         if not self.session_id:
             return None
 
-        url = reverse("admin:orm_session_change", args=[self.session_id])
-        return format_html(
-            '<a href="{}">{}</a>',
-            url,
-            Session.objects.get(pk=self.session_id),
-        )
+        assert self.session is not None
+
+        return change_link(as_proxy(Session, self.session))
 
     @cached_property
     def result_html(self):
@@ -239,44 +242,50 @@ class Message(MessageModel):
 
     @cached_property
     def session_link(self):
-        url = reverse("admin:orm_session_change", args=[self.session.pk])
-        return format_html(
-            '<a href="{}">{}</a>',
-            url,
-            Session.objects.get(pk=self.session.pk),
-        )
+        return change_link(as_proxy(Session, self.session))
+
+    @cached_property
+    def run_link(self):
+        """
+        The run this message belongs to.
+
+        `run_id` holds a run's uuid rather than its primary key -- a message
+        is written by whoever ran it, without a foreign key back -- so the
+        run has to be looked up, and may be gone.
+        """
+        run = Run.objects.filter(uuid=self.run_id).first()
+
+        if run is None:
+            return self.run_id
+
+        return change_link(run)
 
     @cached_property
     def agent_link(self):
         # agent_branch_id/agent_branch_name are annotated onto the queryset by
-        # get_step_nav() (see django/portal/admin/utils.py); they aren't real
-        # model fields, so django-types can't see them.
-        if self.agent_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
-            url = (
-                reverse(
-                    "admin:orm_superagent_change",
-                    args=[self.agent_branch_id],  # pyright: ignore[reportAttributeAccessIssue]
-                )
-                + f"?from_message={self.pk}"
-            )
-            label = f"{self.agent_branch_name} ({self.agent.fingerprint[:6]})"  # pyright: ignore[reportAttributeAccessIssue]
-        else:
-            url = (
-                reverse("admin:orm_superagent_add")
-            ) + f"?from_message={self.pk}&agent_fingerprint={self.agent.fingerprint}"
-            label = self.agent.fingerprint[:6]
+        # qs_messages() (see django/orm/qs.py); they aren't real model fields,
+        # so django-types can't see them.
+        trail = named(self.agent, self.agent_branch_name)  # pyright: ignore[reportAttributeAccessIssue]
 
-        return format_html('<a href="{}">{}</a>', url, label)
+        if self.agent_branch_id:  # pyright: ignore[reportAttributeAccessIssue]
+            return change_link(
+                SuperAgent(pk=self.agent_branch_id),  # pyright: ignore[reportAttributeAccessIssue]
+                trail,
+                from_message=self.pk,
+            )
+
+        return add_link(
+            SuperAgent,
+            trail,
+            from_message=self.pk,
+            agent_fingerprint=trail.fingerprint,
+        )
 
     @cached_property
     def link(self):
-        url = reverse(
-            "admin:orm_message_change",
-            args=[self.pk],
-        )
-        label = f"#{self.pk}"
-
-        return format_html('<a href="{}">{}</a>', url, label)
+        # A permalink to this very message, shown beside the content it
+        # points at, so it reads as a number rather than repeating itself.
+        return change_link(self, f"#{self.pk}")
 
     @cached_property
     def output_schema(self):

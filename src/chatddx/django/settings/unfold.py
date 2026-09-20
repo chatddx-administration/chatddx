@@ -1,7 +1,11 @@
+from django.templatetags.static import static
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
 UNFOLD = {
+    # Loaded on every admin page, because a reference to another record is
+    # rendered on every kind of them; see chatddx.django.portal.links.
+    "STYLES": [lambda request: static("css/admin_link.css")],
     "SITE_TITLE": "chatddx",
     "SITE_HEADER": "ChatDDX Portal",
     "SITE_SUBHEADER": "Manage agent configurations",
