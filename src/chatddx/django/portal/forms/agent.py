@@ -90,7 +90,8 @@ class AgentForm(BranchForm):
         label="Auto-fill from existing agent",
         help_text="This will overwrite all edited values!",
     )
-    instructions = forms.CharField(
+    # the agent's instruction, as the text it is a bundle of
+    instruction = forms.CharField(
         required=False,
         widget=UnfoldAdminExpandableTextareaWidget(),
         label="Instructions",
@@ -158,7 +159,7 @@ class AgentForm(BranchForm):
             ),
             Row(
                 Column(
-                    "instructions",
+                    "instruction",
                 ),
                 css_class="w-1/2",
             ),

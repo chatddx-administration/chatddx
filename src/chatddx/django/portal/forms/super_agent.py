@@ -199,7 +199,8 @@ class SuperAgentForm(BranchForm):
         label="Auto-fill from existing agent",
         help_text="This will overwrite all edited values!",
     )
-    instructions = forms.CharField(
+    # the agent's instruction, as the text it is a bundle of
+    instruction = forms.CharField(
         required=False,
         widget=UnfoldAdminExpandableTextareaWidget(
             attrs={"placeholder": "No instructions provided"}
@@ -249,7 +250,7 @@ class SuperAgentForm(BranchForm):
             ),
             Row(
                 Column(
-                    "instructions",
+                    "instruction",
                     css_class="w-1/2",
                 ),
                 Column(

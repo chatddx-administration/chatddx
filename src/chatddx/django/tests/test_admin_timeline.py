@@ -95,7 +95,7 @@ def test_pager_context_navigation(
     add_url = reverse(f"admin:orm_{admin_name}_add")
 
     for i in range(3):
-        data["instructions"] = str(i)
+        data["instruction"] = str(i)
         print(data)
         _ = user_client.post(
             add_url,

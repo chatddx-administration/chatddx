@@ -41,7 +41,7 @@ def test_super_agent_add_and_versioning(
     superagent_post_data,
 ):
     post_data = superagent_post_data
-    assert post_data["instructions"] == "some instructions"
+    assert post_data["instruction"] == "some instructions"
     assert len(post_data["tool_group_tools"]) == 1
     assert isinstance(post_data["tool_group_tools"][0], str)
 
@@ -178,8 +178,8 @@ def test_superagent_collaborators(
 ):
     post_data = superagent_post_data
 
-    assert isinstance(post_data["instructions"], str)
-    assert post_data["instructions"] == "some instructions"
+    assert isinstance(post_data["instruction"], str)
+    assert post_data["instruction"] == "some instructions"
 
     post_data_with_collaborators = post_data.copy()
     post_data_with_collaborators["collaborators"] = [c.pk for c in collaborators]

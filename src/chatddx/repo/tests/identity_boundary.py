@@ -28,6 +28,8 @@ from chatddx.repo.entities.connection.django import ConnectionTrailModel
 from chatddx.repo.entities.connection.pydantic import ConnectionTrailSchema
 from chatddx.repo.entities.expect.django import ExpectTrailModel
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
+from chatddx.repo.entities.instruction.django import InstructionTrailModel
+from chatddx.repo.entities.instruction.pydantic import InstructionTrailSchema
 from chatddx.repo.entities.output_type.django import OutputTypeTrailModel
 from chatddx.repo.entities.output_type.pydantic import OutputTypeTrailSchema
 from chatddx.repo.entities.sampling_params.django import SamplingParamsTrailModel
@@ -84,6 +86,13 @@ def _test_ToolGroup(value: ToolGroupTrailSchema):
 def _test_optional_ToolGroup(value: ToolGroupTrailSchema | None):
     altered_value = (
         some_inventory.tool_group["some-tool_group"] if value is None else None
+    )
+    return deepcopy(value), altered_value
+
+
+def _test_Instruction(value: InstructionTrailSchema):
+    altered_value = value.model_copy(
+        update={"definition": _test_str(value.definition)[1]}
     )
     return deepcopy(value), altered_value
 
@@ -277,6 +286,7 @@ field_types: dict[Any, Callable[[Any], tuple[Any, Any]]] = {
     (DecimalField, Optional[SamplingDecimal]): _test_optional_decimal,  # noqa: UP045 # pyright: ignore[reportDeprecated]
     (IntegerField, int): _test_int,
     (IntegerField, int | None): _test_optional_int,
+    (InstructionTrailModel, InstructionTrailSchema): _test_Instruction,
     (JSONField, dict[str, SamplingDecimal]): _test_dict_str_decimal,
     (JSONField, dict[str, JsonValue] | None): _test_optional_dict_str_any,
     (JSONField, dict[str, JsonValue]): _test_dict_str_any,

@@ -1,10 +1,33 @@
-from pydantic import BaseModel, Field
+"""
+An agent, which is nothing but what it points at.
+
+Every field here is a relation: its instruction, its connection, its
+sampling params, its output type, its tool group. The instruction used to
+be the one primitive on the agent, and it is a bundle of its own now (see
+`chatddx.repo.entities.instruction`) -- so there is no value an agent
+holds that is not some other entity's to hold.
+
+The flat forms still show the instruction as a textarea, which is what
+`DefinitionText` and `as_definition` are for: the form data in and out of
+this entity carry the text where the trail carries the bundle.
+"""
+
+from typing import Annotated
+
+from pydantic import BeforeValidator, Field
 
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.entities.connection import (
     ConnectionFormDataIn,
     ConnectionTrailSchema,
     ConnectionTrailSpec,
+)
+from chatddx.repo.entities.instruction import (
+    DefinitionText,
+    InstructionFormDataIn,
+    InstructionTrailSchema,
+    InstructionTrailSpec,
+    as_definition,
 )
 from chatddx.repo.entities.output_type import (
     OutputTypeFormDataIn,
@@ -32,11 +55,8 @@ from chatddx.repo.families import (
 )
 
 
-class AgentTrailBase(BaseModel):
-    instructions: str
-
-
-class AgentTrailSchema(AgentTrailBase, TrailSchema):
+class AgentTrailSchema(TrailSchema):
+    instruction: InstructionTrailSchema
     connection: ConnectionTrailSchema
     sampling_params: SamplingParamsTrailSchema = Field(
         default_factory=SamplingParamsTrailSchema,
@@ -54,14 +74,16 @@ class AgentTrailSchema(AgentTrailBase, TrailSchema):
     )
 
 
-class AgentTrailSchemaRef(AgentTrailBase, TrailSchemaRef):
+class AgentTrailSchemaRef(TrailSchemaRef):
+    instruction_id: int
     connection_id: int
     sampling_params_id: int
     output_type_id: int
     tool_group_id: int
 
 
-class AgentTrailSpec(AgentTrailBase, TrailSpec):
+class AgentTrailSpec(TrailSpec):
+    instruction: InstructionTrailSpec
     connection: ConnectionTrailSpec
     sampling_params: SamplingParamsTrailSpec
     output_type: OutputTypeTrailSpec
@@ -76,15 +98,21 @@ class AgentBranchSpec(BranchSpec[AgentTrailSpec]):
     pass
 
 
-class AgentFormDataIn(AgentTrailBase, BaseFormDataIn):
+class AgentFormDataIn(BaseFormDataIn):
+    # the textarea hands over the text; the bundle is what it stands for
+    instruction: Annotated[
+        InstructionFormDataIn,
+        BeforeValidator(as_definition),
+    ]
     connection: ConnectionFormDataIn
     sampling_params: SamplingParamsFormDataIn
     output_type: OutputTypeFormDataIn
     tool_group: ToolGroupFormDataIn
 
 
-class AgentFormDataOut(AgentTrailBase, BaseFormDataOut):
+class AgentFormDataOut(BaseFormDataOut):
     id: CoercedStr = Field(serialization_alias="template")
+    instruction: DefinitionText
     connection: CoercedStr
     sampling_params: CoercedStr
     output_type: CoercedStr

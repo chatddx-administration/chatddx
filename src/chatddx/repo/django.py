@@ -2,6 +2,7 @@ from chatddx.repo.entities.agent.django import *
 from chatddx.repo.entities.case.django import *
 from chatddx.repo.entities.connection.django import *
 from chatddx.repo.entities.expect.django import *
+from chatddx.repo.entities.instruction.django import *
 from chatddx.repo.entities.output_type.django import *
 from chatddx.repo.entities.sampling_params.django import *
 from chatddx.repo.entities.scorer.django import *

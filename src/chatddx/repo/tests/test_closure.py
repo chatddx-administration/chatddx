@@ -19,6 +19,7 @@ from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.pydantic import AgentTrailSchema
 from chatddx.repo.entities.connection.pydantic import ConnectionTrailSchema
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
+from chatddx.repo.entities.instruction.pydantic import InstructionTrailSchema
 from chatddx.repo.entities.scorer.pydantic import ScorerTrailSchema
 from chatddx.repo.entities.tool.pydantic import ToolTrailSchema
 from chatddx.repo.entities.tool_group.pydantic import ToolGroupTrailSchema
@@ -61,11 +62,11 @@ def dangling_trails(owner_name: str) -> list[TrailModel]:
 
 def an_agent(instructions: str = "an agent nobody named the parts of"):
     """
-    An agent whose whole closure is new and unnamed: four relations, one of
+    An agent whose whole closure is new and unnamed: five relations, one of
     them with two tools of its own.
     """
     return AgentTrailSchema(
-        instructions=instructions,
+        instruction=InstructionTrailSchema(definition=instructions),
         connection=ConnectionTrailSchema(
             provider=ProviderChoices.VLLM,
             model="Test/closure",
@@ -94,8 +95,9 @@ def test_a_commit_leaves_nothing_in_its_closure_branchless(owner: IdentityModel)
     agent = get_branch_model("agent", owner.name, "closure-agent")
     closure = trail_closure(agent.target)
 
-    # connection, sampling params, output type, tool group, two tools
-    assert len(closure) == 6
+    # instruction, connection, sampling params, output type, tool group,
+    # two tools
+    assert len(closure) == 7
 
     for trail in closure:
         assert branches_on(trail, owner.name).count() == 1

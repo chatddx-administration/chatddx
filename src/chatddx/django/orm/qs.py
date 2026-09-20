@@ -35,8 +35,12 @@ def qs_super_agent[T: BranchModel](qs: QuerySet[T], owner_name: str):
         for field in ("name", "id")
         for model in agent_relations
     }
+    # The instruction is a relation too, but the agent forms render it
+    # inline rather than linking to a branch of it, so it is selected
+    # without being annotated.
     return qs.select_related(
-        *[f"target__{model}" for model in agent_relations]
+        "target__instruction",
+        *[f"target__{model}" for model in agent_relations],
     ).annotate(**branch_annotations)
 
 
