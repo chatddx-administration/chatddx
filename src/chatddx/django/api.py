@@ -1,3 +1,4 @@
+# pyright: basic
 from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest
@@ -114,9 +115,9 @@ async def swift_diagnose_endpoint(request: HttpRequest, payload: SwiftDiagnoseRe
             {"error": error_message},
             status=400,
         )
-    except Exception as e:
+    except Exception as e:  # ruff: ignore[BLE001]
         return api.create_response(
             request,
-            {"error": f"Execution error: {str(e)}"},
+            {"error": f"Execution error: {e}"},
             status=500,
         )

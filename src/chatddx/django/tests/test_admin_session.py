@@ -20,6 +20,10 @@ from chatddx.history.models import MessageModel, SessionModel
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.inventories import InventoryBranchModel
 
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
+
 
 def _make_message(
     session: SessionModel,
@@ -38,7 +42,6 @@ def _make_message(
     )
 
 
-@pytest.mark.django_db
 def test_session_view_renders_thinking(
     session: SessionModel,
     inventory_fixture_bm: InventoryBranchModel,
@@ -61,7 +64,6 @@ def test_session_view_renders_thinking(
     assert "reasoning about the answer" in content
 
 
-@pytest.mark.django_db
 def test_session_view_omits_thinking_block_when_absent(
     session: SessionModel,
     inventory_fixture_bm: InventoryBranchModel,
@@ -81,7 +83,6 @@ def test_session_view_omits_thinking_block_when_absent(
     assert "Thinking" not in content
 
 
-@pytest.mark.django_db
 def test_session_view_renders_tool_call(
     session: SessionModel,
     inventory_fixture_bm: InventoryBranchModel,
@@ -105,7 +106,6 @@ def test_session_view_renders_tool_call(
     assert escape('"b": 8') in content
 
 
-@pytest.mark.django_db
 def test_session_view_omits_tool_call_block_when_absent(
     session: SessionModel,
     inventory_fixture_bm: InventoryBranchModel,
@@ -123,7 +123,6 @@ def test_session_view_omits_tool_call_block_when_absent(
     assert "Tool Call:" not in content
 
 
-@pytest.mark.django_db
 def test_session_view_renders_tool_return(
     session: SessionModel,
     inventory_fixture_bm: InventoryBranchModel,
@@ -146,7 +145,6 @@ def test_session_view_renders_tool_return(
     assert escape('"result": 20') in content
 
 
-@pytest.mark.django_db
 def test_session_view_omits_tool_return_block_when_absent(
     session: SessionModel,
     inventory_fixture_bm: InventoryBranchModel,
@@ -164,7 +162,6 @@ def test_session_view_omits_tool_return_block_when_absent(
     assert "Tool Return:" not in content
 
 
-@pytest.mark.django_db
 def test_session_view_does_not_render_literal_none_for_missing_content(
     session: SessionModel,
     inventory_fixture_bm: InventoryBranchModel,

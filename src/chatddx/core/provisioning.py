@@ -81,7 +81,7 @@ def init_data(
         for key, receipt in archive_commit_receipt[entity].items():
             branch_model = inventory_branch_models[entity][key]
 
-            branch_model.collaborators.add(user)  # pyright: ignore[reportUnknownMemberType]
+            branch_model.collaborators.add(user)
             print(
                 f"[archive {entity}]: {branch_model.name} ({receipt_text[receipt]} {branch_model.target.fingerprint[:6]})"
             )

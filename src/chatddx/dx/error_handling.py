@@ -1,4 +1,5 @@
 # pyright: basic
+import logging
 from typing import Any
 
 from pydantic import ValidationError
@@ -26,7 +27,10 @@ def resolve_weirdos(val: Any):
 """
 
 
-def print_pydantic_errors(exc: ValidationError, logger=None):
+def print_pydantic_errors(
+    exc: ValidationError,
+    logger: logging.Logger | None = None,
+) -> None:
     raw_errors = exc.errors()
     formatted_errors = []
 

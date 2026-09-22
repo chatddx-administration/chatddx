@@ -20,20 +20,24 @@ connection = "qwen3-8b"
 sampling_params = ["seed-locked", "disable-thinking"]
 output_type = "management_plan_v1"
 
-[agent."gpt-oss-20b free-text seed-locked low-reasoning"]
+[agent."gpt-oss-20b diagnoses-tool seed-locked low-reasoning"]
 extends = ["medical-assistant-free-text"]
 connection = "gpt-oss-20b"
 sampling_params = ["seed-locked", "low-reasoning"]
-output_type = "free-text"
+output_type = "diagnoses tool"
 
-[agent."qwen3-8b free-text seed-locked disable-thinking"]
+[agent."qwen3-8b diagnoses seed-locked disable-thinking"]
 extends = ["medical-assistant-free-text"]
 connection = "qwen3-8b"
 sampling_params = ["seed-locked", "disable-thinking"]
-output_type = "free-text"
+output_type = "diagnoses"
 
 [output_type.management_plan_v1]
 definition_path = "./output_types/management_plan_v1.toml"
+partial = true
+
+[output_type.diagnoses]
+definition_path = "./output_types/diagnoses.json"
 partial = true
 
 [output_type."management_plan_v1 tool"]
@@ -46,4 +50,16 @@ coercion_strategy = "native"
 
 [output_type."management_plan_v1 prompted"]
 extends = ["management_plan_v1"]
+coercion_strategy = "prompted"
+
+[output_type."diagnoses tool"]
+extends = ["diagnoses"]
+coercion_strategy = "tool"
+
+[output_type."diagnoses native"]
+extends = ["diagnoses"]
+coercion_strategy = "native"
+
+[output_type."diagnoses prompted"]
+extends = ["diagnoses"]
 coercion_strategy = "prompted"

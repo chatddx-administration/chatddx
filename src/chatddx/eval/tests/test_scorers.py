@@ -1,6 +1,6 @@
 import pytest
 
-from chatddx.runtime.scorers import (
+from chatddx.eval.scorers import (
     exact_match,
     regex_match,
     resolve_scorer,

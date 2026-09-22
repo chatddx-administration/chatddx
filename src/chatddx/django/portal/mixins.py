@@ -14,7 +14,7 @@ class ModelAdminFormWithRequest:
         change: bool = False,
         **kwargs: Any,
     ):
-        Form = super().get_form(request, obj, **kwargs)
+        Form = super().get_form(request, obj, **kwargs)  # pyright: ignore[reportAttributeAccessIssue]
 
         class FormWithRequest(Form):
             def __new__(cls, *args: Any, **fkwargs: Any):
@@ -26,7 +26,7 @@ class ModelAdminFormWithRequest:
 
 class SharedMixin:
     def get_queryset(self, request: HttpRequest):
-        qs = super(ModelAdmin, self).get_queryset(request)
+        qs = super(ModelAdmin, self).get_queryset(request)  # pyright: ignore[reportArgumentType]
 
         return qs.filter(
             collaborators__name=request.user.username,

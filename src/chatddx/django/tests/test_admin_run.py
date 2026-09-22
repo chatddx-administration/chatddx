@@ -9,8 +9,11 @@ from chatddx.django.portal.links import LINK_CLASS
 from chatddx.history.models import ExperimentModel, RunModel, SessionModel
 from chatddx.repo.inventories import InventoryBranchModel
 
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
 
-@pytest.mark.django_db
+
 def test_changelist_lists_owned_runs(run: RunModel, user_client: Client):
     response = user_client.get(reverse("admin:orm_run_changelist"))
 
@@ -19,7 +22,6 @@ def test_changelist_lists_owned_runs(run: RunModel, user_client: Client):
     assert change_url.encode() in response.content
 
 
-@pytest.mark.django_db
 def test_run_can_be_added_and_owner_is_assigned(
     experiment: ExperimentModel,
     owner: IdentityModel,
@@ -42,7 +44,6 @@ def test_run_can_be_added_and_owner_is_assigned(
     assert created.owner_id == owner.pk
 
 
-@pytest.mark.django_db
 def test_run_status_can_be_changed(run: RunModel, user_client: Client):
     change_response = user_client.get(reverse("admin:orm_run_change", args=[run.pk]))
     assert change_response.status_code == 200
@@ -62,7 +63,6 @@ def test_run_status_can_be_changed(run: RunModel, user_client: Client):
     assert run.status == RunStatusChoices.QUEUED
 
 
-@pytest.mark.django_db
 def test_requeue_action_sets_status_to_queued(run: RunModel, user_client: Client):
     run.status = RunStatusChoices.ERRORED
     run.save(update_fields=["status"])
@@ -92,7 +92,6 @@ def shared_run(
     return run
 
 
-@pytest.mark.django_db
 def test_shared_run_visible_only_via_shared_tab(
     shared_run: RunModel,
     user_client: Client,
@@ -108,7 +107,6 @@ def test_shared_run_visible_only_via_shared_tab(
     assert change_url.encode() in shared_response.content
 
 
-@pytest.mark.django_db
 def test_collaborators_field_excludes_owner(
     owner: IdentityModel,
     experiment: ExperimentModel,
@@ -124,7 +122,6 @@ def test_collaborators_field_excludes_owner(
     assert f'value="{owner.pk}"' not in field_html
 
 
-@pytest.mark.django_db
 def test_experiment_dropdown_shows_timestamp_and_uuid(
     experiment: ExperimentModel,
     user_client: Client,
@@ -136,7 +133,6 @@ def test_experiment_dropdown_shows_timestamp_and_uuid(
     assert f"{timestamp} — {str(experiment.uuid)[:8]}" in content
 
 
-@pytest.mark.django_db
 def test_changelist_shows_experiment_timestamp_and_uuid(
     run: RunModel,
     experiment: ExperimentModel,
@@ -149,7 +145,6 @@ def test_changelist_shows_experiment_timestamp_and_uuid(
     assert f"{timestamp} — {str(experiment.uuid)[:8]}" in content
 
 
-@pytest.mark.django_db
 def test_changelist_links_experiment_and_session(
     run: RunModel,
     experiment: ExperimentModel,
@@ -172,7 +167,6 @@ def test_changelist_links_experiment_and_session(
     assert f'<a class="{LINK_CLASS}" href="{session_url}">' in content
 
 
-@pytest.mark.django_db
 def test_session_field_is_a_link_not_a_dropdown(run: RunModel, user_client: Client):
     session = SessionModel.objects.create(
         owner=run.owner,
@@ -189,7 +183,6 @@ def test_session_field_is_a_link_not_a_dropdown(run: RunModel, user_client: Clie
     assert reverse("admin:orm_session_change", args=[session.pk]) in field_html
 
 
-@pytest.mark.django_db
 def test_result_field_is_read_only_and_json_highlighted(
     run: RunModel, user_client: Client
 ):
@@ -205,7 +198,6 @@ def test_result_field_is_read_only_and_json_highlighted(
     assert "score" in field_html
 
 
-@pytest.mark.django_db
 def test_result_field_does_not_render_as_literal_null(
     run: RunModel, user_client: Client
 ):

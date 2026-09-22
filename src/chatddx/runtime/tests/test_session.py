@@ -6,11 +6,13 @@ from chatddx.history.session import resume_session, start_session
 from chatddx.repo.inventories import InventoryBranchSpec
 from chatddx.runtime.runners import run_from_session
 
-pytestmark = pytest.mark.network
+pytestmark = [
+    pytest.mark.network,
+    pytest.mark.asyncio,
+    pytest.mark.django_db(transaction=True),
+]
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
 async def test_session(inventory_fixture_bs: InventoryBranchSpec, owner: IdentityModel):
     agent = inventory_fixture_bs.agent["qwen3-8b baseline"]
 

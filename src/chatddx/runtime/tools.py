@@ -10,9 +10,9 @@ from chatddx.runtime.context import AgentContext
 _WEB_SEARCH_URL = "https://html.duckduckgo.com/html/"
 _RESULT_RE = re.compile(
     r'class="result__a"[^>]*href="(?P<href>[^"]+)"[^>]*>(?P<title>.*?)</a>'
-    r".*?"
-    r'class="result__snippet"[^>]*>(?P<snippet>.*?)</a>',
-    re.DOTALL,
+    + r".*?"
+    + r'class="result__snippet"[^>]*>(?P<snippet>.*?)</a>',
+    +re.DOTALL,
 )
 _TAG_RE = re.compile(r"<[^>]+>")
 
@@ -36,7 +36,9 @@ def _resolve_result_url(href: str) -> str:
 
 
 def web_search(
-    _: RunContext[AgentContext], query: str, max_results: int = 5
+    _context: RunContext[AgentContext],
+    query: str,
+    max_results: int = 5,
 ) -> str:
     """Search the web and return the top results (title, url, snippet).
 
@@ -50,7 +52,7 @@ def web_search(
         timeout=10.0,
         follow_redirects=True,
     )
-    response.raise_for_status()
+    _ = response.raise_for_status()
 
     results: list[str] = []
     for match in _RESULT_RE.finditer(response.text):

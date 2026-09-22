@@ -8,7 +8,9 @@ from chatddx.repo.entities.agent.django import AgentBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.inventories import InventoryFormDataOut
 
-pytestmark = pytest.mark.django_db(transaction=True)
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
 
 
 @pytest.mark.django_db

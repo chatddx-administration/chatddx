@@ -1,3 +1,4 @@
+# pyright: basic
 from django import template
 
 register = template.Library()

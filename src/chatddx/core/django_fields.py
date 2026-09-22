@@ -4,9 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from django.contrib.postgres.fields.array import ArrayField
-from django.db.models import ForeignKey, JSONField, OneToOneField
-
-from chatddx.utils import make_async
+from django.db.models import JSONField
 
 if TYPE_CHECKING:
     from chatddx.repo.families.django import TrailModel

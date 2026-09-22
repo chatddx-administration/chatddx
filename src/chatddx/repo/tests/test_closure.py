@@ -1,13 +1,3 @@
-"""
-The guarantee: a trail in an owner's possession has a branch of theirs on
-it, however indirectly they came to possess it.
-
-An owner possesses a trail directly when they have a branch on it, and
-indirectly when a trail they possess points at it -- an agent's connection,
-a tool group's tools, an expectation's scorer. `commit_closure` is what
-makes the second case hold, and what these check.
-"""
-
 from typing import Any
 
 import pytest
@@ -218,12 +208,6 @@ def test_the_closure_of_a_shared_model_belongs_to_the_owner(
 def test_a_branch_made_for_the_closure_carries_nothing_beside_its_content(
     owner: IdentityModel,
 ):
-    """
-    Tags, collaborators and -- for a case -- expects belong to a version
-    somebody saved deliberately. A closure branch is made on the owner's
-    behalf by whoever saved the thing pointing at it, so it is given none of
-    them, silently.
-    """
     assert commit_agent(owner.name)
 
     agent = get_branch_model("agent", owner.name, "closure-agent")

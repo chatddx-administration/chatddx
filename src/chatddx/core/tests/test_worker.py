@@ -136,6 +136,8 @@ async def test_drain_leaves_the_queue_empty(
     queued_run: RunModel,
     stub_agent: StubAgent,
 ):
+    _, _ = queued_run, stub_agent
+
     await worker.drain()
 
     assert await apending_passes() == 0
@@ -225,6 +227,7 @@ async def test_a_run_whose_scorer_does_not_exist_is_errored(
     queued_run: RunModel,
     stub_agent: StubAgent,
 ):
+    _ = stub_agent
     await abreak_the_scorer(queued_run.pk)
 
     await worker.worker_pass()

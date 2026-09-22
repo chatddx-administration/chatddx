@@ -1,5 +1,3 @@
-from typing import override
-
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.entities.scorer.pydantic import (
     ScorerFormDataIn,

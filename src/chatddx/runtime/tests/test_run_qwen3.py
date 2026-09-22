@@ -3,11 +3,13 @@ import pytest
 from chatddx.repo.inventories import InventoryBranchSpec
 from chatddx.runtime.runners import run_from_spec
 
-pytestmark = pytest.mark.network
+pytestmark = [
+    pytest.mark.network,
+    pytest.mark.asyncio,
+    pytest.mark.django_db(transaction=True),
+]
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
 async def test_baseline(inventory_fixture_bs: InventoryBranchSpec):
     agent = inventory_fixture_bs.agent["qwen3-8b baseline"]
 
@@ -19,8 +21,6 @@ async def test_baseline(inventory_fixture_bs: InventoryBranchSpec):
     assert result.output == "123abc"
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
 async def test_challenge_coercion_tool(inventory_fixture_bs: InventoryBranchSpec):
     agent = inventory_fixture_bs.agent["qwen3-8b challenge-coercion tool"]
 
@@ -38,8 +38,6 @@ async def test_challenge_coercion_tool(inventory_fixture_bs: InventoryBranchSpec
     }
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
 async def test_challenge_coercion_prompted(inventory_fixture_bs: InventoryBranchSpec):
     agent = inventory_fixture_bs.agent["qwen3-8b challenge-coercion prompted"]
 
@@ -57,8 +55,6 @@ async def test_challenge_coercion_prompted(inventory_fixture_bs: InventoryBranch
     }
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
 async def test_challenge_coercion_native(inventory_fixture_bs: InventoryBranchSpec):
     agent = inventory_fixture_bs.agent["qwen3-8b challenge-coercion native"]
 
@@ -79,8 +75,6 @@ async def test_challenge_coercion_native(inventory_fixture_bs: InventoryBranchSp
     }
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
 async def test_enable_thinking(inventory_fixture_bs: InventoryBranchSpec):
     agent = inventory_fixture_bs.agent["qwen3-8b enable-thinking"]
 
@@ -93,8 +87,6 @@ async def test_enable_thinking(inventory_fixture_bs: InventoryBranchSpec):
     assert result.output == "\n\n123abc"
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
 async def test_tools(inventory_fixture_bs: InventoryBranchSpec):
     agent = inventory_fixture_bs.agent["qwen3-8b test-tools"]
 

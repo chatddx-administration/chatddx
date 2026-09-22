@@ -1,3 +1,4 @@
+# pyright: basic
 import json
 
 import pytest
@@ -14,7 +15,9 @@ from chatddx.django.portal.forms.experiment import (
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.repo.inventories import InventoryBranchModel
 
-pytestmark = pytest.mark.django_db(transaction=True)
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
 
 
 @pytest.fixture
@@ -43,7 +46,6 @@ def test_changelist_lists_owned_experiments(
     assert change_url.encode() in response.content
 
 
-@pytest.mark.django_db
 def test_experiment_change_form_is_read_only(
     experiment: ExperimentModel,
     user_client: Client,
@@ -61,7 +63,6 @@ def test_experiment_change_form_is_read_only(
     assert delete_response.status_code == 403
 
 
-@pytest.mark.django_db
 def test_experiment_change_form_offers_queue_button(
     experiment: ExperimentModel,
     user_client: Client,
@@ -75,7 +76,6 @@ def test_experiment_change_form_offers_queue_button(
     assert queue_url.encode() in response.content
 
 
-@pytest.mark.django_db
 def test_experiment_can_be_added_and_owner_is_assigned(
     owner: IdentityModel,
     add_post_data: dict,
@@ -93,7 +93,6 @@ def test_experiment_can_be_added_and_owner_is_assigned(
     assert created.owner_id == owner.pk
 
 
-@pytest.mark.django_db
 def test_added_experiment_gets_a_queued_run_by_default(
     owner: IdentityModel,
     add_post_data: dict,
@@ -115,7 +114,6 @@ def test_added_experiment_gets_a_queued_run_by_default(
     assert run.owner_id == owner.pk
 
 
-@pytest.mark.django_db
 def test_added_experiment_can_get_a_stored_run(
     add_post_data: dict,
     user_client: Client,
@@ -128,7 +126,6 @@ def test_added_experiment_can_get_a_stored_run(
     assert RunModel.objects.get().status == RunStatusChoices.STORED
 
 
-@pytest.mark.django_db
 def test_added_experiment_gets_no_run_when_told_not_to(
     add_post_data: dict,
     user_client: Client,
@@ -142,7 +139,6 @@ def test_added_experiment_gets_no_run_when_told_not_to(
     assert not RunModel.objects.exists()
 
 
-@pytest.mark.django_db
 def test_added_experiment_rejects_a_status_no_run_can_start_in(
     add_post_data: dict,
     user_client: Client,
@@ -156,7 +152,6 @@ def test_added_experiment_rejects_a_status_no_run_can_start_in(
     assert not RunModel.objects.exists()
 
 
-@pytest.mark.django_db
 def test_queue_button_creates_a_run_per_click(
     experiment: ExperimentModel,
     owner: IdentityModel,
@@ -184,7 +179,6 @@ def other_owner() -> IdentityModel:
     return IdentityModel.objects.create(name="other-owner")
 
 
-@pytest.mark.django_db
 def test_shared_experiment_visible_only_via_shared_tab(
     shared_experiment: ExperimentModel,
     user_client: Client,
@@ -205,7 +199,6 @@ def test_shared_experiment_visible_only_via_shared_tab(
     assert change_url.encode() in shared_response.content
 
 
-@pytest.mark.django_db
 def test_shared_experiment_admin_is_read_only(
     shared_experiment: ExperimentModel,
     user_client: Client,
@@ -219,7 +212,6 @@ def test_shared_experiment_admin_is_read_only(
     assert delete_response.status_code == 403
 
 
-@pytest.mark.django_db
 def test_changelist_shows_branch_names_and_links_for_agent_and_case(
     experiment: ExperimentModel,
     user_client: Client,
@@ -227,8 +219,8 @@ def test_changelist_shows_branch_names_and_links_for_agent_and_case(
     response = user_client.get(reverse("admin:orm_experiment_changelist"))
     content = response.content.decode()
 
-    agent_branch = experiment.agent.branches.get(owner__name=experiment.owner.name)
-    case_branch = experiment.case.branches.get(owner__name=experiment.owner.name)
+    agent_branch = experiment.agent.branches.get(owner__name=experiment.owner.name)  # pyright: ignore[reportAttributeAccessIssue]
+    case_branch = experiment.case.branches.get(owner__name=experiment.owner.name)  # pyright: ignore[reportAttributeAccessIssue]
 
     assert f">agent-2 ({experiment.agent.fingerprint[:6]})<" in content
     assert reverse("admin:orm_superagent_change", args=[agent_branch.pk]) in content
@@ -236,9 +228,7 @@ def test_changelist_shows_branch_names_and_links_for_agent_and_case(
     assert f">case-1 ({experiment.case.fingerprint[:6]})<" in content
     assert reverse("admin:orm_case_change", args=[case_branch.pk]) in content
 
-    # Expect has no admin page of its own -- it's only ever edited inline on
-    # its Case (see ExpectInline) -- so it reads as a name, not as a link.
-    expect_branch = experiment.expect.branches.get(owner__name=experiment.owner.name)
+    expect_branch = experiment.expect.branches.get(owner__name=experiment.owner.name)  # pyright: ignore[reportAttributeAccessIssue]
     assert (
         f"{expect_branch.name} ({experiment.expect.fingerprint[:6]})"
         in content.split("field-expect_")[1][:300]
@@ -255,8 +245,8 @@ def test_change_view_shows_branch_names_and_links_for_agent_and_case(
     )
     content = response.content.decode()
 
-    agent_branch = experiment.agent.branches.get(owner__name=experiment.owner.name)
-    case_branch = experiment.case.branches.get(owner__name=experiment.owner.name)
+    agent_branch = experiment.agent.branches.get(owner__name=experiment.owner.name)  # pyright: ignore[reportAttributeAccessIssue]
+    case_branch = experiment.case.branches.get(owner__name=experiment.owner.name)  # pyright: ignore[reportAttributeAccessIssue]
 
     assert reverse("admin:orm_superagent_change", args=[agent_branch.pk]) in content
     assert reverse("admin:orm_case_change", args=[case_branch.pk]) in content
@@ -269,7 +259,6 @@ def expect_widget(response):
     return getattr(widget, "widget", widget)
 
 
-@pytest.mark.django_db
 def test_add_form_disables_expect_until_a_case_is_chosen(
     inventory_fixture_bm: InventoryBranchModel,
     user_client: Client,
@@ -282,7 +271,6 @@ def test_add_form_disables_expect_until_a_case_is_chosen(
     assert NO_CASE_LABEL.encode() in response.content
 
 
-@pytest.mark.django_db
 def test_add_form_maps_every_case_to_its_own_expects(
     inventory_fixture_bm: InventoryBranchModel,
     user_client: Client,
@@ -297,7 +285,6 @@ def test_add_form_maps_every_case_to_its_own_expects(
         )
 
 
-@pytest.mark.django_db
 def test_add_form_rejects_an_expect_of_another_case(
     add_post_data: dict,
     inventory_fixture_bm: InventoryBranchModel,
@@ -317,7 +304,6 @@ def test_add_form_rejects_an_expect_of_another_case(
     assert not RunModel.objects.exists()
 
 
-@pytest.mark.django_db
 def test_add_form_leaves_expect_enabled_once_a_case_is_posted(
     add_post_data: dict,
     user_client: Client,

@@ -1,3 +1,4 @@
+# pyright: basic
 from pathlib import Path
 
 import pytest
@@ -9,9 +10,11 @@ from inspect_ai.solver import multiple_choice, user_message
 
 from chatddx.core.models import IdentityModel
 from chatddx.repo.inventories import InventoryBranchSpec
-from chatddx.repo.shufflers.branch import get_branch_spec
 
-pytestmark = pytest.mark.network
+pytestmark = [
+    pytest.mark.network,
+    pytest.mark.django_db(transaction=True),
+]
 
 
 @task
@@ -50,7 +53,6 @@ def riddle_task() -> Task:
     )
 
 
-@pytest.mark.django_db()
 def test_inspect_no_thinking(
     inventory_fixture_bs: InventoryBranchSpec, owner: IdentityModel
 ):
@@ -84,7 +86,6 @@ def test_inspect_no_thinking(
     assert log.stats.model_usage["vllm/Qwen/Qwen3-8B-AWQ"].total_tokens == 212
 
 
-@pytest.mark.django_db()
 def test_inspect_thinking(inventory_fixture_bs: InventoryBranchSpec):
     spec = inventory_fixture_bs.agent["qwen3-8b baseline"]
 

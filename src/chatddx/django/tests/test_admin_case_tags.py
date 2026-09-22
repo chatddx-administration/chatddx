@@ -10,6 +10,10 @@ from chatddx.core.utils import ensure_identity, ensure_tag
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.inventories import InventoryFormDataOut
 
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
+
 PREFIX = "orm-expect"
 
 
@@ -48,7 +52,6 @@ def messages_of(response: Any) -> list[str]:
     return [str(message) for message in response.context["messages"]]
 
 
-@pytest.mark.django_db
 def test_the_inventory_tags_are_case_tags_of_their_owner(
     inventory_fixture_fdo: InventoryFormDataOut,
     owner: IdentityModel,
@@ -60,7 +63,6 @@ def test_the_inventory_tags_are_case_tags_of_their_owner(
         assert tag.entity == "case"
 
 
-@pytest.mark.django_db
 def test_case_tags_are_rendered_as_the_widgets_own_choices(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -81,7 +83,6 @@ def test_case_tags_are_rendered_as_the_widgets_own_choices(
     ]
 
 
-@pytest.mark.django_db
 def test_case_tags_are_added_edited_and_removed(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -135,7 +136,6 @@ def test_case_tags_are_added_edited_and_removed(
     assert any("updated tags" in message for message in messages_of(response))
 
 
-@pytest.mark.django_db
 def test_a_new_case_version_keeps_the_tags(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -163,7 +163,6 @@ def test_a_new_case_version_keeps_the_tags(
     assert tag_names(case) == ["tag-1", "tag-2"]
 
 
-@pytest.mark.django_db
 def test_a_case_save_leaves_the_relations_the_form_has_no_say_over(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -185,7 +184,6 @@ def test_a_case_save_leaves_the_relations_the_form_has_no_say_over(
     assert list(case_branch(owner).collaborators.all()) == [collaborator]
 
 
-@pytest.mark.django_db
 def test_case_tags_are_scoped_to_their_owner(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -216,7 +214,6 @@ def test_case_tags_are_scoped_to_their_owner(
     assert list(case_branch(owner).tags.all()) == [my_tag]
 
 
-@pytest.mark.django_db
 def test_case_tags_are_scoped_to_their_entity(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,

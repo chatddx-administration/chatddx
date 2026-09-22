@@ -17,6 +17,10 @@ from chatddx.repo.families.pydantic import BranchSchemaDetails
 from chatddx.repo.inventories import InventoryFormDataOut
 from chatddx.repo.shufflers.branch import commit
 
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
+
 PREFIX = "orm-expect"
 
 
@@ -92,7 +96,6 @@ def scorer_c(owner: IdentityModel) -> ScorerBranchModel:
     return ScorerBranchModel.objects.get(owner=owner, name="scorer-c")
 
 
-@pytest.mark.django_db
 def test_expect_inline_renders_the_cases_expects(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -113,7 +116,6 @@ def test_expect_inline_renders_the_cases_expects(
     ]
 
 
-@pytest.mark.django_db
 def test_expect_inline_add_commits_a_branch_and_links_its_trail(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -163,7 +165,6 @@ def test_expect_inline_add_commits_a_branch_and_links_its_trail(
     assert any("expects" in message for message in messages)
 
 
-@pytest.mark.django_db
 def test_expect_inline_add_is_idempotent(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -199,7 +200,6 @@ def test_expect_inline_add_is_idempotent(
     )
 
 
-@pytest.mark.django_db
 def test_expect_inline_edit_versions_the_expect_branch(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -249,7 +249,6 @@ def test_expect_inline_edit_versions_the_expect_branch(
     ]
 
 
-@pytest.mark.django_db
 def test_expect_inline_delete_unlinks_but_keeps_the_branch(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -285,7 +284,6 @@ def test_expect_inline_delete_unlinks_but_keeps_the_branch(
     assert inline_payloads(response) == ["expect payload 1 for scorer b"]
 
 
-@pytest.mark.django_db
 def test_expects_follow_the_case_to_its_new_version(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -334,7 +332,6 @@ def test_expects_follow_the_case_to_its_new_version(
     ]
 
 
-@pytest.mark.django_db
 def test_expect_inline_without_a_scorer_is_an_error(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -364,7 +361,6 @@ def test_expect_inline_without_a_scorer_is_an_error(
     ]
 
 
-@pytest.mark.django_db
 def test_expect_inline_on_the_add_form(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -405,7 +401,6 @@ def test_expect_inline_on_the_add_form(
     assert CaseTrailModel.objects.filter(payload="case payload 3").count() == 1
 
 
-@pytest.mark.django_db
 def test_an_older_case_version_keeps_the_expects_it_was_saved_with(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -463,7 +458,6 @@ def test_an_older_case_version_keeps_the_expects_it_was_saved_with(
     ]
 
 
-@pytest.mark.django_db
 def test_a_collaborators_edit_leaves_the_owners_expects_alone(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -525,7 +519,6 @@ def test_a_collaborators_edit_leaves_the_owners_expects_alone(
     ]
 
 
-@pytest.mark.django_db
 def test_the_inline_leaves_out_another_cases_identical_expectation(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,

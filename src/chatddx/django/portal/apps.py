@@ -1,4 +1,4 @@
-# src/chatddx/django/portal/apps.py
+# pyright: basic
 
 from django.apps import AppConfig
 

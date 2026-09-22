@@ -4,9 +4,9 @@ from django.db.models import Model, QuerySet
 from pydantic import ValidationError
 
 from chatddx.core import settings
+from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity, ensure_tag
 from chatddx.django.orm.qs import qs_canon
-from chatddx.core.models import IdentityModel
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import (
@@ -88,6 +88,9 @@ def select_branch_models(
         models.append(model)
 
     return models
+
+
+get_branch_model_async = make_async(get_branch_model)
 
 
 def get_branch_spec(
@@ -275,10 +278,12 @@ RELATION_RESOLVERS: dict[
     # a case names expect branches, not their trails: two cases that expect
     # the same thing share one content-addressed trail, so a trail cannot say
     # whose expectation it is
-    "expect": lambda owner, entity: lambda name: get_branch_model(
-        entity_name="expect",
-        owner_name=owner.name,
-        branch_name=name,
+    "expect": lambda owner, entity: (
+        lambda name: get_branch_model(
+            entity_name="expect",
+            owner_name=owner.name,
+            branch_name=name,
+        )
     ),
 }
 

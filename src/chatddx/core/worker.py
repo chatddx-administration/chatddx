@@ -8,10 +8,6 @@ claims it, runs its experiment's agent over its case, and leaves it at
 state, so a pass is safe to repeat and safe to run twice at once -- both
 transitions are claimed with a conditional `UPDATE`.
 
-pgqueuer is only the doorbell. Producers call `wake` after queueing a run to
-have a pass happen now; `serve` also sweeps on a schedule, so a run whose
-doorbell never rang is still picked up on the next minute.
-
 Entry points:
     `wake`   -- ask a running worker for a pass (used by the admin).
     `drain`  -- one pass, then return (`chatddx worker run`).
@@ -36,13 +32,13 @@ from pgqueuer.models import Job, Schedule
 
 from chatddx.core.choices import RunStatusChoices, SessionContextChoices
 from chatddx.django.orm.qs import qs_canon
+from chatddx.eval.scorers import resolve_scorer
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.history.session import start_session
 from chatddx.repo.entities.agent.django import AgentBranchModel
 from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
 from chatddx.repo.trail_cache import trail_cache
 from chatddx.runtime.runners import run_from_session
-from chatddx.runtime.scorers import resolve_scorer
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +90,12 @@ def build_pgqueuer(connection: psycopg.AsyncConnection) -> PgQueuer:
 
     @pgq.entrypoint(ENTRYPOINT)
     async def _process_queued_runs(job: Job) -> None:
+        _ = job
         await worker_pass()
 
     @pgq.schedule(SWEEP_ENTRYPOINT, SWEEP_EXPRESSION)
     async def _sweep_queued_runs(schedule: Schedule) -> None:
+        _ = schedule
         # Enqueue rather than run the pass here, so that a sweep and a `wake`
         # landing together still only cost one pass.
         await enqueue_pass(pgq)

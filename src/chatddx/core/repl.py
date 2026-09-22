@@ -1,4 +1,4 @@
-# src/chatddx/repl.py
+# pyright: basic
 import asyncio
 from typing import Annotated
 
@@ -30,16 +30,13 @@ from pydantic_ai import (
 from rich.console import Console
 
 from chatddx.core.choices import SessionContextChoices
+from chatddx.core.utils import ensure_identity
 from chatddx.history.models import SessionModel
 from chatddx.history.schemas import SessionSpec
 from chatddx.history.session import refresh_messages, resume_session, start_session
-from chatddx.repo.base import BranchSpec
-from chatddx.repo.branch_models import AgentBranchModel
-from chatddx.repo.branch_spec import AgentBranchSpec
-from chatddx.repo.shufflers.agent import get_agent, load_agent
-from chatddx.repo.shufflers.branch import BranchNotFoundError
-from chatddx.repo.shufflers.main import ensure_identity
-from chatddx.repo.trail_specs import AgentSpec
+from chatddx.repo.entities.agent.django import AgentBranchModel
+from chatddx.repo.entities.agent.pydantic import AgentBranchSpec
+from chatddx.repo.shufflers.agent import get_agent
 from chatddx.runtime.runners import stream_from_session
 
 app = typer.Typer(invoke_without_command=True)
@@ -76,7 +73,7 @@ def main(
         return
 
     session: SessionSpec | None = None
-    agent_branch: BranchSpec[AgentSpec] | None = None
+    agent_branch: AgentBranchSpec | None = None
 
     if session_uuid:
         session = asyncio.run(resume_session(owner.pk, session_uuid))
@@ -96,7 +93,7 @@ def main(
     run_repl(session, agent_branch)
 
 
-def run_repl(session: SessionSpec, agent_branch: BranchSpec[AgentSpec]):
+def run_repl(session: SessionSpec, agent_branch: AgentBranchSpec):
     agent_spec = agent_branch.target
     agent_name = agent_branch.name
     print(f"session id: {session.uuid}")
@@ -167,7 +164,7 @@ def run_repl(session: SessionSpec, agent_branch: BranchSpec[AgentSpec]):
                         pass
                     case _:
                         raise ValueError(f"No handler for {type(event)}")
-        except Exception as e:
+        except Exception as e:  # ruff: ignore[BLE001]
             # The model or its serving backend misbehaved mid-run (e.g. a
             # malformed streamed response). Surface it and return to the
             # prompt instead of crashing the whole REPL session.
@@ -190,7 +187,7 @@ def run_repl(session: SessionSpec, agent_branch: BranchSpec[AgentSpec]):
 def print_message(
     message: ModelMessage,
     name: str,
-    agent: AgentSpec,
+    agent: AgentBranchSpec,
     skip_text: bool = False,
 ):
     content: list[tuple[str, str]] = []

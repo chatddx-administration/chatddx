@@ -5,9 +5,12 @@ from chatddx.django.orm.qs import qs_canon
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.shufflers.agent import select_agents_async
 
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.django_db(transaction=True),
+]
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
+
 async def test_load_agents_by_output_type_title(
     inventory_fixture_commit: object,
     owner: IdentityModel,

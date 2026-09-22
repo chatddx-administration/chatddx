@@ -7,8 +7,11 @@ from chatddx.django.portal.utils import load_form_data
 from chatddx.repo.entities.agent.django import Agent
 from chatddx.repo.inventories import InventoryBranchModel, InventoryFormDataOut
 
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
 
-@pytest.mark.django_db
+
 def test_idempotent_save_prevents_duplicates(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -50,7 +53,6 @@ def test_idempotent_save_prevents_duplicates(
     assert len(timeline) == 1
 
 
-@pytest.mark.django_db
 def test_name_change_creates_new_branch(
     user_client: Client,
     inventory_fixture_fdo: InventoryFormDataOut,
@@ -80,7 +82,6 @@ def test_name_change_creates_new_branch(
     assert len(timeline) == 2
 
 
-@pytest.mark.django_db
 def test_pager_context_navigation(
     user_client: Client,
     inventory_fixture_bm: InventoryBranchModel,

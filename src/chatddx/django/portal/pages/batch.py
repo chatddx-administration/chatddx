@@ -18,7 +18,6 @@ from chatddx.history.batches import BatchPlan
 from chatddx.history.models import BatchModel
 from chatddx.history.proxies import Batch
 
-# What a confirmed generation posts back, and the button that says so.
 CONFIRM_FIELD = "_confirm_batch"
 
 CONFIRM_TITLE = "Confirm batch"
@@ -26,17 +25,6 @@ CONFIRM_TITLE = "Confirm batch"
 
 @admin.register(Batch)
 class BatchAdmin(ModelAdminFormWithRequest, TypedModelAdmin[Batch]):
-    """
-    A batch is the order its experiments were generated from, so it never
-    changes once it exists: the change form only ever shows it, and the way
-    to act on it is to generate another set of experiments (see `requeue`).
-
-    Generating is never silent. Every path to it -- the add form and the
-    re-queue button alike -- goes through the confirmation page first, which
-    is where the numbers behind the order, and the cases it leaves out, are
-    put to the user (see `chatddx.history.batches.plan`).
-    """
-
     form = BatchForm
 
     confirmation_template = "templates/batch_confirmation.html"
@@ -58,8 +46,6 @@ class BatchAdmin(ModelAdminFormWithRequest, TypedModelAdmin[Batch]):
     )
     readonly_fields = fields
 
-    # Fields the add form offers; the change form keeps the read-only set
-    # above.
     add_fields = (
         "agent",
         "case_tags",
@@ -128,8 +114,6 @@ class BatchAdmin(ModelAdminFormWithRequest, TypedModelAdmin[Batch]):
 
         form = self.get_form(request)(request.POST)
 
-        # An invalid post is the add form's own business: it renders with the
-        # errors on it, the way any other form does.
         if not form.is_valid():
             return super().add_view(request, form_url, extra_context)
 
@@ -169,11 +153,6 @@ class BatchAdmin(ModelAdminFormWithRequest, TypedModelAdmin[Batch]):
         formsets: Any,
         change: bool,
     ):
-        """
-        The batch's experiments, once the tags and scorers it draws them by
-        are saved -- which is what `super()` does here, and what the plan is
-        read from.
-        """
         super().save_related(request, form, formsets, change)
 
         if change:
@@ -229,13 +208,6 @@ class BatchAdmin(ModelAdminFormWithRequest, TypedModelAdmin[Batch]):
         confirm_label: str,
         cancel_url: str,
     ):
-        """
-        The plan, and the post that carries it out.
-
-        The post is this very request's data, handed back as hidden fields so
-        that confirming is the same post again with `CONFIRM_FIELD` added --
-        nothing of what the user filled in is held anywhere else.
-        """
         context = {
             **self.admin_site.each_context(request),
             "title": CONFIRM_TITLE,

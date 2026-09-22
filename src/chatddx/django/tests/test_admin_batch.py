@@ -15,21 +15,14 @@ from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.scorer.django import Scorer
 from chatddx.repo.inventories import InventoryBranchModel
 
-pytestmark = pytest.mark.django_db(transaction=True)
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
 
 ADD_URL = reverse("admin:orm_batch_add")
 
 
 class Lab:
-    """
-    The inventory's cases, tags, scorers and agent, by name.
-
-    `case-1` carries both tags and expects both scorers; `case-2` carries no
-    tag of its own, so a test that wants a second tagged case says so (see
-    `tag`) and can take an expectation off it to make a case that lacks a
-    scorer.
-    """
-
     def __init__(self, inventory: InventoryBranchModel, owner: IdentityModel):
         self.owner = owner
         self.agent = inventory["agent"]["agent-2"].target
@@ -203,7 +196,7 @@ def test_naming_scorers_narrows_what_is_generated(lab: Lab, user_client: Client)
 
     experiment = ExperimentModel.objects.get()
 
-    assert experiment.expect.scorer_id == lab.scorers["scorer-a"].target_id
+    assert experiment.expect.scorer_id == lab.scorers["scorer-a"].target_id  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def test_cases_without_the_chosen_scorer_are_named_before_generating(

@@ -1,3 +1,4 @@
+# pyright: basic
 from pathlib import Path
 
 from django.apps import AppConfig

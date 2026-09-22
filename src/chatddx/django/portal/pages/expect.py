@@ -21,16 +21,6 @@ class ExpectInline(BranchModelInlineAdmin):
     verbose_name_plural = "Expects"
 
     def get_form_queryset(self, obj: Case):
-        """
-        The expect branches this version of the case was saved with, in the
-        order they were added.
-
-        They are read off the link, not looked up by trail: cases that expect
-        the same payload for the same scorer share one content-addressed
-        trail, so a trail matches every one of their expectations. Nor are
-        they narrowed to canon -- an older version of the case carries the
-        version of the expectation it was saved with.
-        """
         if obj is None or obj.pk is None:
             return Expect.objects.none()
 
@@ -45,7 +35,7 @@ class ExpectInline(BranchModelInlineAdmin):
 
         owner_name = obj.owner.name if obj is not None else request.user.username
 
-        formset.form.base_fields["scorer"].queryset = qs_canon(
+        formset.form.base_fields["scorer"].queryset = qs_canon(  # pyright: ignore[reportAttributeAccessIssue]
             Scorer.objects.all(), owner_name
         )
 

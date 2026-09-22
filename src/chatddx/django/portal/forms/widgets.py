@@ -1,3 +1,4 @@
+# pyright: basic
 from typing import Any
 
 from unfold.widgets import UnfoldAdminSelect2Widget

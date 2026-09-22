@@ -1,13 +1,3 @@
-# src/chatddx/runtime/scorers.py
-"""
-How a run is judged.
-
-A scorer trail carries a `command`, which names a function in this module the
-same way a tool's command names one in `chatddx.runtime.tools`. The worker
-resolves it with `resolve_scorer` and stores whatever the function returns on
-`RunModel.result`, so a scorer's return value has to be JSON-serializable.
-"""
-
 from __future__ import annotations
 
 import re
@@ -23,7 +13,6 @@ type Scorer = Callable[[RunModel], Any | Awaitable[Any]]
 
 
 def last_reply(run: RunModel) -> str | None:
-    """The agent's final answer in the session the run produced."""
     message = (
         Message.objects.filter(
             session_id=run.session_id,
@@ -48,6 +37,7 @@ def exact_match(run: RunModel) -> dict[str, Any]:
 
 class _Node:
     def matches(self, text: str) -> bool:
+        _ = text
         raise NotImplementedError
 
 
@@ -175,8 +165,6 @@ def regex_match(run: RunModel) -> dict[str, Any]:
     }
 
 
-# The commands a scorer trail may name. Kept explicit rather than reflected off
-# the module, so that a stray helper in here can never be run as a scorer.
 SCORERS: dict[str, Scorer] = {
     "exact_match": exact_match,
     "regex_match": regex_match,
@@ -184,10 +172,6 @@ SCORERS: dict[str, Scorer] = {
 
 
 def resolve_scorer(command: str) -> Scorer:
-    """
-    Look a scorer trail's command up among the scorers this module offers, the
-    way `build_tools` looks a tool's command up in `chatddx.runtime.tools`.
-    """
     try:
         return SCORERS[command]
     except KeyError as e:

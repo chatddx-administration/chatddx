@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import (
     Any,
+    TypeGuard,
     cast,
     get_args,
     get_type_hints,
@@ -22,13 +23,26 @@ type Observer[T] = Callable[[T], None | Awaitable[None]]
 from typing import Annotated
 
 
+def is_str_list(value: object) -> TypeGuard[list[str]]:
+    return isinstance(value, list) and all(isinstance(v, str) for v in value)  # pyright: ignore[reportUnknownVariableType]
+
+
+def dig(data: Any, *path: str) -> Any:
+    """Safely traverse nested dicts/objects without type checker noise."""
+    for key in path:
+        if not isinstance(data, dict):
+            return None
+        data = cast(dict[str, Any], data.get(key))
+    return data
+
+
 def make_fields_optional(model_cls: type[BaseModel]) -> type[BaseModel]:
     new_fields = {}
     for f_name, f_info in model_cls.model_fields.items():
         f_dct = f_info.asdict()
         new_fields[f_name] = (
             Annotated[
-                f_dct["annotation"] | None,
+                f_dct["annotation"] | None,  # ruff: ignore[F821]
                 *f_dct["metadata"],
                 Field(**f_dct["attributes"]),
             ],
@@ -37,7 +51,7 @@ def make_fields_optional(model_cls: type[BaseModel]) -> type[BaseModel]:
     return create_model(
         f"{model_cls.__name__}Optional",
         __base__=model_cls,
-        **new_fields,
+        **new_fields,  # pyright: ignore[reportUnknownArgumentType]
     )
 
 
