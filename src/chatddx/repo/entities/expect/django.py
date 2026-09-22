@@ -28,6 +28,13 @@ class ExpectBranchModel(BranchModel):
     class Meta(BranchModel.Meta):
         app_label = "orm"
         db_table = "agents_expect_branch"
+        # A case carries its expectations as a list (`CaseBranchModel.expects`)
+        # and everything that reads one -- a branch spec, the inline, a
+        # scorer's turn -- reads it in order. Without an ordering of their own
+        # Postgres is free to hand them back in whatever order a plan happens
+        # to produce, which it does once the table is big enough for the plan
+        # to change.
+        ordering = ("id",)
 
     target = ForeignKey[ExpectTrailModel](
         ExpectTrailModel,

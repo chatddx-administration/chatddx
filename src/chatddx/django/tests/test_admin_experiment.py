@@ -26,10 +26,12 @@ def add_post_data(inventory_fixture_bm: InventoryBranchModel):
     expect = case.expects.first()
     assert expect is not None
 
+    # An experiment pairs trails, not branches (see `ExperimentModel`), so
+    # every one of these is the branch's target rather than the branch.
     return {
         "agent": inventory_fixture_bm["agent"]["agent-2"].target.pk,
         "case": case.target.pk,
-        "expect": expect.pk,
+        "expect": expect.target.pk,
         "collaborators": [],
         "initial_run_status": RunStatusChoices.QUEUED.value,
     }
@@ -281,7 +283,7 @@ def test_add_form_maps_every_case_to_its_own_expects(
     for name in ("case-1", "case-2"):
         case = inventory_fixture_bm["case"][name]
         assert sorted(by_case[str(case.target.pk)]) == sorted(
-            case.expects.values_list("pk", flat=True)
+            case.expects.values_list("target_id", flat=True)
         )
 
 
@@ -292,9 +294,9 @@ def test_add_form_rejects_an_expect_of_another_case(
 ):
     other_expect = inventory_fixture_bm["case"]["case-2"].expects.first()
     assert other_expect is not None
-    assert other_expect.pk != add_post_data["expect"]
+    assert other_expect.target_id != add_post_data["expect"]
 
-    add_post_data["expect"] = other_expect.pk
+    add_post_data["expect"] = other_expect.target_id
 
     response = user_client.post(reverse("admin:orm_experiment_add"), add_post_data)
 

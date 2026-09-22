@@ -16,9 +16,13 @@ def resolve_trail(model: TrailModel):
 
             pks = [r.pk if isinstance(r, TrailModel) else r for r in value]
 
-            queryset = field.associated_model.objects.filter(pk__in=pks)
+            # The array is ordered -- a tool group's tools are its content and
+            # the fingerprint covers them in order -- and a `pk__in` lookup
+            # answers in whatever order it likes, so the rows are put back in
+            # the order the array named them.
+            by_pk = field.associated_model.objects.in_bulk(pks)
 
-            resolved_value = list(queryset)
+            resolved_value = [by_pk[pk] for pk in pks if pk in by_pk]
 
             for obj in resolved_value:
                 _ = resolve_trail(obj)
