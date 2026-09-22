@@ -1,23 +1,5 @@
-"""
-What each kind of thing in the repo is made of.
-
-Two records, because there are two questions and they have different answers:
-
-`Entity` is what an entity *is* -- the pair of tables it lives in and the
-schemas that read and write them. One entity, one pair of tables.
-
-`View` is how an entity is *presented* -- a proxy model and the form data
-that goes with it. An entity can have several; an agent has two, the flat
-`super_agent` form and the plain one.
-
-Keeping them apart is what makes the class of a thing enough to say which
-entity it belongs to. While views were entities, `agent` and `super_agent`
-claimed the same seven classes and the answer came down to which was
-declared first.
-"""
-
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
 from chatddx.repo.entities.agent import (
     Agent as AgentProxy,
@@ -149,6 +131,7 @@ from chatddx.repo.entities.tool_group import (
     ToolGroupTrailSchemaRef,
     ToolGroupTrailSpec,
 )
+from chatddx.repo.entity_names import EntityName, ViewName
 from chatddx.repo.families import (
     BaseBranch,
     BaseFormDataIn,
@@ -163,29 +146,6 @@ from chatddx.repo.families import (
     TrailSchemaRef,
     TrailSpec,
 )
-
-# `all_entities` iterates this, and what an entity references has to be
-# committed before it: a case's expects, because they are named by branch
-# name, and everything an entity reaches through its trail, because
-# `commit()` gives a branchless trail in its closure a generated name (see
-# `chatddx.repo.names`). Commit an agent before its connection and the
-# connection ends up with that generated name as well as the one the
-# inventory gave it.
-type EntityName = Literal[
-    "instruction",
-    "connection",
-    "sampling_params",
-    "output_type",
-    "tool",
-    "tool_group",
-    "agent",
-    "scorer",
-    "expect",
-    "case",
-]
-
-# Every entity has a view of the same name; `super_agent` is the extra one.
-type ViewName = EntityName | Literal["super_agent"]
 
 
 @dataclass(frozen=True)
@@ -212,16 +172,6 @@ class Entity[
     branch_model: type[BM]
 
     def members(self) -> tuple[type, ...]:
-        """
-        The classes that belong to this entity and no other, i.e. what
-        `entity_of` indexes.
-
-        The details models are not among them. An entity that carries only
-        collaborators and tags shares the base pair with every other, so a
-        details class does not say which entity it is for -- which is fine,
-        because details are always reached from an entity and never the
-        other way round.
-        """
         return (
             self.branch_schema,
             self.branch_spec,
@@ -256,10 +206,6 @@ type AnyEntityMember = (
 )
 
 
-# Per entity: the record's own type, and the union of the classes
-# `members()` claims for it. The collision check in `bundles` is what
-# keeps two entities from claiming one class; these only give the type
-# checker a narrower answer than `AnyEntity`.
 type AgentEntity = Entity[
     AgentBranchSchema,
     AgentBranchSpec,
@@ -489,17 +435,11 @@ class View[
     name: ViewName
     entity: AnyEntity
     proxy: type[P]
-    # only ever an index key for `view_of`, so it is not tied to `P`
     shared_proxy: type[BranchProxy] | None
     form_data_in: type[FDI]
     form_data_out: type[FDO]
 
     def proxies(self) -> tuple[type, ...]:
-        """
-        The proxy models this view is rendered through, i.e. what `view_of`
-        indexes. Form data is reached by name, never by class -- the two
-        agent views share a `form_data_in`.
-        """
         if self.shared_proxy is None:
             return (self.proxy,)
 
@@ -650,9 +590,6 @@ AGENT_VIEW: View[AgentProxy, AgentFormDataIn, AgentFormDataOut] = View(
     form_data_out=AgentFormDataOut,
 )
 
-# The same agent, on one flat form with its relations inlined. It validates
-# as an agent -- see `SuperAgentForm.entity_name` -- and differs only in the
-# aliases `form_data_out` serializes under.
 SUPER_AGENT_VIEW: View[SuperAgentProxy, AgentFormDataIn, SuperAgentFormDataOut] = View(
     name="super_agent",
     entity=AGENT,
@@ -662,10 +599,6 @@ SUPER_AGENT_VIEW: View[SuperAgentProxy, AgentFormDataIn, SuperAgentFormDataOut] 
     form_data_out=SuperAgentFormDataOut,
 )
 
-# An instruction has no page of its own: it is rendered inline, as the one
-# textarea on both agent forms. The view is here because every entity has
-# one of its name, and because the template registry the forms read is built
-# from `form_data_out` per entity.
 INSTRUCTION_VIEW: View[
     InstructionProxy, InstructionFormDataIn, InstructionFormDataOut
 ] = View(
@@ -677,15 +610,15 @@ INSTRUCTION_VIEW: View[
     form_data_out=InstructionFormDataOut,
 )
 
-CONNECTION_VIEW: View[
-    ConnectionProxy, ConnectionFormDataIn, ConnectionFormDataOut
-] = View(
-    name="connection",
-    entity=CONNECTION,
-    proxy=ConnectionProxy,
-    shared_proxy=None,
-    form_data_in=ConnectionFormDataIn,
-    form_data_out=ConnectionFormDataOut,
+CONNECTION_VIEW: View[ConnectionProxy, ConnectionFormDataIn, ConnectionFormDataOut] = (
+    View(
+        name="connection",
+        entity=CONNECTION,
+        proxy=ConnectionProxy,
+        shared_proxy=None,
+        form_data_in=ConnectionFormDataIn,
+        form_data_out=ConnectionFormDataOut,
+    )
 )
 
 SAMPLING_PARAMS_VIEW: View[
@@ -699,15 +632,15 @@ SAMPLING_PARAMS_VIEW: View[
     form_data_out=SamplingParamsFormDataOut,
 )
 
-OUTPUT_TYPE_VIEW: View[
-    OutputTypeProxy, OutputTypeFormDataIn, OutputTypeFormDataOut
-] = View(
-    name="output_type",
-    entity=OUTPUT_TYPE,
-    proxy=OutputTypeProxy,
-    shared_proxy=None,
-    form_data_in=OutputTypeFormDataIn,
-    form_data_out=OutputTypeFormDataOut,
+OUTPUT_TYPE_VIEW: View[OutputTypeProxy, OutputTypeFormDataIn, OutputTypeFormDataOut] = (
+    View(
+        name="output_type",
+        entity=OUTPUT_TYPE,
+        proxy=OutputTypeProxy,
+        shared_proxy=None,
+        form_data_in=OutputTypeFormDataIn,
+        form_data_out=OutputTypeFormDataOut,
+    )
 )
 
 TOOL_VIEW: View[ToolProxy, ToolFormDataIn, ToolFormDataOut] = View(

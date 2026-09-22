@@ -1,12 +1,4 @@
-"""
-Which entity a class belongs to, and which view a proxy is rendered through.
-
-Both indexes are built with a collision check rather than a precedence rule:
-once views are not entities, no class belongs to two entities, so there is
-nothing left for declaration order to decide.
-"""
-
-from typing import cast, overload
+from typing import Literal, cast, overload
 
 from chatddx.repo.registry import *
 
@@ -70,7 +62,9 @@ def _index_by_class[T: AnyEntity | AnyView](
 
 
 _ENTITY_BY_NAME: dict[EntityName, AnyEntity] = {e.name: e for e in ALL_ENTITIES}
-_ENTITY_BY_CLASS: dict[type, AnyEntity] = _index_by_class(ALL_ENTITIES, "members", "entity")
+_ENTITY_BY_CLASS: dict[type, AnyEntity] = _index_by_class(
+    ALL_ENTITIES, "members", "entity"
+)
 
 _VIEW_BY_NAME: dict[ViewName, AnyView] = {v.name: v for v in ALL_VIEWS}
 _VIEW_BY_CLASS: dict[type, AnyView] = _index_by_class(ALL_VIEWS, "proxies", "view")

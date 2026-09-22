@@ -19,10 +19,8 @@ from chatddx.django.orm.qs import qs_canon, qs_owned_trails
 from chatddx.history.proxies import Batch
 from chatddx.repo.entities.agent.django import AgentTrailModel
 from chatddx.repo.entities.scorer.django import Scorer
-from chatddx.repo.registry import EntityName
+from chatddx.repo.entity_names import EntityName
 
-# A tag belongs to one kind of entity, and the tags a batch draws cases by
-# are the case ones (see `chatddx.core.utils.ensure_tag`).
 CASE_ENTITY: EntityName = "case"
 
 NO_SCORERS_HELP = (
@@ -32,15 +30,6 @@ NO_SCORERS_HELP = (
 
 
 class BatchForm(ModelForm):
-    """
-    The order a batch stands for: an agent, the case tags to draw cases by,
-    and the scorers to score them with.
-
-    The form only ever adds one. A batch is a record of what was asked for,
-    so it never changes once it exists -- the way to act on it again is to
-    re-queue it (see `BatchAdmin.requeue`).
-    """
-
     class Meta:
         model = Batch
         fields = ("agent", "case_tags", "scorers")
@@ -78,8 +67,6 @@ class BatchForm(ModelForm):
 
         owner_name = self.request.user.username
 
-        # Everything a batch points at is the owner's own: the agents they
-        # have a branch of, their case tags, and their scorers as they stand.
         self._choices("agent").queryset = qs_owned_trails(
             AgentTrailModel.objects.all(),
             owner_name,

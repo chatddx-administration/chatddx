@@ -6,8 +6,8 @@ from django.db import ProgrammingError
 
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.django import AgentTrailModel
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.inventories import InventoryTrailSchema
-from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers.trail import dump_trail_async, load_trail_async
 from chatddx.repo.tests import identity_boundary
 

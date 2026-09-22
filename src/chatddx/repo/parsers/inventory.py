@@ -24,9 +24,9 @@ from rich.pretty import pretty_repr
 from chatddx.core import settings
 from chatddx.dx.error_handling import print_pydantic_errors
 from chatddx.repo.bundles import entity_of
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.inventories import ParsedInventory
-from chatddx.repo.registry import EntityName
 from chatddx.repo.todo import all_entities
 from chatddx.utils import is_str_list
 
@@ -40,15 +40,10 @@ class ParseError(Exception):
 FileLoader = Callable[[IO[bytes]], JsonValue]
 FileLoaders = dict[str, FileLoader]
 
-# The three levels of an inventory file, named so the indexing reads:
-#   registry[entity][name][field]
 Record = dict[str, JsonValue]
 EntityTable = dict[str, Record]
 DictRegistry = dict[str, EntityTable]
 
-# A record with its references resolved and its parents merged in. Values are
-# `Any` because a field may now hold a nested `EntityData` rather than the
-# `JsonValue` that was read off disk.
 EntityData = dict[str, Any]
 
 ParsedEntry = tuple[BaseModel, BranchDetailsPatch]
@@ -76,23 +71,10 @@ LOADERS: FileLoaders = {
 
 
 def branch_details_keys(entity: EntityName) -> frozenset[str]:
-    """
-    What this entity carries beside its content, by name. A key an entity
-    does not carry is not branch details, so it falls through to the trail
-    schema -- where it is an unknown field and says so.
-    """
     return frozenset(entity_of(entity).branch_details_patch.model_fields)
 
 
 def find_field(schema: object) -> EntityName | None:
-    """
-    The entity a trail schema belongs to, or None for anything that is not
-    one (a plain value, a nested non-entity model).
-
-    This asks the registry rather than reverse-searching the inventory's
-    field types, so there is one answer to "which entity is this class?"
-    and not two that can drift apart.
-    """
     if not isinstance(schema, type):
         return None
 
@@ -103,7 +85,6 @@ def find_field(schema: object) -> EntityName | None:
 
 
 def _lookup(data: DictRegistry, entity: EntityName, name: str) -> Record:
-    """One named record, or a ParseError naming what is missing."""
     table = data.get(entity)
 
     if table is None:
@@ -224,6 +205,7 @@ def parse_entity(
     base_data["extends"] = extends
 
     for ext_name in extends:
+        # Not sure if this is a good idea, probably not, so it's commented out.
         # base_data["name"] += "|" + ext_name
         ext_data = parse_entity(
             schema,
@@ -278,8 +260,6 @@ def parse(
                 data,
             )
 
-            # `entity_data` holds the trail's fields too, so hand the
-            # patch only the keys it declares
             named = {
                 key: value for key, value in entity_data.items() if key in details_keys
             }
@@ -367,11 +347,6 @@ def _from_file(
 
 
 def as_registry(data: Mapping[str, JsonValue], path: Path) -> DictRegistry:
-    """
-    Check on the way in that the file has the entity -> name -> record shape
-    the rest of the parser indexes into, so a malformed file is reported
-    here and not as a KeyError three frames down.
-    """
     registry: DictRegistry = {}
 
     for entity, table in data.items():
@@ -397,8 +372,6 @@ def as_registry(data: Mapping[str, JsonValue], path: Path) -> DictRegistry:
 
 
 def preprocess(raw_data: dict[str, JsonValue]) -> dict[str, JsonValue]:
-    """Add exceptions before any processing"""
-
     data = deepcopy(raw_data)
 
     agents = data.get("agent", {})

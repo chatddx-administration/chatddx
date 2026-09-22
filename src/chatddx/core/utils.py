@@ -1,5 +1,5 @@
 from chatddx.core.models import IdentityModel, TagModel
-from chatddx.repo.registry import EntityName
+from chatddx.repo.entity_names import EntityName
 from chatddx.utils import make_async
 
 

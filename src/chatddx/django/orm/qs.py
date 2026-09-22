@@ -1,68 +1,120 @@
-# pyright: basic
 from collections import defaultdict
+from typing import Any
 
-from django.db.models import (
-    Count,
-    F,
-    OuterRef,
-    Q,
-    QuerySet,
-    Subquery,
+from django.db.models import Count, OuterRef, Prefetch, Q, QuerySet, Subquery
+
+from chatddx.django.orm.annotations import (
+    AnyBranch,
+    annotate_branch_name,
+    annotate_branch_refs,
 )
-
 from chatddx.history.models import BatchModel, ExperimentModel
 from chatddx.history.proxies import Message
-from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.agent.django import Agent
-from chatddx.repo.entities.case.django import Case, CaseExpect
-from chatddx.repo.entities.expect.django import Expect
+from chatddx.repo.entities.case.django import CaseExpect
 from chatddx.repo.families.django import BranchModel, TrailModel
-from chatddx.repo.registry import EntityName
-from chatddx.repo.todo import agent_relations
+from chatddx.repo.utils import trail_paths
 
 
-def qs_super_agent[T: BranchModel](qs: QuerySet[T], owner_name: str):
-    def subquery(owner_name: str, model: EntityName, column: str):
-        branch_model_cls = entity_of(model).branch_model
+def qs_owned[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
+    return qs.filter(owner__name=owner_name)
 
-        return branch_model_cls.objects.filter(
-            target=OuterRef(f"target__{model}"),
-            owner__name=owner_name,
-        ).values(column)[:1]
 
-    branch_annotations = {
-        f"{model}_{field}": Subquery(subquery(owner_name, model, field))
-        for field in ("name", "id")
-        for model in agent_relations
-    }
-    # The instruction is a relation too, but the agent forms render it
-    # inline rather than linking to a branch of it, so it is selected
-    # without being annotated.
-    return qs.select_related(
-        "target__instruction",
-        *[f"target__{model}" for model in agent_relations],
-    ).annotate(**branch_annotations)
+def qs_canon[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
+    return _canon(qs, qs_owned(qs, owner_name))
+
+
+def qs_canon_col[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
+    return _canon(
+        qs,
+        qs.filter(Q(owner__name=owner_name) | Q(collaborators__name=owner_name)),
+    )
+
+
+def _canon[T: BranchModel](qs: QuerySet[T], owned: QuerySet[T]) -> QuerySet[T]:
+    version_count = (
+        qs.filter(owner_id=OuterRef("owner_id"), name=OuterRef("name"))
+        .values("owner_id", "name")
+        .annotate(total=Count("id"))
+        .values("total")
+    )
+
+    canonical_ids = (
+        owned.order_by("owner_id", "name", "-timestamp", "-id")
+        .distinct("owner_id", "name")
+        .values_list("id", flat=True)
+    )
+
+    return (
+        owned.filter(id__in=canonical_ids)
+        .select_related("owner", "target")
+        .annotate(version_count=Subquery(version_count))
+        .order_by("-timestamp")
+    )
+
+
+def qs_with_trail[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
+    paths = trail_paths(_trail_model(qs), "target__")
+    return qs.select_related(*paths) if paths else qs
+
+
+def qs_with_details[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
+    prefetch: list[str | Prefetch[Any]] = []
+
+    for m2m in qs.model._meta.many_to_many:
+        related = m2m.related_model
+
+        if issubclass(related, BranchModel):
+            prefetch.append(
+                Prefetch(m2m.name, queryset=qs_with_details(related.objects.all()))
+            )
+        else:
+            prefetch.append(m2m.name)
+
+    return qs_with_trail(qs).select_related("owner").prefetch_related(*prefetch)
+
+
+def _trail_model(qs: QuerySet[AnyBranch]) -> type[TrailModel]:
+    related = qs.model._meta.get_field("target").related_model
+
+    assert related is not None and issubclass(related, TrailModel)
+
+    return related
+
+
+def qs_super_agent[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
+    return annotate_branch_refs(qs_with_trail(qs), owner_name)
+
+
+def qs_messages(qs: QuerySet[Message], owner_name: str) -> QuerySet[Message]:
+    return annotate_branch_refs(qs, owner_name).order_by("timestamp")
+
+
+def qs_experiments(
+    qs: QuerySet[ExperimentModel],
+    owner_name: str,
+) -> QuerySet[ExperimentModel]:
+    return annotate_branch_refs(qs, owner_name)
+
+
+def qs_batches(qs: QuerySet[BatchModel], owner_name: str) -> QuerySet[BatchModel]:
+    return annotate_branch_refs(qs, owner_name)
+
+
+# --------------------------------------------------------------- trails
 
 
 def qs_owned_trails[T: TrailModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
     return (
-        qs.filter(branches__owner__name=owner_name)
-        .annotate(branch_name=F("branches__name"))
+        annotate_branch_name(
+            qs.filter(branches__owner__name=owner_name),
+            "branches__name",
+        )
         .order_by("id")
         .distinct("id")
     )
 
 
 def expects_by_case(owner_name: str) -> dict[int, list[int]]:
-    """
-    Which expectation trails each case trail carries, for `owner_name`.
-
-    Expectations hang off a case *branch* and name expect branches (see
-    `CaseBranchModel.expects`), while an experiment pairs a case *trail* with
-    an expect trail. A trail's set is therefore the union over the branches
-    the owner has of it: every pairing any version of their case has stood
-    for, and nobody else's.
-    """
     links = (
         CaseExpect.objects.filter(case__owner__name=owner_name)
         .values_list("case__target_id", "expect__target_id")
@@ -70,111 +122,8 @@ def expects_by_case(owner_name: str) -> dict[int, list[int]]:
     )
 
     by_case: dict[int, list[int]] = defaultdict(list)
+
     for case_trail_id, expect_trail_id in links:
         by_case[case_trail_id].append(expect_trail_id)
 
     return {case_id: sorted(expect_ids) for case_id, expect_ids in by_case.items()}
-
-
-def qs_canon[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    owned_qs = qs.filter(owner__name=owner_name)
-
-    count_subquery = (
-        qs.filter(owner_id=OuterRef("owner_id"), name=OuterRef("name"))
-        .values("owner_id", "name")
-        .annotate(total=Count("id"))
-        .values("total")
-    )
-
-    canonical_ids = (
-        owned_qs.order_by("owner_id", "name", "-timestamp", "-id")
-        .distinct("owner_id", "name")
-        .values_list("id", flat=True)
-    )
-
-    return (
-        owned_qs.filter(id__in=canonical_ids)
-        .annotate(_version_count=Subquery(count_subquery))
-        .order_by("-timestamp")
-    )
-
-
-def qs_canon_col[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    owned_qs = qs.filter(Q(owner__name=owner_name) | Q(collaborators__name=owner_name))
-
-    count_subquery = (
-        qs.filter(owner_id=OuterRef("owner_id"), name=OuterRef("name"))
-        .values("owner_id", "name")
-        .annotate(total=Count("id"))
-        .values("total")
-    )
-
-    canonical_ids = (
-        owned_qs.order_by("owner_id", "name", "-timestamp", "-id")
-        .distinct("owner_id", "name")
-        .values_list("id", flat=True)
-    )
-
-    return (
-        owned_qs.filter(id__in=canonical_ids)
-        .annotate(_version_count=Subquery(count_subquery))
-        .order_by("-timestamp")
-    )
-
-
-def qs_owned[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    return qs.filter(owner__name=owner_name)
-
-
-def qs_messages(qs: QuerySet[Message], owner_name: str):
-    agent_branch = Agent.objects.filter(
-        target=OuterRef("agent"),
-        owner__name=owner_name,
-    ).order_by("-timestamp")
-
-    qs = qs.annotate(
-        agent_branch_id=Subquery(agent_branch.values("id")[:1]),
-        agent_branch_name=Subquery(agent_branch.values("name")[:1]),
-    )
-
-    return qs.order_by("timestamp")
-
-
-def qs_experiments(qs: QuerySet[ExperimentModel], owner_name: str):
-    def branch_subquery(model: type[Agent | Case | Expect], target_field: str):
-        return model.objects.filter(
-            target=OuterRef(target_field),
-            owner__name=owner_name,
-        ).order_by("-timestamp")
-
-    agent_branch = branch_subquery(Agent, "agent")
-    case_branch = branch_subquery(Case, "case")
-    expect_branch = branch_subquery(Expect, "expect")
-
-    return qs.annotate(
-        agent_branch_id=Subquery(agent_branch.values("id")[:1]),
-        agent_branch_name=Subquery(agent_branch.values("name")[:1]),
-        case_branch_id=Subquery(case_branch.values("id")[:1]),
-        case_branch_name=Subquery(case_branch.values("name")[:1]),
-        expect_branch_name=Subquery(expect_branch.values("name")[:1]),
-        expect_branch_id=Subquery(expect_branch.values("id")[:1]),
-    )
-
-
-def qs_batches(qs: QuerySet[BatchModel], owner_name: str):
-    """
-    Batches with the agent named as the viewer knows it.
-
-    A batch points at an agent *trail*, the same way an experiment does (see
-    `qs_experiments`), so the name has to come from the branch the viewer has
-    of it.
-    """
-    agent_branch = Agent.objects.filter(
-        target=OuterRef("agent"),
-        owner__name=owner_name,
-    ).order_by("-timestamp")
-
-    return qs.annotate(
-        agent_branch_id=Subquery(agent_branch.values("id")[:1]),
-        agent_branch_name=Subquery(agent_branch.values("name")[:1]),
-    )

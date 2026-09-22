@@ -19,8 +19,8 @@ from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.expect.django import Expect
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
 from chatddx.repo.entities.scorer.django import Scorer
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.pydantic import BaseFormDataIn, BranchSchemaDetails
-from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers.branch import commit, get_branch_model
 
 logger = logging.getLogger(__name__)
@@ -80,23 +80,12 @@ class ExpectInlineForm(ModelForm):
 
 
 class ExpectInlineFormSet(BranchFormSet):
-    """
-    Commit every row as an `expect` branch and give the case the set of
-    branches the rows describe.
-
-    `instance` is the case branch that `BranchModelAdmin.save_model` just made
-    canon (see `BranchModelAdmin.save_related`); its expects are the owner's,
-    so the rows can be set as they stand, without regard for anyone else.
-    """
-
     instance: CaseBranchModel
     can_delete: bool
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
 
-        # (scorer name, branch was versioned) per committed row, for the
-        # messages `CaseAdmin.save_formset()` builds.
         self.outcomes: list[tuple[str, bool]] = []
         self.committed: dict[ExpectInlineForm, Expect] = {}
 
@@ -111,10 +100,6 @@ class ExpectInlineFormSet(BranchFormSet):
     def save(self, commit: bool = True) -> list[Expect]:
         saved = super().save(commit=commit)
 
-        # The case's expects are exactly what the inline shows: the rows the
-        # formset skipped as untouched, the freshly committed version of the
-        # edited ones, and none of the deleted ones. Setting them also covers
-        # a rename, where the new branch has no version to inherit from.
         self.instance.expects.set([self._branch(form) for form in self.live_forms()])
 
         return saved
@@ -131,16 +116,9 @@ class ExpectInlineFormSet(BranchFormSet):
         return self._dump(form, instance.name)
 
     def delete_existing(self, obj: Expect, commit: bool = True) -> None:
-        """
-        A deleted row drops out of the case's expects (see `save()`); the
-        branch it was rendered from is history and stays.
-        """
+        pass
 
     def live_forms(self) -> list[ExpectInlineForm]:
-        """
-        The rows that describe an expectation of the case after this save,
-        i.e. all of them but the empty and the deleted ones.
-        """
         forms = cast(
             list[ExpectInlineForm],
             [form for form in self.initial_forms if form.instance.pk]
@@ -150,10 +128,6 @@ class ExpectInlineFormSet(BranchFormSet):
         return [form for form in forms if not self._is_deleted(form)]
 
     def _branch(self, form: ExpectInlineForm) -> Expect:
-        """
-        The branch a row stands for: the version just committed for the rows
-        that changed, the one the row was rendered from for the rest.
-        """
         committed = self.committed.get(form)
 
         return committed if committed is not None else cast(Expect, form.instance)
@@ -197,14 +171,12 @@ class ExpectInlineFormSet(BranchFormSet):
         return canon
 
     def _branch_name(self, form: ExpectInlineForm) -> str:
-        # sibling in src/chatddx/repo/parsers/inventory.py
         return f"{self.instance.name}|{form.cleaned_data['scorer'].name}"
 
     def _form_data(self, form: ExpectInlineForm) -> dict[str, Any]:
         data = dict(form.cleaned_data)
         scorer_branch = data.pop("scorer", None)
 
-        # the field holds a scorer branch, the schema wants its trail
         if scorer_branch is not None:
             data["scorer"] = scorer_branch.target
 

@@ -310,8 +310,6 @@ def test_add_form_leaves_expect_enabled_once_a_case_is_posted(
     add_post_data: dict,
     user_client: Client,
 ):
-    # A post that comes back with errors keeps the case it was sent with, so
-    # the field it belongs to stays open for business.
     add_post_data["initial_run_status"] = RunStatusChoices.COMPLETED.value
 
     response = user_client.post(reverse("admin:orm_experiment_add"), add_post_data)

@@ -19,12 +19,6 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 
 class StubAgent:
-    """
-    Stands in for `run_from_session`, which is the only part of a pass that
-    talks to a model. Records what it was asked and leaves the reply behind as
-    an assistant message, the way a real run would.
-    """
-
     def __init__(self, reply: str = AGENT_REPLY, error: Exception | None = None):
         self.reply: str = reply
         self.error: Exception | None = error
@@ -63,10 +57,6 @@ def stub_agent(monkeypatch: pytest.MonkeyPatch) -> StubAgent:
 
 @pytest.fixture(autouse=True)
 def empty_queue():
-    """
-    The pgqueuer tables aren't Django models, so nothing truncates them between
-    tests the way it does the rest.
-    """
     with connection.cursor() as cursor:
         cursor.execute("DELETE FROM pgqueuer")
     yield
@@ -85,11 +75,6 @@ def pending_passes() -> int:
 
 
 def break_the_scorer(run_pk: int) -> None:
-    """
-    Point a run's expectation at a command that resolves to nothing. Trails are
-    immutable in the database, so this writes around the trigger that enforces
-    it rather than going through the ORM.
-    """
     run = RunModel.objects.select_related("experiment__expect__scorer").get(pk=run_pk)
 
     with connection.cursor() as cursor:
@@ -101,12 +86,8 @@ def break_the_scorer(run_pk: int) -> None:
         cursor.execute("ALTER TABLE agents_scorer ENABLE TRIGGER USER")
 
 
-# The database is off limits from an async test's own thread.
 apending_passes = sync_to_async(pending_passes)
 abreak_the_scorer = sync_to_async(break_the_scorer)
-
-
-# A pass, end to end through pgqueuer
 
 
 @pytest.mark.asyncio
@@ -150,9 +131,6 @@ async def test_drain_with_nothing_queued_is_a_no_op(stub_agent: StubAgent):
     assert stub_agent.prompts == []
 
 
-# What a pass does and doesn't pick up
-
-
 @pytest.mark.asyncio
 async def test_a_stored_run_is_left_alone(
     queued_run: RunModel,
@@ -173,7 +151,6 @@ async def test_a_run_another_pass_claimed_is_not_run_again(
     queued_run: RunModel,
     stub_agent: StubAgent,
 ):
-    """The claim is a conditional UPDATE, so two passes can't both take a run."""
     queued_run.status = RunStatusChoices.RUNNING
     await queued_run.asave(update_fields=["status"])
 
@@ -196,14 +173,10 @@ async def test_a_failing_run_is_errored_not_retried_forever(
 
     await queued_run.arefresh_from_db()
     assert queued_run.status == RunStatusChoices.ERRORED
-    # The session it got as far as opening is kept, so the failure is readable.
     assert queued_run.session_id is not None
 
     await worker.worker_pass()
     assert len(stub.prompts) == 1
-
-
-# Scoring
 
 
 @pytest.mark.asyncio
@@ -234,18 +207,12 @@ async def test_a_run_whose_scorer_does_not_exist_is_errored(
 
     await queued_run.arefresh_from_db()
     assert queued_run.status == RunStatusChoices.ERRORED
-    # The run itself completed; only the scoring of it failed.
     assert queued_run.session_id is not None
-
-
-# Waking a running worker
 
 
 def test_wake_on_commit_enqueues_one_pass_after_the_transaction_lands():
     with transaction.atomic():
         worker.wake_on_commit()
-        # A pass that started here would look at the queue before the run
-        # being queued is in it.
         assert pending_passes() == 0
 
     assert pending_passes() == 1

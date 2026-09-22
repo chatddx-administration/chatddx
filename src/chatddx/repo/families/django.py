@@ -1,7 +1,7 @@
 # pyright: basic
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
 from django.db.models import (
     PROTECT,
@@ -10,7 +10,6 @@ from django.db.models import (
     Field,
     ForeignKey,
     Index,
-    Manager,
     ManyToManyField,
     Model,
 )
@@ -20,6 +19,8 @@ from chatddx.core.models import IdentityModel, TagModel
 
 class TrailModel(Model):
     id: int
+
+    branch_name: str | None = None
 
     fingerprint = CharField(
         max_length=64,
@@ -35,9 +36,8 @@ class TrailModel(Model):
         abstract = True
 
     def __str__(self) -> str:
-        name: str | None = getattr(self, "branch_name", None)
         short_hash = self.fingerprint[:6]
-        return f"{name} ({short_hash})" if name else short_hash
+        return f"{self.branch_name} ({short_hash})" if self.branch_name else short_hash
 
 
 class BranchModel(Model):
@@ -45,6 +45,8 @@ class BranchModel(Model):
 
     target: Field[Any, Any]
     target_id: int
+
+    version_count: int | None = None
 
     name = CharField(max_length=255)
 
@@ -88,8 +90,7 @@ class BranchProxy(Model):
     pk: int
     name: str
     target: TrailModel
-
-    objects: ClassVar[Manager[BranchModel]]
+    version_count: int | None = None
 
     class Meta:
         abstract = True
