@@ -1,17 +1,14 @@
-"""
-What the registry promises: the class of a thing says which entity it is,
-and an entity carries only what it declares.
-"""
-
 from pathlib import Path
+from typing import assert_type
 
 import pytest
 
+from chatddx.core.choices import ToolChoices
 from chatddx.repo.bundles import (
     ALL_ENTITIES,
     ALL_VIEWS,
     RegistryCollisionError,
-    _index_by_class,
+    _index_by_class,  # pyright: ignore[reportPrivateUsage]
     entity_of,
     view_of,
 )
@@ -21,7 +18,12 @@ from chatddx.repo.entities.agent.django import (
     AgentTrailModel,
     SharedAgent,
 )
-from chatddx.repo.entities.agent.pydantic import AgentFormDataOut, AgentTrailSchema
+from chatddx.repo.entities.agent.pydantic import (
+    AgentBranchSpec,
+    AgentFormDataOut,
+    AgentTrailSchema,
+    AgentTrailSpec,
+)
 from chatddx.repo.entities.case.django import Case, SharedCase
 from chatddx.repo.entities.case.pydantic import CaseBranchDetails
 from chatddx.repo.entities.super_agent.django import SharedSuperAgent, SuperAgent
@@ -44,9 +46,7 @@ def test_a_view_is_not_an_entity():
         assert entity_of(cls) is AGENT
 
 
-@pytest.mark.parametrize(
-    "proxy", [Agent, SharedAgent, SuperAgent, SharedSuperAgent]
-)
+@pytest.mark.parametrize("proxy", [Agent, SharedAgent, SuperAgent, SharedSuperAgent])
 def test_every_agent_proxy_answers_agent(proxy: type):
     """
     `SuperAgent` used to answer 'super_agent' and `SharedSuperAgent` 'agent',
@@ -112,3 +112,86 @@ def test_expects_on_a_non_case_is_an_error_not_a_shrug():
     """
     with pytest.raises(KeyError, match="expects"):
         _ = parse(path=Path(__file__).parent / "data/expects-on-an-agent.toml")
+
+
+def test_entity_of():
+    agent_trail_schema = entity_of("agent").trail_schema
+
+    assert repr(agent_trail_schema) == repr(AgentTrailSchema)
+    _ = assert_type(agent_trail_schema, type[AgentTrailSchema])
+
+    agent_trail_spec = entity_of(agent_trail_schema).trail_spec
+
+    assert repr(agent_trail_spec) == repr(AgentTrailSpec)
+    _ = assert_type(agent_trail_spec, type[AgentTrailSpec])
+
+    agent_branch_spec = entity_of(agent_trail_spec).branch_spec
+
+    assert repr(agent_branch_spec) == repr(AgentBranchSpec)
+    _ = assert_type(agent_branch_spec, type[AgentBranchSpec])
+
+
+def test_super_agent_jsonschema():
+    jsonschema = view_of("super_agent").form_data_out.model_json_schema(
+        mode="serialization"
+    )
+    assert jsonschema["properties"]["instructions"]["type"] == "string"
+    assert jsonschema["properties"]["connection_template"]["type"] == "string"
+
+
+def test_agent_jsonschema():
+    jsonschema = view_of("agent").form_data_out.model_json_schema(mode="serialization")
+    assert jsonschema["properties"]["instructions"]["type"] == "string"
+    assert jsonschema["properties"]["connection"]["type"] == "string"
+
+    jsonschema = view_of("agent").form_data_in.model_json_schema()
+    assert list(jsonschema.keys()) == [
+        "$defs",
+        "properties",
+        "required",
+        "title",
+        "type",
+    ]
+    assert list(jsonschema["$defs"].keys()) == [
+        "CoercionChoices",
+        "ConnectionFormDataIn",
+        "IdentitySchemaOut",
+        "JsonValue",
+        "OutputTypeFormDataIn",
+        "ProviderChoices",
+        "SamplingParamsFormDataIn",
+        "ToolChoices",
+        "ToolFormDataIn",
+        "ToolGroupFormDataIn",
+        "ValidationChoices",
+    ]
+    assert list(jsonschema["properties"].keys()) == [
+        "name",
+        "owner",
+        "collaborators",
+        "tags",
+        "instructions",
+        "connection",
+        "sampling_params",
+        "output_type",
+        "tool_group",
+    ]
+    assert jsonschema["properties"]["connection"] == {
+        "$ref": "#/$defs/ConnectionFormDataIn"
+    }
+    assert jsonschema["properties"]["tool_group"] == {
+        "$ref": "#/$defs/ToolGroupFormDataIn"
+    }
+
+
+def test_type_pipeline():
+    tool_schema_cls = entity_of("tool").trail_schema
+    tool = tool_schema_cls.model_validate(
+        {
+            "command": "cmd",
+            "type": ToolChoices.FUNCTION,
+        }
+    )
+    assert tool.command == "cmd"
+
+    assert view_of("tool").form_data_out.model_validate

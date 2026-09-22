@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 from ninja import Schema as NinjaSchema
 from pydantic import (
@@ -32,13 +32,8 @@ class TrailSchema(BaseTrail):
 
         exclude = {"fingerprint"}
 
-        for field_name, field_info in type(self).model_fields.items():
+        for field_name in type(self).model_fields:
             val = getattr(self, field_name)
-            extra = field_info.json_schema_extra or {}
-
-            if extra.get("exclude_from_fingerprint"):
-                exclude.add(field_name)
-                continue
 
             # sibling in src/chatddx/repo/shufflers/trail.py
             match val:
@@ -107,19 +102,7 @@ def relation_fields(details: type[BaseModel]) -> list[tuple[str, str]]:
 
 
 class BranchSchemaDetails(BaseModel):
-    """
-    What a branch carries besides its content, by name.
-
-    Every entity has a name, an owner, collaborators and tags. An entity that
-    carries more subclasses this and adds it, so that naming something an
-    entity does not carry is an error rather than a silent no-op -- see
-    `chatddx.repo.entities.case.pydantic.CaseBranchDetails`.
-
-    For a relation field, None means the new version inherits the set from
-    the one it supersedes, and a list means exactly that set.
-    """
-
-    model_config = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     name: str
     owner: str
@@ -135,13 +118,7 @@ class BranchSchemaDetails(BaseModel):
 
 
 class BranchDetailsPatch(BaseModel):
-    """
-    `BranchSchemaDetails` with nothing required, for an inventory that names
-    only some of what a branch carries. Its per-entity counterparts live
-    beside the details model they patch.
-    """
-
-    model_config = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     name: str | None = None
     owner: str | None = None

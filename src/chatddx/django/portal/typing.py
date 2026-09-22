@@ -2,7 +2,7 @@ from typing import cast, override
 
 from django.db.models import Model, QuerySet
 from django.http import HttpRequest
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin  # pyright: ignore[reportMissingTypeStubs]
 
 
 class TypedModelAdmin[T: Model](ModelAdmin):

@@ -17,7 +17,10 @@ from chatddx.repo.inventories import InventoryBranchSpec
 from chatddx.repo.shufflers.branch import commit_async, get_branch_async
 from chatddx.utils import make_async
 
-pytestmark = pytest.mark.django_db(transaction=True)
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.django_db(transaction=True),
+]
 
 
 PAYLOAD_1 = "case payload 1"
@@ -59,7 +62,6 @@ def oldest_version(owner: IdentityModel, name: str = "case-1") -> CaseBranchMode
     ).earliest("timestamp")
 
 
-@pytest.mark.asyncio
 async def test_case_1(inventory_fixture_bs: InventoryBranchSpec):
     case_1 = inventory_fixture_bs.case["case-1"]
     assert case_1.name == "case-1"
@@ -70,12 +72,13 @@ async def test_case_1(inventory_fixture_bs: InventoryBranchSpec):
     assert case_1.expects[0].target.scorer.command == "scorer-a command"
 
 
-@pytest.mark.asyncio
 async def test_expects_belong_to_the_owner_not_to_the_payload(
     inventory_fixture_commit: object,
     owner: IdentityModel,
     other_owner: IdentityModel,
 ):
+    _ = inventory_fixture_commit
+
     scorer = ScorerTrailSchema(command="scorer-x command")
 
     _ = await commit_async(
@@ -113,11 +116,12 @@ async def test_expects_belong_to_the_owner_not_to_the_payload(
     ]
 
 
-@pytest.mark.asyncio
 async def test_a_new_case_version_snapshots_what_it_supersedes(
     inventory_fixture_commit: object,
     owner: IdentityModel,
 ):
+    _ = inventory_fixture_commit
+
     created = await commit_async(
         trail=CaseTrailSchema(payload="case payload 1, rewritten"),
         branch_details=BranchSchemaDetails(name="case-1", owner=owner.name),
@@ -140,12 +144,13 @@ async def test_a_new_case_version_snapshots_what_it_supersedes(
     assert await tag_names(superseded) == ["tag-1", "tag-2"]
 
 
-@pytest.mark.asyncio
 async def test_a_tag_belongs_to_one_owner_and_one_entity(
     inventory_fixture_commit: object,
     owner: IdentityModel,
     other_owner: IdentityModel,
 ):
+    _ = inventory_fixture_commit
+
     agent_tag = await make_async(ensure_tag)(owner, "agent", "clinical")
 
     _ = await commit_async(
@@ -174,11 +179,12 @@ async def test_a_tag_belongs_to_one_owner_and_one_entity(
     assert (await case_canon(other_owner.name)).tags == ["clinical"]
 
 
-@pytest.mark.asyncio
 async def test_named_expects_reach_the_canon_of_an_unchanged_case(
     inventory_fixture_commit: object,
     owner: IdentityModel,
 ):
+    _ = inventory_fixture_commit
+
     created = await commit_async(
         trail=CaseTrailSchema(payload=PAYLOAD_1),
         branch_details=CaseBranchDetails(
@@ -195,7 +201,6 @@ async def test_named_expects_reach_the_canon_of_an_unchanged_case(
     assert [expect.target.payload for expect in canon.expects] == [EXPECT_1_A]
 
 
-@pytest.mark.asyncio
 async def test_a_case_keeps_its_own_of_two_identical_expectations(
     inventory_fixture_commit: object,
     owner: IdentityModel,
@@ -204,6 +209,7 @@ async def test_a_case_keeps_its_own_of_two_identical_expectations(
     Two cases that expect the same payload for the same scorer share one
     content-addressed trail, and must still carry an expectation each.
     """
+    _ = inventory_fixture_commit
 
     _ = await commit_async(
         trail=ExpectTrailSchema(

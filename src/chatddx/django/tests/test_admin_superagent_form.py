@@ -10,7 +10,9 @@ from chatddx.repo.entities.agent.django import AgentBranchModel
 from chatddx.repo.entities.connection.django import ConnectionBranchModel
 from chatddx.repo.inventories import InventoryBranchModel
 
-pytestmark = pytest.mark.django_db(transaction=True)
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
 
 
 def test_super_agent_change_recreates_no_branch(
@@ -34,7 +36,6 @@ def test_super_agent_change_recreates_no_branch(
     assert ConnectionBranchModel.objects.count() == before
 
 
-@pytest.mark.django_db
 def test_super_agent_add_and_versioning(
     owner: IdentityModel,
     user_client: Client,

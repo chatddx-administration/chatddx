@@ -1,4 +1,7 @@
 # pyright: basic
+from __future__ import annotations
+
+from typing import Any
 
 from django.db.models import (
     CASCADE,
@@ -27,21 +30,13 @@ class CaseBranchModel(BranchModel):
         app_label = "orm"
         db_table = "agents_case_branch"
 
-    target = ForeignKey(
+    target = ForeignKey[CaseTrailModel](
         CaseTrailModel,
         on_delete=PROTECT,
         related_name="branches",
     )
 
-    # Which expectations a case carries is not part of the case payload, so it
-    # belongs to the owner's version of the case rather than to the (shared,
-    # content-addressed) trail. Each version snapshots the set it was saved
-    # with, see `chatddx.repo.shufflers.branch.commit`.
-    #
-    # The set names expect *branches*, not their trails: two cases that expect
-    # the same payload for the same scorer share one content-addressed trail,
-    # so a trail cannot say which expectation of whose case it stands for.
-    expects = ManyToManyField(
+    expects: ManyToManyField[ExpectBranchModel, Any] = ManyToManyField(
         ExpectBranchModel,
         through="CaseExpect",
         through_fields=("case", "expect"),

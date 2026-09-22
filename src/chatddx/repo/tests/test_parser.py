@@ -62,5 +62,5 @@ def test_infrec_file():
 def test_infrec_record():
     infrec = parse(path=Path(__file__).parent / "data/infrec-4.toml")
 
-    infrec_1 = infrec.agent["agent-1"]
-    assert infrec_1.instruction.definition == "agent 1"
+    infrec_1 = infrec.agent["agent-1"][0]
+    assert infrec_1.instructions == "agent 1"

@@ -29,7 +29,7 @@ class ExpectBranchModel(BranchModel):
         app_label = "orm"
         db_table = "agents_expect_branch"
 
-    target = ForeignKey(
+    target = ForeignKey[ExpectTrailModel](
         ExpectTrailModel,
         on_delete=PROTECT,
         related_name="branches",

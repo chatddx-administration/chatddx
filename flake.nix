@@ -72,10 +72,6 @@
       django-app =
         system: (pythonSets.${system}.mkVirtualEnv "${name}-django-${version}" workspace.deps.default);
 
-      # The queue worker, as an executable of its own: a host wires this into a
-      # service unit next to the Django one and never has to know how the
-      # subcommand is spelled. It runs until killed and needs the same
-      # environment Django does -- DB_*, CHATDDX_MODE, DJANGO_SETTINGS_MODULE.
       worker =
         system:
         let

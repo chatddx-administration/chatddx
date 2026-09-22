@@ -1,7 +1,7 @@
 # pyright: basic
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from django.db.models import (
     PROTECT,
@@ -19,6 +19,8 @@ from chatddx.core.models import IdentityModel, TagModel
 
 
 class TrailModel(Model):
+    id: int
+
     fingerprint = CharField(
         max_length=64,
         db_index=True,
@@ -32,13 +34,15 @@ class TrailModel(Model):
     class Meta:
         abstract = True
 
-    def __str__(self):
-        name = getattr(self, "branch_name", None)
+    def __str__(self) -> str:
+        name: str | None = getattr(self, "branch_name", None)
         short_hash = self.fingerprint[:6]
         return f"{name} ({short_hash})" if name else short_hash
 
 
 class BranchModel(Model):
+    id: int
+
     target: Field[Any, Any]
     target_id: int
 
@@ -53,14 +57,15 @@ class BranchModel(Model):
         on_delete=PROTECT,
         related_name="owned_%(class)s",
     )
+    owner_id: int
 
-    collaborators = ManyToManyField(
+    collaborators: ManyToManyField[IdentityModel, Any] = ManyToManyField(
         IdentityModel,
         blank=True,
         related_name="shared_%(class)s",
     )
 
-    tags = ManyToManyField(
+    tags: ManyToManyField[TagModel, Any] = ManyToManyField(
         TagModel,
         blank=True,
         related_name="tagged_%(class)s",
@@ -70,19 +75,24 @@ class BranchModel(Model):
         abstract = True
         indexes = (Index(fields=["owner", "name", "-timestamp"]),)
 
-    def as_proxy(self, proxy_model):
+    def as_proxy[ModelT: Model](self, proxy_model: type[ModelT]) -> ModelT:
+        fields = self._meta.fields
         return proxy_model.from_db(
             db=self._state.db,
-            field_names=[f.name for f in self._meta.fields],
-            values=[getattr(self, f.name) for f in self._meta.fields],
+            field_names=[f.name for f in fields],
+            values=[getattr(self, f.name) for f in fields],
         )
 
 
-class BranchProxy:
+class BranchProxy(Model):
     pk: int
     name: str
-    objects: Manager[BranchModel]
     target: TrailModel
+
+    objects: ClassVar[Manager[BranchModel]]
+
+    class Meta:
+        abstract = True
 
     def __str__(self) -> str:
         return self.name

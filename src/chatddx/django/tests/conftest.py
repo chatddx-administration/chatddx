@@ -1,3 +1,4 @@
+# pyright: basic
 from typing import Any
 
 import pytest

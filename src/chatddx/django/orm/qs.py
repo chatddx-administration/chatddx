@@ -15,7 +15,7 @@ from chatddx.history.proxies import Message
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.django import Agent
 from chatddx.repo.entities.case.django import Case, CaseExpect
-from chatddx.repo.entities.expect.django import Expect, ExpectBranchModel
+from chatddx.repo.entities.expect.django import Expect
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.registry import EntityName
 from chatddx.repo.todo import agent_relations

@@ -1,8 +1,5 @@
 extends = ["../../../data/test/test-inventory.toml"]
 
-# The shared test inventory's scorers are placeholders ("scorer-a command").
-# The worker runs the scoring pass for real, so it needs a case whose
-# expectation names a scorer that `chatddx.runtime.scorers` actually offers.
 [scorer.regex_match]
 command = "regex_match"
 

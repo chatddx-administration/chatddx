@@ -8,15 +8,16 @@ from pydantic_ai import ModelResponse, TextPart
 from pydantic_core import to_jsonable_python
 
 from chatddx.core.choices import RoleChoices
-from chatddx.core.models import IdentityModel
 from chatddx.history.models import MessageModel, SessionModel
-from chatddx.repo.families.django import BranchModel
 from chatddx.repo.inventories import InventoryBranchModel
+
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
 
 
 @pytest.fixture
 def message(
-    owner: IdentityModel,
     session: SessionModel,
     inventory_fixture_bm: InventoryBranchModel,
 ) -> MessageModel:
@@ -32,7 +33,6 @@ def message(
     )
 
 
-@pytest.mark.django_db
 def test_session_field_is_a_link(
     message: MessageModel,
     session: SessionModel,
@@ -45,7 +45,6 @@ def test_session_field_is_a_link(
     assert reverse("admin:orm_session_change", args=[session.pk]) in field_html
 
 
-@pytest.mark.django_db
 def test_agent_field_is_a_link(
     message: MessageModel,
     inventory_fixture_bm: InventoryBranchModel,

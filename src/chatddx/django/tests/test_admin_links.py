@@ -34,6 +34,10 @@ from chatddx.history.proxies import Experiment, Message, Run, Session
 from chatddx.repo.entities.super_agent.django import SuperAgent
 from chatddx.repo.inventories import InventoryBranchModel
 
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
+
 
 def reference(url: str, label: object) -> str:
     """The markup a reference to `url` is expected to render as."""
@@ -71,7 +75,6 @@ def run_with_session(run: RunModel, owner: IdentityModel) -> RunModel:
     return run
 
 
-@pytest.mark.django_db
 def test_every_admin_page_loads_the_stylesheet(user_client: Client):
     """
     The class is only worth carrying if the rules that style it are there;
@@ -90,7 +93,6 @@ def test_link_carries_the_class_and_escapes_its_label():
     )
 
 
-@pytest.mark.django_db
 def test_change_link_reads_as_the_target_str(session: SessionModel):
     proxy = Session.objects.get(pk=session.pk)
     url = reverse("admin:orm_session_change", args=[session.pk])
@@ -98,14 +100,12 @@ def test_change_link_reads_as_the_target_str(session: SessionModel):
     assert change_link(proxy) == reference(url, proxy)
 
 
-@pytest.mark.django_db
 def test_links_carry_their_query_string():
     add = add_link(SuperAgent, "label", agent_fingerprint="abc")
 
     assert reverse("admin:orm_superagent_add") + "?agent_fingerprint=abc" in add
 
 
-@pytest.mark.django_db
 def test_run_changelist_references_experiment_and_session(
     run_with_session: RunModel,
     experiment: ExperimentModel,
@@ -130,7 +130,6 @@ def test_run_changelist_references_experiment_and_session(
     )
 
 
-@pytest.mark.django_db
 @pytest.mark.parametrize("view", ["changelist", "change"])
 def test_experiment_references_its_agent_and_case(
     view: str,
@@ -167,7 +166,6 @@ def test_experiment_references_its_agent_and_case(
     )
 
 
-@pytest.mark.django_db
 def test_message_form_references_session_run_and_agent(
     message: MessageModel,
     session: SessionModel,
@@ -206,7 +204,6 @@ def test_message_form_references_session_run_and_agent(
     )
 
 
-@pytest.mark.django_db
 def test_message_run_falls_back_to_the_uuid_when_the_run_is_gone(
     message: MessageModel,
     user_client: Client,
@@ -226,7 +223,6 @@ def test_message_run_falls_back_to_the_uuid_when_the_run_is_gone(
     assert f'class="{LINK_CLASS}"' not in field_html
 
 
-@pytest.mark.django_db
 def test_agent_changelist_references_every_relation(
     inventory_fixture_bm: InventoryBranchModel,
     user_client: Client,
@@ -250,7 +246,6 @@ def test_agent_changelist_references_every_relation(
         )
 
 
-@pytest.mark.django_db
 def test_session_form_references_each_message_and_its_agent(
     message: MessageModel,
     session: SessionModel,
@@ -285,7 +280,6 @@ def test_session_form_references_each_message_and_its_agent(
     )
 
 
-@pytest.mark.django_db
 def test_message_permalink_reads_as_its_number_not_its_content(
     message: MessageModel,
 ):

@@ -14,7 +14,7 @@ from chatddx.django.portal.forms.branch_base import (
     PydanticValidationError,
 )
 from chatddx.dx.error_handling import print_pydantic_errors
-from chatddx.repo.bundles import entity_of, view_of
+from chatddx.repo.bundles import view_of
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.expect.django import Expect
 from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
@@ -68,9 +68,7 @@ class ExpectInlineForm(ModelForm):
 
     def validate(self, data: dict[str, Any]):
         try:
-            validated_data = view_of(self.entity_name).form_data_in.model_validate(
-                data
-            )
+            validated_data = view_of(self.entity_name).form_data_in.model_validate(data)
             return validated_data
         except PydanticValidationError as e:
             if settings.MODE == "dev":

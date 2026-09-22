@@ -57,13 +57,13 @@ class BranchModelAdmin[T: BranchProxy](
         queryset = super().get_queryset(request)
         model = queryset.model
         field = (
-            model._meta.pk if from_field is None else model._meta.get_field(from_field)
+            model._meta.pk if from_field is None else model._meta.get_field(from_field)  # pyright: ignore[reportAttributeAccessIssue]
         )
         assert field is not None
         try:
             object_id = field.to_python(object_id)
             return queryset.get(**{field.name: object_id})
-        except (model.DoesNotExist, ValidationError, ValueError):
+        except (model.DoesNotExist, ValidationError, ValueError):  # pyright: ignore[reportAttributeAccessIssue]
             return None
 
     def delete_queryset(self, request: HttpRequest, queryset: QuerySet[DjangoModel]):
@@ -101,9 +101,9 @@ class BranchModelAdmin[T: BranchProxy](
             )
 
         context["fingerprint"] = obj.target.fingerprint[:6]
-        context["timestamp"] = obj.timestamp.strftime("%Y-%m-%d %H:%M")
+        context["timestamp"] = obj.timestamp.strftime("%Y-%m-%d %H:%M")  # pyright: ignore[reportAttributeAccessIssue]
 
-        if obj.owner.name != request.user.username:
+        if obj.owner.name != request.user.username:  # pyright: ignore[reportAttributeAccessIssue]
             context["version_info"] = {"current": 1, "total": 1}
             return super().render_change_form(
                 request, context, add, change, form_url, obj
@@ -177,6 +177,8 @@ class BranchModelAdmin[T: BranchProxy](
 
         schema = schema_cls.model_validate(data.model_dump())
         branch_name = data.name or ""
+
+        assert data.owner
 
         created: bool = branch.commit(
             branch_details=BranchSchemaDetails(

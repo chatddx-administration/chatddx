@@ -28,8 +28,7 @@ schemas: tuple[tuple[EntityName, str], ...] = (
 fields = [
     (bundle, record, field_name)
     for bundle, record in schemas
-    for field_name, field_info in entity_of(bundle).trail_schema.model_fields.items()
-    if not (field_info.json_schema_extra or {}).get("exclude_from_fingerprint")
+    for field_name in entity_of(bundle).trail_schema.model_fields
 ]
 
 

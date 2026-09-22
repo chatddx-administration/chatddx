@@ -249,16 +249,19 @@ def on_result(session_id: int, agent_id: int):
 
 
 def infer_role(msg: ModelResponse | ModelRequest) -> str:
-    if isinstance(msg, ModelResponse):
-        return RoleChoices.ASSISTANT
+    match msg:
+        case ModelResponse():
+            return RoleChoices.ASSISTANT
 
-    if isinstance(msg, ModelRequest):
-        part_kinds = {part.part_kind for part in msg.parts}
+        case ModelRequest():
+            part_kinds = {part.part_kind for part in msg.parts}
 
-        if "system-prompt" in part_kinds:
-            return RoleChoices.SYSTEM
-        if "tool-return" in part_kinds or "retry-prompt" in part_kinds:
-            return RoleChoices.TOOL
+            if "system-prompt" in part_kinds:
+                return RoleChoices.SYSTEM
+            if "tool-return" in part_kinds or "retry-prompt" in part_kinds:
+                return RoleChoices.TOOL
 
-        return RoleChoices.USER
-    return RoleChoices.UNKNOWN
+            return RoleChoices.USER
+        # TODO: Check if the types can be trusted here and remove this block
+        case _:  # pyright: ignore[reportUnnecessaryComparison]
+            return RoleChoices.UNKNOWN  # pyright: ignore[reportUnreachable]

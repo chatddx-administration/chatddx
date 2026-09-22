@@ -1,3 +1,4 @@
+# pyright: basic
 import pytest
 from django.db.models import Q
 
@@ -7,13 +8,18 @@ from chatddx.repo.entities.agent.django import Agent, AgentBranchModel, AgentTra
 from chatddx.repo.entities.connection.django import ConnectionTrailModel
 from chatddx.repo.entities.sampling_params.pydantic import SamplingParamsFormDataIn
 from chatddx.repo.inventories import InventoryFormDataOut
+from chatddx.repo.shufflers.inventory import InventoryCommitReceipt
+
+pytestmark = [
+    pytest.mark.django_db(transaction=True),
+]
 
 
-@pytest.mark.django_db
 def test_ownership(
-    inventory_fixture_commit,
+    inventory_fixture_commit: InventoryCommitReceipt,
     owner: IdentityModel,
 ):
+    _ = inventory_fixture_commit
     connection_fields = [field.name for field in ConnectionTrailModel._meta.fields]
 
     agent_trails = AgentTrailModel.objects.filter(
@@ -66,7 +72,6 @@ def test_ownership(
     assert len(all_owned_connections) == 3
 
 
-@pytest.mark.django_db
 def test_sampling_params(inventory_fixture_fdo: InventoryFormDataOut):
     data = inventory_fixture_fdo.sampling_params
 
@@ -76,10 +81,6 @@ def test_sampling_params(inventory_fixture_fdo: InventoryFormDataOut):
         "some-sampling_params",
     }
 
-    # agent-2 asks for the two of them merged, which is a trail of its own
-    # that the inventory never named. The owner reaches it through the agent,
-    # so committing the agent gave it a branch under a generated name -- see
-    # `chatddx.repo.names` and `commit_closure`.
     generated = data.keys() - named
 
     assert len(generated) == 1
@@ -100,11 +101,12 @@ def test_sampling_params(inventory_fixture_fdo: InventoryFormDataOut):
     assert form_data_out_2.stop_sequences == ["\\n\\n", "END"]
 
 
-@pytest.mark.django_db
-def test_agent_qs(owner: IdentityModel):
+def test_agent_qs(
+    inventory_fixture_commit: InventoryCommitReceipt,
+    owner: IdentityModel,
+):
     qs = Agent.objects.filter(name="some-agent", owner_id=owner.pk)
     agent = qs_super_agent(qs, owner.name).first()
-    assert agent is not None
-    # connection_id is annotated onto the queryset by qs_super_agent(), not a
-    # real model field, so django-types can't see it.
-    assert agent.connection_id is not None
+
+    assert agent
+    assert agent.connection_id  # pyright: ignore[reportAttributeAccessIssue]

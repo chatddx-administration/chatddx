@@ -6,11 +6,13 @@ import pytest
 from chatddx.repo.inventories import InventoryBranchSpec
 from chatddx.runtime.runners import run_from_spec
 
-pytestmark = pytest.mark.network
+pytestmark = [
+    pytest.mark.network,
+    pytest.mark.asyncio,
+    pytest.mark.django_db(transaction=True),
+]
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
 async def test_message_spec(inventory_fixture_bs: InventoryBranchSpec):
     spec = inventory_fixture_bs.agent["no-thinking"]
 
