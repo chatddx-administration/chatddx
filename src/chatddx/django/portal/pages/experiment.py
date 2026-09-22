@@ -19,8 +19,6 @@ from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.history.proxies import Experiment, Run, SharedExperiment, SharedRun
 from chatddx.repo.families.django import TrailModel
 
-# Which trail a relation of an experiment points at, for narrowing the add
-# form's choices down to the ones the user has a branch of.
 EXPERIMENT_TRAIL_FIELDS = ("agent", "case", "expect")
 
 
@@ -52,7 +50,6 @@ class BaseExperimentAdmin(TypedModelAdmin[Experiment]):
 
     @admin.display(description="Batch")
     def batch_(self, obj: Experiment):
-        # Only an experiment a batch generated has one to point back at.
         return obj.batch_link
 
     @override
@@ -77,23 +74,16 @@ class BaseExperimentAdmin(TypedModelAdmin[Experiment]):
 
     def get_queryset(self, request: HttpRequest):
         qs = TypedModelAdmin.get_queryset(self, request)
-        return qs_experiments(qs, request.user.username)
+        # batch_ links through `batch`, once per row.
+        return qs_experiments(qs, request.user.username).select_related("batch")
 
 
 @admin.register(Experiment)
 class ExperimentAdmin(ModelAdminFormWithRequest, BaseExperimentAdmin):
-    """
-    An experiment is a record of what was run, so it never changes once it
-    exists: the change form only ever shows it, and the way to act on it is to
-    queue another run (see `queue`).
-    """
-
     form = ExperimentForm
 
     show_add_link = True
 
-    # Fields the add form offers; the change form keeps the read-only set
-    # `BaseExperimentAdmin` declares.
     add_fields = (
         "agent",
         "case",
@@ -254,7 +244,6 @@ class RunAdmin(TypedModelAdmin[Run]):
     )
     readonly_fields = ("timestamp", "session_", "result_")
     list_filter = ("status",)
-    # experiment_ and session_ link through these, once per row.
     list_select_related = ("experiment", "session")
 
     actions = ("requeue",)

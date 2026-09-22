@@ -135,13 +135,13 @@ def test_super_agent_jsonschema():
     jsonschema = view_of("super_agent").form_data_out.model_json_schema(
         mode="serialization"
     )
-    assert jsonschema["properties"]["instructions"]["type"] == "string"
+    assert jsonschema["properties"]["instruction"]["type"] == "string"
     assert jsonschema["properties"]["connection_template"]["type"] == "string"
 
 
 def test_agent_jsonschema():
     jsonschema = view_of("agent").form_data_out.model_json_schema(mode="serialization")
-    assert jsonschema["properties"]["instructions"]["type"] == "string"
+    assert jsonschema["properties"]["instruction"]["type"] == "string"
     assert jsonschema["properties"]["connection"]["type"] == "string"
 
     jsonschema = view_of("agent").form_data_in.model_json_schema()
@@ -156,6 +156,7 @@ def test_agent_jsonschema():
         "CoercionChoices",
         "ConnectionFormDataIn",
         "IdentitySchemaOut",
+        "InstructionFormDataIn",
         "JsonValue",
         "OutputTypeFormDataIn",
         "ProviderChoices",
@@ -170,7 +171,7 @@ def test_agent_jsonschema():
         "owner",
         "collaborators",
         "tags",
-        "instructions",
+        "instruction",
         "connection",
         "sampling_params",
         "output_type",

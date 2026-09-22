@@ -109,4 +109,21 @@ def test_agent_qs(
     agent = qs_super_agent(qs, owner.name).first()
 
     assert agent
-    assert agent.connection_id  # pyright: ignore[reportAttributeAccessIssue]
+
+    connection = agent.connection_branch
+
+    assert connection.trail == agent.target.connection
+    assert connection.id
+    assert connection.name == "some-connection"
+
+
+def test_agent_qs_without_the_annotation_says_so(
+    inventory_fixture_commit: InventoryCommitReceipt,
+    owner: IdentityModel,
+):
+    agent = Agent.objects.filter(name="some-agent", owner_id=owner.pk).first()
+
+    assert agent
+
+    with pytest.raises(AttributeError, match="annotate_branch_refs"):
+        _ = agent.connection_branch

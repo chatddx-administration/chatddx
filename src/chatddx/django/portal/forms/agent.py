@@ -12,7 +12,7 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import IdentityModel
-from chatddx.django.orm.qs import qs_canon, qs_owned_trails
+from chatddx.django.orm.qs import qs_owned_trails
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo.entities.agent.django import Agent
@@ -39,11 +39,6 @@ class AgentForm(BranchForm):
         super().__init__(*args, **kwargs)
 
         owner = request.user.username
-        owned = qs_canon(Agent.objects.all(), owner)
-
-        self.fields["template"].choices = [("", "--- clear ---")] + [
-            (model.target.pk, model.name) for model in owned
-        ]
 
         self.fields["connection"].queryset = qs_owned_trails(  # pyright: ignore[reportAttributeAccessIssue]
             ConnectionTrailModel.objects.all(), owner
@@ -59,17 +54,12 @@ class AgentForm(BranchForm):
         )
 
     def get_initial(self, instance: Agent):
-        # `tools` is stored as a list of ids, but is hydrated into model
-        # instances here for the form's initial data.
         instance.target.tool_group.tools = list(  # pyright: ignore[reportAttributeAccessIssue]
             ToolTrailModel.objects.filter(pk__in=instance.target.tool_group.tools)
         )
 
         agent_spec_dict = AgentBranchSpec.model_validate(instance).model_dump()
 
-        # This form's relation fields choose trails (see `qs_owned_trails`
-        # above), and `AgentFormDataOut` serializes each relation as the pk
-        # of its trail, so the initial data is already what they want.
         return AgentFormDataOut.model_validate(
             agent_spec_dict | agent_spec_dict["target"]
         ).model_dump(by_alias=True)

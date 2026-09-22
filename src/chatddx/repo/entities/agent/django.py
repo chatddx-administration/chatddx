@@ -5,12 +5,16 @@ from django.db.models import (
     ForeignKey,
 )
 
+from chatddx.django.orm.annotations import BranchRef
 from chatddx.django.orm.utils import Sharable
-from chatddx.repo.entities.connection.django import ConnectionTrailModel
+from chatddx.repo.entities.connection.django import Connection, ConnectionTrailModel
 from chatddx.repo.entities.instruction.django import InstructionTrailModel
-from chatddx.repo.entities.output_type.django import OutputTypeTrailModel
-from chatddx.repo.entities.sampling_params.django import SamplingParamsTrailModel
-from chatddx.repo.entities.tool_group.django import ToolGroupTrailModel
+from chatddx.repo.entities.output_type.django import OutputType, OutputTypeTrailModel
+from chatddx.repo.entities.sampling_params.django import (
+    SamplingParams,
+    SamplingParamsTrailModel,
+)
+from chatddx.repo.entities.tool_group.django import ToolGroup, ToolGroupTrailModel
 from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
@@ -51,6 +55,15 @@ class AgentBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    connection_branch = BranchRef("target__connection", "connection", Connection)
+    sampling_params_branch = BranchRef(
+        "target__sampling_params",
+        "sampling_params",
+        SamplingParams,
+    )
+    output_type_branch = BranchRef("target__output_type", "output_type", OutputType)
+    tool_group_branch = BranchRef("target__tool_group", "tool_group", ToolGroup)
 
 
 class Agent(BranchProxy, AgentBranchModel, Sharable):

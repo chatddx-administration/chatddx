@@ -1,5 +1,6 @@
 from typing import Any, Literal, cast
 
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.pydantic import BranchSchemaDetails
 from chatddx.repo.inventories import (
     InventoryBranchModel,
@@ -8,7 +9,6 @@ from chatddx.repo.inventories import (
     InventoryTrailSchema,
     ParsedInventory,
 )
-from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers.branch import commit, select_branch_models
 from chatddx.repo.todo import all_entities
 

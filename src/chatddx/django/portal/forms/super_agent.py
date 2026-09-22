@@ -16,6 +16,7 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import IdentityModel
+from chatddx.django.orm.qs import qs_with_details
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.connection import ConnectionForm
 from chatddx.django.portal.forms.output_type import OutputTypeForm
@@ -23,12 +24,13 @@ from chatddx.django.portal.forms.sampling_params import SamplingParamsForm
 from chatddx.django.portal.forms.tool_group import ToolGroupForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.django.portal.utils import load_form_data
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.django import Agent
 from chatddx.repo.entities.agent.pydantic import AgentBranchSpec
 from chatddx.repo.entities.super_agent.django import SuperAgent
 from chatddx.repo.entities.super_agent.pydantic import SuperAgentFormDataOut
 from chatddx.repo.entities.tool.django import ToolTrailModel
-from chatddx.repo.registry import EntityName
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.shufflers import branch
 from chatddx.repo.todo import agent_relations
 
@@ -174,13 +176,11 @@ class SuperAgentForm(BranchForm):
         owner_name = self.request.user.username
 
         for relation, _ in SUBFORMS:
-            # Every trail the agent reaches was given a branch when the agent
-            # was committed -- see `branch.commit_closure` -- so this is a
-            # lookup and not a place to invent one.
             branch_model = branch.get_branch_model(
                 entity_name=relation,
                 owner_name=owner_name,
                 fingerprint=getattr(instance.target, relation).fingerprint,
+                qs=qs_with_details(entity_of(relation).branch_model.objects.all()),
             )
 
             relations_dict[relation] = load_form_data(branch_model)
@@ -199,7 +199,6 @@ class SuperAgentForm(BranchForm):
         label="Auto-fill from existing agent",
         help_text="This will overwrite all edited values!",
     )
-    # the agent's instruction, as the text it is a bundle of
     instruction = forms.CharField(
         required=False,
         widget=UnfoldAdminExpandableTextareaWidget(
@@ -274,8 +273,6 @@ class SuperAgentForm(BranchForm):
         helper.layout = Layout(main_section)
         for prefix, _ in SUBFORMS:
             subform_instance = self.subforms[prefix]
-            # Every concrete subform sets its helper's layout at class
-            # definition time.
             assert subform_instance.helper.layout is not None
 
             helper.layout.append(

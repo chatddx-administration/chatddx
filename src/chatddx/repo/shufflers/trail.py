@@ -3,9 +3,9 @@ from typing import Any
 from django.db import transaction
 
 from chatddx.repo.bundles import entity_of
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import TrailModel
 from chatddx.repo.families.pydantic import TrailSchema, TrailSpec
-from chatddx.repo.registry import EntityName
 from chatddx.repo.utils import resolve_trail
 from chatddx.utils import make_async
 

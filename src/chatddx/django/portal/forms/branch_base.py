@@ -10,13 +10,12 @@ from unfold.contrib.inlines.forms import NonrelatedInlineModelFormSet
 
 from chatddx.core import settings
 from chatddx.core.utils import ensure_identity
-from chatddx.django.orm.qs import qs_canon
-from chatddx.django.portal.utils import load_form_data
+from chatddx.django.portal.utils import load_form_data, template_choices
 from chatddx.dx.error_handling import print_pydantic_errors
 from chatddx.repo.bundles import entity_of, view_of
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import BaseFormDataIn
-from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers.trail import load_trail
 
 logger = logging.getLogger(__name__)
@@ -59,14 +58,11 @@ class BranchForm(ModelForm):
 
         super().__init__(*args, **kwargs)
 
-        assert self._meta.model is not None
         model_cls = self._meta.model
 
-        owned = qs_canon(model_cls.objects.all(), owner)  # pyright: ignore[reportArgumentType]
+        assert model_cls is not None and issubclass(model_cls, BranchModel)
 
-        self.fields["template"].choices = [("", "--- clear ---")] + [
-            (model.target.pk, model.name) for model in owned
-        ]
+        self.fields["template"].choices = template_choices(model_cls, owner)
 
         if self.data:
             self.data = self.data.copy()
@@ -74,9 +70,7 @@ class BranchForm(ModelForm):
 
     def validate(self, data: dict[str, Any]):
         try:
-            validated_data = view_of(self.entity_name).form_data_in.model_validate(
-                data
-            )
+            validated_data = view_of(self.entity_name).form_data_in.model_validate(data)
             return validated_data
         except PydanticValidationError as e:
             if settings.MODE == "dev":
@@ -86,10 +80,6 @@ class BranchForm(ModelForm):
             for error in e.errors():
                 field_name = str(error["loc"][0])
                 if field_name in self.errors:
-                    # Django's own field-level validation (e.g. a required
-                    # CharField left blank) already reported an error for
-                    # this field; don't pile a second, differently-worded
-                    # one (pydantic's "Field required") on top of it.
                     continue
                 self.add_error(field_name, error["msg"])
 

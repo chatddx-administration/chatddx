@@ -10,16 +10,16 @@ from django.urls import reverse
 from unfold.contrib.inlines.admin import NonrelatedTabularInline
 
 from chatddx.core.utils import ensure_tag
-from chatddx.django.orm.qs import qs_canon
+from chatddx.django.orm.qs import qs_canon, qs_with_details
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.mixins import ModelAdminFormWithRequest
 from chatddx.django.portal.request_context import RequestContext, request_contexts
 from chatddx.django.portal.typing import TypedModelAdmin
-from chatddx.django.portal.utils import inventory_form_data_out
+from chatddx.django.portal.utils import template_registry
 from chatddx.repo.bundles import entity_of, view_of
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchProxy
 from chatddx.repo.families.pydantic import BranchSchemaDetails
-from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers import branch
 
 
@@ -42,19 +42,15 @@ class BranchModelAdmin[T: BranchProxy](
     )
 
     @admin.display(description="Versions")
-    def versions(self, obj: DjangoModel) -> int | None:
-        return getattr(obj, "_version_count", None)
+    def versions(self, obj: BranchProxy) -> int | None:
+        return obj.version_count
 
     def get_queryset(self, request: HttpRequest):
         qs: QuerySet[Any] = super().get_queryset(request)
         return qs_canon(qs, request.user.username)
 
     def get_object(self, request, object_id, from_field=None):
-        """
-        This is django's get_object() almost verbatim, except it uses super()'s get_queryset
-        instead of self, so non-canonical entries can be retreived.
-        """
-        queryset = super().get_queryset(request)
+        queryset = qs_with_details(super().get_queryset(request))
         model = queryset.model
         field = (
             model._meta.pk if from_field is None else model._meta.get_field(from_field)  # pyright: ignore[reportAttributeAccessIssue]
@@ -142,20 +138,24 @@ class BranchModelAdmin[T: BranchProxy](
 
         return super().render_change_form(request, context, add, change, form_url, obj)
 
+    def template_selectors(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "key": self.name,
+                "target": "#id_template",
+                "field_prefix": "",
+            }
+        ]
+
     def get_form_context(self, request: HttpRequest, obj: Any) -> dict[str, Any]:
+        selectors = self.template_selectors()
+
         return {
-            "template_data": inventory_form_data_out(request.user.username),
-            "form_info": json.dumps(
-                {
-                    "template_selectors": [
-                        {
-                            "key": self.name,
-                            "target": "#id_template",
-                            "field_prefix": "",
-                        }
-                    ]
-                }
+            "template_data": template_registry(
+                request.user.username,
+                tuple(selector["key"] for selector in selectors),
             ),
+            "form_info": json.dumps({"template_selectors": selectors}),
         }
 
     def save_form(
@@ -215,9 +215,6 @@ class BranchModelAdmin[T: BranchProxy](
         outcome.changed += self._sync_tags(outcome.canon, form)
 
         for formset in formsets:
-            # `form.instance` is the version the change form was rendered
-            # from, `outcome.canon` is the one `save_model()` just made canon,
-            # which is what the inlines have to attach themselves to.
             formset.instance = outcome.canon
             self.save_formset(request, form, formset, change=change)
 
@@ -239,8 +236,6 @@ class BranchModelAdmin[T: BranchProxy](
         if wanted is None:
             return []
 
-        # the form hands over names; a tag is only ever the owner's, for this
-        # kind of entity, so this is where a typed one comes into being
         tags = [ensure_tag(canon.owner, self.name, name) for name in wanted]
 
         current_ids = set(canon.tags.values_list("pk", flat=True))

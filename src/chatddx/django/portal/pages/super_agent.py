@@ -1,6 +1,5 @@
 # pyright: basic
 
-import json
 from typing import Any
 
 from django.contrib import admin
@@ -10,12 +9,7 @@ from chatddx.django.orm.qs import qs_super_agent
 from chatddx.django.portal.branch import BranchModelAdmin
 from chatddx.django.portal.forms.super_agent import SuperAgentForm
 from chatddx.django.portal.typing import TypedModelAdmin
-from chatddx.django.portal.utils import (
-    get_branch_link,
-    inventory_form_data_out,
-    truncate_for_list_display,
-)
-from chatddx.repo.entities.agent.django import Agent
+from chatddx.django.portal.utils import truncate_for_list_display
 from chatddx.repo.entities.super_agent.django import SharedSuperAgent, SuperAgent
 from chatddx.repo.todo import agent_relations
 
@@ -37,64 +31,45 @@ class SuperAgentAdmin(BranchModelAdmin[SuperAgent]):
         description="Instructions",
         ordering="target__instruction__definition",
     )
-    def instructions(self, obj: Agent) -> str:
+    def instructions(self, obj: SuperAgent) -> str:
         return truncate_for_list_display(obj.target.instruction.definition)
 
-    @admin.display(description="Connection", ordering="connection_name")
-    def connection(self, obj: Agent):
-        return get_branch_link(obj, "connection")
+    @admin.display(description="Connection", ordering="connection_branch_name")
+    def connection(self, obj: SuperAgent):
+        return obj.connection_branch.link(from_agent=obj.pk)
 
-    @admin.display(description="Output Type", ordering="output_type_name")
-    def output_type(self, obj: Agent):
-        return get_branch_link(obj, "output_type")
+    @admin.display(description="Output Type", ordering="output_type_branch_name")
+    def output_type(self, obj: SuperAgent):
+        return obj.output_type_branch.link(from_agent=obj.pk)
 
-    @admin.display(description="Sampling Params", ordering="sampling_params_name")
-    def sampling_params(self, obj: Agent):
-        return get_branch_link(obj, "sampling_params")
+    @admin.display(
+        description="Sampling Params", ordering="sampling_params_branch_name"
+    )
+    def sampling_params(self, obj: SuperAgent):
+        return obj.sampling_params_branch.link(from_agent=obj.pk)
 
-    @admin.display(description="Tool Group", ordering="tool_group_name")
-    def tool_group(self, obj: Agent):
-        return get_branch_link(obj, "tool_group")
+    @admin.display(description="Tool Group", ordering="tool_group_branch_name")
+    def tool_group(self, obj: SuperAgent):
+        return obj.tool_group_branch.link(from_agent=obj.pk)
 
-    def get_form_context(
-        self,
-        request: HttpRequest,
-        obj: Any,
-    ) -> dict[str, Any]:
-        owner = request.user.username
-
-        form_info: dict[str, Any] = {
-            "template_selectors": [
-                {
-                    "key": "agent",
-                    "target": "#id_template",
-                    "field_prefix": "",
-                    "maps": {
-                        "connection": "connection_template",
-                        "sampling_params": "sampling_params_template",
-                        "output_type": "output_type_template",
-                        "tool_group": "tool_group_template",
-                    },
-                }
-            ]
-            + [
-                {
-                    "key": model,
-                    "target": f"#id_{model}_template",
-                    "field_prefix": model + "_",
-                }
-                for model in agent_relations
-            ]
-        }
-
-        return {
-            "template_data": inventory_form_data_out(owner),
-            "form_info": json.dumps(form_info),
-        }
-
-    def get_object(self, request: HttpRequest, object_id: str, from_field: None = None):
-        obj = super().get_object(request, object_id, from_field)
-        return obj
+    def template_selectors(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "key": "agent",
+                "target": "#id_template",
+                "field_prefix": "",
+                "maps": {
+                    relation: f"{relation}_template" for relation in agent_relations
+                },
+            }
+        ] + [
+            {
+                "key": relation,
+                "target": f"#id_{relation}_template",
+                "field_prefix": f"{relation}_",
+            }
+            for relation in agent_relations
+        ]
 
     def get_queryset(self, request: HttpRequest):
         qs = super().get_queryset(request)

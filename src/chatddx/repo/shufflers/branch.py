@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 from django.db.models import Model, QuerySet
 from pydantic import ValidationError
@@ -6,8 +7,9 @@ from pydantic import ValidationError
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity, ensure_tag
-from chatddx.django.orm.qs import qs_canon
+from chatddx.django.orm.qs import qs_canon, qs_with_details
 from chatddx.repo.bundles import entity_of
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import (
     BranchSchemaDetails,
@@ -17,9 +19,8 @@ from chatddx.repo.families.pydantic import (
     relation_fields,
 )
 from chatddx.repo.names import resolve_branch_name
-from chatddx.repo.registry import EntityName
 from chatddx.repo.shufflers.trail import dump_trail
-from chatddx.repo.utils import resolve_trail, trail_closure
+from chatddx.repo.utils import resolve_trail, resolve_trails, trail_closure
 from chatddx.utils import make_async
 
 
@@ -32,7 +33,7 @@ def get_branch_model(
     owner_name: str,
     branch_name: str | None = None,
     fingerprint: str | None = None,
-    qs: QuerySet[BranchModel] | None = None,
+    qs: QuerySet[Any] | None = None,
 ) -> BranchModel:
     """
     Get latest branch model of `entity_name` owned by `owner_name` (aka canon).
@@ -69,7 +70,7 @@ def get_branch_model(
 def select_branch_models(
     entity_name: EntityName,
     owner_name: str,
-    qs: QuerySet[BranchModel] | None = None,
+    qs: QuerySet[Any] | None = None,
 ) -> list[BranchModel]:
     """
     Find all branch models of `entity_name` directly owned by `owner_name`
@@ -77,15 +78,13 @@ def select_branch_models(
     """
     if qs is None:
         model_cls = entity_of(entity_name).branch_model
-        qs = qs_canon(
-            model_cls.objects.all(),
-            owner_name,
-        )
+        qs = qs_with_details(qs_canon(model_cls.objects.all(), owner_name))
 
-    models: list[BranchModel] = []
-    for model in qs:
-        model.target = resolve_trail(model.target)
-        models.append(model)
+    models = list(qs)
+
+    # One walk for the whole selection: the trails come back a table at a
+    # time rather than a row at a time (see `chatddx.repo.utils`).
+    _ = resolve_trails([model.target for model in models])
 
     return models
 
@@ -98,7 +97,7 @@ def get_branch_spec(
     owner_name: str,
     branch_name: str | None = None,
     fingerprint: str | None = None,
-    qs: QuerySet[BranchModel] | None = None,
+    qs: QuerySet[Any] | None = None,
 ) -> BranchSpec[TrailSpec]:
     """
     Get latest branch spec of `entity_name` owned by `owner_name` (aka canon).
@@ -134,7 +133,7 @@ get_branch_async = make_async(get_branch_spec)
 def select_branch_specs(
     entity_name: EntityName,
     owner_name: str,
-    qs: QuerySet[BranchModel] | None = None,
+    qs: QuerySet[Any] | None = None,
 ) -> list[BranchSpec[TrailSpec]]:
     """
     Find all branch specs of `entity_name` directly owned by `owner_name`
