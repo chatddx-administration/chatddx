@@ -10,7 +10,7 @@ replaces.
 Terms used below:
 
 - **Stack**: machine, OS, model, serving settings and client.
-- **Configuration**: the request-time bundles.
+- **Configuration**: the request-time slices.
 - **Trial**: one request made and recorded.
 
 What was read: pydantic-ai 2.41.0, inspect-ai 0.3.263 and openai 3.10.0
@@ -176,17 +176,17 @@ pydantic-ai's OpenAI chat model sends only OpenAI's standard fields, plus
 JSON body. A `top_k` in `ModelSettings` is dropped without a warning, so
 the `top_k` chatddx stores today has never reached vLLM.
 
-### 2.2 Bundles
+### 2.2 Slices
 
-A bundle owns one concern, may write into several layers, and declares
-everything it writes. There are four bundles now and a fifth later.
+A slice owns one concern, may write into several layers, and declares
+everything it writes. There are four slices now and a fifth later.
 
 **Instruction.**
 - **Templates:** the system and user messages are templates. They are
   Handlebars, via pydantic-ai's `TemplateStr`, and are checked at compile
   time against a declared variable schema (`deps_schema`). Today's Jinja
   instead renders a missing variable as blank without complaint.
-- **Variables:** `case`, plus named **slots** that other bundles fill:
+- **Variables:** `case`, plus named **slots** that other slices fill:
   `output_guidance`, `reasoning_guidance` and, later, `tool_guidance`.
   This generalizes today's `{{ tool_group_instructions }}`.
 - **The case is a value, never a condition.** The template places the case
@@ -211,10 +211,10 @@ everything it writes. There are four bundles now and a fifth later.
   - For gpt-oss, vLLM's harmony renderer puts instructions and function
     tools into the prompt, but not `response_format`.
   - In tool mode, the schema does reach the model, as a tool definition.
-  - So the Output bundle states whether the schema is shown, using its own
+  - So the Output slice states whether the schema is shown, using its own
     template rather than pydantic-ai's default text ("Always respond with a
     JSON object that's compatible with this schema: …").
-- **The schema is the contract inspect's scorers read.** The bundle's other
+- **The schema is the contract inspect's scorers read.** The slice's other
   fields are how the model is made to meet it.
 - **Validation leaves the research path:**
   - Retrying on invalid output re-samples with an error message. The trial
@@ -223,13 +223,13 @@ everything it writes. There are four bundles now and a fifth later.
   - `inform` writes `__error__` into the output itself.
   - A research trial records the raw output and whether it validates. The
     product can keep its retries.
-  - If repair is ever studied, it becomes a bundle of its own, with its own
+  - If repair is ever studied, it becomes a slice of its own, with its own
     message text.
 
 **Reasoning.**
 
-Reasoning gets a bundle of its own because it is the biggest lever, and
-each model family takes it differently. The bundle states an intent (off,
+Reasoning gets a slice of its own because it is the biggest lever, and
+each model family takes it differently. The slice states an intent (off,
 on, an effort level, or a token budget) plus optional guidance. The compile
 step translates the intent using the model's description:
 
@@ -260,7 +260,7 @@ step translates the intent using the model's description:
     started with `--generation-config vllm`, they ran non-thinking mode on
     thinking-mode defaults. Setting `top_k` would not have helped, since it
     never reaches vLLM (§2.1).
-  - So a reasoning bundle may require a sampling bundle tuned for its mode,
+  - So a reasoning slice may require a sampling slice tuned for its mode,
     and the compile step checks it.
   - A thinking budget is coupled to `max_tokens` in the same way.
 
@@ -273,7 +273,7 @@ step translates the intent using the model's description:
   resolves it from the model's `generation_config.json` and the serving
   settings, then writes it into the request, so the request states what it
   asked for.
-- **Not part of this bundle:** the seed, which belongs to the trial (§4).
+- **Not part of this slice:** the seed, which belongs to the trial (§4).
   `n` is gone.
 
 **Tools (later).**
@@ -286,9 +286,9 @@ step translates the intent using the model's description:
 ### 2.3 Composition
 
 - **One of each:** a configuration is one Instruction, one Output, one
-  Reasoning and one Sampling bundle, and later zero or one Tools bundle.
+  Reasoning and one Sampling slice, and later zero or one Tools slice.
 - **Nothing is written twice.**
-  - Each bundle declares what it writes: request fields, including nested
+  - Each slice declares what it writes: request fields, including nested
     `extra_body` paths, and slots.
   - Composition takes their union. A field or slot written twice is an
     error.
@@ -296,14 +296,14 @@ step translates the intent using the model's description:
     (`merge_model_settings` merges shallowly). chatddx's inventory merge is
     shallow too, so two sampling records' `provider_params` replace each
     other instead of combining.
-- **Requirements are checked.** Each bundle declares what it needs from the
-  other bundles, from the model's description and from the serving
+- **Requirements are checked.** Each slice declares what it needs from the
+  other slices, from the model's description and from the serving
   settings, and composition checks all of it. For example:
   - a reasoning budget needs a reasoning parser;
   - native output needs structured outputs;
-  - a sampling bundle tuned for non-thinking mode needs reasoning off.
+  - a sampling slice tuned for non-thinking mode needs reasoning off.
 - **How this maps onto pydantic-ai:**
-  - Each bundle maps naturally onto a pydantic-ai capability
+  - Each slice maps naturally onto a pydantic-ai capability
     (`get_instructions`, `get_model_settings`, `get_toolset`).
   - pydantic-ai's `AgentSpec`, which loads from YAML or JSON, is close to a
     serialized configuration: it has templated instructions,
@@ -312,7 +312,7 @@ step translates the intent using the model's description:
     `output_schema` into a `StructuredDict` and leaves the mode to the
     profile. And when two capabilities set the same thing, the later one
     wins.
-  - So chatddx keeps a thin spec of its own on top: bundles go in; an
+  - So chatddx keeps a thin spec of its own on top: slices go in; an
     `AgentSpec`, plus an explicit output type and profile, come out.
   - `TemplateStr` needs the `pydantic-ai-slim[spec]` extra.
 
@@ -338,14 +338,14 @@ are byte-identical to real ones.
 ### 2.5 Example
 
 Today's `qwen3-8b management_plan_v1 seed-locked disable-thinking`, stated
-as bundles:
+as slices:
 
 ```yaml
 instruction: ddx-plan            # system and user templates; slots output_guidance, reasoning_guidance
 output:
   schema: management_plan_v1     # key order kept
   mode: native
-  show_schema: true              # a factor; the template is the bundle's own
+  show_schema: true              # a factor; the template is the slice's own
 reasoning: off
 sampling: qwen3-non-thinking     # temperature 0.7, top_p 0.8, top_k 20, min_p 0, max_tokens 4096
 ```
@@ -370,9 +370,9 @@ Compiled for Qwen3-8B-AWQ, abbreviated:
 }
 ```
 
-The Reasoning bundle's contribution to that request is
+The Reasoning slice's contribution to that request is
 `{"chat_template_kwargs": {"enable_thinking": false}}`. The Sampling
-bundle's is the six sampling fields.
+slice's is the six sampling fields.
 
 ## 3. Fingerprints
 
@@ -381,8 +381,8 @@ bundle's is the six sampling fields.
 | Level | Covers | Used for |
 |---|---|---|
 | Stack | machine id, OS id(s), model hash, serving hash, client id | which hardware, system, model, serving and client produced a trial |
-| Bundle | each bundle's declared content, in canonical form | authoring: reuse, naming, the branch layer |
-| Contribution | each bundle's effect on the request once compiled for a given stack | comparing configurations |
+| Slice | each slice's declared content, in canonical form | authoring: reuse, naming, the branch layer |
+| Contribution | each slice's effect on the request once compiled for a given stack | comparing configurations |
 | Request | the request with the case left as a placeholder (the skeleton), and each trial's exact body | proving what was asked, and of which configuration |
 
 **Contributions are the tool for comparison:**
@@ -444,7 +444,7 @@ signed, and stored inputs to be re-verified in bulk.
   Today that means one request; it becomes more once tools or repair exist.
 - **It records:**
   - the stack identities;
-  - the bundle, contribution and skeleton hashes;
+  - the slice, contribution and skeleton hashes;
   - the exact request and response bytes, with their hashes;
   - the parsed output, and whether it validates against the Output schema;
   - `finish_reason` (a truncated answer is not a wrong one);
@@ -506,9 +506,9 @@ Whichever option is chosen, it shapes generation the same way:
 |---|---|
 | Deployment, with pricing, `honours` and credentials | Machine, OS, Model, Serving and Client, one identifying field each. `honours` becomes facts in the model's description and the serving manifest, read at compile time. |
 | Model, with revision and quantization in its identity | Identified by its blob hash alone; the rest is description. |
-| Inference | Reasoning and Sampling bundles. `overrides` become typed vLLM fields. `n` is dropped. |
-| Prompt | The Instruction bundle: `TemplateStr` with declared slots. Examples are deferred. |
-| OutputContract and ResponseFormat | The Output bundle. `on_invalid` and retries leave the research path. |
+| Inference | Reasoning and Sampling slices. `overrides` become typed vLLM fields. `n` is dropped. |
+| Prompt | The Instruction slice: `TemplateStr` with declared slots. Examples are deferred. |
+| OutputContract and ResponseFormat | The Output slice. `on_invalid` and retries leave the research path. |
 | Toolset | Tools, deferred, referenced by git revision |
 | Strategy | Deferred: one request per trial |
 | Case, Reference, Dataset, Grader, Score, and the derived views | inspect-ai; out of scope here |
