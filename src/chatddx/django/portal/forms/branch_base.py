@@ -64,9 +64,22 @@ class BranchForm(ModelForm):
 
         owned = qs_canon(model_cls.objects.all(), owner)  # pyright: ignore[reportArgumentType]
 
-        self.fields["template"].choices = [("", "--- clear ---")] + [
+        choices = [("", "--- clear ---")] + [
             (model.target.pk, model.name) for model in owned
         ]
+
+        # `owned` only contains the canonical (latest) version per name, so
+        # an older version currently being edited (e.g. via the version
+        # navigator, or still referenced by another branch such as an
+        # agent) may be missing from `choices`. Add it back so its own
+        # template field renders as selected rather than falling back to
+        # "--- clear ---".
+        if instance is not None and instance.pk:
+            instance_target_id = instance.target_id  # pyright: ignore[reportAttributeAccessIssue]
+            if not any(pk == instance_target_id for pk, _ in choices[1:]):
+                choices.append((instance_target_id, instance.name))
+
+        self.fields["template"].choices = choices
 
         if self.data:
             self.data = self.data.copy()

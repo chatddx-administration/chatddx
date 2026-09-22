@@ -157,6 +157,25 @@ class SuperAgentForm(BranchForm):
 
                 self.fields[name] = field
 
+            # Each subform computes its own "template" choices from its own
+            # canonical (latest-per-name) branches, with no knowledge of the
+            # branch this agent actually links to. If that branch has since
+            # been superseded by a newer version, its choices won't include
+            # it and the field would render as unselected even though the
+            # agent is still using it. Add it back in.
+            template_name = prefixed("template", prefix)
+            template_field = self.fields.get(template_name)
+            current_value = self.initial.get(template_name)
+
+            if template_field is not None and current_value:
+                existing_values = {str(value) for value, _ in template_field.choices}
+                if str(current_value) not in existing_values:
+                    label = self.initial.get(prefixed("name", prefix), current_value)
+                    template_field.choices = [
+                        *template_field.choices,
+                        (current_value, label),
+                    ]
+
     def get_initial(self, instance: SuperAgent):
         # `tools` is stored as a list of ids, but is hydrated into model
         # instances here for the form's initial data.

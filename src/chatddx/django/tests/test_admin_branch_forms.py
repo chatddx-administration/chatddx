@@ -6,7 +6,7 @@ from django.urls import reverse
 from chatddx.core.models import IdentityModel
 from chatddx.repo.entities.agent.django import AgentBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
-from chatddx.repo.inventories import InventoryFormDataOut
+from chatddx.repo.inventories import InventoryBranchModel, InventoryFormDataOut
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -143,6 +143,66 @@ def test_agent_change_view_renders(
     v2_url = reverse("admin:orm_agent_change", args=[versions[0].pk])
     response = user_client.get(v2_url)
     assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_template_preselected_when_related_branch_has_newer_version(
+    user_client: Client,
+    inventory_fixture_fdo: InventoryFormDataOut,
+    inventory_fixture_bm: InventoryBranchModel,
+    owner: IdentityModel,
+):
+    """
+    An agent's connection field references a specific connection trail,
+    which stays pinned even after that connection is edited elsewhere and
+    a newer version becomes canonical. The connection's own change form,
+    and the agent form's nested connection_template field, should both
+    still preselect that pinned (now non-canonical) connection.
+    """
+    agent = inventory_fixture_bm["agent"]["some-agent"]
+    connection_branch = inventory_fixture_bm["connection"]["some-connection"]
+    old_connection_target_id = connection_branch.target_id
+
+    connection_data = inventory_fixture_fdo.connection["some-connection"].model_dump(
+        exclude_none=True
+    )
+    connection_data["model"] = "Test/edited-elsewhere"
+
+    response = user_client.post(
+        reverse("admin:orm_connection_change", args=[connection_branch.pk]),
+        data=connection_data,
+        follow=True,
+    )
+    assert response.status_code == 200
+    if "adminform" in response.context:
+        assert response.context["adminform"].form.errors == ""
+
+    # The old connection version is no longer canonical, but it's still
+    # reachable directly (e.g. via the version navigator) and should
+    # preselect itself in its own "template" dropdown.
+    response = user_client.get(
+        reverse("admin:orm_connection_change", args=[connection_branch.pk])
+    )
+    assert response.status_code == 200
+    connection_form = response.context["adminform"].form
+    assert connection_form.initial.get("template") == str(old_connection_target_id)
+    connection_choices = {
+        str(value) for value, _ in connection_form.fields["template"].choices
+    }
+    assert str(old_connection_target_id) in connection_choices
+
+    # The agent still points at the old connection trail; its nested
+    # connection_template field should preselect it too.
+    response = user_client.get(reverse("admin:orm_superagent_change", args=[agent.pk]))
+    assert response.status_code == 200
+    agent_form = response.context["adminform"].form
+    assert agent_form.initial.get("connection_template") == str(
+        old_connection_target_id
+    )
+    agent_choices = {
+        str(value) for value, _ in agent_form.fields["connection_template"].choices
+    }
+    assert str(old_connection_target_id) in agent_choices
 
 
 @pytest.mark.django_db
