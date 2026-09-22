@@ -6,6 +6,9 @@ cost in time and compute?** This note sets out the data model that question
 needs, and compares the current model against it. It does not propose a
 migration.
 
+For how requests are generated and recorded, see `data-generation.md`. Where
+the two notes disagree, that note wins.
+
 ## The question, as data
 
 To answer the question, the model needs three things:
