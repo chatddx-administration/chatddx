@@ -1,36 +1,97 @@
+"""
+How a run's output is judged against an expectation.
+
+A scorer is code, named by the `command` its trail carries, and it reads one
+thing: the output the run recorded (`RunModel.output`) -- the value the agent
+returned, whatever its output type's coercion strategy made the model send
+over the wire. It never reads the transcript, which differs by coercion
+strategy: a structured reply delivered as a tool call has no text at all.
+
+What a scorer can read is a fact about its code, so it is registered with
+it: `accepts` is the JSON Schema of the outputs it can judge. That is what
+says whether it can judge an output type at all (`Scorer.reads`), before
+anything runs, and what an output is checked against before it is judged
+(`Scorer.check`), after.
+"""
+
 from __future__ import annotations
 
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, override
 
-from chatddx.core.choices import RoleChoices
-from chatddx.history.models import RunModel
-from chatddx.history.proxies import Message
+import jsonschema
+from pydantic import JsonValue
 
-type Scorer = Callable[[RunModel], Any | Awaitable[Any]]
+from chatddx.core.json_schema import satisfies
+from chatddx.repo.entities.output_type.pydantic import TEXT_SCHEMA, output_schema
 
+type Judge = Callable[[Any, str], Any | Awaitable[Any]]
 
-def last_reply(run: RunModel) -> str | None:
-    message = (
-        Message.objects.filter(
-            session_id=run.session_id,
-            role=RoleChoices.ASSISTANT,
-        )
-        .order_by("-pk")
-        .first()
-    )
-
-    return message.content if message else None
+LIST_OF_TEXT: dict[str, JsonValue] = {
+    "type": "array",
+    "items": TEXT_SCHEMA,
+}
 
 
-def exact_match(run: RunModel) -> dict[str, Any]:
-    actual = last_reply(run)
-    expected = run.experiment.expect.payload
+class UnreadableOutputError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class Scorer:
+    command: str
+    # (output, expectation payload) -> result
+    judge: Judge
+    # every output `judge` is handed is valid against this
+    accepts: dict[str, JsonValue]
+
+    def reads(self, definition: Mapping[str, Any]) -> bool:
+        """
+        Whether every output a run can return under an output type with this
+        `definition` is one this scorer can judge.
+        """
+        return satisfies(output_schema(definition), self.accepts)
+
+    def check(self, output: Any) -> None:
+        try:
+            jsonschema.validate(instance=output, schema=self.accepts)
+        except jsonschema.ValidationError as e:
+            raise UnreadableOutputError(
+                f"{self.command} cannot judge this output: {e.message}"
+            ) from e
+
+
+def exact_match(output: str, expected: str) -> dict[str, Any]:
+    return {
+        "correct": output == expected,
+        "expected": expected,
+    }
+
+
+def reciprocal_rank(output: list[str], expected: str) -> dict[str, Any]:
+    """
+    Score a ranked list against the answer it should contain: the first item
+    that satisfies the expectation's pattern decides the score, so an answer
+    in first place is worth 100, in second 50, in n-th 100/n, and missing
+    from the list 0.
+    """
+    pattern = compile_pattern(expected)
+
+    for rank, item in enumerate(output, start=1):
+        if pattern.matches(item):
+            return {
+                "score": 100 / rank,
+                "rank": rank,
+                "matched": item,
+                "expected": expected,
+            }
 
     return {
-        "correct": actual == expected,
+        "score": 0.0,
+        "rank": None,
+        "matched": None,
         "expected": expected,
     }
 
@@ -71,7 +132,7 @@ class _Or(_Node):
 _TOKEN_RE = re.compile(r"\(|\)|&|\||[^\s&|()]+")
 
 
-class _RowParser:
+class _PatternParser:
     def __init__(self, tokens: list[str]):
         self._tokens: list[str] = tokens
         self._pos: int = 0
@@ -122,52 +183,37 @@ class _RowParser:
         return _Phrase(re.compile(re.escape(literal), re.IGNORECASE))
 
 
-def _compile_row(row: str) -> _Node:
-    tokens = _TOKEN_RE.findall(row)
+def compile_pattern(pattern: str) -> _Node:
+    """
+    A pattern is a boolean expression over case-insensitive substrings, with
+    `&`, `|` and parentheses -- `&` binds tighter than `|`, so
+    `copd | exacerbation & pulmonary` reads as `copd | (exacerbation & pulmonary)`.
+
+    It is one line. An expectation used to be several, one acceptable answer
+    per row, best first; the ranking is the output's to give now, and a
+    second line would otherwise be read as more words of the first phrase.
+    """
+    if len([line for line in pattern.splitlines() if line.strip()]) > 1:
+        raise ValueError(
+            "a pattern is a single line: join alternative answers with '|'"
+        )
+
+    tokens = _TOKEN_RE.findall(pattern)
     if not tokens:
         raise ValueError("empty pattern")
-    return _RowParser(tokens).parse()
+    return _PatternParser(tokens).parse()
 
 
-def row_matches(row: str, text: str) -> bool:
-    """
-    A row is a boolean expression over case-insensitive substrings, with `&`,
-    `|` and parentheses -- `&` binds tighter than `|`, so
-    `copd | exacerbation & pulmonary` reads as `copd | (exacerbation & pulmonary)`.
-    """
-    return _compile_row(row).matches(text)
-
-
-def regex_match(run: RunModel) -> dict[str, Any]:
-    """
-    Score a reply against a ranked expectation: one row per acceptable answer,
-    best first. The first row the reply satisfies decides the score, so hitting
-    row 1 is worth 100, row 2 is worth 50, row n is worth 100/n.
-    """
-    actual = last_reply(run)
-    expected = run.experiment.expect.payload
-
-    score = 0.0
-    matched_row: str | None = None
-
-    if actual:
-        for line_number, row in enumerate(expected.splitlines(), start=1):
-            row = row.strip()
-            if row and row_matches(row, actual):
-                score = 100 / line_number
-                matched_row = row
-                break
-
-    return {
-        "score": score,
-        "matched_row": matched_row,
-        "expected": expected,
-    }
+def pattern_matches(pattern: str, text: str) -> bool:
+    return compile_pattern(pattern).matches(text)
 
 
 SCORERS: dict[str, Scorer] = {
-    "exact_match": exact_match,
-    "regex_match": regex_match,
+    scorer.command: scorer
+    for scorer in (
+        Scorer("exact_match", exact_match, accepts=TEXT_SCHEMA),
+        Scorer("reciprocal_rank", reciprocal_rank, accepts=LIST_OF_TEXT),
+    )
 }
 
 
@@ -177,3 +223,14 @@ def resolve_scorer(command: str) -> Scorer:
     except KeyError as e:
         known = ", ".join(sorted(SCORERS)) or "none"
         raise LookupError(f"unknown scorer {command!r} (known: {known})") from e
+
+
+def scorer_reads(command: str, definition: Mapping[str, Any]) -> bool | None:
+    """
+    Whether the scorer a trail names can judge the output of an output type
+    with this `definition`: None where the command names no scorer this code
+    has, since then nothing says what it reads.
+    """
+    scorer = SCORERS.get(command)
+
+    return None if scorer is None else scorer.reads(definition)

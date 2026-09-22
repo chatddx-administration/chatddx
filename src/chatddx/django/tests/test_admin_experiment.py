@@ -11,8 +11,11 @@ from chatddx.django.portal.forms.experiment import (
     MISMATCHED_EXPECT,
     NO_CASE_LABEL,
     NO_RUN,
+    UNREADABLE_EXPECT,
 )
+from chatddx.django.tests.conftest import ranked_expect
 from chatddx.history.models import ExperimentModel, RunModel
+from chatddx.repo.entities.agent.django import AgentBranchModel
 from chatddx.repo.inventories import InventoryBranchModel
 
 pytestmark = [
@@ -316,3 +319,40 @@ def test_add_form_leaves_expect_enabled_once_a_case_is_posted(
 
     assert response.status_code == 200
     assert "disabled" not in expect_widget(response).attrs
+
+
+def test_an_expectation_whose_scorer_cannot_judge_the_agent_is_refused(
+    add_post_data: dict,
+    inventory_fixture_bm: InventoryBranchModel,
+    owner: IdentityModel,
+    user_client: Client,
+):
+    expect = ranked_expect("case-1", owner)
+    inventory_fixture_bm["case"]["case-1"].expects.add(expect)
+
+    # agent-2 answers with an object, and reciprocal_rank reads a list
+    add_post_data["expect"] = expect.target_id
+
+    response = user_client.post(reverse("admin:orm_experiment_add"), add_post_data)
+
+    assert response.status_code == 200
+    assert response.context["adminform"].form.errors["expect"] == [UNREADABLE_EXPECT]
+    assert not ExperimentModel.objects.exists()
+
+
+def test_an_expectation_whose_scorer_can_judge_the_agent_is_taken(
+    add_post_data: dict,
+    inventory_fixture_bm: InventoryBranchModel,
+    lister: AgentBranchModel,
+    owner: IdentityModel,
+    user_client: Client,
+):
+    expect = ranked_expect("case-1", owner)
+    inventory_fixture_bm["case"]["case-1"].expects.add(expect)
+
+    add_post_data |= {"agent": lister.target.pk, "expect": expect.target_id}
+
+    response = user_client.post(reverse("admin:orm_experiment_add"), add_post_data)
+
+    assert response.status_code == 302
+    assert ExperimentModel.objects.get().expect_id == expect.target_id

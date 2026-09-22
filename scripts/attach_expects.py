@@ -20,6 +20,6 @@ data = tomllib.loads(path.read_text())
 
 for case, expect in list(expects.items()):
     expects.pop(case)
-    data["case"][case]["expects"] = {"regex_match": expect}
+    data["case"][case]["expects"] = {"reciprocal_rank": expect}
 print(expect)
 path.write_text(tomli_w.dumps(data))

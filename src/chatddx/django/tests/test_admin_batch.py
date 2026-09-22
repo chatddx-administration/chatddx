@@ -8,9 +8,11 @@ from django.urls import reverse
 from chatddx.core.choices import RunStatusChoices
 from chatddx.core.models import IdentityModel, TagModel
 from chatddx.django.portal.pages.batch import CONFIRM_FIELD
+from chatddx.django.tests.conftest import RANKED, ranked_expect
 from chatddx.history.batches import EXCLUDED_SHOWN, BatchPlan, PlanRow, plan
 from chatddx.history.models import BatchModel, ExperimentModel, RunModel
 from chatddx.history.proxies import ALL_SCORERS
+from chatddx.repo.entities.agent.django import AgentBranchModel
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.scorer.django import Scorer
 from chatddx.repo.inventories import InventoryBranchModel
@@ -363,7 +365,7 @@ def test_the_experiment_traces_back_to_its_batch(lab: Lab, user_client: Client):
 
 
 def test_an_untagged_case_is_left_alone(lab: Lab, user_client: Client):
-    batch_plan = plan("alex", [lab.tags["tag-1"]], [])
+    batch_plan = plan("alex", lab.agent, [lab.tags["tag-1"]], [])
 
     # case-2 carries no tag, so it is not in the batch at all -- not excluded
     assert batch_plan.excluded == ()
@@ -376,3 +378,75 @@ def test_the_excluded_cases_are_counted_and_truncated():
 
     assert batch_plan.excluded_shown == names[:EXCLUDED_SHOWN]
     assert batch_plan.excluded_rest == 3
+
+
+def test_a_scorer_that_cannot_judge_the_agent_is_named_and_its_expectations_left_out(
+    lab: Lab,
+    owner: IdentityModel,
+    user_client: Client,
+):
+    lab.cases["case-1"].expects.add(ranked_expect("case-1", owner))
+
+    response = user_client.post(ADD_URL, lab.post_data())
+
+    assert response.status_code == 200
+
+    batch_plan = response.context["plan"]
+
+    # agent-2 answers with an object, and reciprocal_rank reads a list
+    assert batch_plan.unreadable == (RANKED,)
+    assert batch_plan.total == 2
+    assert RANKED.encode() in response.content
+
+
+def test_a_scorer_asked_for_by_name_is_named_even_where_no_case_carries_it(
+    lab: Lab,
+    owner: IdentityModel,
+    user_client: Client,
+):
+    _ = ranked_expect("case-2", owner)
+    ranked = Scorer.objects.get(owner=owner, name=RANKED)
+
+    response = user_client.post(ADD_URL, lab.post_data(scorers=[ranked.pk]))
+
+    batch_plan = response.context["plan"]
+
+    assert batch_plan.unreadable == (RANKED,)
+    assert batch_plan.rows == (PlanRow(tag="tag-1", scorer=RANKED, count=0),)
+    assert batch_plan.total == 0
+
+
+def test_a_case_with_nothing_the_agent_can_be_judged_by_is_left_out(
+    lab: Lab,
+    owner: IdentityModel,
+    user_client: Client,
+):
+    lab.tag("case-2", "tag-1")
+    lab.drop_expect("case-2", "scorer-a")
+    lab.drop_expect("case-2", "scorer-b")
+    lab.cases["case-2"].expects.add(ranked_expect("case-2", owner))
+
+    response = user_client.post(ADD_URL, lab.post_data())
+
+    batch_plan = response.context["plan"]
+
+    assert batch_plan.excluded == ("case-2",)
+    assert batch_plan.unreadable == (RANKED,)
+    assert batch_plan.total == 2
+
+
+def test_an_agent_whose_output_a_scorer_can_read_is_judged_by_it(
+    lab: Lab,
+    owner: IdentityModel,
+    lister: AgentBranchModel,
+    user_client: Client,
+):
+    lab.cases["case-1"].expects.add(ranked_expect("case-1", owner))
+
+    response = user_client.post(ADD_URL, lab.post_data(agent=lister.target.pk))
+
+    batch_plan = response.context["plan"]
+
+    assert batch_plan.unreadable == ()
+    assert batch_plan.total == 3
+    assert PlanRow(tag="tag-1", scorer=RANKED, count=1) in batch_plan.rows

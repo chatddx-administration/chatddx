@@ -8,6 +8,24 @@
             {{ headline }}
         </p>
 
+        {% if plan.unreadable %}
+            <div class="border-base-200 border-t p-4 dark:border-base-800">
+                <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+                    {% translate "Scorers that cannot judge this agent" %}
+                </h2>
+
+                <p class="mb-2 text-sm">
+                    {% blocktranslate count counter=plan.unreadable|length %}This scorer cannot read what the agent's output type returns, so the expectations it judges are left out of the batch:{% plural %}These scorers cannot read what the agent's output type returns, so the expectations they judge are left out of the batch:{% endblocktranslate %}
+                </p>
+
+                <ul class="leading-relaxed text-sm">
+                    {% for name in plan.unreadable %}
+                        <li>{{ name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
         {% if plan.excluded %}
             <div class="border-base-200 border-t p-4 dark:border-base-800">
                 <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
@@ -15,7 +33,7 @@
                 </h2>
 
                 <p class="mb-2 text-sm">
-                    {% blocktranslate count counter=plan.excluded|length %}{{ counter }} case carries none of the chosen scorers and is left out of the batch:{% plural %}{{ counter }} cases carry none of the chosen scorers and are left out of the batch:{% endblocktranslate %}
+                    {% blocktranslate count counter=plan.excluded|length %}{{ counter }} case carries no expectation that a chosen scorer can judge here, and is left out of the batch:{% plural %}{{ counter }} cases carry no expectation that a chosen scorer can judge here, and are left out of the batch:{% endblocktranslate %}
                 </p>
 
                 <ul class="leading-relaxed text-sm">

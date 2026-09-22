@@ -1,395 +1,395 @@
 [case.DutchFall10w]
 tags = ["dutch-fall"]
-expects.regex_match = "biliary & (colic | stone)"
+expects.reciprocal_rank = "biliary & (colic | stone)"
 
 [case.Dutchfall11w]
 tags = ["dutch-fall"]
-expects.regex_match = "aaa | (abdominal | aortic) & aneurysm | dissection"
+expects.reciprocal_rank = "aaa | (abdominal | aortic) & aneurysm | dissection"
 
 [case.Dutchfall12w]
 tags = ["dutch-fall"]
-expects.regex_match = "pancreatitis"
+expects.reciprocal_rank = "pancreatitis"
 
 [case.Dutchfall13w]
 tags = ["dutch-fall"]
-expects.regex_match = "torsion | ovarian & torsion"
+expects.reciprocal_rank = "torsion | ovarian & torsion"
 
 [case.Dutchfall14w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+expects.reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [case.Dutchfall15w]
 tags = ["dutch-fall"]
-expects.regex_match = "gastroenteritis"
+expects.reciprocal_rank = "gastroenteritis"
 
 [case.Dutchfall16w]
 tags = ["dutch-fall"]
-expects.regex_match = "chf | (congestive | failure) & heart"
+expects.reciprocal_rank = "chf | (congestive | failure) & heart"
 
 [case.Dutchfall17w]
 tags = ["dutch-fall"]
-expects.regex_match = "liver & failure | cirrosis | cirrhosis"
+expects.reciprocal_rank = "liver & failure | cirrosis | cirrhosis"
 
 [case.Dutchfall18w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+expects.reciprocal_rank = "pneumonia"
 
 [case.Dutchfall19w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+expects.reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [case.Dutchfall1w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+expects.reciprocal_rank = "pneumonia"
 
 [case.Dutchfall20w]
 tags = ["dutch-fall"]
-expects.regex_match = "vasculitis"
+expects.reciprocal_rank = "vasculitis"
 
 [case.Dutchfall21w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+expects.reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [case.Dutchfall22w]
 tags = ["dutch-fall"]
-expects.regex_match = "uti | urinary & infection | cystitis | urosepsis"
+expects.reciprocal_rank = "uti | urinary & infection | cystitis | urosepsis"
 
 [case.Dutchfall23w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+expects.reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [case.Dutchfall24w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+expects.reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [case.Dutchfall25w]
 tags = ["dutch-fall"]
-expects.regex_match = "pancreatitis"
+expects.reciprocal_rank = "pancreatitis"
 
 [case.Dutchfall26w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+expects.reciprocal_rank = "pneumonia"
 
 [case.Dutchfall27w]
 tags = ["dutch-fall"]
-expects.regex_match = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+expects.reciprocal_rank = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
 
 [case.Dutchfall28w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+expects.reciprocal_rank = "pneumonia"
 
 [case.Dutchfall29w]
 tags = ["dutch-fall"]
-expects.regex_match = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+expects.reciprocal_rank = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
 
 [case.Dutchfall2w]
 tags = ["dutch-fall"]
-expects.regex_match = "(diverticular | (gastro & intestinal) | gi) & bleed"
+expects.reciprocal_rank = "(diverticular | (gastro & intestinal) | gi) & bleed"
 
 [case.Dutchfall30w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+expects.reciprocal_rank = "pneumonia"
 
 [case.Dutchfall3w]
 tags = ["dutch-fall"]
-expects.regex_match = "diverticulitis | (gastro & intestinal | gi) & inflammation"
+expects.reciprocal_rank = "diverticulitis | (gastro & intestinal | gi) & inflammation"
 
 [case.Dutchfall4w]
 tags = ["dutch-fall"]
-expects.regex_match = "pancreatitis"
+expects.reciprocal_rank = "pancreatitis"
 
 [case.Dutchfall5w]
 tags = ["dutch-fall"]
-expects.regex_match = "uti | urinary & infection | cystitis | urosepsis"
+expects.reciprocal_rank = "uti | urinary & infection | cystitis | urosepsis"
 
 [case.Dutchfall6w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+expects.reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [case.Dutchfall7w]
 tags = ["dutch-fall"]
-expects.regex_match = "hernia"
+expects.reciprocal_rank = "hernia"
 
 [case.Dutchfall8w]
 tags = ["dutch-fall"]
-expects.regex_match = "chf | (congestive | failure) & heart"
+expects.reciprocal_rank = "chf | (congestive | failure) & heart"
 
 [case.Dutchfall9w]
 tags = ["dutch-fall"]
-expects.regex_match = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
+expects.reciprocal_rank = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
 
 [case.casesfromedn1]
 tags = ["edn"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+expects.reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [case.casesfromedn10]
 tags = ["edn"]
-expects.regex_match = "scad | dissection | dissektion"
+expects.reciprocal_rank = "scad | dissection | dissektion"
 
 [case.casesfromedn11]
 tags = ["edn"]
-expects.regex_match = "delirium | abstinens"
+expects.reciprocal_rank = "delirium | abstinens"
 
 [case.casesfromedn12]
 tags = ["edn"]
-expects.regex_match = "depression"
+expects.reciprocal_rank = "depression"
 
 [case.casesfromedn13]
 tags = ["edn"]
-expects.regex_match = "leptospirosis"
+expects.reciprocal_rank = "leptospirosis"
 
 [case.casesfromedn14]
 tags = ["edn"]
-expects.regex_match = "ektopisk & graviditet | ektopisk"
+expects.reciprocal_rank = "ektopisk & graviditet | ektopisk"
 
 [case.casesfromedn15]
 tags = ["edn"]
-expects.regex_match = "hematom | hematoma"
+expects.reciprocal_rank = "hematom | hematoma"
 
 [case.casesfromedn16]
 tags = ["edn"]
-expects.regex_match = "tarmperforation | perforation"
+expects.reciprocal_rank = "tarmperforation | perforation"
 
 [case.casesfromedn17]
 tags = ["edn"]
-expects.regex_match = "porfyri"
+expects.reciprocal_rank = "porfyri"
 
 [case.casesfromedn18]
 tags = ["edn"]
-expects.regex_match = "malaria"
+expects.reciprocal_rank = "malaria"
 
 [case.casesfromedn19]
 tags = ["edn"]
-expects.regex_match = "meningit"
+expects.reciprocal_rank = "meningit"
 
 [case.casesfromedn2]
 tags = ["edn"]
-expects.regex_match = "psychosis | psychotic | psykos | psykotisk"
+expects.reciprocal_rank = "psychosis | psychotic | psykos | psykotisk"
 
 [case.casesfromedn20]
 tags = ["edn"]
-expects.regex_match = "viral & meningit | meningit"
+expects.reciprocal_rank = "viral & meningit | meningit"
 
 [case.casesfromedn3]
 tags = ["edn"]
-expects.regex_match = "psychosis | psychotic | psykos | psykotisk"
+expects.reciprocal_rank = "psychosis | psychotic | psykos | psykotisk"
 
 [case.casesfromedn4]
 tags = ["edn"]
-expects.regex_match = "sepsis | septic"
+expects.reciprocal_rank = "sepsis | septic"
 
 [case.casesfromedn5]
 tags = ["edn"]
-expects.regex_match = "acl | (cruciate | ligament) & (tear | injury)"
+expects.reciprocal_rank = "acl | (cruciate | ligament) & (tear | injury)"
 
 [case.casesfromedn6]
 tags = ["edn"]
-expects.regex_match = "lungbleeding | bleeding | lungblödning | blödning"
+expects.reciprocal_rank = "lungbleeding | bleeding | lungblödning | blödning"
 
 [case.casesfromedn7]
 tags = ["edn"]
-expects.regex_match = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
+expects.reciprocal_rank = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
 
 [case.casesfromedn8]
 tags = ["edn"]
-expects.regex_match = "hjärntumör | tumör| brain & (tumour | tumor)"
+expects.reciprocal_rank = "hjärntumör | tumör| brain & (tumour | tumor)"
 
 [case.casesfromedn9]
 tags = ["edn"]
-expects.regex_match = "ileus | tarmvred | obstruction | obstruktion"
+expects.reciprocal_rank = "ileus | tarmvred | obstruction | obstruktion"
 
 [case.openxddx-case_1]
 tags = ["openxddx"]
-expects.regex_match = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
+expects.reciprocal_rank = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
 
 [case.openxddx-case_10]
 tags = ["openxddx"]
-expects.regex_match = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
+expects.reciprocal_rank = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
 
 [case.openxddx-case_11]
 tags = ["openxddx"]
-expects.regex_match = "osteoarthritis | arthritis"
+expects.reciprocal_rank = "osteoarthritis | arthritis"
 
 [case.openxddx-case_12]
 tags = ["openxddx"]
-expects.regex_match = "endometriosis"
+expects.reciprocal_rank = "endometriosis"
 
 [case.openxddx-case_13]
 tags = ["openxddx"]
-expects.regex_match = "tension & pneumothorax"
+expects.reciprocal_rank = "tension & pneumothorax"
 
 [case.openxddx-case_14]
 tags = ["openxddx"]
-expects.regex_match = "physiological & jaundice | neonatal & jaundice"
+expects.reciprocal_rank = "physiological & jaundice | neonatal & jaundice"
 
 [case.openxddx-case_15]
 tags = ["openxddx"]
-expects.regex_match = "aortic & stenosis | valve & dysfunction"
+expects.reciprocal_rank = "aortic & stenosis | valve & dysfunction"
 
 [case.openxddx-case_16]
 tags = ["openxddx"]
-expects.regex_match = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
+expects.reciprocal_rank = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
 
 [case.openxddx-case_17]
 tags = ["openxddx"]
-expects.regex_match = "(liver & failure) | cirrosis | cirrhosis"
+expects.reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
 
 [case.openxddx-case_18]
 tags = ["openxddx"]
-expects.regex_match = "toxoplasma & gondi | toxoplasmosis"
+expects.reciprocal_rank = "toxoplasma & gondi | toxoplasmosis"
 
 [case.openxddx-case_19]
 tags = ["openxddx"]
-expects.regex_match = "stroke | cvl"
+expects.reciprocal_rank = "stroke | cvl"
 
 [case.openxddx-case_2]
 tags = ["openxddx"]
-expects.regex_match = "pneumonia"
+expects.reciprocal_rank = "pneumonia"
 
 [case.openxddx-case_20]
 tags = ["openxddx"]
-expects.regex_match = "physiological & jaundice | neonatal & jaundice"
+expects.reciprocal_rank = "physiological & jaundice | neonatal & jaundice"
 
 [case.openxddx-case_21]
 tags = ["openxddx"]
-expects.regex_match = "vascular & insufficency | vascular & disease"
+expects.reciprocal_rank = "vascular & insufficency | vascular & disease"
 
 [case.openxddx-case_22]
 tags = ["openxddx"]
-expects.regex_match = "dementia | alzheimer"
+expects.reciprocal_rank = "dementia | alzheimer"
 
 [case.openxddx-case_23]
 tags = ["openxddx"]
-expects.regex_match = "measles | rubeola"
+expects.reciprocal_rank = "measles | rubeola"
 
 [case.openxddx-case_24]
 tags = ["openxddx"]
-expects.regex_match = "takutsubo | cardiomyopathy"
+expects.reciprocal_rank = "takutsubo | cardiomyopathy"
 
 [case.openxddx-case_25]
 tags = ["openxddx"]
-expects.regex_match = "osteoarthritis | arthritis"
+expects.reciprocal_rank = "osteoarthritis | arthritis"
 
 [case.openxddx-case_26]
 tags = ["openxddx"]
-expects.regex_match = "testicular & torsion"
+expects.reciprocal_rank = "testicular & torsion"
 
 [case.openxddx-case_27]
 tags = ["openxddx"]
-expects.regex_match = "gynecomastia | hormonal & imbalance"
+expects.reciprocal_rank = "gynecomastia | hormonal & imbalance"
 
 [case.openxddx-case_28]
 tags = ["openxddx"]
-expects.regex_match = "cholecystitis"
+expects.reciprocal_rank = "cholecystitis"
 
 [case.openxddx-case_29]
 tags = ["openxddx"]
-expects.regex_match = "insulinoma"
+expects.reciprocal_rank = "insulinoma"
 
 [case.openxddx-case_3]
 tags = ["openxddx"]
-expects.regex_match = "osteoarthritis | arthritis"
+expects.reciprocal_rank = "osteoarthritis | arthritis"
 
 [case.openxddx-case_30]
 tags = ["openxddx"]
-expects.regex_match = "dysmenorrhea"
+expects.reciprocal_rank = "dysmenorrhea"
 
 [case.openxddx-case_31]
 tags = ["openxddx"]
-expects.regex_match = "hiv"
+expects.reciprocal_rank = "hiv"
 
 [case.openxddx-case_32]
 tags = ["openxddx"]
-expects.regex_match = "hernia"
+expects.reciprocal_rank = "hernia"
 
 [case.openxddx-case_33]
 tags = ["openxddx"]
-expects.regex_match = "gastroenteritis"
+expects.reciprocal_rank = "gastroenteritis"
 
 [case.openxddx-case_34]
 tags = ["openxddx"]
-expects.regex_match = "basal & cell & carcinoma | bcc"
+expects.reciprocal_rank = "basal & cell & carcinoma | bcc"
 
 [case.openxddx-case_35]
 tags = ["openxddx"]
-expects.regex_match = "pneumonia"
+expects.reciprocal_rank = "pneumonia"
 
 [case.openxddx-case_36]
 tags = ["openxddx"]
-expects.regex_match = "precocious & puberty"
+expects.reciprocal_rank = "precocious & puberty"
 
 [case.openxddx-case_37]
 tags = ["openxddx"]
-expects.regex_match = "(liver & failure) | cirrosis | cirrhosis"
+expects.reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
 
 [case.openxddx-case_38]
 tags = ["openxddx"]
-expects.regex_match = "bleeding | hypovolemic & shock | postpartum & bleeding"
+expects.reciprocal_rank = "bleeding | hypovolemic & shock | postpartum & bleeding"
 
 [case.openxddx-case_39]
 tags = ["openxddx"]
-expects.regex_match = "parkinson | parkinson's & disease"
+expects.reciprocal_rank = "parkinson | parkinson's & disease"
 
 [case.openxddx-case_4]
 tags = ["openxddx"]
-expects.regex_match = "hirschsprung & disease | intestinal & disease"
+expects.reciprocal_rank = "hirschsprung & disease | intestinal & disease"
 
 [case.openxddx-case_40]
 tags = ["openxddx"]
-expects.regex_match = "overdose | drug & use | intoxication"
+expects.reciprocal_rank = "overdose | drug & use | intoxication"
 
 [case.openxddx-case_41]
 tags = ["openxddx"]
-expects.regex_match = "myopathy"
+expects.reciprocal_rank = "myopathy"
 
 [case.openxddx-case_42]
 tags = ["openxddx"]
-expects.regex_match = "thyroid & cyst | benign & thyroid & nodules"
+expects.reciprocal_rank = "thyroid & cyst | benign & thyroid & nodules"
 
 [case.openxddx-case_44]
 tags = ["openxddx"]
-expects.regex_match = "(liver & failure) | cirrosis | cirrhosis"
+expects.reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
 
 [case.openxddx-case_45]
 tags = ["openxddx"]
-expects.regex_match = "copd | ((exacerbation | obstructive) & pulmonary)"
+expects.reciprocal_rank = "copd | ((exacerbation | obstructive) & pulmonary)"
 
 [case.openxddx-case_46]
 tags = ["openxddx"]
-expects.regex_match = "dermatitis"
+expects.reciprocal_rank = "dermatitis"
 
 [case.openxddx-case_47]
 tags = ["openxddx"]
-expects.regex_match = "gastroenteritis"
+expects.reciprocal_rank = "gastroenteritis"
 
 [case.openxddx-case_48]
 tags = ["openxddx"]
-expects.regex_match = "hypocalcemia"
+expects.reciprocal_rank = "hypocalcemia"
 
 [case.openxddx-case_49]
 tags = ["openxddx"]
-expects.regex_match = "gynecomastia | hormonal & imbalance"
+expects.reciprocal_rank = "gynecomastia | hormonal & imbalance"
 
 [case.openxddx-case_5]
 tags = ["openxddx"]
-expects.regex_match = "peripheral & artery & disease | arterial & insufficency | peripheral & arterial & disease"
+expects.reciprocal_rank = "peripheral & artery & disease | arterial & insufficency | peripheral & arterial & disease"
 
 [case.openxddx-case_50]
 tags = ["openxddx"]
-expects.regex_match = "spontaneous & abortion | miscarriage"
+expects.reciprocal_rank = "spontaneous & abortion | miscarriage"
 
 [case.openxddx-case_6]
 tags = ["openxddx"]
-expects.regex_match = "hypertension"
+expects.reciprocal_rank = "hypertension"
 
 [case.openxddx-case_7]
 tags = ["openxddx"]
-expects.regex_match = "tardive & dyskinesia | dyskinesia"
+expects.reciprocal_rank = "tardive & dyskinesia | dyskinesia"
 
 [case.openxddx-case_8]
 tags = ["openxddx"]
-expects.regex_match = "hemolytic & uremic & syndrome | hus"
+expects.reciprocal_rank = "hemolytic & uremic & syndrome | hus"
 
 [case.openxddx-case_9]
 tags = ["openxddx"]
-expects.regex_match = "hyperthyroidism | graves & disease"
+expects.reciprocal_rank = "hyperthyroidism | graves & disease"

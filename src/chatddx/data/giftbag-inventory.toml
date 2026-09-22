@@ -12,5 +12,5 @@ tools = ["web_search"]
 [scorer.exact_match]
 command = "exact_match"
 
-[scorer.regex_match]
-command = "regex_match"
+[scorer.reciprocal_rank]
+command = "reciprocal_rank"

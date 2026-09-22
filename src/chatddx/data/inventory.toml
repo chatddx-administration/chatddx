@@ -1,7 +1,7 @@
 extends = ["cases.toml", "chatddx/test-inventory.toml"]
 
-[scorer.regex_match]
-command = "regex_match"
+[scorer.reciprocal_rank]
+command = "reciprocal_rank"
 
 [scorer.exact_match]
 command = "exact_match"

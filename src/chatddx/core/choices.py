@@ -27,6 +27,10 @@ class CoercionChoices(TextChoices):
     PROMPTED = "prompted"
     TOOL = "tool"
     NATIVE = "native"
+    # Not the output type's to say: the connection's profile decides, by its
+    # `default_structured_output_mode` -- where pydantic-ai keeps it, beside
+    # the capabilities that decide which modes a model can take at all.
+    AUTO = "auto"
 
 
 class RoleChoices(TextChoices):

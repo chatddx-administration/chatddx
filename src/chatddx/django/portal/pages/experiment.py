@@ -239,10 +239,11 @@ class RunAdmin(TypedModelAdmin[Run]):
         "experiment",
         "status",
         "session_",
+        "output_",
         "result_",
         "collaborators",
     )
-    readonly_fields = ("timestamp", "session_", "result_")
+    readonly_fields = ("timestamp", "session_", "output_", "result_")
     list_filter = ("status",)
     list_select_related = ("experiment", "session")
 
@@ -260,6 +261,10 @@ class RunAdmin(TypedModelAdmin[Run]):
     @admin.display(description="Session")
     def session_(self, obj: Run):
         return obj.session_link
+
+    @admin.display(description="Output")
+    def output_(self, obj: Run):
+        return obj.output_html
 
     @admin.display(description="Result")
     def result_(self, obj: Run):
