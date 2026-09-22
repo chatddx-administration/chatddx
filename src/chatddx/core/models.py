@@ -18,6 +18,10 @@ class IdentityModel(Model):
     class Meta:
         app_label = "orm"
         db_table = "agents_identity"
+        # A branch reads its collaborators as a list (`BranchSpec`), so they
+        # need an order of their own rather than whatever order a plan
+        # happens to produce.
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
@@ -56,6 +60,8 @@ class TagModel(Model):
     class Meta:
         app_label = "orm"
         db_table = "agents_tag"
+        # as with an identity above: a branch reads its tags as a list
+        ordering = ("name",)
         constraints = (
             UniqueConstraint(
                 fields=["owner", "name", "entity"],
