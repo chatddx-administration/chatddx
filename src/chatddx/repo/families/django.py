@@ -37,7 +37,7 @@ class TrailModel(Model):
 
     def __str__(self) -> str:
         short_hash = self.fingerprint[:6]
-        return f"{self.branch_name} ({short_hash})" if self.branch_name else short_hash
+        return self.branch_name or short_hash
 
 
 class BranchModel(Model):
