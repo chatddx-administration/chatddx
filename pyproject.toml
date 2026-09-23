@@ -20,7 +20,7 @@ dependencies = [
   "pgqueuer[psycopg]>=1.3.2",
   "prompt-toolkit>=3.0.53",
   "psycopg[binary]>=3.3.5",
-  "pydantic-ai-slim[openai]>=2.41.0",
+  "pydantic-ai-slim[openai,spec]>=2.41.0",
   "time-machine>=3.5.1",
   "tomli-w>=1.2.0",
 ]

@@ -538,7 +538,7 @@ dependencies = [
     { name = "pgqueuer", extra = ["psycopg"] },
     { name = "prompt-toolkit" },
     { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic-ai-slim", extra = ["openai"] },
+    { name = "pydantic-ai-slim", extra = ["openai", "spec"] },
     { name = "time-machine" },
     { name = "tomli-w" },
 ]
@@ -587,7 +587,7 @@ requires-dist = [
     { name = "pgqueuer", extras = ["psycopg"], specifier = ">=1.3.2" },
     { name = "prompt-toolkit", specifier = ">=3.0.53" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.5" },
-    { name = "pydantic-ai-slim", extras = ["openai"], specifier = ">=2.41.0" },
+    { name = "pydantic-ai-slim", extras = ["openai", "spec"], specifier = ">=2.41.0" },
     { name = "time-machine", specifier = ">=3.5.1" },
     { name = "tomli-w", specifier = ">=1.2.0" },
 ]
@@ -2277,6 +2277,10 @@ openai = [
     { name = "openai" },
     { name = "tiktoken" },
 ]
+spec = [
+    { name = "pydantic-handlebars" },
+    { name = "pyyaml" },
+]
 
 [[package]]
 name = "pydantic-core"
@@ -2366,6 +2370,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7a/5f/710c3ef69975031fcd58c74f97b854c61a38940c46e074268d1d60c14c08/pydantic_graph-2.41.0.tar.gz", hash = "sha256:02e3253a3a100f583411065f8da51454cdf4f4d8bfa5d216e1f770c924bf5cc9", size = 45189, upload-time = "2026-09-08T04:26:08.092Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/39/0752f32d8063131a1f56d34fd2cf215fbea543dbcc5286ec34ac5e22aafd/pydantic_graph-2.41.0-py3-none-any.whl", hash = "sha256:a51bda0e151a18d00a23ec2fd2965350f977337e8754475cab827fb9f636fd7c", size = 52699, upload-time = "2026-09-08T04:26:01.356Z" },
+]
+
+[[package]]
+name = "pydantic-handlebars"
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/96/73/e55a1fe1a8788a5fa82d9209e796f4111e28f2d2fecab7173aa6d80516ad/pydantic_handlebars-0.2.1.tar.gz", hash = "sha256:d4124cfbf7d6e3bded9331a08ccccf6f29f3e3a93665b35b5d6061650aeeb49f", size = 176949, upload-time = "2026-05-25T01:24:38.354Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/11/364bc401f1d8fdb3947079fc43ffdfbfc9132d065981a03a95d2e87440c4/pydantic_handlebars-0.2.1-py3-none-any.whl", hash = "sha256:c713427d6498cf4b66814447d54753a2748f8a8d3a9f00c194192ddb3df61e52", size = 50476, upload-time = "2026-05-25T01:24:37.104Z" },
 ]
 
 [[package]]
