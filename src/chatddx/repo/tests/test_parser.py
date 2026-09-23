@@ -100,12 +100,12 @@ def inventory() -> ParsedInventory:
 
 def test_every_record_of_the_inventory_parses(inventory: ParsedInventory):
     assert {entity: len(getattr(inventory, entity)) for entity in all_entities} == {
-        "machine": 2,
+        "machine": 3,
         "os": 3,
         "model": 2,
-        "serving": 3,
+        "serving": 5,
         "client": 2,
-        "stack": 3,
+        "stack": 5,
         "tool": 3,
         "toolset": 2,
         "instruction": 3,

@@ -2,6 +2,7 @@
 extends = [
   "../../../data/inventory/pelle.toml",
   "../../../data/inventory/malborg.toml",
+  "../../../data/inventory/fake.toml",
   "../../../data/inventory/models.toml",
   "../../../data/inventory/clients.toml",
   "../../../data/inventory/slices.toml",

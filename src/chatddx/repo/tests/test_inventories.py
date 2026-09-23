@@ -15,12 +15,12 @@ pytestmark = [
 
 # the test inventory: the inventory's records, and two cases of its own
 COUNTS = {
-    "machine": 2,
+    "machine": 3,
     "os": 3,
     "model": 2,
-    "serving": 3,
+    "serving": 5,
     "client": 2,
-    "stack": 3,
+    "stack": 5,
     "tool": 3,
     "toolset": 2,
     "instruction": 3,
