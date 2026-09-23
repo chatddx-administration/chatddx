@@ -397,6 +397,44 @@ def test_a_view_the_code_doesn_t_know_is_refused():
         _ = OutputTrailSchema(schema=PLAN, views={"plan": "$"})  # pyright: ignore[reportArgumentType]
 
 
+def test_a_view_reads_what_its_path_reaches_in_an_answer():
+    output = OutputTrailSchema(
+        schema=PLAN, views={"differential": "$.diagnoses[*].diagnosis"}
+    )
+    answer: JsonValue = {
+        "diagnoses": [
+            {"diagnosis": "pneumonia"},
+            {"diagnosis": "copd"},
+            # an item the path doesn't reach is read as nothing
+            {"probability": "low"},
+        ]
+    }
+
+    assert output.view("differential", answer) == ["pneumonia", "copd"]
+
+
+def test_a_view_of_one_string_reads_a_list_of_one():
+    output = OutputTrailSchema(schema=PLAN, views={"differential": "$.summary"})
+
+    assert output.view("differential", {"summary": "pneumonia"}) == ["pneumonia"]
+    assert output.view("differential", {}) == []
+
+
+def test_free_text_is_read_a_line_at_a_time_its_list_markers_stripped():
+    output = OutputTrailSchema(views={"differential": "lines"})
+    answer = (
+        "1. Pneumonia\n\n- COPD exacerbation\n* Asthma\n2) Heart failure\n  Embolism "
+    )
+
+    assert output.view("differential", answer) == [
+        "Pneumonia",
+        "COPD exacerbation",
+        "Asthma",
+        "Heart failure",
+        "Embolism",
+    ]
+
+
 def test_a_schema_is_a_json_schema():
     with pytest.raises(ValidationError, match="not a valid JSON Schema"):
         _ = OutputTrailSchema(schema={"type": "objet"})

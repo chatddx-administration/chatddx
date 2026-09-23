@@ -16,6 +16,7 @@ The schema is kept as written, key order included: a constrained decoder
 emits keys in the order `properties` gives them.
 """
 
+import json
 import re
 import warnings
 from typing import Any, Literal, cast
@@ -56,8 +57,37 @@ _PATH = re.compile(r"\$(?:\.[A-Za-z_][A-Za-z0-9_]*|\[\*\])*")
 _STEP = re.compile(r"\.([A-Za-z_][A-Za-z0-9_]*)|\[\*\]")
 
 
+# a list marker the `lines` parser strips: `-`, `*`, `•`, `1.` or `1)`
+_MARKER = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
+
+
 class Unproved(ValueError):
     pass
+
+
+def read(document: JsonValue, path: str) -> list[JsonValue]:
+    """Every value `path` reaches in `document`, in the document's order."""
+    values: list[JsonValue] = [document]
+
+    for step in _STEP.finditer(path, 1):
+        name = step.group(1)
+        reached: list[JsonValue] = []
+
+        for value in values:
+            if name is not None and isinstance(value, dict) and name in value:
+                reached.append(value[name])
+            elif name is None and isinstance(value, list):
+                reached.extend(value)
+
+        values = reached
+
+    return values
+
+
+def lines(text: str) -> list[str]:
+    """The `lines` parser: an item per non-empty line, its list marker stripped."""
+    items = (_MARKER.sub("", line).strip() for line in text.splitlines())
+    return [item for item in items if item]
 
 
 def prove(schema: dict[str, JsonValue], path: str, items: str) -> None:
@@ -156,6 +186,21 @@ with warnings.catch_warnings():
         )
         guidance: str | None = None
         views: dict[View, str] = Field(default_factory=dict)
+
+        def view(self, name: View, answer: JsonValue) -> list[JsonValue]:
+            """
+            What the view `name` reads from `answer`: the values its path
+            reaches in a structured answer, or its parser's items from free
+            text.
+            """
+            reading = self.views[name]
+
+            if self.schema is None:
+                return list(
+                    lines(answer if isinstance(answer, str) else json.dumps(answer))
+                )
+
+            return read(answer, reading)
 
         @model_validator(mode="after")
         def _every_view_is_proved(self):
