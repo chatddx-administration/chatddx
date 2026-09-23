@@ -12,10 +12,20 @@ from contextlib import asynccontextmanager
 from typing import Any, cast
 
 import httpx2
+from jsonschema.validators import validator_for
 from pydantic import JsonValue
-from pydantic_ai import Agent, AgentRunEvents, ModelSettings
+from pydantic_ai import (
+    Agent,
+    AgentRunEvents,
+    ModelSettings,
+    NativeOutput,
+    PromptedOutput,
+    StructuredDict,
+    ToolOutput,
+)
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles import DEFAULT_PROFILE, ModelProfile, merge_profile
+from pydantic_ai.profiles.openai import OpenAIModelProfile
 from pydantic_ai.providers.vllm import VLLMProvider
 
 from chatddx.runtime.resolution import Resolution
@@ -32,6 +42,22 @@ SETTINGS = {
     "stop": "stop_sequences",
 }
 
+# What pydantic-ai would otherwise do to a request on its own account, and
+# chatddx doesn't. The schema goes out as it was written, and it reaches the
+# model only through the coercion's schema prompt or the final-result tool
+# (data-generation.md §2.2): chatddx owns every string the model reads.
+OWN: OpenAIModelProfile = {
+    "json_schema_transformer": None,
+    "native_output_requires_schema_in_instructions": False,
+    # prompted is the schema shown and nothing more: no JSON mode
+    "supports_json_object_output": False,
+    # a model taken for a reasoning one would have its sampling dropped
+    "openai_supports_reasoning": False,
+}
+
+# the tool a structured answer is given through, in tool mode
+FINAL_RESULT = "final_result"
+
 
 class Trial:
     def __init__(
@@ -40,16 +66,19 @@ class Trial:
         case: str,
         api_key: str | None = None,
         transport: httpx2.AsyncBaseTransport | None = None,
+        seed: int | None = None,
     ):
         self.resolution: Resolution = resolution
         self.case: str = case
         self.api_key: str | None = api_key
         self.transport: httpx2.AsyncBaseTransport | None = transport
+        # the trial's own, not the configuration's (new-datamodel.md §2)
+        self.seed: int | None = seed
         # the request body as it was sent
         self.request: bytes | None = None
 
     @asynccontextmanager
-    async def stream(self) -> AsyncGenerator[AgentRunEvents[str]]:
+    async def stream(self) -> AsyncGenerator[AgentRunEvents[Any]]:
         system, user = self.resolution.render(self.case)
 
         async with httpx2.AsyncClient(
@@ -66,7 +95,14 @@ class Trial:
                 provider=provider,
                 profile=self._profile,
             )
-            agent = Agent(model, instructions=system or None, output_type=str)
+            # One trial is one request: an answer that doesn't hold is
+            # recorded, not repaired by asking again (data-generation.md §2.2).
+            agent = Agent(
+                model,
+                instructions=system or None,
+                output_type=self._output_type(),
+                retries={"output": 0},
+            )
 
             async with agent.run_stream_events(
                 user, model_settings=self.settings()
@@ -86,7 +122,34 @@ class Trial:
         if extra_body:
             settings["extra_body"] = extra_body
 
+        if self.seed is not None:
+            settings["seed"] = self.seed
+
         return cast(ModelSettings, cast(object, settings))
+
+    def _output_type(self) -> Any:
+        coercion = self.resolution.coercion
+
+        if coercion is None:
+            return str
+
+        # pydantic-ai sorts a schema's keywords, but keeps its properties in
+        # the order they were written: the order a constrained decoder emits
+        structured = StructuredDict(coercion.schema)
+
+        match coercion.mode:
+            case "native":
+                return NativeOutput(structured, template=False)
+            case "tool":
+                # what the tool is said to be: the text that asks for the
+                # output, rather than pydantic-ai's own
+                return ToolOutput(
+                    structured,
+                    name=FINAL_RESULT,
+                    description=self.resolution.output.guidance,
+                )
+            case "prompted":
+                return PromptedOutput(structured, template=False)
 
     def _profile(self, _matched: ModelProfile) -> ModelProfile:
         # vLLM's profile for no model family in particular, and the facts'
@@ -95,7 +158,16 @@ class Trial:
             DEFAULT_PROFILE,
             VLLMProvider.model_profile(""),
             cast(ModelProfile, cast(object, self.resolution.profile)),
+            OWN,
         )
 
     async def _keep(self, request: httpx2.Request) -> None:
         self.request = request.content
+
+
+def invalid(schema: dict[str, JsonValue], answer: Any) -> str | None:
+    """Why `answer` doesn't hold to `schema`, or None when it does."""
+    validator = validator_for(schema)(schema)
+    error = next(iter(validator.iter_errors(answer)), None)
+
+    return None if error is None else f"{error.json_path}: {error.message}"

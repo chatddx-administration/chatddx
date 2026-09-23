@@ -9,15 +9,26 @@ with its slots filled, then the toolset. The case is left out: a cell is
 resolved once, and each trial renders it with a case of its own.
 """
 
+import json
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from pydantic import JsonValue
 from pydantic_ai import TemplateStr
 
-from chatddx.repo.entities.coercion.pydantic import CoercionTrailBase
+from chatddx.repo.entities.coercion.pydantic import (
+    SLOT as SCHEMA_PROMPT,
+    CoercionMode,
+    CoercionTrailBase,
+    Mode,
+)
 from chatddx.repo.entities.instruction.pydantic import InstructionTrailBase
-from chatddx.repo.entities.model.pydantic import BudgetFact, ModelFacts, Refusal
+from chatddx.repo.entities.model.pydantic import (
+    BudgetFact,
+    ModeFact,
+    ModelFacts,
+    Refusal,
+)
 from chatddx.repo.entities.output.pydantic import (
     SLOT as OUTPUT_GUIDANCE,
     OutputTrailBase,
@@ -29,7 +40,7 @@ from chatddx.repo.entities.stack.pydantic import StackDetails
 from chatddx.repo.entities.toolset.pydantic import ToolsetTrailBase
 
 type Slice = Literal[
-    "model", "reasoning", "sampling", "output", "instruction", "toolset"
+    "model", "reasoning", "sampling", "output", "coercion", "instruction", "toolset"
 ]
 
 
@@ -85,6 +96,18 @@ class Sampling:
     writes: dict[str, JsonValue]
 
 
+@dataclass(frozen=True)
+class Coercion:
+    # the mode the variation asks for, and the one it realizes on the model:
+    # `auto` is whichever the facts name
+    requested: CoercionMode
+    mode: Mode
+    # the output's, as it was written
+    schema: dict[str, JsonValue]
+    # what the facts say of the mode on this model
+    note: str | None
+
+
 class CellRefused(Exception):
     """A cell refused, with what its other slices resolve to regardless."""
 
@@ -93,12 +116,14 @@ class CellRefused(Exception):
         refusals: list[SliceRefusal],
         reasoning: Reasoning | None,
         sampling: Sampling | None,
+        coercion: Coercion | None,
         slots: dict[str, str],
     ):
         super().__init__("; ".join(f"{r.slice}: {r.reason}" for r in refusals))
         self.refusals: list[SliceRefusal] = refusals
         self.reasoning: Reasoning | None = reasoning
         self.sampling: Sampling | None = sampling
+        self.coercion: Coercion | None = coercion
         self.slots: dict[str, str] = slots
 
 
@@ -110,6 +135,9 @@ class Resolution:
     profile: dict[str, JsonValue]
     reasoning: Reasoning
     sampling: Sampling
+    output: OutputTrailBase
+    # None for free text: whatever the coercion, it contributes nothing
+    coercion: Coercion | None
     instruction: InstructionTrailBase
     # the instruction's slots, as the other slices fill them
     slots: dict[str, str]
@@ -159,10 +187,10 @@ def resolve(
         configuration.reasoning, configuration.sampling, facts, serving
     )
     refusals += found
-    slots = _slots(configuration, refusals)
+    coercion, slots = _output(configuration, facts, serving, refusals)
 
     if refusals:
-        raise CellRefused(refusals, reasoning, sampling, slots)
+        raise CellRefused(refusals, reasoning, sampling, coercion, slots)
 
     assert stack.endpoint and stack.served_name and reasoning and sampling
 
@@ -173,6 +201,8 @@ def resolve(
         profile=facts.profile,
         reasoning=reasoning,
         sampling=sampling,
+        output=configuration.output,
+        coercion=coercion,
         instruction=configuration.instruction,
         slots=slots,
     )
@@ -321,25 +351,30 @@ def _budget_fits(
         )
 
 
-def _slots(
-    configuration: Configuration, refusals: list[SliceRefusal]
-) -> dict[str, str]:
+def _output(
+    configuration: Configuration,
+    facts: ModelFacts,
+    serving: ServingTrailBase | None,
+    refusals: list[SliceRefusal],
+) -> tuple[Coercion | None, dict[str, str]]:
+    """How the output is held to its schema, and the slots the two fill."""
     output = configuration.output
+    variation = configuration.coercion
+    coercion: Coercion | None = None
     slots: dict[str, str] = {}
 
-    if output.schema is not None:
-        refusals.append(
-            SliceRefusal(
-                "output",
-                "an output with a schema needs its coercion resolved, which the repl "
-                + "doesn't do yet",
-                "later",
-            )
-        )
-
-    # free text: whatever the coercion, it contributes nothing
     if output.guidance is not None:
         slots[OUTPUT_GUIDANCE] = output.guidance
+
+    # free text: whatever the coercion, it contributes nothing
+    if output.schema is not None:
+        coercion = _coercion(variation, output.schema, facts, serving, refusals)
+
+        if coercion and variation.schema_prompt is not None:
+            schema = json.dumps(output.schema, indent=2, ensure_ascii=False)
+            slots[SCHEMA_PROMPT] = TemplateStr(variation.schema_prompt).render(
+                {"schema": schema}
+            )
 
     if configuration.toolset is not None:
         refusals.append(
@@ -348,14 +383,60 @@ def _slots(
 
     for slot in slots:
         if slot not in configuration.instruction.variables:
+            filler = "output" if slot == OUTPUT_GUIDANCE else "coercion"
             refusals.append(
                 SliceRefusal(
                     "instruction",
-                    f"it doesn't place '{slot}', which the output fills",
+                    f"it doesn't place '{slot}', which the {filler} fills",
                 )
             )
 
-    return slots
+    return coercion, slots
+
+
+def _coercion(
+    variation: CoercionTrailBase,
+    schema: dict[str, JsonValue],
+    facts: ModelFacts,
+    serving: ServingTrailBase | None,
+    refusals: list[SliceRefusal],
+) -> Coercion | None:
+    mode = facts.coercion.default if variation.mode == "auto" else variation.mode
+
+    if mode is None:
+        refusals.append(
+            SliceRefusal("coercion", "the model's facts name no mode for 'auto'")
+        )
+        return None
+
+    through = "" if mode == variation.mode else f"it ends at '{mode}': "
+    fact: ModeFact | Refusal | None = getattr(facts.coercion, mode)
+
+    match fact:
+        case None:
+            refusals.append(
+                SliceRefusal(
+                    "coercion", f"{through}the model's facts say nothing on '{mode}'"
+                )
+            )
+        case Refusal():
+            refusals.append(SliceRefusal("coercion", f"{through}{fact.refused}"))
+        case ModeFact():
+            provided = serving.provides() if serving else frozenset[Requirement]()
+            missing = [need for need in fact.needs if need not in provided]
+
+            if not missing:
+                return Coercion(variation.mode, mode, schema, fact.note)
+
+            refusals.append(
+                SliceRefusal(
+                    "coercion",
+                    f"{through}'{mode}' needs {_listed(missing)}, which the serving "
+                    + "doesn't provide",
+                )
+            )
+
+    return None
 
 
 def _listed(needs: list[str]) -> str:

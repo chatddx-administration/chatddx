@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 import pytest
@@ -18,6 +19,7 @@ from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.parsers.inventory import parse
 from chatddx.runtime.resolution import (
     CellRefused,
+    Coercion,
     SliceRefusal,
     Slices,
     realize,
@@ -43,6 +45,12 @@ FACTS = ModelFacts.model_validate(
                 "off": {"temperature": 0.7, "top_p": 0.8, "top_k": 20},
             },
             "generation_config": {"temperature": 0.6, "top_p": 0.95},
+        },
+        "coercion": {
+            "default": "native",
+            "native": {"needs": "reasoning_parser"},
+            "tool": {"needs": "tool_call_parser", "note": "tool_choice is ignored"},
+            "prompted": {"refused": "never tried"},
         },
         "profile": {"supports_json_schema_output": True},
     }
@@ -282,15 +290,113 @@ def test_a_stack_the_repl_can_t_send_to_is_refused():
     ]
 
 
-def test_a_schema_and_a_toolset_wait_for_their_pieces():
-    output = OutputTrailSchema.model_validate(
-        {"schema": {"type": "object", "properties": {}}, "guidance": "Fill it in."}
-    )
+def test_a_toolset_waits_for_its_piece():
     toolset = ToolsetTrailSchema(tools=[ToolTrailSchema(name="lookup")])
 
-    assert [r.kind for r in refusals(cell(output=output, toolset=toolset))] == [
-        "later",
-        "later",
+    assert refusals(cell(toolset=toolset)) == [
+        SliceRefusal("toolset", "the repl doesn't run tools yet", "later")
+    ]
+
+
+# ------------------------------------------------------------------ coercion
+
+# key order as written: a constrained decoder emits keys in this order
+SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"urgent": {"type": "boolean"}, "diagnoses": {"type": "array"}},
+    "required": ["urgent", "diagnoses"],
+}
+
+STRUCTURED = OutputTrailSchema.model_validate(
+    {"schema": SCHEMA, "guidance": "List the diagnoses."}
+)
+
+
+def test_a_schema_is_held_by_the_mode_the_coercion_asks_for():
+    resolution = resolve(
+        cell(output=STRUCTURED, coercion=CoercionTrailSchema(mode="native")),
+        STACK,
+        FACTS,
+        SERVING,
+    )
+
+    assert resolution.coercion == Coercion("native", "native", SCHEMA, None)
+    # shown to the model by nothing: no schema prompt
+    assert resolution.slots == {"output_guidance": "List the diagnoses."}
+
+
+def test_auto_is_the_mode_the_facts_name():
+    resolution = resolve(cell(output=STRUCTURED), STACK, FACTS, SERVING)
+
+    assert resolution.coercion == Coercion("auto", "native", SCHEMA, None)
+
+
+def test_the_schema_prompt_fills_its_slot_with_the_schema_as_written():
+    coercion = CoercionTrailSchema(mode="native", schema_prompt="Schema:\n{{schema}}")
+    resolution = resolve(
+        cell(output=STRUCTURED, coercion=coercion), STACK, FACTS, SERVING
+    )
+
+    assert resolution.slots["schema_prompt"] == "Schema:\n" + json.dumps(
+        SCHEMA, indent=2
+    )
+    assert resolution.render("a cough")[0] == (
+        "List the diagnoses.\n" + resolution.slots["schema_prompt"]
+    )
+
+
+def test_a_mode_needs_what_the_facts_say_it_needs():
+    coercion = CoercionTrailSchema(mode="tool")
+
+    assert refusals(cell(output=STRUCTURED, coercion=coercion)) == [
+        SliceRefusal(
+            "coercion",
+            "'tool' needs a tool call parser, which the serving doesn't provide",
+        )
+    ]
+
+    serving = ServingTrailSchema(
+        engine=ENGINE,
+        args={"tool-call-parser": "hermes", "enable-auto-tool-choice": True},
+    )
+    resolution = resolve(
+        cell(output=STRUCTURED, coercion=coercion), STACK, FACTS, serving
+    )
+
+    # what the facts say of the mode goes with it
+    assert resolution.coercion == Coercion(
+        "tool", "tool", SCHEMA, "tool_choice is ignored"
+    )
+
+
+def test_a_mode_the_facts_refuse_or_say_nothing_on_is_refused():
+    prompted = CoercionTrailSchema(mode="prompted", schema_prompt="{{schema}}")
+    silent = FACTS.model_copy(
+        update={"coercion": FACTS.coercion.model_copy(update={"default": None})}
+    )
+
+    assert refusals(cell(output=STRUCTURED, coercion=prompted)) == [
+        SliceRefusal("coercion", "never tried")
+    ]
+    assert refusals(cell(output=STRUCTURED), facts=silent) == [
+        SliceRefusal("coercion", "the model's facts name no mode for 'auto'")
+    ]
+
+
+def test_a_schema_prompt_the_instruction_doesn_t_place_is_refused():
+    guidance_only = InstructionTrailSchema(
+        system="{{output_guidance}}",
+        user="{{case}}",
+        variables=["case", "output_guidance"],
+    )
+    coercion = CoercionTrailSchema(mode="native", schema_prompt="{{schema}}")
+
+    assert refusals(
+        cell(instruction=guidance_only, output=STRUCTURED, coercion=coercion)
+    ) == [
+        SliceRefusal(
+            "instruction", "it doesn't place 'schema_prompt', which the coercion fills"
+        )
     ]
 
 
