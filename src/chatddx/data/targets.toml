@@ -1,0 +1,303 @@
+# What each case is expected to yield, keyed by the case and then by the
+# scorer the target was written for. These were the cases' `expects` in
+# cases.toml; targets are inspect's, not the registry's, so the inventory
+# no longer carries them (new-datamodel.md §7). `regex_match` becomes
+# `reciprocal_rank` over the `differential` view, and each pattern stays its
+# target.
+
+[DutchFall10w]
+regex_match = "biliary & (colic | stone)"
+
+[Dutchfall11w]
+regex_match = "aaa | (abdominal | aortic) & aneurysm | dissection"
+
+[Dutchfall12w]
+regex_match = "pancreatitis"
+
+[Dutchfall13w]
+regex_match = "torsion | ovarian & torsion"
+
+[Dutchfall14w]
+regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+
+[Dutchfall15w]
+regex_match = "gastroenteritis"
+
+[Dutchfall16w]
+regex_match = "chf | (congestive | failure) & heart"
+
+[Dutchfall17w]
+regex_match = "liver & failure | cirrosis | cirrhosis"
+
+[Dutchfall18w]
+regex_match = "pneumonia"
+
+[Dutchfall19w]
+regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+
+[Dutchfall1w]
+regex_match = "pneumonia"
+
+[Dutchfall20w]
+regex_match = "vasculitis"
+
+[Dutchfall21w]
+regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+
+[Dutchfall22w]
+regex_match = "uti | urinary & infection | cystitis | urosepsis"
+
+[Dutchfall23w]
+regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+
+[Dutchfall24w]
+regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+
+[Dutchfall25w]
+regex_match = "pancreatitis"
+
+[Dutchfall26w]
+regex_match = "pneumonia"
+
+[Dutchfall27w]
+regex_match = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+
+[Dutchfall28w]
+regex_match = "pneumonia"
+
+[Dutchfall29w]
+regex_match = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+
+[Dutchfall2w]
+regex_match = "(diverticular | (gastro & intestinal) | gi) & bleed"
+
+[Dutchfall30w]
+regex_match = "pneumonia"
+
+[Dutchfall3w]
+regex_match = "diverticulitis | (gastro & intestinal | gi) & inflammation"
+
+[Dutchfall4w]
+regex_match = "pancreatitis"
+
+[Dutchfall5w]
+regex_match = "uti | urinary & infection | cystitis | urosepsis"
+
+[Dutchfall6w]
+regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+
+[Dutchfall7w]
+regex_match = "hernia"
+
+[Dutchfall8w]
+regex_match = "chf | (congestive | failure) & heart"
+
+[Dutchfall9w]
+regex_match = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
+
+[casesfromedn1]
+regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+
+[casesfromedn10]
+regex_match = "scad | dissection | dissektion"
+
+[casesfromedn11]
+regex_match = "delirium | abstinens"
+
+[casesfromedn12]
+regex_match = "depression"
+
+[casesfromedn13]
+regex_match = "leptospirosis"
+
+[casesfromedn14]
+regex_match = "ektopisk & graviditet | ektopisk"
+
+[casesfromedn15]
+regex_match = "hematom | hematoma"
+
+[casesfromedn16]
+regex_match = "tarmperforation | perforation"
+
+[casesfromedn17]
+regex_match = "porfyri"
+
+[casesfromedn18]
+regex_match = "malaria"
+
+[casesfromedn19]
+regex_match = "meningit"
+
+[casesfromedn2]
+regex_match = "psychosis | psychotic | psykos | psykotisk"
+
+[casesfromedn20]
+regex_match = "viral & meningit | meningit"
+
+[casesfromedn3]
+regex_match = "psychosis | psychotic | psykos | psykotisk"
+
+[casesfromedn4]
+regex_match = "sepsis | septic"
+
+[casesfromedn5]
+regex_match = "acl | (cruciate | ligament) & (tear | injury)"
+
+[casesfromedn6]
+regex_match = "lungbleeding | bleeding | lungblödning | blödning"
+
+[casesfromedn7]
+regex_match = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
+
+[casesfromedn8]
+regex_match = "hjärntumör | tumör| brain & (tumour | tumor)"
+
+[casesfromedn9]
+regex_match = "ileus | tarmvred | obstruction | obstruktion"
+
+[openxddx-case_1]
+regex_match = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
+
+[openxddx-case_10]
+regex_match = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
+
+[openxddx-case_11]
+regex_match = "osteoarthritis | arthritis"
+
+[openxddx-case_12]
+regex_match = "endometriosis"
+
+[openxddx-case_13]
+regex_match = "tension & pneumothorax"
+
+[openxddx-case_14]
+regex_match = "physiological & jaundice | neonatal & jaundice"
+
+[openxddx-case_15]
+regex_match = "aortic & stenosis | valve & dysfunction"
+
+[openxddx-case_16]
+regex_match = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
+
+[openxddx-case_17]
+regex_match = "(liver & failure) | cirrosis | cirrhosis"
+
+[openxddx-case_18]
+regex_match = "toxoplasma & gondi | toxoplasmosis"
+
+[openxddx-case_19]
+regex_match = "stroke | cvl"
+
+[openxddx-case_2]
+regex_match = "pneumonia"
+
+[openxddx-case_20]
+regex_match = "physiological & jaundice | neonatal & jaundice"
+
+[openxddx-case_21]
+regex_match = "vascular & insufficency | vascular & disease"
+
+[openxddx-case_22]
+regex_match = "dementia | alzheimer"
+
+[openxddx-case_23]
+regex_match = "measles | rubeola"
+
+[openxddx-case_24]
+regex_match = "takutsubo | cardiomyopathy"
+
+[openxddx-case_25]
+regex_match = "osteoarthritis | arthritis"
+
+[openxddx-case_26]
+regex_match = "testicular & torsion"
+
+[openxddx-case_27]
+regex_match = "gynecomastia | hormonal & imbalance"
+
+[openxddx-case_28]
+regex_match = "cholecystitis"
+
+[openxddx-case_29]
+regex_match = "insulinoma"
+
+[openxddx-case_3]
+regex_match = "osteoarthritis | arthritis"
+
+[openxddx-case_30]
+regex_match = "dysmenorrhea"
+
+[openxddx-case_31]
+regex_match = "hiv"
+
+[openxddx-case_32]
+regex_match = "hernia"
+
+[openxddx-case_33]
+regex_match = "gastroenteritis"
+
+[openxddx-case_34]
+regex_match = "basal & cell & carcinoma | bcc"
+
+[openxddx-case_35]
+regex_match = "pneumonia"
+
+[openxddx-case_36]
+regex_match = "precocious & puberty"
+
+[openxddx-case_37]
+regex_match = "(liver & failure) | cirrosis | cirrhosis"
+
+[openxddx-case_38]
+regex_match = "bleeding | hypovolemic & shock | postpartum & bleeding"
+
+[openxddx-case_39]
+regex_match = "parkinson | parkinson's & disease"
+
+[openxddx-case_4]
+regex_match = "hirschsprung & disease | intestinal & disease"
+
+[openxddx-case_40]
+regex_match = "overdose | drug & use | intoxication"
+
+[openxddx-case_41]
+regex_match = "myopathy"
+
+[openxddx-case_42]
+regex_match = "thyroid & cyst | benign & thyroid & nodules"
+
+[openxddx-case_44]
+regex_match = "(liver & failure) | cirrosis | cirrhosis"
+
+[openxddx-case_45]
+regex_match = "copd | ((exacerbation | obstructive) & pulmonary)"
+
+[openxddx-case_46]
+regex_match = "dermatitis"
+
+[openxddx-case_47]
+regex_match = "gastroenteritis"
+
+[openxddx-case_48]
+regex_match = "hypocalcemia"
+
+[openxddx-case_49]
+regex_match = "gynecomastia | hormonal & imbalance"
+
+[openxddx-case_5]
+regex_match = "peripheral & artery & disease | arterial & insufficency | peripheral & arterial & disease"
+
+[openxddx-case_50]
+regex_match = "spontaneous & abortion | miscarriage"
+
+[openxddx-case_6]
+regex_match = "hypertension"
+
+[openxddx-case_7]
+regex_match = "tardive & dyskinesia | dyskinesia"
+
+[openxddx-case_8]
+regex_match = "hemolytic & uremic & syndrome | hus"
+
+[openxddx-case_9]
+regex_match = "hyperthyroidism | graves & disease"

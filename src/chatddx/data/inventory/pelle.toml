@@ -1,0 +1,65 @@
+# pelle: one RTX 3070 (8 GB). It serves Qwen3-8B-AWQ at
+# http://pelle.km:12009/v1/, the endpoint chatddx uses today.
+#
+# Everything marked "# guessed" waits for the script that collects it from
+# the machine: /etc/machine-id, `nvidia-smi -L`, /run/current-system and
+# the manifest the NixOS module writes beside the `vllm serve` unit.
+
+[machine.pelle]
+machine_id = "681655ac-1beb-4bfc-931c-d495f0624e31"  # guessed
+unreliable = false
+tags = ["rtx-3070"]
+
+[machine.pelle.specs]
+cpu = "AMD Ryzen 7 5800X 8-Core Processor"  # guessed
+ram_gib = 32  # guessed
+location = "Stockholm"  # guessed
+
+[[machine.pelle.specs.gpus]]
+model = "NVIDIA GeForce RTX 3070"
+memory_mib = 8192
+uuid = "GPU-6f519b58-d1e4-4366-8603-a0dce09a0589"  # guessed
+
+[os.pelle]
+toplevel = "/nix/store/ngjpgszd12d3z53mf1pm0cqms9h6km3i-nixos-system-pelle-26.11.20260519.c09727c"  # guessed
+flake_rev = "c067699436f8692b395d1d7e6a297b6524e32f20"  # guessed
+
+[os.pelle.specs]
+hostname = "pelle"
+kernel = "6.18.12"  # guessed
+nvidia_driver = "580.95.05"  # guessed
+nixpkgs_rev = "c09727c23bd83e81248764ed6e2dd41aa3113972"  # guessed: the nixpkgs chatddx's own flake pins
+
+[serving."qwen3-8b-awq@pelle"]
+engine = "/nix/store/5nxjf9n4gzgajv67rd4fb1kdssql7g51-python3.13-vllm-0.13.0"  # guessed
+
+# arguments that change what the model reads or the numbers: fingerprinted
+[serving."qwen3-8b-awq@pelle".args]
+max-model-len = 8192  # guessed: what 8 GB leaves for the KV cache
+kv-cache-dtype = "fp8"  # guessed
+enforce-eager = true  # guessed: no CUDA graphs, to spare memory
+reasoning-parser = "qwen3"  # guessed
+enable-auto-tool-choice = true  # guessed
+tool-call-parser = "hermes"  # guessed
+
+[serving."qwen3-8b-awq@pelle".env]
+VLLM_BATCH_INVARIANT = "1"  # guessed
+
+# arguments that only change speed: recorded, not fingerprinted
+[serving."qwen3-8b-awq@pelle".performance]
+gpu-memory-utilization = 0.92  # guessed
+max-num-seqs = 8  # guessed
+enable-prefix-caching = true  # guessed
+host = "0.0.0.0"  # guessed
+port = 12009
+
+[stack."qwen3-8b-awq@pelle"]
+machine = "pelle"
+os = "pelle"
+model = "qwen3-8b-awq"
+serving = "qwen3-8b-awq@pelle"
+endpoint = "http://pelle.km:12009/v1/"
+served_name = "Qwen/Qwen3-8B-AWQ"
+api = "vllm"
+# no credential: vLLM runs without --api-key  # guessed
+tags = ["rtx-3070"]

@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "integer": {
+      "type": "integer"
+    },
+    "list": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "bool": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "integer",
+    "list",
+    "bool"
+  ]
+}
