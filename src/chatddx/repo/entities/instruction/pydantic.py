@@ -1,79 +1,85 @@
 """
-What an agent is told to do, as a bundle of its own.
+Instruction: a request-time slice (new-datamodel.md §2).
 
-The text used to sit on the agent as its one primitive field. It is a
-bundle now, so an agent is nothing but the things it points at, and the
-same instruction can be pointed at twice.
+A variation is the templates of the system and user messages (Handlebars,
+through pydantic-ai's `TemplateStr`) and the variables they declare: `case`,
+and the slots other slices fill. An instruction never names an output: text
+that asks for one output lives in that output's guidance, and reaches the
+model through the `output_guidance` slot. So instruction and output can be
+varied apart.
 
-A bundle of one field is still carried flat wherever a person meets it --
-a textarea on the agent forms, `instructions = "..."` in an inventory --
-so `as_definition` and `definition_text` are the two directions between
-the text and the bundle it stands for.
+The case is a value, never a condition: a template places it and never
+branches on it, so equal request skeletons mean equal requests for every
+case (data-generation.md §3.1).
 """
 
-from typing import Annotated, Any
+from typing import Literal, get_args
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import Field, model_validator
 
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
+    BaseFormDataIn,
+    BaseFormDataOut,
+    BaseTrail,
     BranchSchema,
     BranchSpec,
+    Details,
     TrailSchema,
     TrailSchemaRef,
     TrailSpec,
 )
-from chatddx.repo.families.pydantic import BaseFormDataIn, BaseFormDataOut, BaseTrail
+from chatddx.repo.templates import placements
 
+# `case`, and each slot by the slice that fills it: the output's guidance,
+# the coercion's schema prompt and the toolset's guidance. A reasoning slot
+# is left out until a study needs it (new-datamodel.md §8).
+type Variable = Literal["case", "output_guidance", "schema_prompt", "tool_guidance"]
 
-def as_definition(v: Any) -> Any:
-    """
-    The bundle a bare string stands for.
-
-    Whatever hands over an instruction as text -- a form field, an
-    inventory record that named it inline -- says the same thing as a
-    bundle with that text as its definition.
-    """
-    match v:
-        case str():
-            return {"definition": v}
-        case _:
-            return v
-
-
-def definition_text(v: Any) -> Any:
-    """
-    The text of an instruction, from the bundle or from the text itself.
-
-    The other direction of `as_definition`: what a flat form puts in its
-    one field, whether it is handed the bundle or the text.
-    """
-    match v:
-        case {"definition": definition}:
-            return definition
-        case BaseModel():
-            return v.definition  # pyright: ignore[reportAttributeAccessIssue]
-        case _:
-            return v
-
-
-# An instruction where the text is what is carried: the agent forms and the
-# template registry they read from.
-DefinitionText = Annotated[str, BeforeValidator(definition_text)]
+VARIABLES: tuple[Variable, ...] = get_args(Variable.__value__)
 
 
 class InstructionTrailBase(BaseTrail):
-    definition: str
+    system: str = ""
+    # `{{case}}` sends the case as it is, as chatddx always has
+    user: str
+    variables: list[Variable]
+
+    @model_validator(mode="after")
+    def _declared_is_placed(self):
+        placed = placements(self.system) | placements(self.user)
+        declared = set(self.variables)
+
+        if len(declared) != len(self.variables):
+            raise ValueError("a variable is declared twice")
+
+        if "case" not in declared:
+            raise ValueError("an instruction places the case: declare `case`")
+
+        if "case" in placed.conditions:
+            raise ValueError("the case is a value, never a condition")
+
+        undeclared = sorted(placed.names - declared)
+
+        if undeclared:
+            raise ValueError(f"{undeclared} placed but not declared")
+
+        unplaced = sorted(declared - placed.values)
+
+        if unplaced:
+            raise ValueError(f"{unplaced} declared but never placed")
+
+        # one order for one set, so the same declaration is the same content
+        self.variables = sorted(self.variables, key=VARIABLES.index)
+
+        return self
 
 
 class InstructionTrailSchema(InstructionTrailBase, TrailSchema):
     pass
 
 
-class InstructionTrailSchemaRef(
-    TrailSchemaRef,
-    InstructionTrailBase,
-):
+class InstructionTrailSchemaRef(TrailSchemaRef, InstructionTrailBase):
     pass
 
 
@@ -85,7 +91,7 @@ class InstructionBranchSchema(BranchSchema[InstructionTrailSchema]):
     pass
 
 
-class InstructionBranchSpec(BranchSpec[InstructionTrailSpec]):
+class InstructionBranchSpec(BranchSpec[InstructionTrailSpec, Details]):
     pass
 
 
@@ -93,6 +99,5 @@ class InstructionFormDataIn(InstructionTrailBase, BaseFormDataIn):
     pass
 
 
-class InstructionFormDataOut(BaseFormDataOut):
+class InstructionFormDataOut(InstructionTrailBase, BaseFormDataOut):
     id: CoercedStr = Field(serialization_alias="template")
-    definition: str

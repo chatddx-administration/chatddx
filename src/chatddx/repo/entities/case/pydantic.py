@@ -1,16 +1,22 @@
+"""
+A case: its payload, as the model receives it through the instruction's
+`case` variable.
+
+What a case is expected to yield is not the registry's any more: targets are
+inspect's, keyed by the case, and a batch's scorers read them
+(new-datamodel.md §7).
+"""
+
 from pydantic import Field
 
 from chatddx.core.fields import CoercedStr
-from chatddx.repo.entities.expect.pydantic import ExpectBranchSpec
 from chatddx.repo.families import (
-    RELATION,
-    BaseBranch,
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
-    BranchDetailsPatch,
-    BranchSchemaDetails,
+    BranchSchema,
     BranchSpec,
+    Details,
     TrailSchema,
     TrailSchemaRef,
     TrailSpec,
@@ -25,10 +31,7 @@ class CaseTrailSchema(CaseTrailBase, TrailSchema):
     pass
 
 
-class CaseTrailSchemaRef(
-    TrailSchemaRef,
-    CaseTrailBase,
-):
+class CaseTrailSchemaRef(TrailSchemaRef, CaseTrailBase):
     pass
 
 
@@ -36,27 +39,12 @@ class CaseTrailSpec(CaseTrailBase, TrailSpec):
     pass
 
 
-class CaseBranchDetails(BranchSchemaDetails):
-    # Which expectations a case carries is the owner's, not the payload's, so
-    # it belongs to the branch. The names are expect *branch* names: two cases
-    # that expect the same thing share one content-addressed trail, so a trail
-    # cannot say whose expectation it is.
-    expects: list[str] | None = Field(
-        default=None,
-        json_schema_extra={RELATION: "expect"},
-    )
-
-
-class CaseBranchDetailsPatch(BranchDetailsPatch):
-    expects: list[str] | None = None
-
-
-class CaseBranchSchema(BaseBranch[CaseTrailSchema], CaseBranchDetails):
+class CaseBranchSchema(BranchSchema[CaseTrailSchema]):
     pass
 
 
-class CaseBranchSpec(BranchSpec[CaseTrailSpec]):
-    expects: list[ExpectBranchSpec] = Field(default_factory=list)
+class CaseBranchSpec(BranchSpec[CaseTrailSpec, Details]):
+    pass
 
 
 class CaseFormDataIn(CaseTrailBase, BaseFormDataIn):

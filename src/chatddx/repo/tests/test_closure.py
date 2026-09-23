@@ -2,19 +2,21 @@ from typing import Any
 
 import pytest
 
-from chatddx.core.choices import ProviderChoices, ToolChoices
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_tag
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.agent.pydantic import AgentTrailSchema
-from chatddx.repo.entities.connection.pydantic import ConnectionTrailSchema
-from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
+from chatddx.repo.entities.coercion.pydantic import CoercionTrailSchema
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
 from chatddx.repo.entities.instruction.pydantic import InstructionTrailSchema
-from chatddx.repo.entities.scorer.pydantic import ScorerTrailSchema
+from chatddx.repo.entities.machine.pydantic import MachineBranchDetails
+from chatddx.repo.entities.output.pydantic import OutputTrailSchema
+from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailSchema
+from chatddx.repo.entities.sampling.pydantic import SamplingTrailSchema
 from chatddx.repo.entities.tool.pydantic import ToolTrailSchema
-from chatddx.repo.entities.tool_group.pydantic import ToolGroupTrailSchema
+from chatddx.repo.entities.toolset.pydantic import ToolsetTrailSchema
 from chatddx.repo.families.django import TrailModel
 from chatddx.repo.families.pydantic import BranchSchemaDetails
+from chatddx.repo.inventories import InventoryTrailSchema
 from chatddx.repo.names import resolve_branch_name
 from chatddx.repo.shufflers.branch import (
     commit,
@@ -50,44 +52,49 @@ def dangling_trails(owner_name: str) -> list[TrailModel]:
     return dangling
 
 
-def an_agent(instructions: str = "an agent nobody named the parts of"):
+def a_configuration(guidance: str = "nobody named the parts of this"):
     """
-    An agent whose whole closure is new and unnamed: five relations, one of
-    them with two tools of its own.
+    A configuration whose whole closure is new and unnamed: five slices and a
+    toolset of two tools.
     """
-    return AgentTrailSchema(
-        instruction=InstructionTrailSchema(definition=instructions),
-        connection=ConnectionTrailSchema(
-            provider=ProviderChoices.VLLM,
-            model="Test/closure",
-            endpoint="http://closure.example.com/v1/",  # pyright: ignore[reportArgumentType]
+    return ConfigurationTrailSchema(
+        instruction=InstructionTrailSchema(
+            system="{{output_guidance}}",
+            user="{{case}}",
+            variables=["case", "output_guidance"],
         ),
-        tool_group=ToolGroupTrailSchema(
-            instructions="tools of an agent nobody named the parts of",
+        output=OutputTrailSchema(guidance=guidance),
+        coercion=CoercionTrailSchema(mode="native"),
+        reasoning=ReasoningTrailSchema(effort="default"),
+        sampling=SamplingTrailSchema(defaults="model"),
+        toolset=ToolsetTrailSchema(
             tools=[
-                ToolTrailSchema(command="closure-tool-1", type=ToolChoices.FUNCTION),
-                ToolTrailSchema(command="closure-tool-2", type=ToolChoices.FUNCTION),
+                ToolTrailSchema(name="closure_tool_1"),
+                ToolTrailSchema(name="closure_tool_2"),
             ],
         ),
     )
 
 
-def commit_agent(owner_name: str, name: str = "closure-agent", **kwargs: Any) -> bool:
+def commit_configuration(
+    owner_name: str, name: str = "closure-configuration", **kwargs: Any
+) -> bool:
     return commit(
-        trail=an_agent(**kwargs),
+        trail=a_configuration(**kwargs),
         branch_details=BranchSchemaDetails(name=name, owner=owner_name),
     )
 
 
 def test_a_commit_leaves_nothing_in_its_closure_branchless(owner: IdentityModel):
-    assert commit_agent(owner.name)
+    assert commit_configuration(owner.name)
 
-    agent = get_branch_model("agent", owner.name, "closure-agent")
-    closure = trail_closure(agent.target)
+    configuration = get_branch_model(
+        "configuration", owner.name, "closure-configuration"
+    )
+    closure = trail_closure(configuration.target)
 
-    # instruction, connection, sampling params, output type, tool group,
-    # two tools
-    assert len(closure) == 7
+    # instruction, output, coercion, reasoning, sampling, toolset, two tools
+    assert len(closure) == 8
 
     for trail in closure:
         assert branches_on(trail, owner.name).count() == 1
@@ -95,56 +102,83 @@ def test_a_commit_leaves_nothing_in_its_closure_branchless(owner: IdentityModel)
     assert dangling_trails(owner.name) == []
 
 
+def test_a_stack_s_closure_is_its_things(
+    owner: IdentityModel,
+    trails: InventoryTrailSchema,
+):
+    """A container's stack reaches both systems, its own and its host's."""
+    assert commit(
+        trails.stack["qwen3-8b-awq@malborg"],
+        BranchSchemaDetails(name="a stack", owner=owner.name),
+    )
+
+    stack = get_branch_model("stack", owner.name, "a stack")
+
+    assert sorted(entity_of(trail).name for trail in trail_closure(stack.target)) == [
+        "machine",
+        "model",
+        "os",
+        "os",
+        "serving",
+    ]
+    assert dangling_trails(owner.name) == []
+
+
 def test_a_branch_made_for_the_closure_is_named_by_the_resolver(
     owner: IdentityModel,
 ):
-    assert commit_agent(owner.name)
+    assert commit_configuration(owner.name)
 
-    agent = get_branch_model("agent", owner.name, "closure-agent")
-    connection = agent.target.connection
+    configuration = get_branch_model(
+        "configuration", owner.name, "closure-configuration"
+    )
+    output = configuration.target.output
 
-    made = branches_on(connection, owner.name).get()
+    made = branches_on(output, owner.name).get()
 
-    assert made.name == resolve_branch_name("connection", connection.fingerprint)
-    assert made.name == f"connection {connection.fingerprint[:6]}"
+    assert made.name == resolve_branch_name("output", output.fingerprint)
+    assert made.name == f"output {output.fingerprint.rpartition(':')[2][:6]}"
 
 
 def test_a_trail_the_owner_already_has_a_branch_on_is_left_alone(
     owner: IdentityModel,
 ):
-    agent_schema = an_agent()
-
     assert commit(
-        trail=agent_schema.connection,
-        branch_details=BranchSchemaDetails(name="my connection", owner=owner.name),
+        trail=a_configuration().output,
+        branch_details=BranchSchemaDetails(name="my output", owner=owner.name),
     )
 
-    assert commit_agent(owner.name)
+    assert commit_configuration(owner.name)
 
-    agent = get_branch_model("agent", owner.name, "closure-agent")
-    connection = agent.target.connection
+    configuration = get_branch_model(
+        "configuration", owner.name, "closure-configuration"
+    )
 
     # the name they chose, and no second branch beside it
-    assert [b.name for b in branches_on(connection, owner.name)] == ["my connection"]
+    assert [b.name for b in branches_on(configuration.target.output, owner.name)] == [
+        "my output"
+    ]
 
 
-def test_committing_the_same_agent_again_makes_no_further_branches(
+def test_committing_the_same_configuration_again_makes_no_further_branches(
     owner: IdentityModel,
 ):
-    assert commit_agent(owner.name)
+    assert commit_configuration(owner.name)
 
-    agent = get_branch_model("agent", owner.name, "closure-agent")
+    configuration = get_branch_model(
+        "configuration", owner.name, "closure-configuration"
+    )
     before = {
         trail.pk: branches_on(trail, owner.name).count()
-        for trail in trail_closure(agent.target)
+        for trail in trail_closure(configuration.target)
     }
 
     # same content, so the canon does not move
-    assert not commit_agent(owner.name)
+    assert not commit_configuration(owner.name)
 
     after = {
         trail.pk: branches_on(trail, owner.name).count()
-        for trail in trail_closure(agent.target)
+        for trail in trail_closure(configuration.target)
     }
 
     assert after == before
@@ -154,25 +188,26 @@ def test_committing_the_same_agent_again_makes_no_further_branches(
 def test_the_walk_goes_on_where_a_commit_stops(owner: IdentityModel):
     """
     A trail that has a branch is skipped, not stepped over: the walk carries
-    on past it. So an owner left holding a tool group whose tools have no
-    branches -- data from before this, or a branch someone deleted -- is
-    repaired by the next commit that reaches them, even though the commit
-    itself changes nothing.
+    on past it. So an owner left holding a toolset whose tools have no
+    branches is repaired by the next commit that reaches them, even though
+    the commit itself changes nothing.
     """
-    assert commit_agent(owner.name)
+    assert commit_configuration(owner.name)
 
-    agent = get_branch_model("agent", owner.name, "closure-agent")
-    tool_group = agent.target.tool_group
-    tools = trail_closure(tool_group)
+    configuration = get_branch_model(
+        "configuration", owner.name, "closure-configuration"
+    )
+    toolset = configuration.target.toolset
+    tools = trail_closure(toolset)
 
     assert len(tools) == 2
 
     for tool in tools:
         _ = branches_on(tool, owner.name).delete()
 
-    assert not commit_agent(owner.name)
+    assert not commit_configuration(owner.name)
 
-    assert branches_on(tool_group, owner.name).count() == 1
+    assert branches_on(toolset, owner.name).count() == 1
 
     for tool in tools:
         assert branches_on(tool, owner.name).count() == 1
@@ -181,84 +216,84 @@ def test_the_walk_goes_on_where_a_commit_stops(owner: IdentityModel):
 def test_a_new_version_gives_the_new_parts_of_its_closure_branches(
     owner: IdentityModel,
 ):
-    assert commit_agent(owner.name)
-    assert commit_agent(owner.name, instructions="rewritten")
+    assert commit_configuration(owner.name)
+    assert commit_configuration(owner.name, guidance="rewritten")
 
     assert dangling_trails(owner.name) == []
 
 
-def test_the_closure_of_a_shared_model_belongs_to_the_owner(
+def test_the_closure_of_a_shared_configuration_belongs_to_the_owner(
     owner: IdentityModel,
     other_owner: IdentityModel,
 ):
     """
-    A collaborator saving a shared model commits under its owner's name, so
-    the closure is committed for the owner too -- and for nobody else.
+    A collaborator saving a shared configuration commits under its owner's
+    name, so the closure is committed for the owner too -- and for nobody
+    else.
     """
-    assert commit_agent(other_owner.name)
+    assert commit_configuration(other_owner.name)
 
-    agent = get_branch_model("agent", other_owner.name, "closure-agent")
+    configuration = get_branch_model(
+        "configuration", other_owner.name, "closure-configuration"
+    )
 
     assert dangling_trails(other_owner.name) == []
 
-    for trail in trail_closure(agent.target):
+    for trail in trail_closure(configuration.target):
         assert branches_on(trail, owner.name).count() == 0
 
 
 def test_a_branch_made_for_the_closure_carries_nothing_beside_its_content(
     owner: IdentityModel,
+    trails: InventoryTrailSchema,
 ):
-    assert commit_agent(owner.name)
+    assert commit(
+        trails.stack["qwen3-8b-awq@pelle"],
+        BranchSchemaDetails(name="a stack", owner=owner.name),
+    )
 
-    agent = get_branch_model("agent", owner.name, "closure-agent")
+    stack = get_branch_model("stack", owner.name, "a stack")
 
-    for trail in trail_closure(agent.target):
+    for trail in trail_closure(stack.target):
         made = branches_on(trail, owner.name).get()
 
         assert list(made.collaborators.all()) == []
         assert list(made.tags.all()) == []
 
+    # a machine's details, all at their defaults
+    machine = branches_on(stack.target.machine, owner.name).get()
 
-def test_the_owner_s_own_branch_keeps_what_it_carries(owner: IdentityModel):
+    assert machine.details == {"unreliable": False, "specs": None}
+
+
+def test_the_owner_s_own_branch_keeps_what_it_carries(
+    owner: IdentityModel,
+    trails: InventoryTrailSchema,
+):
     """
     The other half of leaving an already-branched trail alone: a commit that
-    reaches it does not strip the version the owner saved.
+    reaches it does not strip the version the owner saved, details included.
     """
+    stack = trails.stack["qwen3-8b-awq@pelle"]
+
     assert commit(
-        trail=an_agent().connection,
-        branch_details=BranchSchemaDetails(
-            name="my connection",
+        trail=stack.machine,
+        branch_details=MachineBranchDetails(
+            name="my machine",
             owner=owner.name,
+            unreliable=True,
             collaborators=["a collaborator"],
             tags=["tagged"],
         ),
     )
 
-    assert commit_agent(owner.name)
+    assert commit(stack, BranchSchemaDetails(name="a stack", owner=owner.name))
 
-    connection = get_branch_model("connection", owner.name, "my connection")
+    machine = get_branch_model("machine", owner.name, "my machine")
 
-    assert [i.name for i in connection.collaborators.all()] == ["a collaborator"]
-    assert [tag.name for tag in connection.tags.all()] == ["tagged"]
-
-
-def test_an_expectation_gives_its_scorer_a_branch(owner: IdentityModel):
-    """
-    The guarantee is not the agent's: every entity with a closure gets it.
-    """
-    scorer = ScorerTrailSchema(command="a scorer nobody named")
-
-    assert commit(
-        trail=ExpectTrailSchema(payload="an expectation", scorer=scorer),
-        branch_details=BranchSchemaDetails(name="an expectation", owner=owner.name),
-    )
-
-    expect = get_branch_model("expect", owner.name, "an expectation")
-    scorer_trail = expect.target.scorer
-
-    made = branches_on(scorer_trail, owner.name).get()
-
-    assert made.name == resolve_branch_name("scorer", scorer_trail.fingerprint)
+    assert [i.name for i in machine.collaborators.all()] == ["a collaborator"]
+    assert [tag.name for tag in machine.tags.all()] == ["tagged"]
+    assert machine.details["unreliable"] is True
 
 
 def test_the_test_inventory_leaves_nothing_branchless(
@@ -270,18 +305,35 @@ def test_the_test_inventory_leaves_nothing_branchless(
     assert dangling_trails(owner.name) == []
 
 
+def test_committed_in_order_every_part_keeps_the_name_its_record_gave_it(
+    inventory_fixture_commit: object,
+    owner: IdentityModel,
+):
+    """
+    Committed in the order `EntityName` gives, every trail a composition
+    reaches already has its own branch, and the closure makes none.
+    """
+    _ = inventory_fixture_commit
+
+    for entity_name in all_entities:
+        for branch in select_branch_models(entity_name, owner.name):
+            assert not branch.name.startswith(f"{entity_name} "), branch.name
+
+
 def test_the_closure_is_the_trails_and_only_the_trails(owner: IdentityModel):
     """
     `trail_closure` walks content. A tag hangs off the branch rather than
     the trail, so nothing but trails is ever reached, and the trail itself
     is not in its own closure.
     """
-    _ = ensure_tag(owner, "agent", "a tag")
+    _ = ensure_tag(owner, "configuration", "a tag")
 
-    assert commit_agent(owner.name)
+    assert commit_configuration(owner.name)
 
-    agent = get_branch_model("agent", owner.name, "closure-agent")
-    closure = trail_closure(agent.target)
+    configuration = get_branch_model(
+        "configuration", owner.name, "closure-configuration"
+    )
+    closure = trail_closure(configuration.target)
 
     assert all(isinstance(trail, TrailModel) for trail in closure)
-    assert agent.target not in closure
+    assert configuration.target not in closure

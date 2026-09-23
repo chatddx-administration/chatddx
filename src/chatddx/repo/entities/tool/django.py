@@ -1,15 +1,13 @@
 # pyright: basic
 
-from django.db.models import (
-    PROTECT,
-    CharField,
-    ForeignKey,
-    TextField,
-)
+from django.db.models import PROTECT, CharField, ForeignKey, TextField
 
-from chatddx.core.choices import ToolChoices
-from chatddx.core.django_fields import JSONSchemaField
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import (
+    BranchModel,
+    BranchProxy,
+    OrderedJSONField,
+    TrailModel,
+)
 
 
 class ToolTrailModel(TrailModel):
@@ -17,19 +15,9 @@ class ToolTrailModel(TrailModel):
         app_label = "orm"
         db_table = "agents_tool"
 
-    command = CharField(
-        max_length=255,
-        db_index=True,
-        help_text="Command the tool invoces",
-    )
-    type = CharField(
-        max_length=50,
-        choices=ToolChoices.choices,
-        default=ToolChoices.FUNCTION,
-        help_text="The type of tool.",
-    )
-    description = TextField()
-    parameters = JSONSchemaField()
+    name = CharField(max_length=64)
+    description = TextField(blank=True)
+    parameters = OrderedJSONField()
 
 
 class ToolBranchModel(BranchModel):

@@ -1,16 +1,25 @@
 from typing import Literal
 
+# In commit order: anything an entity references comes before it
+# (new-datamodel.md §10), so committing in this order finds the branch an
+# owner gave each part before a composition reaches it.
 type EntityName = Literal[
-    "instruction",
-    "connection",
-    "sampling_params",
-    "output_type",
+    "machine",
+    "os",
+    "model",
+    "serving",
+    "client",
+    "stack",
     "tool",
-    "tool_group",
-    "agent",
-    "scorer",
-    "expect",
+    "toolset",
+    "instruction",
+    "output",
+    "coercion",
+    "reasoning",
+    "sampling",
+    "configuration",
     "case",
 ]
 
-type ViewName = EntityName | Literal["super_agent"]
+# Every entity is presented through one view of its own name.
+type ViewName = EntityName

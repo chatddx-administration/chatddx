@@ -1,96 +1,122 @@
-from datetime import UTC, datetime, timedelta
-from typing import Any
+"""
+A trail is content, content-addressed and immutable: what goes into the
+database is what comes back, down to the order of a schema's keys, and a
+trail row is never written twice.
+"""
+
+from typing import Any, cast
 
 import pytest
-from django.db import ProgrammingError
+from django.db import ProgrammingError, transaction
 
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.agent.django import AgentTrailModel
+from chatddx.repo.entities.output.django import OutputTrailModel
+from chatddx.repo.entities.stack.django import StackTrailModel
+from chatddx.repo.entities.toolset.pydantic import ToolsetTrailSpec
 from chatddx.repo.entity_names import EntityName
+from chatddx.repo.families.pydantic import TrailSchema, TrailSpec
 from chatddx.repo.inventories import InventoryTrailSchema
-from chatddx.repo.shufflers.trail import dump_trail_async, load_trail_async
-from chatddx.repo.tests import identity_boundary
-
-schemas: tuple[tuple[EntityName, str], ...] = (
-    ("connection", "connection-1"),
-    ("sampling_params", "sampling_params-1"),
-    ("tool_group", "tool_group-1"),
-    ("tool", "tool-1"),
-    ("output_type", "output_type-1"),
-    ("agent", "agent-1"),
-    ("agent", "agent-2"),
-    ("agent", "agent-3"),
-    ("case", "case-1"),
-    ("expect", "expect-1-a"),
-    ("scorer", "scorer-a"),
-)
-
-fields = [
-    (bundle, record, field_name)
-    for bundle, record in schemas
-    for field_name in entity_of(bundle).trail_schema.model_fields
-]
+from chatddx.repo.shufflers.trail import dump_trail, load_trail
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db
-@pytest.mark.parametrize("bundle, branch_name, field_name", fields)
-@pytest.mark.time_machine(datetime(1970, 1, 1, tzinfo=UTC), tick=False)
-async def test_identity_boundary(
-    inventory_fixture_ts: InventoryTrailSchema,
-    time_machine: Any,
-    bundle: EntityName,
-    branch_name: str,
-    field_name: str,
+def records(trails: InventoryTrailSchema) -> list[tuple[EntityName, str, TrailSchema]]:
+    return [
+        (cast(EntityName, entity), name, trail)
+        for entity, table in trails
+        for name, trail in cast(dict[str, TrailSchema], table).items()
+    ]
+
+
+pytestmark = pytest.mark.django_db
+
+
+def test_every_field_of_a_trail_is_fingerprinted_and_nothing_else(
+    trails: InventoryTrailSchema,
 ):
-    Model = entity_of(bundle).trail_model
-    Spec = entity_of(bundle).trail_spec
-    Schema = entity_of(bundle).trail_schema
+    """A field is fingerprinted if and only if it is trail content (§1)."""
+    for entity, name, trail in records(trails):
+        fields = set(entity_of(entity).trail_schema.model_fields)
 
-    field = Model._meta.get_field(field_name)
+        assert set(trail.canonical_input()) == fields, f"{entity} {name}"
 
-    associated_model = getattr(field, "associated_model", None)
-    db_type = field.related_model or associated_model or field.__class__
-    api_type = Schema.model_fields[field_name].annotation
-    test_key = (db_type, api_type)
 
-    if test_key not in identity_boundary.field_types:
-        pytest.fail(f"No test defined for type combination {test_key} on {field_name}")
+def test_every_trail_of_the_inventory_comes_back_as_it_went_in(
+    trails: InventoryTrailSchema,
+):
+    """
+    Loaded back and validated as content again, each trail has the
+    fingerprint it went in with: nothing it holds was lost, reordered or
+    rounded on the way.
+    """
+    for entity, name, trail in records(trails):
+        bundle = entity_of(entity)
 
-    schema = getattr(inventory_fixture_ts, bundle)[branch_name]
-    _ = await dump_trail_async(Model, schema)
-    spec = await load_trail_async(bundle, schema.fingerprint, Spec)
+        _ = dump_trail(bundle.trail_model, trail)
+        spec = cast(TrailSpec, load_trail(entity, trail.fingerprint, bundle.trail_spec))
 
-    value, altered_value = identity_boundary.field_types[test_key](
-        getattr(schema, field_name)
+        again = bundle.trail_schema.model_validate(spec.model_dump())
+
+        assert spec.fingerprint == trail.fingerprint, f"{entity} {name}"
+        assert again.fingerprint == trail.fingerprint, f"{entity} {name}"
+
+
+def test_a_schema_keeps_its_order_in_the_database(trails: InventoryTrailSchema):
+    """jsonb would sort `properties` by length, then by bytes."""
+    output = trails.output["management-plan"]
+    stored = dump_trail(OutputTrailModel, output)
+
+    fetched = OutputTrailModel.objects.get(pk=stored.pk)
+    # an OrderedJSONField reads back as the document, whatever TextField says
+    schema = cast(dict[str, Any], cast(object, fetched.schema))
+
+    assert list(schema["properties"]) == [
+        "acute_warning",
+        "diagnoses",
+        "management",
+        "sources",
+    ]
+
+
+def test_the_same_content_is_one_row(trails: InventoryTrailSchema):
+    stack = trails.stack["qwen3-8b-awq@pelle"]
+    model = entity_of("stack").trail_model
+
+    first = dump_trail(model, stack)
+    second = dump_trail(model, stack.model_copy(deep=True))
+
+    assert first.pk == second.pk
+    assert model.objects.count() == 1
+
+
+def test_a_trail_s_parts_are_shared_by_whatever_reaches_them(
+    trails: InventoryTrailSchema,
+):
+    pelle = dump_trail(StackTrailModel, trails.stack["qwen3-8b-awq@pelle"])
+    malborg = dump_trail(StackTrailModel, trails.stack["qwen3-8b-awq@malborg"])
+
+    assert pelle.model_id == malborg.model_id
+    assert pelle.host_os_id is None
+    assert malborg.host_os_id is not None
+
+
+def test_a_toolset_keeps_the_order_of_its_tools(trails: InventoryTrailSchema):
+    toolset = trails.toolset["sentinel"]
+    bundle = entity_of("toolset")
+
+    _ = dump_trail(bundle.trail_model, toolset)
+    spec = cast(
+        ToolsetTrailSpec,
+        load_trail("toolset", toolset.fingerprint, bundle.trail_spec),
     )
 
-    for v, altered in (
-        (value, False),
-        (altered_value, True),
-        (value, False),
-    ):
-        time_machine.shift(timedelta(days=1))
-        raw_copy = schema.model_copy(update={field_name: v})
-
-        test_schema = Schema.model_validate(raw_copy.model_dump())
-        _ = await dump_trail_async(Model, test_schema)
-        test_spec = await load_trail_async(bundle, str(test_schema.fingerprint), Spec)
-
-        if not altered:
-            assert schema.fingerprint == test_schema.fingerprint
-            assert spec.fingerprint == test_spec.fingerprint
-
-        if altered:
-            assert schema.fingerprint != test_schema.fingerprint
-            assert spec.fingerprint != test_spec.fingerprint
+    assert [tool.name for tool in spec.tools] == ["sentinel_string", "sentinel_op"]
 
 
-@pytest.mark.asyncio
-@pytest.mark.django_db()
-async def test_immutability_trigger(inventory_fixture_ts: InventoryTrailSchema):
-    agent_schema = inventory_fixture_ts.agent["agent-1"]
-    agent_model = await dump_trail_async(AgentTrailModel, agent_schema)
+@pytest.mark.parametrize("change", ["save", "delete"])
+def test_a_trail_is_immutable(trails: InventoryTrailSchema, change: str):
+    stored = dump_trail(
+        entity_of("configuration").trail_model, trails.configuration["plan"]
+    )
 
-    with pytest.raises(ProgrammingError):
-        await agent_model.asave()
+    with pytest.raises(ProgrammingError, match="immutable"), transaction.atomic():
+        getattr(stored, change)()

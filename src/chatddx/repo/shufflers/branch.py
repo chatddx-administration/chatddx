@@ -7,7 +7,6 @@ from pydantic import ValidationError
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity, ensure_tag
-from chatddx.django.orm.qs import qs_canon, qs_with_details
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel, TrailModel
@@ -15,10 +14,11 @@ from chatddx.repo.families.pydantic import (
     BranchSchemaDetails,
     BranchSpec,
     TrailSchema,
-    TrailSpec,
+    dump_details,
     relation_fields,
 )
 from chatddx.repo.names import resolve_branch_name
+from chatddx.repo.queries import qs_canon, qs_with_details
 from chatddx.repo.shufflers.trail import dump_trail
 from chatddx.repo.utils import resolve_trail, resolve_trails, trail_closure
 from chatddx.utils import make_async
@@ -98,7 +98,7 @@ def get_branch_spec(
     branch_name: str | None = None,
     fingerprint: str | None = None,
     qs: QuerySet[Any] | None = None,
-) -> BranchSpec[TrailSpec]:
+) -> BranchSpec[Any, Any]:
     """
     Get latest branch spec of `entity_name` owned by `owner_name` (aka canon).
 
@@ -134,7 +134,7 @@ def select_branch_specs(
     entity_name: EntityName,
     owner_name: str,
     qs: QuerySet[Any] | None = None,
-) -> list[BranchSpec[TrailSpec]]:
+) -> list[BranchSpec[Any, Any]]:
     """
     Find all branch specs of `entity_name` directly owned by `owner_name`
     `qs`: Start from custom queryset (default: all)
@@ -143,7 +143,7 @@ def select_branch_specs(
     models = select_branch_models(entity_name, owner_name, qs)
     spec_cls = entity_of(entity_name).branch_spec
 
-    specs: list[BranchSpec[TrailSpec]] = []
+    specs: list[BranchSpec[Any, Any]] = []
     for model in models:
         specs.append(spec_cls.model_validate(model))
 
@@ -161,6 +161,14 @@ def commit(
     Embed trail in a branch and make it canon
     True: Canon changed
     False: Canon not changed, the trail was already canon in the branch
+
+    A version is its trail and its details: what the branch says about the
+    content without being part of it, such as a model's facts or a stack's
+    endpoint. Resolution reads details, and a trial has to be able to say
+    which version it resolved against, so a change to them makes a new
+    version as a change to the trail does (new-datamodel.md §1). What the
+    branch is related to, its tags and collaborators, is not read by
+    resolution, and changes in place.
     """
     entity = entity_of(trail)
     branch_model_cls = entity.branch_model
@@ -169,9 +177,11 @@ def commit(
     # A caller that says nothing about what this kind of branch carries hands
     # over the base details; widening it to the entity's own leaves every
     # relation at None, which still means "inherit from the superseded
-    # version". A caller that names something the entity does not carry is
-    # rejected here rather than ignored.
+    # version", and every detail at its default. A caller that names
+    # something the entity does not carry is rejected here rather than
+    # ignored.
     branch_details = entity.branch_details.model_validate(branch_details.model_dump())
+    details = dump_details(branch_details)
 
     qs = branch_model_cls.objects.all()
 
@@ -180,9 +190,13 @@ def commit(
         branch_details.owner,
     ).first()
 
-    if canon and trail.fingerprint == canon.target.fingerprint:
-        # What a branch carries besides its content is not fingerprinted, so
-        # it can change while the canon stays put.
+    if (
+        canon
+        and trail.fingerprint == canon.target.fingerprint
+        and details == canon.details
+    ):
+        # What a branch is related to is not part of its version, so it can
+        # change while the canon stays put.
         commit_relations(canon, canon, branch_details)
         _ = commit_closure(canon.target, branch_details.owner)
         return False
@@ -197,6 +211,7 @@ def commit(
         name=branch_details.name,
         owner=ensure_identity(branch_details.owner),
         target=target,
+        details=details,
     )
 
     commit_relations(branch_model, canon, branch_details)
@@ -213,11 +228,11 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
     Give every trail `target` reaches a branch of `owner_name`'s, and answer
     with the names of the ones that had to be made.
 
-    A trail an owner holds only through another -- an agent's connection, a
-    tool group's tools -- is as much in their possession as the one they
-    named, and anything that offers to show or edit it needs a branch to say
-    *which* one it is. So a commit is not finished until the closure of what
-    it committed is committed too.
+    A trail an owner holds only through another -- a stack's machine, a
+    toolset's tools -- is as much in their possession as the one they named,
+    and anything that offers to show or edit it needs a branch to say *which*
+    one it is. So a commit is not finished until the closure of what it
+    committed is committed too.
 
     Only a trail the owner has *no* branch of gets one. Where they already
     have one, which of their versions is canon and what it is called is
@@ -226,10 +241,10 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
 
     These branches are made on the owner's behalf rather than saved by them,
     so they carry nothing beside their content: no tags, no collaborators,
-    and for a case no expects. A collaborator saving a shared model commits
-    under the owner's name, and what the owner's version of a connection is
-    tagged with is not the collaborator's to write -- so it is dropped,
-    silently and on purpose.
+    and every detail at its default. A collaborator saving a shared
+    configuration commits under the owner's name, and what the owner's
+    version of an instruction is tagged with is not the collaborator's to
+    write -- so it is dropped, silently and on purpose.
     """
     committed: list[str] = []
 
@@ -243,8 +258,8 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
 
         if has_branch:
             # Skipped, not stepped over: what this trail reaches is still
-            # walked, so an owner left holding a tool group whose tools have
-            # no branches is repaired rather than kept out of reach.
+            # walked, so an owner left holding a toolset whose tools have no
+            # branches is repaired rather than kept out of reach.
             continue
 
         branch_name = resolve_branch_name(entity.name, trail.fingerprint)
@@ -274,16 +289,6 @@ RELATION_RESOLVERS: dict[
 ] = {
     "identity": lambda owner, entity: ensure_identity,
     "tag": lambda owner, entity: lambda name: ensure_tag(owner, entity, name),
-    # a case names expect branches, not their trails: two cases that expect
-    # the same thing share one content-addressed trail, so a trail cannot say
-    # whose expectation it is
-    "expect": lambda owner, entity: (
-        lambda name: get_branch_model(
-            entity_name="expect",
-            owner_name=owner.name,
-            branch_name=name,
-        )
-    ),
 }
 
 
@@ -296,9 +301,9 @@ def commit_relations(
     Give `branch_model` what `branch_details` names beside its content, and
     for everything it doesn't name, what the version it supersedes carried.
 
-    None of this is part of the trail: collaborators, tags and a case's
-    expects belong to the owner's version of the entity, not to its payload,
-    and every version keeps the set it was saved with.
+    None of this is part of the trail: collaborators and tags belong to the
+    owner's version of the entity, not to its content, and every version
+    keeps the set it was saved with.
 
     Which relations a branch has is the details model's to say -- every field
     it tags with a `relation` -- so an entity that carries something extra

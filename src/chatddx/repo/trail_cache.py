@@ -17,35 +17,40 @@ class TrailCache:
         self.cache = OrderedDict()
 
     def get_sync[T: TrailSpec](self, Spec: type[T], pk: int) -> T:
-        trail_model_cls = entity_of(Spec).trail_model
         key = (Spec, pk)
 
         if key in self.cache:
             self.cache.move_to_end(key)
             return cast(T, self.cache[key])
 
-        trail_model = trail_model_cls.objects.get(pk=pk)
-        trail_model = resolve_trail(trail_model)
-        return Spec.model_validate(trail_model)
+        trail_model = entity_of(Spec).trail_model.objects.get(pk=pk)
+        spec = Spec.model_validate(resolve_trail(trail_model))
+
+        self._keep(key, spec)
+
+        return spec
 
     async def get_async[T: TrailSpec](self, Spec: type[T], pk: int) -> T:
-        trail_model_cls = entity_of(Spec).trail_model
         key = (Spec, pk)
 
         if key in self.cache:
             self.cache.move_to_end(key)
             return cast(T, self.cache[key])
 
-        trail_model = await trail_model_cls.objects.select_related().aget(pk=pk)
-        trail_model = await resolve_trail_async(trail_model)
-        spec = Spec.model_validate(trail_model)
+        # `resolve_trail` fetches what the trail reaches, a table at a time
+        trail_model = await entity_of(Spec).trail_model.objects.aget(pk=pk)
+        spec = Spec.model_validate(await resolve_trail_async(trail_model))
 
+        self._keep(key, spec)
+
+        return spec
+
+    def _keep(self, key: tuple[type[TrailSpec], int], spec: TrailSpec) -> None:
+        # a trail is immutable, so what is kept is never stale
         self.cache[key] = spec
 
         if len(self.cache) > self.max_size:
             _ = self.cache.popitem(last=False)
-
-        return spec
 
 
 trail_cache = TrailCache(max_size=100)

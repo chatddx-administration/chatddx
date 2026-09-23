@@ -103,7 +103,12 @@ def trail_schema(parsed_inventory: ParsedInventory) -> InventoryTrailSchema:
 
 def form_data_out(inventory_fixture_bs: InventoryBranchSpec) -> InventoryFormDataOut:
     """
-    Validate a spec model inventory into a form_data_out inventory
+    Validate a spec model inventory into a form_data_out inventory.
+
+    A form shows a branch flat: its trail's fields and its details beside its
+    name, with the trail's id as the template it was made from. The trail is
+    kept whole under `target` too, for a field a form renames: a tool's own
+    name, which a form can't call `name`.
     """
     inventory = {}
 
@@ -112,7 +117,11 @@ def form_data_out(inventory_fixture_bs: InventoryBranchSpec) -> InventoryFormDat
         for branch_name, branch_spec in getattr(
             inventory_fixture_bs, entity_name
         ).items():
-            branch_dict = branch_spec.model_dump()
-            inventory[entity_name][branch_name] = branch_dict | branch_dict["target"]
+            branch = branch_spec.model_dump(mode="json")
+            inventory[entity_name][branch_name] = (
+                branch["target"]
+                | branch["details"]
+                | {"name": branch["name"], "target": branch["target"]}
+            )
 
     return InventoryFormDataOut.model_validate(inventory)

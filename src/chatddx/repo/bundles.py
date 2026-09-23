@@ -7,30 +7,40 @@ class RegistryCollisionError(Exception):
     pass
 
 
+# in commit order, as `EntityName` lists them
 ALL_ENTITIES: tuple[AnyEntity, ...] = (
-    AGENT,
-    INSTRUCTION,
-    CONNECTION,
-    SAMPLING_PARAMS,
-    OUTPUT_TYPE,
+    MACHINE,
+    OS,
+    MODEL,
+    SERVING,
+    CLIENT,
+    STACK,
     TOOL,
-    TOOL_GROUP,
-    SCORER,
-    EXPECT,
+    TOOLSET,
+    INSTRUCTION,
+    OUTPUT,
+    COERCION,
+    REASONING,
+    SAMPLING,
+    CONFIGURATION,
     CASE,
 )
 
 ALL_VIEWS: tuple[AnyView, ...] = (
-    AGENT_VIEW,
-    SUPER_AGENT_VIEW,
-    INSTRUCTION_VIEW,
-    CONNECTION_VIEW,
-    SAMPLING_PARAMS_VIEW,
-    OUTPUT_TYPE_VIEW,
+    MACHINE_VIEW,
+    OS_VIEW,
+    MODEL_VIEW,
+    SERVING_VIEW,
+    CLIENT_VIEW,
+    STACK_VIEW,
     TOOL_VIEW,
-    TOOL_GROUP_VIEW,
-    SCORER_VIEW,
-    EXPECT_VIEW,
+    TOOLSET_VIEW,
+    INSTRUCTION_VIEW,
+    OUTPUT_VIEW,
+    COERCION_VIEW,
+    REASONING_VIEW,
+    SAMPLING_VIEW,
+    CONFIGURATION_VIEW,
     CASE_VIEW,
 )
 
@@ -89,32 +99,38 @@ def _by_mro[T](index: dict[type, T], x: object) -> T | None:
 
 @overload
 def entity_of(
-    x: AgentMember | type[AgentMember] | Literal["agent"],
-) -> AgentEntity: ...
+    x: MachineMember | type[MachineMember] | Literal["machine"],
+) -> MachineEntity: ...
 
 
 @overload
 def entity_of(
-    x: InstructionMember | type[InstructionMember] | Literal["instruction"],
-) -> InstructionEntity: ...
+    x: OsMember | type[OsMember] | Literal["os"],
+) -> OsEntity: ...
 
 
 @overload
 def entity_of(
-    x: ConnectionMember | type[ConnectionMember] | Literal["connection"],
-) -> ConnectionEntity: ...
+    x: ModelMember | type[ModelMember] | Literal["model"],
+) -> ModelEntity: ...
 
 
 @overload
 def entity_of(
-    x: SamplingParamsMember | type[SamplingParamsMember] | Literal["sampling_params"],
-) -> SamplingParamsEntity: ...
+    x: ServingMember | type[ServingMember] | Literal["serving"],
+) -> ServingEntity: ...
 
 
 @overload
 def entity_of(
-    x: OutputTypeMember | type[OutputTypeMember] | Literal["output_type"],
-) -> OutputTypeEntity: ...
+    x: ClientMember | type[ClientMember] | Literal["client"],
+) -> ClientEntity: ...
+
+
+@overload
+def entity_of(
+    x: StackMember | type[StackMember] | Literal["stack"],
+) -> StackEntity: ...
 
 
 @overload
@@ -125,20 +141,44 @@ def entity_of(
 
 @overload
 def entity_of(
-    x: ToolGroupMember | type[ToolGroupMember] | Literal["tool_group"],
-) -> ToolGroupEntity: ...
+    x: ToolsetMember | type[ToolsetMember] | Literal["toolset"],
+) -> ToolsetEntity: ...
 
 
 @overload
 def entity_of(
-    x: ScorerMember | type[ScorerMember] | Literal["scorer"],
-) -> ScorerEntity: ...
+    x: InstructionMember | type[InstructionMember] | Literal["instruction"],
+) -> InstructionEntity: ...
 
 
 @overload
 def entity_of(
-    x: ExpectMember | type[ExpectMember] | Literal["expect"],
-) -> ExpectEntity: ...
+    x: OutputMember | type[OutputMember] | Literal["output"],
+) -> OutputEntity: ...
+
+
+@overload
+def entity_of(
+    x: CoercionMember | type[CoercionMember] | Literal["coercion"],
+) -> CoercionEntity: ...
+
+
+@overload
+def entity_of(
+    x: ReasoningMember | type[ReasoningMember] | Literal["reasoning"],
+) -> ReasoningEntity: ...
+
+
+@overload
+def entity_of(
+    x: SamplingMember | type[SamplingMember] | Literal["sampling"],
+) -> SamplingEntity: ...
+
+
+@overload
+def entity_of(
+    x: ConfigurationMember | type[ConfigurationMember] | Literal["configuration"],
+) -> ConfigurationEntity: ...
 
 
 @overload
@@ -159,8 +199,8 @@ def entity_of(
     """
     The entity a name, class or instance belongs to.
 
-    A proxy resolves through its branch model, so `entity_of(SuperAgent(...))`
-    and `entity_of(SharedSuperAgent(...))` both answer `agent`.
+    A proxy resolves through its branch model, so `entity_of(Configuration(...))`
+    and `entity_of(SharedConfiguration(...))` both answer `configuration`.
     """
     if isinstance(x, str):
         return _ENTITY_BY_NAME[x]
@@ -181,10 +221,8 @@ def view_of(
     The view a name, proxy or branch is rendered through.
 
     Every entity has a view of its own name, so an `EntityName` is a
-    `ViewName` and reaches the entity's default view. A proxy is rendered
-    through the view that registered it -- which is how `SuperAgent` gets
-    the flat agent form while a plain `AgentBranchModel` gets the default
-    one -- and anything else falls back to its entity's default view.
+    `ViewName` and reaches the entity's view. A proxy is rendered through the
+    view that registered it, and anything else through its entity's.
     """
     if isinstance(x, str):
         return _VIEW_BY_NAME[x]
@@ -194,5 +232,5 @@ def view_of(
     if view is not None:
         return view
 
-    # not a registered proxy, so it is an entity class and has a default view
+    # not a registered proxy, so it is an entity class and has a view
     return _VIEW_BY_NAME[entity_of(cast(AnyEntityMember, x)).name]

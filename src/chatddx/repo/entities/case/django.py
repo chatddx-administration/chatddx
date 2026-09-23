@@ -1,19 +1,8 @@
 # pyright: basic
-from __future__ import annotations
 
-from typing import Any
-
-from django.db.models import (
-    CASCADE,
-    PROTECT,
-    ForeignKey,
-    ManyToManyField,
-    Model,
-    TextField,
-)
+from django.db.models import PROTECT, ForeignKey, TextField
 
 from chatddx.django.orm.utils import Sharable
-from chatddx.repo.entities.expect.django import ExpectBranchModel
 from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
@@ -30,27 +19,11 @@ class CaseBranchModel(BranchModel):
         app_label = "orm"
         db_table = "agents_case_branch"
 
-    target = ForeignKey[CaseTrailModel](
+    target = ForeignKey(
         CaseTrailModel,
         on_delete=PROTECT,
         related_name="branches",
     )
-
-    expects: ManyToManyField[ExpectBranchModel, Any] = ManyToManyField(
-        ExpectBranchModel,
-        through="CaseExpect",
-        through_fields=("case", "expect"),
-        related_name="cases",
-    )
-
-
-class CaseExpect(Model):
-    class Meta:
-        app_label = "orm"
-        db_table = "agents_case_expect_link"
-
-    case = ForeignKey(CaseBranchModel, on_delete=CASCADE)
-    expect = ForeignKey(ExpectBranchModel, on_delete=CASCADE)
 
 
 class Case(BranchProxy, CaseBranchModel, Sharable):

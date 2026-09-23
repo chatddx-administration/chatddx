@@ -1,0 +1,79 @@
+"""
+A client: a thing, identified by one field.
+
+The chatddx build decides how a configuration becomes a request: its store
+path pins pydantic-ai, openai and inspect-ai, whose profiles, schema
+transformers and default prompt text are library code. A run from a dev
+shell has no build, and is recorded as such: a client with none.
+
+A client is not part of a stack. It changes with every deploy while the
+servers don't, and a trial joins the two (new-datamodel.md §6).
+"""
+
+from pydantic import Field
+
+from chatddx.core.fields import CoercedStr
+from chatddx.repo.families import (
+    BaseBranch,
+    BaseFormDataIn,
+    BaseFormDataOut,
+    BaseTrail,
+    BranchDetailsPatch,
+    BranchSchemaDetails,
+    BranchSpec,
+    Details,
+    TrailSchema,
+    TrailSchemaRef,
+    TrailSpec,
+)
+from chatddx.repo.families.fields import StorePath
+
+
+class ClientDetails(Details):
+    rev: str | None = None
+    # the versions of the libraries that build requests, by distribution
+    packages: dict[str, str] = Field(default_factory=dict)
+
+
+class ClientTrailBase(BaseTrail):
+    build: StorePath | None = None
+
+
+class ClientTrailSchema(ClientTrailBase, TrailSchema):
+    pass
+
+
+class ClientTrailSchemaRef(TrailSchemaRef, ClientTrailBase):
+    pass
+
+
+class ClientTrailSpec(ClientTrailBase, TrailSpec):
+    pass
+
+
+class ClientBranchDetails(BranchSchemaDetails, ClientDetails):
+    pass
+
+
+class ClientBranchDetailsPatch(BranchDetailsPatch, ClientDetails):
+    pass
+
+
+class ClientBranchSchema(BaseBranch[ClientTrailSchema], ClientBranchDetails):
+    pass
+
+
+class ClientBranchSpec(BranchSpec[ClientTrailSpec, ClientDetails]):
+    pass
+
+
+class ClientFormDataIn(ClientTrailBase, BaseFormDataIn):
+    rev: str | None = None
+    packages: dict[str, str] = Field(default_factory=dict)
+
+
+class ClientFormDataOut(BaseFormDataOut):
+    id: CoercedStr = Field(serialization_alias="template")
+    build: str | None
+    rev: str | None
+    packages: dict[str, str]

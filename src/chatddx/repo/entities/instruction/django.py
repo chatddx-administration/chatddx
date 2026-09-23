@@ -1,10 +1,6 @@
 # pyright: basic
 
-from django.db.models import (
-    PROTECT,
-    ForeignKey,
-    TextField,
-)
+from django.db.models import PROTECT, ForeignKey, JSONField, TextField
 
 from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
@@ -14,7 +10,10 @@ class InstructionTrailModel(TrailModel):
         app_label = "orm"
         db_table = "agents_instruction"
 
-    definition = TextField()
+    system = TextField(blank=True)
+    user = TextField()
+    # a list, whose order jsonb keeps
+    variables = JSONField(default=list)
 
 
 class InstructionBranchModel(BranchModel):
