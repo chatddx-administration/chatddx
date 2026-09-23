@@ -1,7 +1,9 @@
 """
-Django settings for testing chatddx.repo on its own:
+Django settings for testing chatddx.repo on its own, and the commands that
+provision it:
 
     pytest --ds=chatddx.repo.tests.settings src/chatddx/repo
+    pytest --ds=chatddx.repo.tests.settings src/chatddx/core/tests/test_provisioning.py
 
 The rest of the project still speaks the old model: history's runs and
 experiments and the portal's pages import entities the registry no longer

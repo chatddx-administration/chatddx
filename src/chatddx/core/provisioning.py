@@ -10,7 +10,9 @@ django.setup()
 from chatddx.core.utils import ensure_identity
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.families.pydantic import BranchDetailsPatch
-from chatddx.repo.parsers.inventory import parse
+from chatddx.repo.inventories import ParsedInventory
+from chatddx.repo.names import short_fingerprint
+from chatddx.repo.parsers.inventory import ParseError, parse
 from chatddx.repo.shufflers import inventory
 from chatddx.repo.todo import all_entities
 
@@ -23,19 +25,18 @@ receipt_text = {
 def wipe_data(
     user_name: Annotated[str, typer.Argument()],
 ):
-    user = ensure_identity(user_name)
     for entity in all_entities:
-        shared_field = f"shared_{entity.replace('_', '')}branchmodel"
+        branch_model = entity_of(entity).branch_model
 
-        d, _ = entity_of(entity).branch_model.objects.filter(owner=user).delete()
-        msg = f"[{entity}]: removed {d}"
+        _, removed = branch_model.objects.filter(owner__name=user_name).delete()
+        unshared, _ = branch_model.collaborators.through.objects.filter(
+            identitymodel__name=user_name
+        ).delete()
 
-        if hasattr(user, shared_field):
-            rel = getattr(user, shared_field)
-            rels = rel.all().count()
-            rel.clear()
-            msg += f", unshared {rels}"
-        print(msg)
+        print(
+            f"[{entity}]: removed {removed.get(branch_model._meta.label, 0)}, "
+            + f"unshared {unshared}"
+        )
 
 
 def init_data(
@@ -68,34 +69,41 @@ def init_data(
         ),
     ] = settings.INVENTORY_PATH / "giftbag-inventory.toml",
 ):
-    archive = ensure_identity(settings.ARCHIVE_IDENTITY_NAME)
+    # Both are read before either is written, so a mistake in one commits
+    # nothing of the other.
+    archived = _parse(inventory_path, settings.ARCHIVE_IDENTITY_NAME)
+    giftbag = _parse(giftbag_inventory_path, user_name) if with_giftbag else None
+
     user = ensure_identity(user_name)
+    archive_receipt = _commit("archive", archived)
 
-    parsed_archive = parse(inventory_path, BranchDetailsPatch(owner=archive.name))
-
-    archive_commit_receipt = inventory.commit_parsed_inventory(parsed_archive)
-
-    inventory_branch_models = inventory.owned_inventory(archive.name)
+    # The archive keeps the inventory, and its users collaborate on it.
+    archive_branch_models = inventory.owned_inventory(settings.ARCHIVE_IDENTITY_NAME)
 
     for entity in all_entities:
-        for key, receipt in archive_commit_receipt[entity].items():
-            branch_model = inventory_branch_models[entity][key]
+        for name in archive_receipt[entity]:
+            archive_branch_models[entity][name].collaborators.add(user)
 
-            branch_model.collaborators.add(user)
-            print(
-                f"[archive {entity}]: {branch_model.name} ({receipt_text[receipt]} {branch_model.target.fingerprint[:6]})"
-            )
+    if giftbag is not None:
+        _ = _commit("giftbag", giftbag)
 
-    if not with_giftbag:
-        return
 
-    parsed_giftbag = parse(giftbag_inventory_path, BranchDetailsPatch(owner=user.name))
-    giftbag_commit_receipt = inventory.commit_parsed_inventory(parsed_giftbag)
+def _parse(path: Path, owner_name: str) -> ParsedInventory:
+    try:
+        return parse(path, BranchDetailsPatch(owner=owner_name))
+    except ParseError as e:
+        typer.echo(f"{path}: {e}", err=True)
+        raise typer.Exit(1) from None
+
+
+def _commit(label: str, parsed: ParsedInventory) -> inventory.InventoryCommitReceipt:
+    receipt = inventory.commit_parsed_inventory(parsed)
 
     for entity in all_entities:
-        for key, receipt in giftbag_commit_receipt[entity].items():
-            branch_model = inventory_branch_models[entity][key]
-
+        for name, (trail, _) in getattr(parsed, entity).items():
             print(
-                f"[giftbag {entity}]: {branch_model.name} ({receipt_text[receipt]} {branch_model.target.fingerprint[:6]})"
+                f"[{label} {entity}]: {name} ({receipt_text[receipt[entity][name]]} "
+                + f"{short_fingerprint(trail.fingerprint)})"
             )
+
+    return receipt
