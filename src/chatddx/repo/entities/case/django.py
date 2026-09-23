@@ -7,18 +7,10 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class CaseTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_case"
-
     payload = TextField()
 
 
 class CaseBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_case_branch"
-
     target = ForeignKey(
         CaseTrailModel,
         on_delete=PROTECT,
@@ -27,16 +19,14 @@ class CaseBranchModel(BranchModel):
 
 
 class Case(BranchProxy, CaseBranchModel, Sharable):
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Case"
         verbose_name_plural = "Cases"
 
 
 class SharedCase(BranchProxy, CaseBranchModel, Sharable):
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Shared Case"
         verbose_name_plural = "Shared Cases"

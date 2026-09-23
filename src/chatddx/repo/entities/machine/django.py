@@ -6,18 +6,10 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class MachineTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_machine"
-
     machine_id = UUIDField()
 
 
 class MachineBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_machine_branch"
-
     target = ForeignKey(
         MachineTrailModel,
         on_delete=PROTECT,
@@ -26,8 +18,7 @@ class MachineBranchModel(BranchModel):
 
 
 class Machine(BranchProxy, MachineBranchModel):
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Machine"
         verbose_name_plural = "Machines"

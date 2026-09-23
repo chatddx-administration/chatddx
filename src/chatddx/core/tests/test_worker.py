@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 import pytest
@@ -7,7 +8,9 @@ from django.db import connection, transaction
 from django.utils import timezone
 from pydantic_ai import ModelResponse, TextPart
 from pydantic_core import to_jsonable_python
+from typer.testing import CliRunner
 
+from chatddx import manage
 from chatddx.core import worker
 from chatddx.core.choices import RoleChoices, RunStatusChoices, SessionContextChoices
 from chatddx.core.tests.conftest import AGENT_REPLY, CASE_PAYLOAD
@@ -16,6 +19,46 @@ from chatddx.history.schemas import SessionSpec
 from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
 
 pytestmark = pytest.mark.django_db(transaction=True)
+runner = CliRunner()
+
+
+def record_call(
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    calls: list[str],
+) -> None:
+    async def _recorded() -> None:
+        calls.append(name)
+
+    fn: Callable[[], Coroutine[Any, Any, None]] = _recorded
+    monkeypatch.setattr(worker, name, fn)
+
+
+def test_worker_is_a_command_group_of_its_own():
+    result = runner.invoke(manage.app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "worker" in result.stdout
+
+
+def test_worker_run_drains_the_queue_once(monkeypatch: pytest.MonkeyPatch):
+    calls: list[str] = []
+    record_call(monkeypatch, "drain", calls)
+
+    result = runner.invoke(manage.app, ["worker", "run"])
+
+    assert result.exit_code == 0, result.output
+    assert calls == ["drain"]
+
+
+def test_worker_serve_keeps_processing(monkeypatch: pytest.MonkeyPatch):
+    calls: list[str] = []
+    record_call(monkeypatch, "serve", calls)
+
+    result = runner.invoke(manage.app, ["worker", "serve"])
+
+    assert result.exit_code == 0, result.output
+    assert calls == ["serve"]
 
 
 class StubAgent:

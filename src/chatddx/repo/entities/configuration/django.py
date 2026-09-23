@@ -14,10 +14,6 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class ConfigurationTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_configuration"
-
     instruction_id: int
     output_id: int
     coercion_id: int
@@ -60,10 +56,6 @@ class ConfigurationTrailModel(TrailModel):
 
 
 class ConfigurationBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_configuration_branch"
-
     target = ForeignKey(
         ConfigurationTrailModel,
         on_delete=PROTECT,
@@ -81,9 +73,8 @@ class ConfigurationBranchModel(BranchModel):
 class Configuration(BranchProxy, ConfigurationBranchModel, Sharable):
     target: ConfigurationTrailModel
 
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Configuration"
         verbose_name_plural = "Configurations"
 
@@ -91,8 +82,7 @@ class Configuration(BranchProxy, ConfigurationBranchModel, Sharable):
 class SharedConfiguration(BranchProxy, ConfigurationBranchModel, Sharable):
     target: ConfigurationTrailModel
 
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Shared Configuration"
         verbose_name_plural = "Shared Configurations"

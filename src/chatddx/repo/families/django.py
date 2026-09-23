@@ -22,13 +22,6 @@ from chatddx.repo.names import short_fingerprint
 
 
 class OrderedJSONField(TextField):
-    """
-    A JSON document kept as it was written. Postgres' jsonb re-sorts an
-    object's keys, and the order of a schema's keys is what a constrained
-    decoder emits and what a model shown the schema reads, so a document whose
-    order carries meaning is stored as text (new-datamodel.md §10).
-    """
-
     def from_db_value(self, value: Any, expression: Any, connection: Any) -> Any:
         return None if value is None else json.loads(value)
 
@@ -47,7 +40,6 @@ class TrailModel(Model):
 
     branch_name: str | None = None
 
-    # `cddx-trail/1:sha256:<64 hex digits>`, which outgrew 64 characters
     fingerprint = CharField(
         max_length=128,
         db_index=True,
@@ -60,6 +52,7 @@ class TrailModel(Model):
 
     class Meta:
         abstract = True
+        app_label = "orm"
 
     def __str__(self) -> str:
         return self.branch_name or short_fingerprint(self.fingerprint)
@@ -98,9 +91,6 @@ class BranchModel(Model):
         related_name="tagged_%(class)s",
     )
 
-    # What the entity's details schema says beside its content and its
-    # relations: a machine's specs, a stack's endpoint. It is written once per
-    # version, like `target`; a change to it makes a new version.
     details: JSONField[dict[str, Any]] = JSONField(
         default=dict,
         blank=True,
@@ -108,6 +98,7 @@ class BranchModel(Model):
 
     class Meta:
         abstract = True
+        app_label = "orm"
         indexes = (Index(fields=["owner", "name", "-timestamp"]),)
 
     def as_proxy[ModelT: Model](self, proxy_model: type[ModelT]) -> ModelT:
@@ -126,6 +117,7 @@ class BranchProxy(Model):
     version_count: int | None = None
 
     class Meta:
+        app_label = "orm"
         abstract = True
 
     def __str__(self) -> str:

@@ -11,10 +11,6 @@ from chatddx.repo.families.django import (
 
 
 class OutputTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_output"
-
     # null for free text
     schema = OrderedJSONField(null=True, blank=True)
     guidance = TextField(null=True, blank=True)
@@ -22,10 +18,6 @@ class OutputTrailModel(TrailModel):
 
 
 class OutputBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_output_branch"
-
     target = ForeignKey(
         OutputTrailModel,
         on_delete=PROTECT,
@@ -34,8 +26,7 @@ class OutputBranchModel(BranchModel):
 
 
 class Output(BranchProxy, OutputBranchModel):
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Output"
         verbose_name_plural = "Outputs"

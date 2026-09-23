@@ -1,14 +1,14 @@
-from chatddx.django.portal.pages.agent import *
-from chatddx.django.portal.pages.auth import *
-from chatddx.django.portal.pages.batch import *
-from chatddx.django.portal.pages.case import *
-from chatddx.django.portal.pages.connection import *
-from chatddx.django.portal.pages.expect import *
-from chatddx.django.portal.pages.experiment import *
-from chatddx.django.portal.pages.identity import *
-from chatddx.django.portal.pages.message import *
-from chatddx.django.portal.pages.output_type import *
-from chatddx.django.portal.pages.sampling_params import *
-from chatddx.django.portal.pages.session import *
-from chatddx.django.portal.pages.super_agent import *
-from chatddx.django.portal.pages.tool_group import *
+# from chatddx.django.portal.pages.agent import *
+# from chatddx.django.portal.pages.auth import *
+# from chatddx.django.portal.pages.batch import *
+# from chatddx.django.portal.pages.case import *
+# from chatddx.django.portal.pages.connection import *
+# from chatddx.django.portal.pages.expect import *
+# from chatddx.django.portal.pages.experiment import *
+# from chatddx.django.portal.pages.identity import *
+# from chatddx.django.portal.pages.message import *
+# from chatddx.django.portal.pages.output_type import *
+# from chatddx.django.portal.pages.sampling_params import *
+# from chatddx.django.portal.pages.session import *
+# from chatddx.django.portal.pages.super_agent import *
+# from chatddx.django.portal.pages.tool_group import *

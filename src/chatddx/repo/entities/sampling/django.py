@@ -14,10 +14,6 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class SamplingTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_sampling"
-
     defaults = CharField(max_length=16)
 
     # doubles, like the numbers a request carries
@@ -31,10 +27,6 @@ class SamplingTrailModel(TrailModel):
 
 
 class SamplingBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_sampling_branch"
-
     target = ForeignKey(
         SamplingTrailModel,
         on_delete=PROTECT,
@@ -43,8 +35,7 @@ class SamplingBranchModel(BranchModel):
 
 
 class Sampling(BranchProxy, SamplingBranchModel):
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Sampling"
         verbose_name_plural = "Sampling"

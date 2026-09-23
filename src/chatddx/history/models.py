@@ -42,7 +42,6 @@ class BatchModel(Model):
 
     class Meta:
         app_label = "orm"
-        db_table = "agents_batch"
 
     uuid = UUIDField(
         default=uuid.uuid4,
@@ -81,7 +80,6 @@ class BatchModel(Model):
 class ExperimentModel(Model):
     class Meta:
         app_label = "orm"
-        db_table = "agents_experiment"
 
     uuid = UUIDField(
         default=uuid.uuid4,
@@ -134,7 +132,6 @@ class ExperimentModel(Model):
 class SessionModel(Model):
     class Meta:
         app_label = "orm"
-        db_table = "agents_session"
 
     uuid = UUIDField(
         default=uuid.uuid4,
@@ -173,7 +170,6 @@ class SessionModel(Model):
 class RunModel(Model):
     class Meta:
         app_label = "orm"
-        db_table = "agents_run"
 
     uuid = UUIDField(
         default=uuid.uuid4,
@@ -223,7 +219,6 @@ class RunModel(Model):
 class MessageModel(Model):
     class Meta:
         app_label = "orm"
-        db_table = "agents_message"
         ordering = ("pk",)
 
     role = CharField(max_length=255, choices=RoleChoices.choices)

@@ -11,10 +11,6 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class StackTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_stack"
-
     machine_id: int
     os_id: int | None
     host_os_id: int | None
@@ -55,10 +51,6 @@ class StackTrailModel(TrailModel):
 
 
 class StackBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_stack_branch"
-
     target = ForeignKey(
         StackTrailModel,
         on_delete=PROTECT,
@@ -75,8 +67,7 @@ class StackBranchModel(BranchModel):
 class Stack(BranchProxy, StackBranchModel):
     target: StackTrailModel
 
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Stack"
         verbose_name_plural = "Stacks"

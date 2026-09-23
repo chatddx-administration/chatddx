@@ -6,10 +6,6 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class InstructionTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_instruction"
-
     system = TextField(blank=True)
     user = TextField()
     # a list, whose order jsonb keeps
@@ -17,10 +13,6 @@ class InstructionTrailModel(TrailModel):
 
 
 class InstructionBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_instruction_branch"
-
     target = ForeignKey(
         InstructionTrailModel,
         on_delete=PROTECT,
@@ -29,8 +21,7 @@ class InstructionBranchModel(BranchModel):
 
 
 class Instruction(BranchProxy, InstructionBranchModel):
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Instruction"
         verbose_name_plural = "Instructions"

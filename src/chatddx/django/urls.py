@@ -3,7 +3,7 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.http import HttpRequest, HttpResponse
 from django.urls import path
 
-from .api import api
+# from .api import api
 
 
 def auth_check(request: HttpRequest):
@@ -15,7 +15,7 @@ def auth_check(request: HttpRequest):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/", api.urls),
     path("api/auth/", auth_check, name="auth_check"),
+    #    path("api/", api.urls),
 ]
 urlpatterns += staticfiles_urlpatterns()

@@ -134,7 +134,7 @@ DROP TYPE       IF EXISTS   pgqueuer_status;
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("orm", "0009_sharedagent_sharedsuperagent"),
+        ("orm", "0001_initial"),
     ]
 
     operations = [
