@@ -16,6 +16,8 @@ else:
     TypedArrayField = ArrayField
 
 
+# Nothing but orm's 0001_initial reads this, and it imports it by path, so
+# it stays until the migrations are squashed.
 class JSONSchemaField(TypedJSONField):
     pass
 
