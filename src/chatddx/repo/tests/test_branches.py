@@ -28,9 +28,13 @@ from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.pydantic import BranchSchemaDetails
 from chatddx.repo.inventories import InventoryTrailSchema
 from chatddx.repo.shufflers.branch import (
+    AmbiguousBranchError,
+    BranchNotFoundError,
     commit,
     get_branch_model,
     get_branch_spec,
+    get_visible_branch_model,
+    select_visible_branch_models,
 )
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -241,3 +245,77 @@ def test_two_owners_of_one_case_share_its_trail(
 
     assert mine.target_id == theirs.target_id
     assert mine.pk != theirs.pk
+
+
+# ---------------------------------------------------- what an identity sees
+
+
+def case(name: str, owner: str, *collaborators: str, payload: str = "") -> None:
+    assert commit(
+        CaseTrailSchema(payload=payload or f"{owner}'s {name}"),
+        BranchSchemaDetails(name=name, owner=owner, collaborators=list(collaborators)),
+    )
+
+
+def test_an_identity_sees_its_own_branches_and_those_shared_with_it(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("mine", owner.name)
+    case("shared", other_owner.name, owner.name)
+    case("theirs", other_owner.name)
+
+    visible = select_visible_branch_models("case", owner.name)
+
+    assert [(m.name, m.owner.name) for m in visible] == [
+        ("mine", "alex"),
+        ("shared", "other"),
+    ]
+
+
+def test_its_own_branch_shadows_a_shared_one_of_the_same_name(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("case-1", other_owner.name, owner.name)
+    case("case-1", owner.name)
+
+    visible = select_visible_branch_models("case", owner.name)
+    found = get_visible_branch_model("case", owner.name, "case-1")
+
+    assert [m.owner.name for m in visible] == ["alex"]
+    assert found.owner.name == "alex"
+
+
+def test_a_shared_branch_is_found_by_its_name_or_by_its_trail(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("case-1", other_owner.name, owner.name)
+
+    by_name = get_visible_branch_model("case", owner.name, "case-1")
+    by_trail = get_visible_branch_model("case", owner.name, trail=by_name.target_id)
+
+    assert by_name.owner.name == "other"
+    assert by_trail.pk == by_name.pk
+
+
+def test_a_branch_not_shared_with_an_identity_isn_t_found(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("case-1", other_owner.name)
+
+    with pytest.raises(BranchNotFoundError, match="no case 'case-1' for alex"):
+        _ = get_visible_branch_model("case", owner.name, "case-1")
+
+
+def test_one_name_shared_by_two_is_ambiguous(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("case-1", other_owner.name, owner.name)
+    case("case-1", "third", owner.name)
+
+    with pytest.raises(AmbiguousBranchError, match="other, third"):
+        _ = get_visible_branch_model("case", owner.name, "case-1")

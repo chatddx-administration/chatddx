@@ -18,13 +18,17 @@ from chatddx.repo.families.pydantic import (
     relation_fields,
 )
 from chatddx.repo.names import resolve_branch_name
-from chatddx.repo.queries import qs_canon, qs_with_details
+from chatddx.repo.queries import qs_canon, qs_canon_col, qs_with_details
 from chatddx.repo.shufflers.trail import dump_trail
 from chatddx.repo.utils import resolve_trail, resolve_trails, trail_closure
 from chatddx.utils import make_async
 
 
 class BranchNotFoundError(Exception):
+    pass
+
+
+class AmbiguousBranchError(Exception):
     pass
 
 
@@ -90,6 +94,74 @@ def select_branch_models(
 
 
 get_branch_model_async = make_async(get_branch_model)
+
+
+def select_visible_branch_models(
+    entity_name: EntityName,
+    identity_name: str,
+) -> list[BranchModel]:
+    """
+    The canon of every branch of `entity_name` that `identity_name` can use,
+    by name: its own, and those shared with it. Its own shadows a shared one
+    of the same name.
+    """
+    model_cls = entity_of(entity_name).branch_model
+    visible = _prefer_own(
+        list(qs_canon_col(model_cls.objects.all(), identity_name)),
+        identity_name,
+    )
+    models = sorted(visible, key=lambda model: (model.name, model.owner.name))
+
+    _ = resolve_trails([model.target for model in models])
+
+    return models
+
+
+def get_visible_branch_model(
+    entity_name: EntityName,
+    identity_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | int | None = None,
+) -> BranchModel:
+    """
+    The canon of the branch of `entity_name` that `identity_name` means by
+    `branch_name`, or that holds `trail`: its own if it has one, else the
+    one shared with it.
+    """
+    assert branch_name or trail
+
+    qs = entity_of(entity_name).branch_model.objects.all()
+
+    if branch_name:
+        qs = qs.filter(name=branch_name)
+
+    if trail:
+        qs = qs.filter(target=trail)
+
+    candidates = _prefer_own(list(qs_canon_col(qs, identity_name)), identity_name)
+    what = f"{entity_name} '{branch_name}'" if branch_name else f"{entity_name} branch"
+
+    if not candidates:
+        raise BranchNotFoundError(f"no {what} for {identity_name}")
+
+    if len(candidates) > 1:
+        owners = ", ".join(sorted(model.owner.name for model in candidates))
+        raise AmbiguousBranchError(f"{what} is shared by more than one: {owners}")
+
+    model = candidates[0]
+    model.target = resolve_trail(model.target)
+
+    return model
+
+
+def _prefer_own(models: list[BranchModel], identity_name: str) -> list[BranchModel]:
+    own = {model.name for model in models if model.owner.name == identity_name}
+
+    return [
+        model
+        for model in models
+        if model.owner.name == identity_name or model.name not in own
+    ]
 
 
 def get_branch_spec(
