@@ -1,12 +1,15 @@
+import json
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
+import httpx2
 import pytest
 from rich.console import Console
 from typer.testing import CliRunner
 
 from chatddx.core.repl import Repl, complete
-from chatddx.dx.fake_vllm import FakeTransport
+from chatddx.dx.fake_vllm import FakeTransport, stream
 from chatddx.manage import app
 
 pytestmark = pytest.mark.django_db
@@ -106,8 +109,10 @@ def test_show_sets_each_variation_beside_what_it_resolves_to(say: Say):
 def test_show_reports_a_refused_cell_slice_by_slice(say: Say):
     written = say("cell plan-web gpt-oss-20b@fake", "show")
 
-    assert written.count("not yet:") == 2
+    # the toolset waits; the rest resolves regardless
+    assert written.count("not yet:") == 1
     assert "the model's default, 'medium': reasoning_effort=\"medium\"" in written
+    assert "response_format: guided decoding holds the answer" in written
 
 
 def test_run_streams_a_trial_of_the_cell(say: Say, fake: FakeTransport):
@@ -252,6 +257,98 @@ def test_the_reasoning_table_pulls_in_the_cell_s_sampling(say: Say):
     assert "sampling as 'recommended' pulls it in" in written
     # Qwen3's recommendation with its thinking off
     assert "temperature=0.7 top_p=0.8" in written
+
+
+# ------------------------------------------------------------------ answers
+
+
+def test_a_structured_answer_is_judged_and_its_views_read(say: Say):
+    written = say("cell plan qwen3-8b-awq@fake", "run case-1")
+
+    assert '"acute_warning": "fake acute warning"' in written
+    assert "valid" in written
+    assert "differential\n  1. fake diagnosis 1\n  2. fake diagnosis 2" in written
+
+
+def test_free_text_has_its_views_read_too(say: Say):
+    written = say("cell free-text qwen3-8b-awq@fake", "run case-1")
+
+    assert "differential\n  1. Fake diagnosis A" in written
+    assert "valid" not in written
+
+
+def test_tool_mode_shows_the_call_the_answer_is_given_through(say: Say):
+    written = say("cell diagnoses-tool qwen3-8b-awq@fake", "run case-1")
+
+    assert '[final_result] {"diagnoses": ["fake diagnoses 1"' in written
+    assert "valid" in written
+
+
+def test_an_answer_that_doesn_t_hold_says_why():
+    provision()
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        # any object at all, where the plan's schema wants its fields
+        body["response_format"] = {"type": "json_object"}
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content="".join(stream(body)).encode(),
+        )
+
+    repl = Repl("alex", Console(record=True, width=200), httpx2.MockTransport(handler))
+    _ = repl.handle("cell plan qwen3-8b-awq@fake")
+    _ = repl.handle("run case-1")
+
+    written = repl.console.export_text()
+    assert "invalid: $: 'acute_warning' is a required property" in written
+    # its views read nothing from it
+    assert "differential\n  nothing" in written
+
+
+def test_an_answer_that_doesn_t_parse_says_so():
+    provision()
+
+    def handler(_request: httpx2.Request) -> httpx2.Response:
+        # prose, where the schema wants a document
+        body: dict[str, Any] = {"model": "Qwen/Qwen3-8B-AWQ", "messages": []}
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content="".join(stream(body)).encode(),
+        )
+
+    repl = Repl("alex", Console(record=True, width=200), httpx2.MockTransport(handler))
+    _ = repl.handle("cell challenge-coercion-prompted qwen3-8b-awq@fake")
+    _ = repl.handle("run case-1")
+
+    assert "invalid: the answer doesn't parse" in repl.console.export_text()
+
+
+def test_run_takes_the_trial_s_seed(say: Say, fake: FakeTransport):
+    written = say("cell free-text qwen3-8b-awq@fake", "run case-1 42", "run case-1 x")
+
+    assert "trial: free-text × qwen3-8b-awq@fake × case-1 (seed 42)" in written
+    assert fake.requests[0]["seed"] == 42
+    assert "a seed is a whole number, not 'x'" in written
+    assert len(fake.requests) == 1
+
+
+def test_show_says_how_the_answer_is_held_and_what_the_facts_note(say: Say):
+    written = say("cell diagnoses-tool gpt-oss-20b@fake", "show")
+
+    assert "a final_result tool holds the answer to the schema" in written
+    assert "the model reads it as the tool's parameters" in written
+    assert "vLLM ignores tool_choice = required for gpt-oss" in written
+
+
+def test_show_shows_a_schema_prompt_and_clips_a_long_one(say: Say):
+    written = say("cell plan-shown qwen3-8b-awq@fake", "show")
+
+    assert "the model reads it through schema_prompt" in written
+    assert "Answer with a JSON object that matches this JSON Schema" in written
+    assert "more lines" in written
 
 
 def test_quit_leaves(repl: Repl):

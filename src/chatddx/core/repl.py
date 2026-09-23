@@ -31,6 +31,9 @@ from pydantic_ai import (
     TextPartDelta,
     ThinkingPart,
     ThinkingPartDelta,
+    ToolCallPart,
+    ToolCallPartDelta,
+    UnexpectedModelBehavior,
 )
 from rich.console import Console
 from rich.table import Table
@@ -38,6 +41,7 @@ from rich.text import Text
 
 from chatddx.core.models import IdentityModel
 from chatddx.repo.bundles import entity_of
+from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
 from chatddx.repo.entities.configuration.pydantic import ConfigurationBranchSpec
 from chatddx.repo.entities.model.pydantic import ModelBranchSpec, ModelFacts
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchSpec
@@ -52,6 +56,7 @@ from chatddx.repo.shufflers.branch import (
 )
 from chatddx.runtime.resolution import (
     CellRefused,
+    Coercion,
     Reasoning,
     Resolution,
     Sampling,
@@ -60,13 +65,14 @@ from chatddx.runtime.resolution import (
     realize,
     resolve,
 )
-from chatddx.runtime.trial import Trial
+from chatddx.runtime.trial import FINAL_RESULT, Trial, invalid
 
 HISTORY = Path.home() / ".chatddx_history"
 
 THINKING = "#5f87af"
 LABEL = "dim"
 REFUSED = "red"
+VALID = "green"
 LATER = "yellow"
 
 # what each command takes, and what it does
@@ -80,7 +86,7 @@ COMMANDS: dict[str, tuple[tuple[str, ...], str]] = {
     "set": (("SLICE", "VARIATION"), "put another variation of a slice in the cell"),
     "show": ((), "show the cell, and how it resolves on its stack"),
     "reasoning": ((), "show what each reasoning variation does on each stack"),
-    "run": (("CASE",), "run a case on the cell"),
+    "run": (("CASE", "[SEED]"), "run a case on the cell, with a seed if given"),
     "help": ((), "list the commands"),
     "quit": ((), "leave (or Ctrl-D)"),
 }
@@ -170,8 +176,9 @@ class Repl:
             return True
 
         params, _ = COMMANDS[verb]
+        required = [param for param in params if not param.startswith("[")]
 
-        if len(args) != len(params):
+        if not len(required) <= len(args) <= len(params):
             self.error(f"usage: {' '.join((verb, *params))}")
             return True
 
@@ -288,10 +295,15 @@ class Repl:
         if self.configuration and self.stack:
             try:
                 resolution = self.resolve()
-                parts = (resolution.reasoning, resolution.sampling, resolution.slots)
+                parts = (
+                    resolution.reasoning,
+                    resolution.sampling,
+                    resolution.coercion,
+                    resolution.slots,
+                )
             except CellRefused as e:
                 refusals = e.refusals
-                parts = (e.reasoning, e.sampling, e.slots)
+                parts = (e.reasoning, e.sampling, e.coercion, e.slots)
 
         table = Table(box=None, header_style="bold")
         table.add_column("slice")
@@ -319,7 +331,7 @@ class Repl:
         if resolution:
             system, user = resolution.render("‹case›")
             self.console.print("system", style="bold")
-            self.console.print(Text(system or "(none)"))
+            self.console.print(Text(_clipped(system) or "(none)"))
             self.console.print("user", style="bold")
             self.console.print(Text(user))
 
@@ -380,7 +392,11 @@ class Repl:
 
         self.console.print(table)
 
-    def do_run(self, name: str) -> None:
+    def do_run(self, name: str, seed: str | None = None) -> None:
+        if seed is not None and not seed.isdigit():
+            self.error(f"a seed is a whole number, not '{seed}'")
+            return
+
         if not (self.configuration and self.stack):
             self.error(
                 "the cell needs a configuration and a stack: cell CONFIGURATION STACK"
@@ -400,8 +416,10 @@ class Repl:
             self.error(f"{self.identity} has no secret '{resolution.credential}'")
             return
 
+        seeded = f" (seed {seed})" if seed is not None else ""
         self.console.print(
-            f"trial: {self.label} × {self.stack.name} × {case.name}", style="bold"
+            f"trial: {self.label} × {self.stack.name} × {case.name}{seeded}",
+            style="bold",
         )
 
         trial = Trial(
@@ -409,15 +427,22 @@ class Repl:
             case.target.payload,
             api_key=api_key,
             transport=self.transport,
+            seed=int(seed) if seed is not None else None,
         )
 
         try:
-            asyncio.run(self.stream(trial))
+            answer = asyncio.run(self.stream(trial))
         except KeyboardInterrupt:
             self.console.print("\n(stopped)", style=LABEL)
+        except UnexpectedModelBehavior as e:
+            # one trial is one request: an answer that doesn't parse is not
+            # asked for again
+            self.error(f"invalid: the answer doesn't parse ({e})")
         except Exception as e:  # noqa: BLE001
             # the model or its server failed mid-run: say so and carry on
             self.error(f"\n{type(e).__name__}: {e}")
+        else:
+            self.judge(resolution, answer)
 
     # -------------------------------------------------------------- helpers
 
@@ -458,9 +483,30 @@ class Repl:
             self.stack.target.serving,
         )
 
-    async def stream(self, trial: Trial) -> None:
+    async def stream(self, trial: Trial) -> Any:
         async with trial.stream() as events:
-            await show_events(self.console, events)
+            return await show_events(self.console, events)
+
+    def judge(self, resolution: Resolution, answer: Any) -> None:
+        """Whether the answer holds to its schema, and what its views read."""
+        if resolution.coercion is not None:
+            problem = invalid(resolution.coercion.schema, answer)
+
+            if problem is None:
+                self.console.print("valid", style=VALID)
+            else:
+                self.error(f"invalid: {problem}")
+
+        for view in resolution.output.views:
+            items = resolution.output.view(view, answer)
+            self.console.print(view, style="bold")
+
+            for i, item in enumerate(items, 1):
+                text = item if isinstance(item, str) else json.dumps(item)
+                self.console.print(Text(f"  {i}. {text}"))
+
+            if not items:
+                self.console.print("  nothing", style=LABEL)
 
     def name_of(self, entity: EntityName, trail: Any) -> str:
         """What the identity calls `trail`, or its short fingerprint."""
@@ -544,12 +590,13 @@ class Repl:
 
 
 # what the slices resolved to, whether or not the cell is refused
-type Parts = tuple[Reasoning | None, Sampling | None, dict[str, str]]
+type Parts = tuple[Reasoning | None, Sampling | None, Coercion | None, dict[str, str]]
 
 
 def _realized(entity: str, slices: Slices, parts: Parts) -> str:
-    reasoning, sampling, slots = parts
+    reasoning, sampling, coercion, slots = parts
     free_text = slices.output.schema is None
+    views = ", ".join(slices.output.views) or "none"
 
     match entity:
         case "reasoning" if reasoning:
@@ -561,14 +608,50 @@ def _realized(entity: str, slices: Slices, parts: Parts) -> str:
             return writes
         case "sampling" if sampling:
             return f"{sampling.source}: {_writes(sampling.writes) or 'nothing'}"
-        case "output" if free_text:
-            return "free text"
+        case "output":
+            return f"{'free text' if free_text else 'a schema'}; views: {views}"
         case "coercion" if free_text:
             return "nothing to coerce in free text"
+        case "coercion" if coercion:
+            return _coerced(coercion, SCHEMA_PROMPT in slots)
         case "instruction":
             return f"filled: {', '.join(slots) or 'no slots'}"
         case _:
             return ""
+
+
+def _coerced(coercion: Coercion, shown: bool) -> str:
+    """How the answer is held to its schema, and how the model reads it."""
+    match coercion.mode:
+        case "native":
+            held = "response_format: guided decoding holds the answer to the schema"
+        case "tool":
+            held = f"a {FINAL_RESULT} tool holds the answer to the schema"
+        case "prompted":
+            held = "nothing holds the answer to the schema"
+
+    reads = [
+        *(["as the tool's parameters"] if coercion.mode == "tool" else []),
+        *(["through schema_prompt"] if shown else []),
+    ]
+    how = (
+        f"the model reads it {' and '.join(reads)}"
+        if reads
+        else "the model doesn't read it"
+    )
+    auto = f"auto → {coercion.mode}: " if coercion.requested == "auto" else ""
+    note = f"\n{coercion.note}" if coercion.note else ""
+
+    return f"{auto}{held}; {how}{note}"
+
+
+def _clipped(text: str, lines: int = 30) -> str:
+    kept = text.splitlines()
+
+    if len(kept) <= lines:
+        return text
+
+    return "\n".join(kept[:lines]) + f"\n… {len(kept) - lines} more lines"
 
 
 def _effort(
@@ -616,9 +699,13 @@ def _writes(writes: dict[str, JsonValue], prefix: str = "") -> str:
     return " ".join(field for field in fields if field)
 
 
-async def show_events(console: Console, events: AgentRunEvents[str]) -> None:
-    """Write out a trial's events as they come: its thinking, then its answer."""
+async def show_events(console: Console, events: AgentRunEvents[Any]) -> Any:
+    """
+    Write out a trial's events as they come: its thinking, then its answer,
+    as text or as the call that gives it. Answer with the answer.
+    """
     at_start = True
+    answer: Any = None
 
     def write(text: str, style: str = "") -> None:
         nonlocal at_start
@@ -647,9 +734,15 @@ async def show_events(console: Console, events: AgentRunEvents[str]) -> None:
                 write(text)
             case PartDeltaEvent(delta=TextPartDelta(content_delta=text)):
                 write(text)
+            case PartStartEvent(part=ToolCallPart(tool_name=name, args=args)):
+                begin(name)
+                write(_arguments(args))
+            case PartDeltaEvent(delta=ToolCallPartDelta(args_delta=args)) if args:
+                write(_arguments(args))
             case PartEndEvent():
                 begin(None)
             case AgentRunResultEvent(result=result):
+                answer = result.output
                 usage = result.usage
                 begin(None)
                 console.out(
@@ -659,6 +752,21 @@ async def show_events(console: Console, events: AgentRunEvents[str]) -> None:
                 )
             case _:
                 pass
+
+    return answer
+
+
+def _arguments(args: Any) -> str:
+    """A tool call's arguments, or a piece of them, as they were sent."""
+    match args:
+        case str():
+            return args
+        case None:
+            return ""
+        case dict():
+            return json.dumps(args)
+        case _:
+            return str(args)
 
 
 def complete(names: dict[str, list[str]], line: str) -> list[str]:
