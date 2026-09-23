@@ -1,15 +1,28 @@
 import json
 import threading
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import httpx2
 import pytest
+from jsonschema.validators import validator_for
 
-from chatddx.dx.fake_vllm import ANSWER, completion, respond, server, stream, thinking
+from chatddx.core import settings
+from chatddx.dx.fake_vllm import (
+    ANSWER,
+    completion,
+    instance,
+    respond,
+    server,
+    stream,
+    thinking,
+)
 
 QWEN = "Qwen/Qwen3-8B-AWQ"
 GPT_OSS = "openai/gpt-oss-20b"
+
+SCHEMAS = sorted((settings.INVENTORY_PATH / "inventory/schemas").glob("*.json"))
 
 
 def body(model: str = QWEN, **fields: Any) -> dict[str, Any]:
@@ -41,18 +54,105 @@ def test_it_thinks_about_the_fields_it_was_sent():
     assert "user (2 words)" in thought
 
 
-def test_a_budget_cuts_the_thinking_short():
-    reasoning, answer, finish = respond(body(thinking_token_budget=3))
+def test_it_reads_back_a_schema_or_a_tool_by_what_it_is():
+    thought = thinking(
+        body(
+            response_format={"type": "json_schema", "json_schema": {"schema": {}}},
+            tools=[{"type": "function", "function": {"name": "final_result"}}],
+        )
+    )
 
-    assert reasoning == "I am the "
-    assert (answer, finish) == (ANSWER, "stop")
+    assert thought is not None
+    assert "response_format=json_schema tools=final_result" in thought
+
+
+def test_a_budget_cuts_the_thinking_short():
+    reply = respond(body(thinking_token_budget=3))
+
+    assert reply.reasoning == "I am the "
+    assert (reply.content, reply.finish) == (ANSWER, "stop")
 
 
 def test_max_tokens_are_spent_on_thinking_first():
-    reasoning, answer, finish = respond(body(max_completion_tokens=5))
+    reply = respond(body(max_completion_tokens=5))
 
-    assert (reasoning, answer, finish) == ("I am the fake vLLM, ", "", "length")
-    assert respond(body(max_tokens=5)) == (reasoning, answer, finish)
+    assert (reply.reasoning, reply.content, reply.finish) == (
+        "I am the fake vLLM, ",
+        "",
+        "length",
+    )
+    assert respond(body(max_tokens=5)) == reply
+
+
+# ------------------------------------------------------------------ schemas
+
+
+@pytest.mark.parametrize("path", SCHEMAS, ids=lambda path: path.stem)
+def test_what_it_writes_holds_to_the_inventory_s_schemas(path: Path):
+    schema = json.loads(path.read_text())
+
+    assert not list(validator_for(schema)(schema).iter_errors(instance(schema)))
+
+
+def test_what_it_writes_follows_references_unions_and_counts():
+    schema = {
+        "$defs": {
+            "Diagnosis": {"type": "object", "properties": {"name": {"type": "string"}}}
+        },
+        "type": "object",
+        "properties": {
+            "diagnoses": {
+                "type": "array",
+                "items": {"$ref": "#/$defs/Diagnosis"},
+                "minItems": 2,
+                "maxItems": 2,
+            },
+            "severity": {"enum": ["high", "low"]},
+            "kind": {"const": "plan"},
+            "maybe": {"anyOf": [{"type": "null"}, {"type": "integer"}]},
+        },
+    }
+
+    assert instance(schema) == {
+        "diagnoses": [{"name": "fake name 1"}, {"name": "fake name 2"}],
+        "severity": "high",
+        "kind": "plan",
+        "maybe": 0,
+    }
+
+
+def test_held_to_a_schema_it_answers_with_a_document_that_holds():
+    schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
+    reply = respond(
+        body(response_format={"type": "json_schema", "json_schema": {"schema": schema}})
+    )
+
+    assert json.loads(reply.content) == {"ok": False}
+
+
+def test_shown_a_schema_it_answers_with_a_document_that_holds():
+    schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
+    shown = {"role": "system", "content": f"Answer with this:\n{json.dumps(schema)}"}
+    reply = respond(body(messages=[shown, {"role": "user", "content": "a cough"}]))
+
+    assert json.loads(reply.content) == {"ok": False}
+
+
+def test_offered_a_tool_it_calls_it():
+    tool = {
+        "type": "function",
+        "function": {
+            "name": "final_result",
+            "parameters": {"type": "object", "properties": {"ok": {"type": "boolean"}}},
+        },
+    }
+    reply = respond(body(tools=[tool]))
+
+    assert reply.call == ("final_result", '{"ok": false}')
+    assert (reply.content, reply.finish) == ("", "tool_calls")
+
+
+# ------------------------------------------------------------------ streams
 
 
 def events(chunks: Iterator[str]) -> list[Any]:
@@ -70,6 +170,24 @@ def test_it_streams_the_thinking_then_the_answer_then_the_usage():
     assert "".join(d.get("content", "") for d in deltas) == ANSWER
     assert chunks[-2]["choices"][0]["finish_reason"] == "stop"
     assert chunks[-1]["usage"]["prompt_tokens"] == 2
+
+
+def test_it_streams_a_call_as_its_name_then_its_arguments():
+    tool: dict[str, Any] = {
+        "type": "function",
+        "function": {"name": "final_result", "parameters": {}},
+    }
+    chunks = events(stream(body(tools=[tool])))
+    calls = [
+        call
+        for c in chunks
+        if c["choices"]
+        for call in c["choices"][0]["delta"].get("tool_calls", [])
+    ]
+
+    assert calls[0]["function"] == {"name": "final_result", "arguments": ""}
+    assert "".join(call["function"]["arguments"] for call in calls) == "null"
+    assert chunks[-1]["choices"][0]["finish_reason"] == "tool_calls"
 
 
 def test_it_answers_whole_when_asked_not_to_stream():

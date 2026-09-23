@@ -9,14 +9,20 @@ would: Qwen3 thinks unless `enable_thinking` is false, and gpt-oss always
 does. What it thinks about is the request it was sent, field by field, and
 it answers every case alike, since nothing in it reads the case. Like a
 model, it spends `max_tokens` on thinking first. A word is a token.
+
+Asked for a structured answer, it gives a document that holds to the
+schema: one `response_format` names, as guided decoding would force, or one
+a system message shows, as a model that follows it would. Offered tools, it
+calls the first.
 """
 
 import json
 import re
 import time
 from collections.abc import Iterator
+from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Annotated, Any, override
+from typing import Annotated, Any, cast, override
 
 import httpx2
 import typer
@@ -44,7 +50,7 @@ def thinking(body: dict[str, Any]) -> str | None:
         f"{m.get('role')} ({len(str(m.get('content') or '').split())} words)"
         for m in body.get("messages", [])
     ]
-    fields = [f"{k}={json.dumps(v)}" for k, v in body.items() if k not in _TRANSPORT]
+    fields = [_field(k, v) for k, v in body.items() if k not in _TRANSPORT]
 
     return (
         "I am the fake vLLM, and nothing here reads the case. "
@@ -54,17 +60,37 @@ def thinking(body: dict[str, Any]) -> str | None:
     )
 
 
-def respond(body: dict[str, Any]) -> tuple[str | None, str, str]:
-    """The thinking, the answer and the finish reason, within `max_tokens`."""
+@dataclass(frozen=True)
+class Reply:
+    reasoning: str | None
+    content: str
+    # a call to a tool: its name and its arguments, as JSON
+    call: tuple[str, str] | None
+    finish: str
+
+
+def respond(body: dict[str, Any]) -> Reply:
+    """What the model gives back, within `max_tokens`."""
     thought_text = thinking(body)
     thought = _words(thought_text or "")
-    answer = _words(ANSWER)
+    tools: list[dict[str, Any]] = body.get("tools") or []
+    schema = _schema(body)
+    call: tuple[str, str] | None = None
+
+    if tools:
+        tool = tools[0]["function"]
+        call = (tool["name"], json.dumps(instance(tool.get("parameters") or {})))
+        answer: list[str] = []
+    elif schema is not None:
+        answer = _words(json.dumps(instance(schema), indent=2))
+    else:
+        answer = _words(ANSWER)
 
     budget = body.get("thinking_token_budget")
     if isinstance(budget, int):
         thought = thought[:budget]
 
-    finish = "stop"
+    finish = "tool_calls" if call else "stop"
     # as vLLM does: OpenAI's newer name first
     limit = body.get("max_completion_tokens", body.get("max_tokens"))
 
@@ -75,41 +101,73 @@ def respond(body: dict[str, Any]) -> tuple[str | None, str, str]:
 
     reasoning = "".join(thought) if thought_text is not None else None
 
-    return reasoning, "".join(answer), finish
+    return Reply(reasoning, "".join(answer), call, finish)
 
 
 def completion(body: dict[str, Any]) -> dict[str, Any]:
     """The whole response, for a request that doesn't stream."""
-    reasoning, answer, finish = respond(body)
-    message: dict[str, Any] = {"role": "assistant", "content": answer}
+    reply = respond(body)
+    message: dict[str, Any] = {"role": "assistant", "content": reply.content}
 
-    if reasoning is not None:
-        message["reasoning"] = reasoning
+    if reply.reasoning is not None:
+        message["reasoning"] = reply.reasoning
+
+    if reply.call is not None:
+        name, arguments = reply.call
+        message["tool_calls"] = [
+            {
+                "id": "chatcmpl-tool-fake",
+                "type": "function",
+                "function": {"name": name, "arguments": arguments},
+            }
+        ]
 
     return {
         "id": "chatcmpl-fake",
         "object": "chat.completion",
         "created": int(time.time()),
         "model": body.get("model"),
-        "choices": [{"index": 0, "message": message, "finish_reason": finish}],
-        "usage": _usage(body, reasoning, answer),
+        "choices": [{"index": 0, "message": message, "finish_reason": reply.finish}],
+        "usage": _usage(body, reply),
     }
 
 
 def stream(body: dict[str, Any]) -> Iterator[str]:
     """The response as server-sent events, a word at a time."""
-    reasoning, answer, finish = respond(body)
+    reply = respond(body)
     model = body.get("model")
 
     yield _event(model, {"role": "assistant", "content": ""})
 
-    for word in _words(reasoning or ""):
+    for word in _words(reply.reasoning or ""):
         yield _event(model, {"reasoning": word})
 
-    for word in _words(answer):
+    for word in _words(reply.content):
         yield _event(model, {"content": word})
 
-    yield _event(model, {}, finish)
+    if reply.call is not None:
+        name, arguments = reply.call
+        yield _event(
+            model,
+            {
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "id": "chatcmpl-tool-fake",
+                        "type": "function",
+                        "function": {"name": name, "arguments": ""},
+                    }
+                ]
+            },
+        )
+
+        for piece in _words(arguments):
+            yield _event(
+                model,
+                {"tool_calls": [{"index": 0, "function": {"arguments": piece}}]},
+            )
+
+    yield _event(model, {}, reply.finish)
 
     options: dict[str, Any] = body.get("stream_options") or {}
 
@@ -121,11 +179,76 @@ def stream(body: dict[str, Any]) -> Iterator[str]:
                 "created": int(time.time()),
                 "model": model,
                 "choices": [],
-                "usage": _usage(body, reasoning, answer),
+                "usage": _usage(body, reply),
             }
         )
 
     yield "data: [DONE]\n\n"
+
+
+def instance(
+    schema: Any,
+    root: Any = None,
+    key: str = "value",
+    n: int | None = None,
+    depth: int = 0,
+) -> Any:
+    """
+    A document that holds to `schema`. Strings say what they are, by the
+    property that holds them, and count up through an array: `fake
+    diagnosis 1`, `fake diagnosis 2`.
+    """
+    root = schema if root is None else root
+
+    if not isinstance(schema, dict) or depth > 12:
+        return None
+
+    schema = cast(dict[str, Any], schema)
+
+    if "$ref" in schema:
+        return instance(_resolve(root, schema["$ref"]), root, key, n, depth + 1)
+
+    if "const" in schema:
+        return schema["const"]
+
+    if schema.get("enum"):
+        return schema["enum"][0]
+
+    for union in ("anyOf", "oneOf", "allOf"):
+        options = [o for o in schema.get(union, []) if o.get("type") != "null"]
+        if options:
+            return instance(options[0], root, key, n, depth + 1)
+
+    kind = schema.get("type")
+
+    if isinstance(kind, list):
+        kind = next((k for k in cast(list[str], kind) if k != "null"), "null")
+
+    match kind:
+        case "object":
+            properties: dict[str, Any] = schema.get("properties", {})
+            return {
+                name: instance(sub, root, name, n, depth + 1)
+                for name, sub in properties.items()
+            }
+        case "array":
+            count = min(max(schema.get("minItems", 3), 1), schema.get("maxItems", 3))
+            return [
+                instance(schema.get("items", {}), root, key, i, depth + 1)
+                for i in range(1, count + 1)
+            ]
+        case "string":
+            return f"fake {key.replace('_', ' ')}" + ("" if n is None else f" {n}")
+        case "integer":
+            return int(schema.get("minimum", 0))
+        case "number":
+            return float(schema.get("minimum", 0))
+        case "boolean":
+            return False
+        case _:
+            if "properties" in schema:
+                return instance(schema | {"type": "object"}, root, key, n, depth + 1)
+            return None
 
 
 class FakeTransport(httpx2.AsyncBaseTransport):
@@ -232,14 +355,74 @@ def _data(chunk: dict[str, Any]) -> str:
     return f"data: {json.dumps(chunk)}\n\n"
 
 
-def _usage(body: dict[str, Any], reasoning: str | None, answer: str) -> dict[str, int]:
+def _usage(body: dict[str, Any], reply: Reply) -> dict[str, int]:
     prompt = sum(
         len(str(m.get("content") or "").split()) for m in body.get("messages", [])
     )
-    completion_tokens = len((reasoning or "").split()) + len(answer.split())
+    arguments = reply.call[1] if reply.call else ""
+    completion_tokens = sum(
+        len(text.split()) for text in (reply.reasoning or "", reply.content, arguments)
+    )
 
     return {
         "prompt_tokens": prompt,
         "completion_tokens": completion_tokens,
         "total_tokens": prompt + completion_tokens,
     }
+
+
+def _schema(body: dict[str, Any]) -> dict[str, Any] | None:
+    """The schema an answer is held to, or shown, if any."""
+    response_format: dict[str, Any] = body.get("response_format") or {}
+
+    if response_format.get("type") == "json_schema":
+        return response_format["json_schema"].get("schema") or {}
+
+    if response_format.get("type") == "json_object":
+        return {"type": "object"}
+
+    for message in body.get("messages", []):
+        if message.get("role") == "system":
+            shown = _shown(str(message.get("content") or ""))
+            if shown is not None:
+                return shown
+
+    return None
+
+
+def _shown(text: str) -> dict[str, Any] | None:
+    """The first JSON schema written into `text`."""
+    decoder = json.JSONDecoder()
+
+    for match in re.finditer(r"\{", text):
+        try:
+            value, _ = decoder.raw_decode(text, match.start())
+        except ValueError:
+            continue
+
+        if isinstance(value, dict):
+            schema = cast(dict[str, Any], value)
+            if {"type", "properties"} & schema.keys():
+                return schema
+
+    return None
+
+
+def _resolve(root: Any, ref: str) -> Any:
+    node: Any = root
+
+    for part in ref.removeprefix("#/").split("/"):
+        node = cast(dict[str, Any], node).get(part) if isinstance(node, dict) else None
+
+    return node
+
+
+def _field(key: str, value: Any) -> str:
+    """A request field as the thinking reads it back, big ones by what they are."""
+    match key:
+        case "response_format":
+            return f"response_format={value.get('type')}"
+        case "tools":
+            return "tools=" + ",".join(tool["function"]["name"] for tool in value)
+        case _:
+            return f"{key}={json.dumps(value)}"
