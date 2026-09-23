@@ -7,6 +7,7 @@ from unfold.widgets import UnfoldAdminSelectWidget
 
 from chatddx.core.choices import RunStatusChoices
 from chatddx.django.orm.qs import expects_by_case
+from chatddx.eval.scorers import scorer_reads
 from chatddx.history.proxies import Experiment
 
 # Sentinel for "create the experiment, but no run to go with it". It lives
@@ -25,6 +26,10 @@ INITIAL_RUN_STATUS_CHOICES = (
 NO_CASE_LABEL = "Select a case first"
 
 MISMATCHED_EXPECT = "That expectation doesn't belong to the chosen case."
+
+UNREADABLE_EXPECT = (
+    "That expectation's scorer can't judge what the chosen agent's output type returns."
+)
 
 
 class ExperimentForm(forms.ModelForm):
@@ -60,6 +65,7 @@ class ExperimentForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
 
+        agent = cleaned_data.get("agent")
         case = cleaned_data.get("case")
         expect = cleaned_data.get("expect")
 
@@ -68,6 +74,13 @@ class ExperimentForm(forms.ModelForm):
 
         if expect.pk not in self.expects_by_case().get(case.pk, ()):
             self.add_error("expect", MISMATCHED_EXPECT)
+
+        # A run it could not score is not worth making; a scorer this code
+        # has no contract for is left to say so when it scores.
+        elif agent is not None and (
+            scorer_reads(expect.scorer.command, agent.output_type.definition) is False
+        ):
+            self.add_error("expect", UNREADABLE_EXPECT)
 
         return cleaned_data
 

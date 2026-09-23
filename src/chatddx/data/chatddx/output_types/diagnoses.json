@@ -1,17 +1,9 @@
 {
   "title": "diagnoses",
-  "type": "object",
-  "properties": {
-    "diagnoses": {
-      "description": "The commonly used name of the diagnosis.",
-      "items": {
-        "type": "string"
-      },
-      "title": "Diagnosis",
-      "type": "array"
-    }
-  },
-  "required": [
-    "diagnoses"
-  ]
+  "description": "Differential diagnoses, most likely first.",
+  "type": "array",
+  "items": {
+    "description": "The commonly used name of the diagnosis.",
+    "type": "string"
+  }
 }

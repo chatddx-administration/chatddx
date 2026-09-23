@@ -121,6 +121,7 @@ class BatchAdmin(ModelAdminFormWithRequest, TypedModelAdmin[Batch]):
 
         plan = batches.plan(
             request.user.username,
+            form.cleaned_data["agent"],
             list(form.cleaned_data["case_tags"]),
             list(form.cleaned_data["scorers"]),
         )

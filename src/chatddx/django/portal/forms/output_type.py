@@ -51,8 +51,8 @@ class OutputTypeForm(BranchForm):
     coercion_strategy = ChoiceField(
         choices=CoercionChoices.choices,
         widget=UnfoldAdminSelect2Widget(),
-        label="Coerceion Strategy",
-        help_text="How the model is forced to follow the schema (system prompts, guided decoding, or tool call).",
+        label="Coercion Strategy",
+        help_text="How the model is forced to follow the schema (system prompts, guided decoding, or tool call). 'auto' leaves it to the connection's profile.",
     )
     definition = CharField(
         required=False,

@@ -213,6 +213,16 @@ class RunModel(Model):
     )
     session_id: int | None
 
+    # What the agent returned: the value its output type's definition
+    # describes, the same whichever coercion strategy got it out of the
+    # model. It is what the run is scored on; `result` is what the scorer
+    # made of it.
+    output: JSONField[Any | None] = JSONField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+
     result: JSONField[Any | None] = JSONField(
         default=None,
         null=True,

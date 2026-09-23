@@ -5,11 +5,11 @@ from chatddx.core.models import IdentityModel
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.repo.inventories import InventoryBranchModel
 
-# The prompt the agent is sent and the reply the stubbed agent gives back; the
-# reply hits the first row of `scored-case`'s expectation, so a run that goes
-# all the way through scores 100.
+# The prompt the agent is sent and the output the stubbed agent returns; the
+# output's first item satisfies `scored-case`'s expectation, so a run that
+# goes all the way through scores 100.
 CASE_PAYLOAD = "a patient presents with a cough"
-AGENT_REPLY = "most likely community-acquired pneumonia"
+AGENT_OUTPUT = ["community-acquired pneumonia", "copd"]
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def experiment(
 
     return ExperimentModel.objects.create(
         owner=owner,
-        agent=inventory_fixture_bm["agent"]["agent-2"].target,
+        agent=inventory_fixture_bm["agent"]["diagnostician"].target,
         case=case.target,
         expect=expect_branch.target,
     )

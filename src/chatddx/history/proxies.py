@@ -36,8 +36,10 @@ from chatddx.history.schemas import ErrorPayload, MessageSpec, PromptPayload
 from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
 from chatddx.repo.entities.case.django import Case
 from chatddx.repo.entities.expect.django import Expect
+from chatddx.repo.entities.output_type.pydantic import is_free_text
 from chatddx.repo.entities.super_agent.django import SuperAgent
 from chatddx.repo.trail_cache import trail_cache
+from chatddx.runtime.builder import unwrap
 from chatddx.runtime.utils import get_part_content
 from chatddx.utils import render_json_html, truncate_content
 
@@ -169,6 +171,10 @@ class Run(RunModel):
         assert self.session is not None
 
         return change_link(as_proxy(Session, self.session))
+
+    @cached_property
+    def output_html(self):
+        return render_json_html(self.output)
 
     @cached_property
     def result_html(self):
@@ -355,8 +361,11 @@ class Message(MessageModel):
         if self.content is None:
             return None
 
-        if self.output_schema and self.role == RoleChoices.ASSISTANT.value:
-            data = json.loads(self.content)
+        if (
+            not is_free_text(self.output_schema)
+            and self.role == RoleChoices.ASSISTANT.value
+        ):
+            data = unwrap(self.output_schema, json.loads(self.content))
             jsonschema.validate(
                 instance=data,
                 schema=self.output_schema,

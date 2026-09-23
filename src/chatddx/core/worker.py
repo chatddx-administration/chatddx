@@ -4,9 +4,10 @@ The experiment worker.
 
 `RunModel.status` is the queue: a run sits at `queued` until a worker pass
 claims it, runs its experiment's agent over its case, and leaves it at
-`completed`, then scores it and leaves it at `scored`. Postgres holds that
-state, so a pass is safe to repeat and safe to run twice at once -- both
-transitions are claimed with a conditional `UPDATE`.
+`completed` with the agent's output recorded, then scores that output and
+leaves it at `scored`. Postgres holds that state, so a pass is safe to
+repeat and safe to run twice at once -- both transitions are claimed with a
+conditional `UPDATE`.
 
 Entry points:
     `wake`   -- ask a running worker for a pass (used by the admin).
@@ -29,9 +30,10 @@ from pgqueuer import PgQueuer
 from pgqueuer.db import PsycopgDriver
 from pgqueuer.domain.types import QueueExecutionMode
 from pgqueuer.models import Job, Schedule
+from pydantic_core import to_jsonable_python
 
 from chatddx.core.choices import RunStatusChoices, SessionContextChoices
-from chatddx.django.orm.qs import qs_canon
+from chatddx.django.orm.qs import qs_canon, qs_canon_col
 from chatddx.eval.scorers import resolve_scorer
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.history.session import start_session
@@ -174,14 +176,12 @@ async def execute_run(run_id: int) -> None:
             pk=run.experiment_id
         )
 
-        agent_branch = await qs_canon(
-            AgentBranchModel.objects.filter(target_id=experiment.agent_id),
-            run.owner.name,
-        ).afirst()
+        agent_branch = await session_agent(experiment.agent_id, run.owner.name)
         if agent_branch is None:
             raise RuntimeError(
-                f"no branch of agent {experiment.agent_id} owned by "
-                + f"{run.owner.name!r}: cannot start a session for run {run.uuid}"
+                f"no branch of agent {experiment.agent_id} owned by or shared "
+                + f"with {run.owner.name!r}: cannot start a session for run "
+                + f"{run.uuid}"
             )
 
         session = await start_session(
@@ -194,12 +194,13 @@ async def execute_run(run_id: int) -> None:
 
         agent_spec = await trail_cache.get_async(AgentTrailSpec, experiment.agent_id)
 
-        _ = await run_from_session(
+        result = await run_from_session(
             session=session,
             prompt=experiment.case.payload,
             agent_spec=agent_spec,
         )
 
+        run.output = to_jsonable_python(result.output)
         run.status = RunStatusChoices.COMPLETED
         logger.info("run %s completed (session %s)", run.uuid, session_id)
 
@@ -209,7 +210,21 @@ async def execute_run(run_id: int) -> None:
 
     finally:
         run.session_id = session_id
-        await run.asave(update_fields=["session_id", "status"])
+        await run.asave(update_fields=["session_id", "status", "output"])
+
+
+async def session_agent(agent_id: int, owner_name: str) -> AgentBranchModel | None:
+    """
+    The branch a run's session names its agent by: the run owner's own, and
+    failing that one shared with them. An agent does not have to be the run
+    owner's to be run -- one made for everyone is held by the archive, and
+    whoever may use it is its collaborator.
+    """
+    branches = AgentBranchModel.objects.filter(target_id=agent_id)
+
+    return await qs_canon(branches, owner_name).afirst() or (
+        await qs_canon_col(branches, owner_name).afirst()
+    )
 
 
 async def process_completed_runs() -> None:
@@ -239,7 +254,8 @@ async def score_run(run_id: int) -> None:
 
     # An experiment doesn't pick a scorer of its own: how an expectation is
     # judged is part of the expectation.
-    scorer_trail = run.experiment.expect.scorer
+    expect = run.experiment.expect
+    scorer_trail = expect.scorer
 
     logger.info("scoring run %s with %s", run.uuid, scorer_trail.command)
 
@@ -247,13 +263,19 @@ async def score_run(run_id: int) -> None:
 
     try:
         scorer = resolve_scorer(scorer_trail.command)
+
+        # An output its scorer cannot read is an error of the pairing, not a
+        # score of 0, and it says which.
+        scorer.check(run.output)
+
         # A synchronous scorer goes through Django's own executor rather than a
-        # thread of its own, so the ORM connections it opens are the ones
-        # `worker_pass` closes at the end of the pass.
+        # thread of its own: it keeps a slow one off the event loop, and any
+        # ORM connection one opens is among those `worker_pass` closes at the
+        # end of the pass.
         result = (
-            await scorer(run)
-            if inspect.iscoroutinefunction(scorer)
-            else await sync_to_async(scorer)(run)
+            await scorer.judge(run.output, expect.payload)
+            if inspect.iscoroutinefunction(scorer.judge)
+            else await sync_to_async(scorer.judge)(run.output, expect.payload)
         )
         status = RunStatusChoices.SCORED
         logger.info("run %s scored", run.uuid)

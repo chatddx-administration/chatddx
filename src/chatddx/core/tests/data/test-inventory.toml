@@ -1,8 +1,16 @@
 extends = ["../../../data/test/test-inventory.toml"]
 
-[scorer.regex_match]
-command = "regex_match"
+[scorer.reciprocal_rank]
+command = "reciprocal_rank"
+
+[output_type.ranked-diagnoses]
+definition = { type = "array", items = { type = "string" } }
+
+[agent.diagnostician]
+instructions = "list plausible diagnoses, most likely first"
+connection = "connection-1"
+output_type = "ranked-diagnoses"
 
 [case.scored-case]
 payload = "a patient presents with a cough"
-expects.regex_match = "pneumonia\ncopd | (exacerbation & pulmonary)"
+expects.reciprocal_rank = "pneumonia | copd | exacerbation & pulmonary"

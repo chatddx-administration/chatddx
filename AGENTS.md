@@ -20,3 +20,8 @@ Lessons:
   `BranchRef` (`django/orm/annotations.py`), never as a string spelled once in
   an `annotate()` and again in a `getattr`. `django/orm/qs.py` only says which
   refs a page wants.
+* A scorer judges `RunModel.output`, never the transcript (which differs by
+  coercion strategy), and is registered with the JSON Schema it accepts
+  (`eval/scorers.py`). Whether two things go together is decided by the
+  fields that decide it, not by the entities carrying them
+  (`docs/design/compatibility.md`).

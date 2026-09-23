@@ -4,8 +4,9 @@ What a batch stands for, and what it makes.
 
 A batch names an agent, a set of case tags and a set of scorers. The
 experiments it stands for are every pairing of a case carrying one of those
-tags with an expectation of that case whose scorer was asked for -- one
-experiment per (case, expectation), all of them running the batch's agent.
+tags with an expectation of that case whose scorer was asked for, and can
+judge what the agent returns -- one experiment per (case, expectation), all
+of them running the batch's agent.
 
 `plan` works that set out without writing anything, so the numbers can be
 shown before the user commits to them; `generate` is the same walk, written
@@ -19,6 +20,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from django.db import transaction
 
@@ -26,7 +28,9 @@ from chatddx.core.choices import RunStatusChoices
 from chatddx.core.models import TagModel
 from chatddx.core.worker import wake_on_commit
 from chatddx.django.orm.qs import qs_canon
+from chatddx.eval.scorers import scorer_reads
 from chatddx.history.models import BatchModel, ExperimentModel, RunModel
+from chatddx.repo.entities.agent.django import AgentTrailModel
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.scorer.django import ScorerBranchModel, ScorerTrailModel
 
@@ -53,11 +57,16 @@ class BatchPlan:
     and `rows` is the same set counted per tag and scorer. A case carrying
     two of the batch's tags is counted under both, so the rows can add up to
     more than `total`; `overlapping` says when they do.
+
+    `unreadable` names the scorers in play that cannot judge what the agent
+    returns: the expectations they judge are left out, since every run of
+    one would fail at scoring.
     """
 
     rows: tuple[PlanRow, ...]
     pairs: tuple[tuple[int, int], ...]
     excluded: tuple[str, ...]
+    unreadable: tuple[str, ...] = ()
 
     @property
     def total(self) -> int:
@@ -78,6 +87,7 @@ class BatchPlan:
 
 def plan(
     owner_name: str,
+    agent: AgentTrailModel,
     tags: Sequence[TagModel],
     scorers: Sequence[ScorerBranchModel],
 ) -> BatchPlan:
@@ -86,17 +96,19 @@ def plan(
 
     Cases are the owner's canon ones carrying any of `tags`; expectations are
     theirs, narrowed to `scorers` where any were named and left whole where
-    none were. A case that ends up with no expectation to run is excluded,
-    and named in the plan so the user hears about it before generating.
+    none were, and to the scorers that can judge what `agent` returns. A
+    case that ends up with no expectation to run is excluded, and named in
+    the plan so the user hears about it before generating.
     """
     tag_names = {tag.pk: tag.name for tag in tags}
     wanted = {scorer.target_id: scorer.name for scorer in scorers}
+    reads = _Reads(agent)
 
     cases = (
         qs_canon(CaseBranchModel.objects.all(), owner_name)
         .filter(tags__in=list(tag_names))
         .distinct()
-        .prefetch_related("tags", "expects__target")
+        .prefetch_related("tags", "expects__target__scorer")
     )
 
     counts: Counter[tuple[str, int]] = Counter()
@@ -107,7 +119,8 @@ def plan(
         expects = [
             expect
             for expect in case.expects.all()
-            if not wanted or expect.target.scorer_id in wanted
+            if (not wanted or expect.target.scorer_id in wanted)
+            and reads(expect.target.scorer)
         ]
 
         if not expects:
@@ -131,19 +144,63 @@ def plan(
             for tag in case_tags:
                 counts[(tag, expect.target.scorer_id)] += 1
 
+    # A scorer that was asked for is named even when no case carries it:
+    # asking for one that cannot read the agent's output is worth hearing.
+    unreadable = reads.unreadable() | {
+        scorer_id for scorer_id in wanted if not reads.by_id(scorer_id)
+    }
+
+    scorer_names = _scorer_names(
+        owner_name,
+        wanted,
+        {scorer_id for _, scorer_id in counts} | unreadable,
+    )
+
     return BatchPlan(
-        rows=_rows(counts, tag_names, wanted, owner_name),
+        rows=_rows(counts, tag_names, wanted, scorer_names),
         pairs=tuple(pairs),
         excluded=tuple(sorted(excluded)),
+        unreadable=tuple(sorted(scorer_names[pk] for pk in unreadable)),
     )
 
 
 def plan_for(batch: BatchModel) -> BatchPlan:
     return plan(
         batch.owner.name,
+        batch.agent,
         list(batch.case_tags.all()),
         list(batch.scorers.all()),
     )
+
+
+class _Reads:
+    """
+    Which scorers can judge what one agent returns, asked once per scorer.
+
+    A scorer this code has no contract for is not ruled out: nothing says
+    what it reads, and its runs fail at scoring with a message saying so.
+    """
+
+    def __init__(self, agent: AgentTrailModel):
+        self.definition: dict[str, Any] = agent.output_type.definition
+        self.verdicts: dict[int, bool] = {}
+
+    def __call__(self, scorer: ScorerTrailModel) -> bool:
+        if scorer.pk not in self.verdicts:
+            self.verdicts[scorer.pk] = (
+                scorer_reads(scorer.command, self.definition) is not False
+            )
+
+        return self.verdicts[scorer.pk]
+
+    def by_id(self, scorer_id: int) -> bool:
+        if scorer_id not in self.verdicts:
+            return self(ScorerTrailModel.objects.get(pk=scorer_id))
+
+        return self.verdicts[scorer_id]
+
+    def unreadable(self) -> set[int]:
+        return {pk for pk, readable in self.verdicts.items() if not readable}
 
 
 @dataclass(frozen=True)
@@ -192,18 +249,16 @@ def _rows(
     counts: Counter[tuple[str, int]],
     tag_names: dict[int, str],
     wanted: dict[int, str],
-    owner_name: str,
+    scorer_names: dict[int, str],
 ) -> tuple[PlanRow, ...]:
     """
     A row per tag and scorer, in name order.
 
     Named scorers each get a row whether or not anything came of them -- a
-    zero is how the user sees that their cases carry no expectation for one.
-    Where none were named the batch stands for whatever the cases carry, so
-    only those scorers have a row.
+    zero is how the user sees that their cases carry no expectation for one,
+    or none that one can judge. Where none were named the batch stands for
+    whatever the cases carry, so only those scorers have a row.
     """
-    scorer_names = _scorer_names(owner_name, wanted, counts)
-
     scorer_ids = (
         sorted(wanted, key=lambda pk: scorer_names[pk])
         if wanted
@@ -226,7 +281,7 @@ def _rows(
 def _scorer_names(
     owner_name: str,
     wanted: dict[int, str],
-    counts: Counter[tuple[str, int]],
+    in_play: Iterable[int],
 ) -> dict[int, str]:
     """
     What each scorer trail in play reads as: the name the owner's branch of
@@ -237,7 +292,7 @@ def _scorer_names(
         for branch in qs_canon(ScorerBranchModel.objects.all(), owner_name)
     } | wanted
 
-    missing = {scorer_id for _, scorer_id in counts} - set(names)
+    missing = set(in_play) - set(names)
 
     return names | {
         trail.pk: str(trail)
@@ -250,8 +305,10 @@ def excluded_message(plan_: BatchPlan) -> str | None:
     if not plan_.excluded:
         return None
 
-    return f"{len(plan_.excluded)} case(s) left out for want of a scorer: " + _names(
-        plan_.excluded_shown, plan_.excluded_rest
+    return (
+        f"{len(plan_.excluded)} case(s) left out for want of a scorer that can "
+        + "judge this agent's output: "
+        + _names(plan_.excluded_shown, plan_.excluded_rest)
     )
 
 
