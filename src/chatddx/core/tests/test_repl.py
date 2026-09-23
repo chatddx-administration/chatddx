@@ -96,7 +96,7 @@ def test_show_sets_each_variation_beside_what_it_resolves_to(say: Say):
 
     assert "cell: free-text × qwen3-8b-awq@fake" in written
     assert (
-        "the model's default, 'on': chat_template_kwargs={\"enable_thinking\": true}"
+        "the model's default, 'on': chat_template_kwargs.enable_thinking=true"
         in written
     )
     assert "recommended for 'on'" in written
@@ -145,6 +145,115 @@ def test_what_it_doesn_t_know_is_said_and_nothing_changes(repl: Repl, say: Say):
     assert repl.configuration is None
 
 
+# ----------------------------------------------------------------------- set
+
+
+def test_set_puts_another_variation_in_the_cell(
+    repl: Repl, say: Say, fake: FakeTransport
+):
+    written = say("cell free-text qwen3-8b-awq@fake", "set reasoning off", "run case-1")
+
+    assert repl.prompt == "alex free-text+reasoning=off×qwen3-8b-awq@fake> "
+    assert "trial: free-text+reasoning=off × qwen3-8b-awq@fake × case-1" in written
+
+    # Qwen3 with its thinking switched off, and nothing thought
+    [request] = fake.requests
+    assert request["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "[thinking]" not in written
+
+
+def test_show_says_what_is_set_and_what_the_configuration_has(say: Say):
+    written = say("cell free-text qwen3-8b-awq@fake", "set reasoning off", "show")
+
+    assert "off (set; free-text has default)" in written
+    assert "chat_template_kwargs.enable_thinking=false" in written
+    assert "recommended for 'off'" in written
+
+
+def test_setting_the_configuration_s_own_variation_unsets_it(repl: Repl, say: Say):
+    _ = say("cell free-text qwen3-8b-awq@fake", "set reasoning off")
+    _ = say("set reasoning default")
+
+    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
+
+
+def test_use_puts_a_configuration_in_as_it_is(repl: Repl, say: Say):
+    _ = say("cell free-text qwen3-8b-awq@fake", "set reasoning off", "use free-text")
+
+    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
+
+
+def test_what_a_stack_refuses_is_said_before_anything_is_sent(
+    say: Say, fake: FakeTransport
+):
+    written = say("cell free-text gpt-oss-20b@fake", "set reasoning off", "run case-1")
+
+    assert "refused: reasoning: always reasons" in written
+    assert fake.requests == []
+
+
+def test_set_says_what_it_can_t_set(say: Say):
+    written = say("set reasoning off", "use free-text", "set colour red")
+    written += say("set reasoning nope")
+
+    assert "the cell has no configuration to set it in" in written
+    assert (
+        "no slice 'colour': instruction, output, coercion, reasoning, sampling, toolset"
+        in written
+    )
+    assert "no reasoning 'nope' for alex" in written
+
+
+# ----------------------------------------------------------------- reasoning
+
+
+REASONING = (
+    "default",
+    "off",
+    "on",
+    "on-budget-2048",
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+)
+
+
+def row_names(table: str) -> list[str]:
+    """A table's first column, where a row starts rather than wraps on."""
+    cells = [
+        line.split("│")[1].strip()
+        for line in table.splitlines()
+        if line.startswith("│")
+    ]
+    return [cell for cell in cells if cell]
+
+
+def test_the_reasoning_table_sets_every_variation_on_every_stack(say: Say):
+    written = say("reasoning")
+
+    assert row_names(written) == list(REASONING)
+
+    # every stack is named once; those alike share a column
+    for stack in ("gpt-oss-20b@fake", "qwen3-8b-awq@pelle", "qwen3-8b-awq@fake"):
+        assert written.count(stack) == 1
+
+    assert "refused: always reasons" in written
+    assert "thinking_token_budget=2048" in written
+    assert "the cell has no configuration: no sampling is pulled in" in written
+
+
+def test_the_reasoning_table_pulls_in_the_cell_s_sampling(say: Say):
+    written = say("cell free-text qwen3-8b-awq@fake", "set reasoning high", "reasoning")
+
+    assert "▸ high" in written
+    assert "▸ qwen3-8b-awq@fake" in written
+    assert "sampling as 'recommended' pulls it in" in written
+    # Qwen3's recommendation with its thinking off
+    assert "temperature=0.7 top_p=0.8" in written
+
+
 def test_quit_leaves(repl: Repl):
     assert repl.handle("quit") is False
 
@@ -170,6 +279,7 @@ def test_it_completes_a_command_and_then_its_names():
         "configuration": ["free-text", "plan", "plan-web"],
         "stack": ["qwen3-8b-awq@fake", "qwen3-8b-awq@pelle"],
         "case": ["case-1", "case-2"],
+        "reasoning": ["default", "high", "off", "on", "on-budget-2048"],
     }
 
     assert complete(names, "us") == ["use"]
@@ -180,6 +290,8 @@ def test_it_completes_a_command_and_then_its_names():
     ]
     assert complete(names, "run case-") == ["case-1", "case-2"]
     assert complete(names, "show ") == []
+    assert complete(names, "set r") == ["reasoning"]
+    assert complete(names, "set reasoning o") == ["off", "on", "on-budget-2048"]
 
 
 def test_a_session_can_be_piped_in(tmp_path: Path):

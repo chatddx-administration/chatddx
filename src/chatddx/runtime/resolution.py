@@ -49,6 +49,18 @@ class Configuration(Protocol):
 
 
 @dataclass(frozen=True)
+class Slices:
+    """A configuration's variations with any of them swapped for another."""
+
+    instruction: InstructionTrailBase
+    output: OutputTrailBase
+    coercion: CoercionTrailBase
+    reasoning: ReasoningTrailBase
+    sampling: SamplingTrailBase
+    toolset: ToolsetTrailBase | None
+
+
+@dataclass(frozen=True)
 class SliceRefusal:
     slice: Slice
     reason: str
@@ -127,7 +139,6 @@ def resolve(
     serving: ServingTrailBase | None,
 ) -> Resolution:
     refusals: list[SliceRefusal] = []
-    provided = serving.provides() if serving else frozenset[Requirement]()
 
     if stack.api is None:
         refusals.append(SliceRefusal("model", "the stack names no API"))
@@ -144,12 +155,10 @@ def resolve(
     if stack.served_name is None:
         refusals.append(SliceRefusal("model", "the stack names no served name"))
 
-    reasoning = _reasoning(configuration.reasoning, facts, provided, refusals)
-    sampling = _sampling(configuration.sampling, facts, reasoning, refusals)
-
-    if reasoning and sampling:
-        _budget_fits(configuration.reasoning, sampling, refusals)
-
+    reasoning, sampling, found = realize(
+        configuration.reasoning, configuration.sampling, facts, serving
+    )
+    refusals += found
     slots = _slots(configuration, refusals)
 
     if refusals:
@@ -167,6 +176,29 @@ def resolve(
         instruction=configuration.instruction,
         slots=slots,
     )
+
+
+def realize(
+    reasoning: ReasoningTrailBase,
+    sampling: SamplingTrailBase | None,
+    facts: ModelFacts,
+    serving: ServingTrailBase | None,
+) -> tuple[Reasoning | None, Sampling | None, list[SliceRefusal]]:
+    """
+    A reasoning variation on a model, and the sampling it pulls in. The two
+    are resolved together: sampling can default to what the facts recommend
+    for the mode reasoning resolves to, and a budget spends max_tokens.
+    """
+    refusals: list[SliceRefusal] = []
+    provided = serving.provides() if serving else frozenset[Requirement]()
+
+    realized = _reasoning(reasoning, facts, provided, refusals)
+    pulled = _sampling(sampling, facts, realized, refusals) if sampling else None
+
+    if realized and pulled:
+        _budget_fits(reasoning, pulled, refusals)
+
+    return realized, pulled, refusals
 
 
 def _reasoning(
@@ -188,10 +220,8 @@ def _reasoning(
     intent, fact = resolved
 
     if isinstance(fact, Refusal):
-        through = "" if intent == effort else f", which ends at '{intent}'"
-        refusals.append(
-            SliceRefusal("reasoning", f"'{effort}'{through} is refused: {fact.refused}")
-        )
+        through = "" if intent == effort else f"it ends at '{intent}': "
+        refusals.append(SliceRefusal("reasoning", f"{through}{fact.refused}"))
         return None
 
     writes = dict(fact)
@@ -207,9 +237,7 @@ def _reasoning(
                     )
                 )
             case Refusal():
-                refusals.append(
-                    SliceRefusal("reasoning", f"a budget is refused: {budget.refused}")
-                )
+                refusals.append(SliceRefusal("reasoning", budget.refused))
             case BudgetFact():
                 missing = [need for need in budget.needs if need not in provided]
 

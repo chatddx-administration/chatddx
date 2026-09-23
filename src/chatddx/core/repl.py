@@ -4,9 +4,9 @@ The repl: run cases on a cell, and watch the model answer as it goes.
 
 A cell is a configuration joined to a stack (new-datamodel.md §5), and the
 repl holds one the way psql holds a database: `use` puts a configuration in
-it, `on` a stack, and `run` makes a trial of it on a case. Names are looked
-up as the identity the repl runs as sees them: its own branches first, then
-those shared with it.
+it, `on` a stack, `set` another variation of one of its slices, and `run`
+makes a trial of it on a case. Names are looked up as the identity the repl
+runs as sees them: its own branches first, then those shared with it.
 """
 
 import asyncio
@@ -17,7 +17,7 @@ import shlex
 import sys
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, get_args
 
 import typer
 from pydantic import JsonValue
@@ -37,8 +37,10 @@ from rich.table import Table
 from rich.text import Text
 
 from chatddx.core.models import IdentityModel
+from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.configuration.pydantic import ConfigurationBranchSpec
 from chatddx.repo.entities.model.pydantic import ModelBranchSpec, ModelFacts
+from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchSpec
 from chatddx.repo.entities.stack.pydantic import StackBranchSpec
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.names import short_fingerprint
@@ -54,6 +56,8 @@ from chatddx.runtime.resolution import (
     Resolution,
     Sampling,
     SliceRefusal,
+    Slices,
+    realize,
     resolve,
 )
 from chatddx.runtime.trial import Trial
@@ -73,7 +77,9 @@ COMMANDS: dict[str, tuple[tuple[str, ...], str]] = {
     "use": (("CONFIGURATION",), "put a configuration in the cell"),
     "on": (("STACK",), "put a stack in the cell"),
     "cell": (("CONFIGURATION", "STACK"), "put both in the cell"),
+    "set": (("SLICE", "VARIATION"), "put another variation of a slice in the cell"),
     "show": ((), "show the cell, and how it resolves on its stack"),
+    "reasoning": ((), "show what each reasoning variation does on each stack"),
     "run": (("CASE",), "run a case on the cell"),
     "help": ((), "list the commands"),
     "quit": ((), "leave (or Ctrl-D)"),
@@ -87,6 +93,8 @@ SLICES: tuple[EntityName, ...] = (
     "sampling",
     "toolset",
 )
+
+EFFORTS: tuple[Effort, ...] = get_args(Effort.__value__)
 
 
 class Repl:
@@ -102,17 +110,44 @@ class Repl:
         self.transport: Any = transport
 
         self.configuration: ConfigurationBranchSpec | None = None
+        # the variations `set` put in the cell in place of the configuration's
+        self.variations: dict[str, Any] = {}
         self.stack: StackBranchSpec | None = None
-        self.model: ModelBranchSpec | None = None
 
         self._names: dict[tuple[EntityName, int], str] = {}
+        self._facts: dict[int, ModelFacts] = {}
+
+    @property
+    def label(self) -> str:
+        """The cell's configuration, and what is set in it."""
+        if not self.configuration:
+            return ""
+
+        set_ = "".join(
+            f"+{entity}={self.variations[entity].name}"
+            for entity in SLICES
+            if entity in self.variations
+        )
+        return f"{self.configuration.name}{set_}"
 
     @property
     def prompt(self) -> str:
-        configuration = self.configuration.name if self.configuration else ""
         stack = f"×{self.stack.name}" if self.stack else ""
-        cell = f" {configuration}{stack}" if configuration or stack else ""
+        cell = f" {self.label}{stack}" if self.configuration or self.stack else ""
         return f"{self.identity}{cell}> "
+
+    @property
+    def slices(self) -> Slices:
+        """The cell's variations: those set, and the configuration's."""
+        return Slices(**{entity: self.variation(entity) for entity in SLICES})
+
+    def variation(self, entity: str) -> Any:
+        assert self.configuration
+
+        if entity in self.variations:
+            return self.variations[entity].target
+
+        return getattr(self.configuration.target, entity)
 
     def handle(self, line: str) -> bool:
         """Carry out one line; False when it asks to leave."""
@@ -181,8 +216,7 @@ class Repl:
         for column in ("stack", "model", "machine", "endpoint", "owner"):
             table.add_column(column)
 
-        for model in select_visible_branch_models("stack", self.identity):
-            spec = StackBranchSpec.model_validate(model)
+        for spec in self.stacks():
             table.add_row(
                 spec.name,
                 self.name_of("model", spec.target.model),
@@ -200,11 +234,12 @@ class Repl:
 
     def do_use(self, name: str) -> None:
         model = get_visible_branch_model("configuration", self.identity, name)
-        self.configuration = ConfigurationBranchSpec.model_validate(model)
+        self.put_configuration(model)
         self.say_cell()
 
     def do_on(self, name: str) -> None:
-        self.put_stack(get_visible_branch_model("stack", self.identity, name))
+        model = get_visible_branch_model("stack", self.identity, name)
+        self.stack = StackBranchSpec.model_validate(model)
         self.say_cell()
 
     def do_cell(self, configuration: str, stack: str) -> None:
@@ -214,8 +249,29 @@ class Repl:
         )
         stack_model = get_visible_branch_model("stack", self.identity, stack)
 
-        self.configuration = ConfigurationBranchSpec.model_validate(configuration_model)
-        self.put_stack(stack_model)
+        self.put_configuration(configuration_model)
+        self.stack = StackBranchSpec.model_validate(stack_model)
+        self.say_cell()
+
+    def do_set(self, entity: str, name: str) -> None:
+        if entity not in SLICES:
+            self.error(f"no slice '{entity}': {', '.join(SLICES)}")
+            return
+
+        if not self.configuration:
+            self.error("the cell has no configuration to set it in: use CONFIGURATION")
+            return
+
+        model = get_visible_branch_model(entity, self.identity, name)
+        spec = entity_of(entity).branch_spec.model_validate(model)
+        own = getattr(self.configuration.target, entity)
+
+        if own is not None and own.fingerprint == spec.target.fingerprint:
+            # the configuration's own: nothing is set any more
+            _ = self.variations.pop(entity, None)
+        else:
+            self.variations[entity] = spec
+
         self.say_cell()
 
     def do_show(self) -> None:
@@ -248,13 +304,15 @@ class Repl:
             table.add_row("model", model, self.outcome("model", refusals, where))
 
         if self.configuration:
-            trail = self.configuration.target
+            slices = self.slices
 
             for entity in SLICES:
-                variation = getattr(trail, entity)
-                name = self.name_of(entity, variation) if variation else "—"
-                realized = _realized(entity, trail, parts) if parts else ""
-                table.add_row(entity, name, self.outcome(entity, refusals, realized))
+                realized = _realized(entity, slices, parts) if parts else ""
+                table.add_row(
+                    entity,
+                    self.variation_text(entity),
+                    self.outcome(entity, refusals, realized),
+                )
 
         self.console.print(table)
 
@@ -264,6 +322,63 @@ class Repl:
             self.console.print(Text(system or "(none)"))
             self.console.print("user", style="bold")
             self.console.print(Text(user))
+
+    def do_reasoning(self) -> None:
+        variations = sorted(
+            (
+                ReasoningBranchSpec.model_validate(model)
+                for model in select_visible_branch_models("reasoning", self.identity)
+            ),
+            key=lambda v: (
+                EFFORTS.index(v.target.effort),
+                v.target.budget or 0,
+                v.name,
+            ),
+        )
+        stacks = self.stacks()
+        slices = self.slices if self.configuration else None
+
+        caption = (
+            f"sampling as '{self.name_of('sampling', slices.sampling)}' pulls it in"
+            if slices
+            else "the cell has no configuration: no sampling is pulled in"
+        )
+        # A column per stack, but stacks every variation resolves alike on
+        # share one: they differ in nothing this table shows.
+        columns: dict[tuple[str, ...], tuple[list[str], list[Text]]] = {}
+
+        for stack in stacks:
+            cells = [
+                _effort(
+                    *realize(
+                        variation.target,
+                        slices.sampling if slices else None,
+                        self.facts_of(stack),
+                        stack.target.serving,
+                    )
+                )
+                for variation in variations
+            ]
+            names, _ = columns.setdefault(
+                tuple(cell.plain for cell in cells), ([], cells)
+            )
+            current = self.stack is not None and self.stack.name == stack.name
+            names.append(f"▸ {stack.name}" if current else stack.name)
+
+        table = Table(header_style="bold", show_lines=True, caption=caption)
+        table.add_column("reasoning")
+
+        for names, _ in columns.values():
+            table.add_column("\n".join(names), overflow="fold")
+
+        for i, variation in enumerate(variations):
+            current = slices is not None and _same(slices.reasoning, variation.target)
+            table.add_row(
+                f"▸ {variation.name}" if current else variation.name,
+                *(cells[i] for _, cells in columns.values()),
+            )
+
+        self.console.print(table)
 
     def do_run(self, name: str) -> None:
         if not (self.configuration and self.stack):
@@ -286,8 +401,7 @@ class Repl:
             return
 
         self.console.print(
-            f"trial: {self.configuration.name} × {self.stack.name} × {case.name}",
-            style="bold",
+            f"trial: {self.label} × {self.stack.name} × {case.name}", style="bold"
         )
 
         trial = Trial(
@@ -307,28 +421,40 @@ class Repl:
 
     # -------------------------------------------------------------- helpers
 
-    def put_stack(self, model: Any) -> None:
-        self.stack = StackBranchSpec.model_validate(model)
+    def put_configuration(self, model: Any) -> None:
+        # a configuration goes in as it is: what was set was set in another
+        self.configuration = ConfigurationBranchSpec.model_validate(model)
+        self.variations = {}
 
-        try:
-            self.model = ModelBranchSpec.model_validate(
-                get_visible_branch_model(
-                    "model", self.identity, trail=self.stack.target.model.id
-                )
-            )
-        except (BranchNotFoundError, AmbiguousBranchError):
-            # no facts to read: resolution refuses for want of them
-            self.model = None
+    def stacks(self) -> list[StackBranchSpec]:
+        return [
+            StackBranchSpec.model_validate(model)
+            for model in select_visible_branch_models("stack", self.identity)
+        ]
+
+    def facts_of(self, stack: StackBranchSpec) -> ModelFacts:
+        """The facts of the stack's model, as the identity's branch has them."""
+        model_id = stack.target.model.id
+
+        if model_id not in self._facts:
+            try:
+                model = get_visible_branch_model("model", self.identity, trail=model_id)
+                facts = ModelBranchSpec.model_validate(model).details.facts
+            except (BranchNotFoundError, AmbiguousBranchError):
+                # none to read: resolution refuses for want of them
+                facts = ModelFacts()
+
+            self._facts[model_id] = facts
+
+        return self._facts[model_id]
 
     def resolve(self) -> Resolution:
         assert self.configuration and self.stack
 
-        facts = self.model.details.facts if self.model else ModelFacts()
-
         return resolve(
-            self.configuration.target,
+            self.slices,
             self.stack.details,
-            facts,
+            self.facts_of(self.stack),
             self.stack.target.serving,
         )
 
@@ -354,6 +480,18 @@ class Repl:
             self._names[key] = name
 
         return self._names[key]
+
+    def variation_text(self, entity: EntityName) -> Text:
+        assert self.configuration
+
+        own = self.name_of(entity, getattr(self.configuration.target, entity))
+
+        if entity not in self.variations:
+            return Text(own)
+
+        text = Text(self.variations[entity].name, style="bold")
+        text.append(f" (set; {self.configuration.name} has {own})", style=LABEL)
+        return text
 
     def owner(self, name: str) -> str:
         return "" if name == self.identity else name
@@ -386,7 +524,7 @@ class Repl:
         return text
 
     def say_cell(self) -> None:
-        configuration = self.configuration.name if self.configuration else "?"
+        configuration = self.label or "?"
         stack = self.stack.name if self.stack else "?"
         self.console.print(f"cell: {configuration} × {stack}")
 
@@ -409,9 +547,9 @@ class Repl:
 type Parts = tuple[Reasoning | None, Sampling | None, dict[str, str]]
 
 
-def _realized(entity: str, configuration: Any, parts: Parts) -> str:
+def _realized(entity: str, slices: Slices, parts: Parts) -> str:
     reasoning, sampling, slots = parts
-    free_text = configuration.output.schema is None
+    free_text = slices.output.schema is None
 
     match entity:
         case "reasoning" if reasoning:
@@ -433,8 +571,49 @@ def _realized(entity: str, configuration: Any, parts: Parts) -> str:
             return ""
 
 
-def _writes(writes: dict[str, JsonValue]) -> str:
-    return " ".join(f"{k}={json.dumps(v)}" for k, v in writes.items())
+def _effort(
+    reasoning: Reasoning | None,
+    sampling: Sampling | None,
+    refusals: list[SliceRefusal],
+) -> Text:
+    """A reasoning variation on a stack, as the table shows it."""
+    if refusals:
+        return Text(
+            "\n".join(f"refused: {refusal.reason}" for refusal in refusals),
+            style=REFUSED,
+        )
+
+    assert reasoning
+
+    text = Text()
+
+    if reasoning.effort != reasoning.intent:
+        # the model's default, or a collapse: the intent it ends at
+        text.append(f"→ {reasoning.intent}\n")
+
+    text.append(_writes(reasoning.writes) or "nothing")
+
+    if sampling:
+        text.append(f"\n{_writes(sampling.writes) or 'nothing'}", style=LABEL)
+
+    return text
+
+
+def _same(trail: Any, other: Any) -> bool:
+    return trail.fingerprint == other.fingerprint
+
+
+def _writes(writes: dict[str, JsonValue], prefix: str = "") -> str:
+    """Request fields as `path=value`, a nested field by its dotted path."""
+    fields: list[str] = []
+
+    for key, value in writes.items():
+        if isinstance(value, dict):
+            fields.append(_writes(value, f"{prefix}{key}."))
+        else:
+            fields.append(f"{prefix}{key}={json.dumps(value)}")
+
+    return " ".join(field for field in fields if field)
 
 
 async def show_events(console: Console, events: AgentRunEvents[str]) -> None:
@@ -495,11 +674,16 @@ def complete(names: dict[str, list[str]], line: str) -> list[str]:
     if position >= len(params):
         return []
 
-    return [
-        name
-        for name in names.get(params[position].lower(), [])
-        if name.startswith(words[-1])
-    ]
+    match params[position]:
+        case "SLICE":
+            candidates = list(SLICES)
+        case "VARIATION":
+            # a variation of the slice named before it
+            candidates = names.get(words[position - 1], [])
+        case param:
+            candidates = names.get(param.lower(), [])
+
+    return [name for name in candidates if name.startswith(words[-1])]
 
 
 def repl(
@@ -525,7 +709,8 @@ def repl(
 
     # looked up once: a name is completed from these as it is typed
     names = {
-        entity: shell.names(entity) for entity in ("configuration", "stack", "case")
+        entity: shell.names(entity)
+        for entity in ("configuration", "stack", "case", *SLICES)
     }
 
     def completer(_word: str, state: int) -> str | None:

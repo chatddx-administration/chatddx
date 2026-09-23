@@ -16,7 +16,13 @@ from chatddx.repo.entities.tool.pydantic import ToolTrailSchema
 from chatddx.repo.entities.toolset.pydantic import ToolsetTrailSchema
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.parsers.inventory import parse
-from chatddx.runtime.resolution import CellRefused, SliceRefusal, resolve
+from chatddx.runtime.resolution import (
+    CellRefused,
+    SliceRefusal,
+    Slices,
+    realize,
+    resolve,
+)
 
 ENGINE = "/nix/store/5nxjf9n4gzgajv67rd4fb1kdssql7g51-python3.13-vllm-0.13.0"
 
@@ -28,6 +34,7 @@ FACTS = ModelFacts.model_validate(
             "on": {"chat_template_kwargs": {"enable_thinking": True}},
             "high": "on",
             "low": {"refused": "no effort levels"},
+            "xhigh": "low",
             "budget": {"field": "thinking_token_budget", "needs": "reasoning_parser"},
         },
         "sampling": {
@@ -164,12 +171,46 @@ def test_free_text_places_no_schema_whatever_the_coercion():
     assert resolution.slots == {"output_guidance": "List the diagnoses."}
 
 
+def test_a_variation_set_in_a_configuration_s_place_resolves_there():
+    configuration = cell()
+    slices = Slices(
+        instruction=configuration.instruction,
+        output=configuration.output,
+        coercion=configuration.coercion,
+        reasoning=ReasoningTrailSchema(effort="off"),
+        sampling=configuration.sampling,
+        toolset=configuration.toolset,
+    )
+
+    resolution = resolve(slices, STACK, FACTS, SERVING)
+
+    assert resolution.reasoning.writes == {
+        "chat_template_kwargs": {"enable_thinking": False}
+    }
+    assert resolution.sampling.source == "recommended for 'off'"
+
+
+def test_reasoning_realizes_without_a_sampling_to_pull_in():
+    reasoning, sampling, refusals = realize(
+        ReasoningTrailSchema(effort="high"), None, FACTS, SERVING
+    )
+
+    assert reasoning is not None
+    assert (reasoning.intent, sampling, refusals) == ("on", None, [])
+
+
 # ------------------------------------------------------------------- refused
 
 
 def test_an_effort_the_facts_refuse_is_refused_with_their_reason():
     assert refusals(cell(reasoning=ReasoningTrailSchema(effort="low"))) == [
-        SliceRefusal("reasoning", "'low' is refused: no effort levels")
+        SliceRefusal("reasoning", "no effort levels")
+    ]
+
+
+def test_an_effort_that_collapses_into_a_refused_one_says_where_it_ended():
+    assert refusals(cell(reasoning=ReasoningTrailSchema(effort="xhigh"))) == [
+        SliceRefusal("reasoning", "it ends at 'low': no effort levels")
     ]
 
 
