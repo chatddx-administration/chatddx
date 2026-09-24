@@ -22,7 +22,9 @@ match DJANGO_MODE:
 INSTALLED_APPS = [
     "unfold",
     "chatddx.django.portal",
-    "chatddx.django.orm.apps.OrmConfig",
+    "chatddx.core.apps.CoreConfig",
+    "chatddx.repo.apps.RepoConfig",
+    "chatddx.history.apps.HistoryConfig",
     "modeltranslation",
     "corsheaders",
     "unfold.contrib.filters",

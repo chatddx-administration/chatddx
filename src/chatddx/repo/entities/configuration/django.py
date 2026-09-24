@@ -2,15 +2,19 @@
 
 from django.db.models import PROTECT, ForeignKey
 
-from chatddx.django.orm.annotations import BranchRef
-from chatddx.django.orm.utils import Sharable
 from chatddx.repo.entities.coercion.django import Coercion, CoercionTrailModel
 from chatddx.repo.entities.instruction.django import Instruction, InstructionTrailModel
 from chatddx.repo.entities.output.django import Output, OutputTrailModel
 from chatddx.repo.entities.reasoning.django import Reasoning, ReasoningTrailModel
 from chatddx.repo.entities.sampling.django import Sampling, SamplingTrailModel
 from chatddx.repo.entities.toolset.django import Toolset, ToolsetTrailModel
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.branch_refs import BranchRef
+from chatddx.repo.families.django import (
+    BranchModel,
+    BranchProxy,
+    Sharable,
+    TrailModel,
+)
 
 
 class ConfigurationTrailModel(TrailModel):
@@ -54,6 +58,9 @@ class ConfigurationTrailModel(TrailModel):
         related_name="configurations",
     )
 
+    class Meta:
+        db_table = "repo_configuration_trail"
+
 
 class ConfigurationBranchModel(BranchModel):
     trail = ForeignKey(
@@ -68,6 +75,9 @@ class ConfigurationBranchModel(BranchModel):
     reasoning_branch = BranchRef("trail__reasoning", "reasoning", Reasoning)
     sampling_branch = BranchRef("trail__sampling", "sampling", Sampling)
     toolset_branch = BranchRef("trail__toolset", "toolset", Toolset)
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_configuration_branch"
 
 
 class Configuration(BranchProxy, ConfigurationBranchModel, Sharable):

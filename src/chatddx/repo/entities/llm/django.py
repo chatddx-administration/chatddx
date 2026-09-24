@@ -8,6 +8,9 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 class LLMTrailModel(TrailModel):
     snapshot = TextField()
 
+    class Meta:
+        db_table = "repo_llm_trail"
+
 
 class LLMBranchModel(BranchModel):
     trail = ForeignKey(
@@ -15,6 +18,9 @@ class LLMBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_llm_branch"
 
 
 class LLM(BranchProxy, LLMBranchModel):

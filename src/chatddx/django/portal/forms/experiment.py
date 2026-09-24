@@ -6,7 +6,7 @@ from django import forms
 from unfold.widgets import UnfoldAdminSelectWidget
 
 from chatddx.core.choices import RunStatusChoices
-from chatddx.django.orm.qs import expects_by_case
+from chatddx.django.portal.qs import expects_by_case
 from chatddx.history.proxies import Experiment
 
 # Sentinel for "create the experiment, but no run to go with it". It lives

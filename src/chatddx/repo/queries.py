@@ -2,7 +2,7 @@
 The queries the registry answers itself: an owner's heads, and a branch with
 what it carries.
 
-`chatddx.django.orm.qs` builds the portal's pages on these; the registry
+`chatddx.django.portal.qs` builds the portal's pages on these; the registry
 doesn't reach up for them, so it stands without the pages.
 """
 

@@ -15,7 +15,7 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import TagModel
-from chatddx.django.orm.qs import qs_head, qs_owned_trails
+from chatddx.django.portal.qs import qs_head, qs_owned_trails
 from chatddx.history.proxies import Batch
 from chatddx.repo.entities.agent.django import AgentTrailModel
 from chatddx.repo.entities.scorer.django import Scorer

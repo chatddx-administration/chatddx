@@ -10,6 +10,9 @@ class CoercionTrailModel(TrailModel):
     schema_prompt = TextField(null=True, blank=True)
     tool_description = TextField(null=True, blank=True)
 
+    class Meta:
+        db_table = "repo_coercion_trail"
+
 
 class CoercionBranchModel(BranchModel):
     trail = ForeignKey(
@@ -17,6 +20,9 @@ class CoercionBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_coercion_branch"
 
 
 class Coercion(BranchProxy, CoercionBranchModel):

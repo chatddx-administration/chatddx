@@ -5,9 +5,9 @@ from typing import Any
 from django.contrib import admin
 from django.http import HttpRequest
 
-from chatddx.django.orm.qs import qs_super_agent
 from chatddx.django.portal.branch import BranchModelAdmin
 from chatddx.django.portal.forms.super_agent import SuperAgentForm
+from chatddx.django.portal.qs import qs_super_agent
 from chatddx.django.portal.typing import TypedModelAdmin
 from chatddx.django.portal.utils import truncate_for_list_display
 from chatddx.repo.entities.super_agent.django import SharedSuperAgent, SuperAgent

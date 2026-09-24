@@ -2,12 +2,19 @@
 
 from django.db.models import PROTECT, ForeignKey, TextField
 
-from chatddx.django.orm.utils import Sharable
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import (
+    BranchModel,
+    BranchProxy,
+    Sharable,
+    TrailModel,
+)
 
 
 class CaseTrailModel(TrailModel):
     vignette = TextField()
+
+    class Meta:
+        db_table = "repo_case_trail"
 
 
 class CaseBranchModel(BranchModel):
@@ -16,6 +23,9 @@ class CaseBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_case_branch"
 
 
 class Case(BranchProxy, CaseBranchModel, Sharable):

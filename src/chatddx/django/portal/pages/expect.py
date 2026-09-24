@@ -4,9 +4,9 @@ from typing import Any
 
 from django.http import HttpRequest
 
-from chatddx.django.orm.qs import qs_head
 from chatddx.django.portal.branch import BranchModelInlineAdmin
 from chatddx.django.portal.forms.expect import ExpectInlineForm, ExpectInlineFormSet
+from chatddx.django.portal.qs import qs_head
 from chatddx.repo.entities.case.django import Case
 from chatddx.repo.entities.expect.django import Expect
 from chatddx.repo.entities.scorer.django import Scorer

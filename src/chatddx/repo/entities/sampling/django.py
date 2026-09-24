@@ -25,6 +25,9 @@ class SamplingTrailModel(TrailModel):
     frequency_penalty = FloatField(null=True, blank=True)
     stop = JSONField(null=True, blank=True)
 
+    class Meta:
+        db_table = "repo_sampling_trail"
+
 
 class SamplingBranchModel(BranchModel):
     trail = ForeignKey(
@@ -32,6 +35,9 @@ class SamplingBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_sampling_branch"
 
 
 class Sampling(BranchProxy, SamplingBranchModel):

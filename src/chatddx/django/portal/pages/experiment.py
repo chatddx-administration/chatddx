@@ -11,9 +11,9 @@ from chatddx.core.choices import RunStatusChoices
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
 from chatddx.core.worker import wake_on_commit
-from chatddx.django.orm.qs import qs_experiments, qs_owned_trails
 from chatddx.django.portal.forms.experiment import NO_RUN, ExperimentForm
 from chatddx.django.portal.mixins import ModelAdminFormWithRequest
+from chatddx.django.portal.qs import qs_experiments, qs_owned_trails
 from chatddx.django.portal.typing import TypedModelAdmin
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.history.proxies import Experiment, Run, SharedExperiment, SharedRun

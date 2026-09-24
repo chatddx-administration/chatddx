@@ -16,6 +16,9 @@ class ToolsetTrailModel(TrailModel):
         default=list,
     )
 
+    class Meta:
+        db_table = "repo_toolset_trail"
+
 
 class ToolsetBranchModel(BranchModel):
     trail = ForeignKey(
@@ -23,6 +26,9 @@ class ToolsetBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_toolset_branch"
 
 
 class Toolset(BranchProxy, ToolsetBranchModel):

@@ -9,9 +9,9 @@ from unfold.decorators import action
 
 from chatddx.core.choices import RunStatusChoices
 from chatddx.core.utils import ensure_identity
-from chatddx.django.orm.qs import qs_batches
 from chatddx.django.portal.forms.batch import BatchForm
 from chatddx.django.portal.mixins import ModelAdminFormWithRequest
+from chatddx.django.portal.qs import qs_batches
 from chatddx.django.portal.typing import TypedModelAdmin
 from chatddx.history import batches
 from chatddx.history.batches import BatchPlan

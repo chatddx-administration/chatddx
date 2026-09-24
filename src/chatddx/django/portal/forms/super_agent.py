@@ -16,13 +16,13 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import IdentityModel
-from chatddx.django.orm.qs import qs_with_relations
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.connection import ConnectionForm
 from chatddx.django.portal.forms.output_type import OutputTypeForm
 from chatddx.django.portal.forms.sampling_params import SamplingParamsForm
 from chatddx.django.portal.forms.tool_group import ToolGroupForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
+from chatddx.django.portal.qs import qs_with_relations
 from chatddx.django.portal.utils import load_form_data
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.django import Agent

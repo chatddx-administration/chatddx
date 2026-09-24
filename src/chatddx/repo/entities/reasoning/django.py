@@ -9,6 +9,9 @@ class ReasoningTrailModel(TrailModel):
     effort = CharField(max_length=16)
     budget = PositiveIntegerField(null=True, blank=True)
 
+    class Meta:
+        db_table = "repo_reasoning_trail"
+
 
 class ReasoningBranchModel(BranchModel):
     trail = ForeignKey(
@@ -16,6 +19,9 @@ class ReasoningBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_reasoning_branch"
 
 
 class Reasoning(BranchProxy, ReasoningBranchModel):

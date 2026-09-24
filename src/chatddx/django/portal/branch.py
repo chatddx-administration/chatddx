@@ -10,9 +10,9 @@ from django.urls import reverse
 from unfold.contrib.inlines.admin import NonrelatedTabularInline
 
 from chatddx.core.utils import ensure_tag
-from chatddx.django.orm.qs import qs_head, qs_with_relations
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.mixins import ModelAdminFormWithRequest
+from chatddx.django.portal.qs import qs_head, qs_with_relations
 from chatddx.django.portal.request_context import RequestContext, request_contexts
 from chatddx.django.portal.typing import TypedModelAdmin
 from chatddx.django.portal.utils import template_registry

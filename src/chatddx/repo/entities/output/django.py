@@ -16,6 +16,9 @@ class OutputTrailModel(TrailModel):
     guidance = TextField(null=True, blank=True)
     views = JSONField(default=dict, blank=True)
 
+    class Meta:
+        db_table = "repo_output_trail"
+
 
 class OutputBranchModel(BranchModel):
     trail = ForeignKey(
@@ -23,6 +26,9 @@ class OutputBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_output_branch"
 
 
 class Output(BranchProxy, OutputBranchModel):

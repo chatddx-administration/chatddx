@@ -11,6 +11,9 @@ class ScorerTrailModel(TrailModel):
     target_kind = CharField(max_length=32, null=True, blank=True)
     args = JSONField(default=dict, blank=True)
 
+    class Meta:
+        db_table = "repo_scorer_trail"
+
 
 class ScorerBranchModel(BranchModel):
     trail = ForeignKey(
@@ -18,6 +21,9 @@ class ScorerBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_scorer_branch"
 
 
 class Scorer(BranchProxy, ScorerBranchModel):

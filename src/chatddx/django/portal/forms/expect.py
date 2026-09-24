@@ -9,11 +9,11 @@ from unfold.widgets import UnfoldAdminTextareaWidget
 
 from chatddx.core import settings
 from chatddx.dev.error_handling import print_pydantic_errors
-from chatddx.django.orm.qs import qs_head
 from chatddx.django.portal.forms.branch_base import (
     BranchFormSet,
     PydanticValidationError,
 )
+from chatddx.django.portal.qs import qs_head
 from chatddx.repo.bundles import presentation_of
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.expect.django import Expect

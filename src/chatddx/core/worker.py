@@ -31,7 +31,7 @@ from pgqueuer.domain.types import QueueExecutionMode
 from pgqueuer.models import Job, Schedule
 
 from chatddx.core.choices import RunStatusChoices, SessionContextChoices
-from chatddx.django.orm.qs import qs_head
+from chatddx.django.portal.qs import qs_head
 from chatddx.eval.scorers import resolve_scorer
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.history.session import start_session

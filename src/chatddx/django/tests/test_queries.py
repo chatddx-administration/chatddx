@@ -3,7 +3,7 @@ import pytest
 from django.db.models import Q
 
 from chatddx.core.models import IdentityModel
-from chatddx.django.orm.qs import qs_super_agent
+from chatddx.django.portal.qs import qs_super_agent
 from chatddx.repo.entities.agent.django import Agent, AgentBranchModel, AgentTrailModel
 from chatddx.repo.entities.connection.django import ConnectionTrailModel
 from chatddx.repo.entities.sampling_params.pydantic import SamplingParamsFormDataIn

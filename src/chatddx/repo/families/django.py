@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from django.contrib import admin
 from django.db.models import (
     PROTECT,
     CharField,
@@ -12,6 +13,7 @@ from django.db.models import (
     ForeignKey,
     Index,
     JSONField,
+    Manager,
     ManyToManyField,
     Model,
     TextField,
@@ -52,7 +54,6 @@ class TrailModel(Model):
 
     class Meta:
         abstract = True
-        app_label = "orm"
 
     def __str__(self) -> str:
         return self.branch_name or short_fingerprint(self.fingerprint)
@@ -98,7 +99,6 @@ class BranchModel(Model):
 
     class Meta:
         abstract = True
-        app_label = "orm"
         indexes = (Index(fields=["owner", "name", "-timestamp"]),)
 
     def as_proxy[ModelT: Model](self, proxy_model: type[ModelT]) -> ModelT:
@@ -117,8 +117,15 @@ class BranchProxy(Model):
     version_count: int | None = None
 
     class Meta:
-        app_label = "orm"
         abstract = True
 
     def __str__(self) -> str:
         return self.name
+
+
+class Sharable:
+    collaborators: Manager[IdentityModel]
+
+    @admin.display(description="Collaborators")
+    def collaborators_csv(self):
+        return ", ".join([str(c) for c in self.collaborators.all()]) or None

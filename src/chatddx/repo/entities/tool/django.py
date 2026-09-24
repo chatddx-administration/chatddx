@@ -15,6 +15,9 @@ class ToolTrailModel(TrailModel):
     description = TextField(blank=True)
     parameters = OrderedJSONField()
 
+    class Meta:
+        db_table = "repo_tool_trail"
+
 
 class ToolBranchModel(BranchModel):
     trail = ForeignKey(
@@ -22,6 +25,9 @@ class ToolBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_tool_branch"
 
 
 class Tool(BranchProxy, ToolBranchModel):

@@ -8,6 +8,9 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 class MachineTrailModel(TrailModel):
     machine_id = UUIDField()
 
+    class Meta:
+        db_table = "repo_machine_trail"
+
 
 class MachineBranchModel(BranchModel):
     trail = ForeignKey(
@@ -15,6 +18,9 @@ class MachineBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_machine_branch"
 
 
 class Machine(BranchProxy, MachineBranchModel):

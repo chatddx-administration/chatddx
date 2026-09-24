@@ -12,9 +12,9 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import IdentityModel
-from chatddx.django.orm.qs import qs_owned_trails
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
+from chatddx.django.portal.qs import qs_owned_trails
 from chatddx.repo.entities.agent.django import Agent
 from chatddx.repo.entities.agent.pydantic import (
     AgentBranchOut,

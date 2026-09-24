@@ -86,7 +86,7 @@ class MessageKind(StrEnum):
 
 class TrialModel(Model):
     class Meta:
-        app_label = "orm"
+        db_table = "history_trial"
         constraints = (
             UniqueConstraint(
                 fields=("configuration", "stack", "case", "seed"),
@@ -131,7 +131,7 @@ class TrialModel(Model):
 
 class ConversationModel(Model):
     class Meta:
-        app_label = "orm"
+        db_table = "history_conversation"
 
     uuid = UUIDField(
         default=uuid.uuid4,
@@ -163,7 +163,7 @@ class ConversationModel(Model):
 
 class RunModel(Model):
     class Meta:
-        app_label = "orm"
+        db_table = "history_run"
 
     uuid = UUIDField(
         default=uuid.uuid4,
@@ -297,7 +297,7 @@ class RunToolBranchModel(Model):
     """
 
     class Meta:
-        app_label = "orm"
+        db_table = "history_run_tool_branch"
 
     run = ForeignKey(
         RunModel,
@@ -321,7 +321,7 @@ class ScoreModel(Model):
     """
 
     class Meta:
-        app_label = "orm"
+        db_table = "history_score"
         ordering = ("pk",)
 
     run = ForeignKey(
@@ -380,7 +380,7 @@ class ScoreModel(Model):
 
 class MessageModel(Model):
     class Meta:
-        app_label = "orm"
+        db_table = "history_message"
         ordering = ("pk",)
 
     conversation = ForeignKey(

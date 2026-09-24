@@ -11,6 +11,9 @@ class InstructionTrailModel(TrailModel):
     # a list, whose order jsonb keeps
     variables = JSONField(default=list)
 
+    class Meta:
+        db_table = "repo_instruction_trail"
+
 
 class InstructionBranchModel(BranchModel):
     trail = ForeignKey(
@@ -18,6 +21,9 @@ class InstructionBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_instruction_branch"
 
 
 class Instruction(BranchProxy, InstructionBranchModel):

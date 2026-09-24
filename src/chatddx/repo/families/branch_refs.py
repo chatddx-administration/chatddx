@@ -142,7 +142,7 @@ def annotate_branch_refs[T: Model](
 
     for ref in refs.values():
         branch_qs = ref.branch_model.objects.filter(
-            target=OuterRef(ref.trail_path),
+            trail=OuterRef(ref.trail_path),
             owner__name=owner_name,
         ).order_by("-timestamp")
 

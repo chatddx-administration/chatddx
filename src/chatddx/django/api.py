@@ -8,7 +8,7 @@ from pydantic_ai.exceptions import ModelHTTPError
 from chatddx.core.choices import SessionContextChoices
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
-from chatddx.django.orm.qs import qs_head
+from chatddx.django.portal.qs import qs_head
 from chatddx.history.session import start_session
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.store.agent import get_agent_async, select_agents_async

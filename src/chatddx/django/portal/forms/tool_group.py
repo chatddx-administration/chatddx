@@ -16,9 +16,9 @@ from unfold.widgets import (
     UnfoldAdminTextInputWidget,
 )
 
-from chatddx.django.orm.qs import qs_owned_trails
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
+from chatddx.django.portal.qs import qs_owned_trails
 from chatddx.repo.entities.tool.django import ToolTrailModel
 from chatddx.repo.entities.tool_group.django import ToolGroup
 

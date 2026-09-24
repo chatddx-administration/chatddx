@@ -11,6 +11,9 @@ class ServingTrailModel(TrailModel):
     args = JSONField(default=dict, blank=True)
     env = JSONField(default=dict, blank=True)
 
+    class Meta:
+        db_table = "repo_serving_trail"
+
 
 class ServingBranchModel(BranchModel):
     trail = ForeignKey(
@@ -18,6 +21,9 @@ class ServingBranchModel(BranchModel):
         on_delete=PROTECT,
         related_name="branches",
     )
+
+    class Meta(BranchModel.Meta):
+        db_table = "repo_serving_branch"
 
 
 class Serving(BranchProxy, ServingBranchModel):

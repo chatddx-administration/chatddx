@@ -1,7 +1,7 @@
 import json
 from typing import Any, Literal
 
-from chatddx.django.orm.qs import qs_head, qs_with_relations
+from chatddx.django.portal.qs import qs_head, qs_with_relations
 from chatddx.repo.bundles import entity_of, presentation_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel
