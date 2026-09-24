@@ -295,7 +295,10 @@ class RunModel(Model):
 
 
 class RunToolBranchModel(Model):
-    """A tool's branch a run read: kept as long as the run is."""
+    """
+    A tool's branch a run read, kept as long as the run is, and the git blob
+    id of the file that ran for it (`chatddx.runtime.implementation`).
+    """
 
     class Meta:
         app_label = "orm"
@@ -308,6 +311,7 @@ class RunToolBranchModel(Model):
         ToolBranchModel,
         on_delete=PROTECT,
     )
+    blob = CharField(max_length=64)
 
 
 class MessageModel(Model):

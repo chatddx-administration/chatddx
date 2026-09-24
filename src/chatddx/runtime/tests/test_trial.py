@@ -2,6 +2,7 @@ import json
 import threading
 from collections.abc import Callable, Iterator
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import httpx2
@@ -18,6 +19,8 @@ from pydantic_ai import (
 )
 
 from chatddx.dx.fake_vllm import ANSWER, FakeTransport, server, stream, thinking
+from chatddx.runtime import tools
+from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import Resolution, Sampling
 from chatddx.runtime.trial import TOOL_ROUNDS, Trial, cause_of, invalid
 
@@ -349,8 +352,26 @@ async def test_each_call_is_run_and_what_it_returned_goes_back(
     assert [json.loads(body) for body in trial.requests] == fake.requests
 
 
-def broken() -> str:
-    raise RuntimeError("the index is down")
+def calling(tool: str, arguments: dict[str, Any]) -> httpx2.MockTransport:
+    """The fake vLLM, calling `tool` with `arguments`, whatever it declares."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+
+        for offered in body.get("tools", []):
+            if offered["function"]["name"] == tool:
+                offered["function"]["parameters"] = {
+                    "type": "object",
+                    "properties": {k: {"const": v} for k, v in arguments.items()},
+                }
+
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content="".join(stream(body)).encode(),
+        )
+
+    return httpx2.MockTransport(handler)
 
 
 @pytest.mark.asyncio
@@ -358,15 +379,82 @@ async def test_a_tool_that_fails_tells_the_model_why(
     cell: Cell, entry_points: dict[str, str]
 ):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
-    implementations = entry_points | {"sentinel_string": f"{__name__}:broken"}
-    fake = FakeTransport()
-
-    events = await run(
-        Trial(resolved, CASE, transport=fake, implementations=implementations)
+    trial = Trial(
+        resolved,
+        CASE,
+        transport=calling("sentinel_op", {"v1": 12, "v2": 0}),
+        implementations=entry_points,
     )
 
-    assert returned(fake.requests[-1]) == ["RuntimeError: the index is down", "0"]
+    events = await run(trial)
+
+    assert returned(json.loads(trial.requests[-1])) == [
+        "asdf",
+        "ZeroDivisionError: integer modulo by zero",
+    ]
     assert answer(events) == ANSWER
+
+
+@pytest.mark.asyncio
+async def test_arguments_that_don_t_hold_go_back_to_the_model_uncalled(
+    cell: Cell, entry_points: dict[str, str]
+):
+    resolved = cell("test-tools", "qwen3-8b-awq@fake")
+    trial = Trial(
+        resolved,
+        CASE,
+        transport=calling("sentinel_op", {"v1": "twelve", "v2": 8}),
+        implementations=entry_points,
+    )
+
+    _ = await run(trial)
+
+    assert returned(json.loads(trial.requests[-1])) == [
+        "asdf",
+        "invalid arguments: $.v1: 'twelve' is not of type 'integer'",
+    ]
+
+
+def test_only_chatddx_s_own_tools_run(cell: Cell, entry_points: dict[str, str]):
+    resolved = cell("test-tools", "qwen3-8b-awq@fake")
+
+    with pytest.raises(
+        ValueError,
+        match="the tool 'sentinel_op' can't run: os:system isn't one of chatddx's",
+    ):
+        _ = Trial(
+            resolved, CASE, implementations=entry_points | {"sentinel_op": "os:system"}
+        )
+
+    with pytest.raises(ValueError, match="there is no chatddx.runtime.tools.nope"):
+        _ = Trial(
+            resolved,
+            CASE,
+            implementations=entry_points
+            | {"sentinel_op": "chatddx.runtime.tools.nope:nope"},
+        )
+
+    with pytest.raises(
+        ValueError, match="there is no chatddx.runtime.tools.sentinel_op:nope"
+    ):
+        _ = Trial(
+            resolved,
+            CASE,
+            implementations=entry_points
+            | {"sentinel_op": "chatddx.runtime.tools.sentinel_op:nope"},
+        )
+
+
+def test_a_trial_keeps_the_blob_of_each_tool_file_it_runs(
+    cell: Cell, entry_points: dict[str, str]
+):
+    resolved = cell("test-tools", "qwen3-8b-awq@fake")
+    trial = Trial(resolved, CASE, implementations=entry_points)
+
+    assert {name: ran.blob for name, ran in trial.implementations.items()} == {
+        name: blob_of(Path(tools.__file__).parent.joinpath(f"{name}.py").read_bytes())
+        for name in ("sentinel_string", "sentinel_op")
+    }
 
 
 @pytest.mark.asyncio
@@ -408,7 +496,7 @@ def test_a_tool_with_nothing_to_run_is_refused_before_anything_is_sent(cell: Cel
             CASE,
             transport=FakeTransport(),
             implementations={
-                "sentinel_string": "chatddx.runtime.tools:sentinel_string"
+                "sentinel_string": "chatddx.runtime.tools.sentinel_string:sentinel_string"
             },
         )
 

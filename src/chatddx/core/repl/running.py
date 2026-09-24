@@ -62,29 +62,27 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
         return
 
     tools = repl.tools()
-    implementations = {
-        tool: branch.details.implementation.entry_point
-        for tool, branch in tools.items()
-        if branch.details.implementation is not None
-    }
-    missing = [t.name for t in resolution.tools if t.name not in implementations]
 
-    if missing:
-        repl.error(f"nothing to run for {', '.join(missing)}: no implementation")
+    try:
+        trial = Trial(
+            resolution,
+            case.target.payload,
+            api_key=api_key,
+            transport=repl.transport,
+            seed=int(seed) if seed is not None else None,
+            implementations={
+                tool: branch.details.implementation.entry_point
+                for tool, branch in tools.items()
+                if branch.details.implementation is not None
+            },
+        )
+    except ValueError as e:
+        repl.error(str(e))
         return
 
     seeded = f" (seed {seed})" if seed is not None else ""
     header = f"{cell.label} × {cell.stack.name} × {case.name}{seeded}"
     repl.console.print(f"trial: {header}", style="bold")
-
-    trial = Trial(
-        resolution,
-        case.target.payload,
-        api_key=api_key,
-        transport=repl.transport,
-        seed=int(seed) if seed is not None else None,
-        implementations=implementations,
-    )
 
     unheld = False if resolution.coercion is not None else None
     started = timezone.now()
@@ -118,7 +116,10 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
             Branches(
                 stack=cell.stack.id,
                 model=repl.model_of(cell.stack)[1],
-                tools=[branch.id for branch in tools.values()],
+                tools={
+                    tools[tool].id: ran.blob
+                    for tool, ran in trial.implementations.items()
+                },
             ),
             case.target_id,
             trial,

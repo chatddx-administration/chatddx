@@ -865,7 +865,7 @@ Each entity below is one slice, and each of its records is a variation.
 | `name` | trail | yes | the name the model sees |
 | `description` | trail | yes | |
 | `parameters` | trail | yes | |
-| `implementation` | details | no | a git revision and entry point; the trial records the revision it ran |
+| `implementation` | details | no | an entry point into one of chatddx's own tool files, `chatddx.runtime.tools.<file>`; each run records the git blob of the file that ran |
 
 ### The configuration and the case
 
@@ -889,7 +889,8 @@ errored, or on the client of a later deploy, and each run records:
 
 - the client it ran on: its build's trail, and the revision and package
   versions it ran with;
-- the branch rows whose details resolution read;
+- the branch rows whose details resolution read, and the git blob of each
+  tool file that ran;
 - the requests and responses themselves (`data-generation.md` §4);
 - the output value, and whether it is valid (§4).
 

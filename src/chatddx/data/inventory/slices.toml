@@ -166,8 +166,9 @@ frequency_penalty = 0
 # ------------------------------------------------------------ toolset, tool
 #
 # A toolset is ordered tools and the guidance that fills `tool_guidance`. A
-# tool is what the model sees of it; its implementation is description, and
-# a trial records the revision it ran.
+# tool is what the model sees of it; its implementation is description, a
+# function in one of chatddx's own tool files, and each run records the git
+# blob of the file that ran.
 
 [toolset.web]
 tools = ["web_search"]
@@ -179,7 +180,7 @@ tools = ["sentinel_string", "sentinel_op"]
 [tool.web_search]
 name = "web_search"
 description = "Search the web for up-to-date information"
-implementation.entry_point = "chatddx.runtime.tools:web_search"
+implementation.entry_point = "chatddx.runtime.tools.web_search:web_search"
 
 [tool.web_search.parameters]
 type = "object"
@@ -191,13 +192,13 @@ additionalProperties = false
 [tool.sentinel_string]
 name = "sentinel_string"
 description = "This is tool returns a string that is hard to know in advance"
-implementation.entry_point = "chatddx.runtime.tools:sentinel_string"
+implementation.entry_point = "chatddx.runtime.tools.sentinel_string:sentinel_string"
 parameters = { type = "object", properties = {}, additionalProperties = false }
 
 [tool.sentinel_op]
 name = "sentinel_op"
 description = "This tool takes two arguments and performs an operation on them"
-implementation.entry_point = "chatddx.runtime.tools:sentinel_op"
+implementation.entry_point = "chatddx.runtime.tools.sentinel_op:sentinel_op"
 
 [tool.sentinel_op.parameters]
 type = "object"

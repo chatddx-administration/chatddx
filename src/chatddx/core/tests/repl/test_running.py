@@ -216,5 +216,22 @@ def test_a_tool_with_nothing_to_run_is_said_before_anything_is_sent(
 
     written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
 
-    assert "nothing to run for sentinel_op: no implementation" in written
+    assert "the tool 'sentinel_op' has nothing to run" in written
+    assert "trial:" not in written
+    assert fake.requests == []
+
+
+def test_a_tool_that_isn_t_chatddx_s_own_is_refused_before_anything_is_sent(
+    say: Say, fake: FakeTransport
+):
+    _ = ToolBranchModel.objects.filter(name="sentinel_op").update(
+        details={"implementation": {"entry_point": "os:system"}}
+    )
+
+    written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
+
+    assert (
+        "the tool 'sentinel_op' can't run: os:system isn't one of chatddx's tools"
+        in written
+    )
     assert fake.requests == []

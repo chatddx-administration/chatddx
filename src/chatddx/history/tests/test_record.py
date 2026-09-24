@@ -7,6 +7,7 @@ import asyncio
 import json
 import uuid
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import httpx2
@@ -15,7 +16,12 @@ from django.utils import timezone
 from pydantic_ai import AgentRunResultEvent, UsageLimitExceeded
 
 from chatddx.dx.fake_vllm import ANSWER, FakeTransport, stream
-from chatddx.history.models import RunModel, RunStatus, TrialModel
+from chatddx.history.models import (
+    RunModel,
+    RunStatus,
+    RunToolBranchModel,
+    TrialModel,
+)
 from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.configuration.pydantic import (
@@ -28,6 +34,8 @@ from chatddx.repo.entities.stack.pydantic import StackBranchSpec
 from chatddx.repo.entities.tool.pydantic import ToolBranchSpec
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.shufflers.branch import get_visible_branch_model
+from chatddx.runtime import tools
+from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import resolve
 from chatddx.runtime.trial import TOOL_ROUNDS, Trial
 
@@ -105,7 +113,11 @@ def written(
     return record(
         "alex",
         cell,
-        Branches(stack.id, model.pk, [tool.id for tool in tools]),
+        Branches(
+            stack.id,
+            model.pk,
+            {tool.id: trial.implementations[tool.target.name].blob for tool in tools},
+        ),
         case.target_id,
         trial,
         outcome,
@@ -183,6 +195,13 @@ def test_a_run_keeps_its_tools_branches_and_every_round():
         "sentinel_op",
         "sentinel_string",
     ]
+    assert {
+        row.tool_branch.name: row.blob
+        for row in RunToolBranchModel.objects.filter(run=run)
+    } == {
+        name: blob_of(Path(tools.__file__).parent.joinpath(f"{name}.py").read_bytes())
+        for name in ("sentinel_op", "sentinel_string")
+    }
     assert len(run.requests) == len(run.responses) == 3
     assert [m.role for m in run.session.messages.all()] == [  # pyright: ignore[reportOptionalMemberAccess]
         "user",

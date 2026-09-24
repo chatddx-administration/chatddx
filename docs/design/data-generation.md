@@ -279,8 +279,9 @@ step translates the intent using the model's description:
 **Tools (later).**
 - The definitions the model reads (name, description and parameter schema)
   are part of the request and are hashed.
-- Implementations are referenced by git revision. They belong to the trial,
-  because they change the tool's results, not the request.
+- Implementations are chatddx's own tool files, and each run records the
+  git blob of the file that ran. They belong to the run, not the request,
+  because they change the tool's results, not what the model reads.
 - Their guidance fills `tool_guidance`.
 
 ### 2.3 Composition

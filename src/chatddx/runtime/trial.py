@@ -12,7 +12,6 @@ variations' names, says what ran. So are pydantic-ai's messages, as far as
 the run got.
 """
 
-import importlib
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
@@ -39,6 +38,7 @@ from pydantic_ai.profiles import DEFAULT_PROFILE, ModelProfile, merge_profile
 from pydantic_ai.profiles.openai import OpenAIModelProfile
 from pydantic_ai.providers.vllm import VLLMProvider
 
+from chatddx.runtime.implementation import Implementation, implementation
 from chatddx.runtime.resolution import Resolution
 
 SETTINGS = {
@@ -80,17 +80,24 @@ class Trial:
         self.api_key: str | None = api_key
         self.transport: httpx2.AsyncBaseTransport | None = transport
         self.seed: int | None = seed
-        self.implementations: dict[str, str] = implementations or {}
         self.run_id: str = run_id or str(uuid.uuid4())
         self.conversation_id: str = conversation_id or str(uuid.uuid4())
         self.requests: list[bytes] = []
         self.responses: list[bytearray] = []
         self.messages: list[ModelMessage] = []
         self.history: list[ModelMessage] = list(history)
+        self.implementations: dict[str, Implementation] = {}
 
         for tool in resolution.tools:
-            if tool.name not in self.implementations:
+            entry_point = (implementations or {}).get(tool.name)
+
+            if entry_point is None:
                 raise ValueError(f"the tool '{tool.name}' has nothing to run")
+
+            try:
+                self.implementations[tool.name] = implementation(entry_point)
+            except ValueError as e:
+                raise ValueError(f"the tool '{tool.name}' can't run: {e}") from None
 
     @asynccontextmanager
     async def stream(self) -> AsyncGenerator[AgentRunEvents[Any]]:
@@ -157,7 +164,7 @@ class Trial:
     def _tools(self) -> list[Tool[Any]]:
         return [
             Tool.from_schema(
-                _runner(self.implementations[tool.name]),
+                _runner(self.implementations[tool.name], tool.parameters),
                 name=tool.name,
                 description=tool.description,
                 json_schema=tool.parameters,
@@ -225,18 +232,22 @@ class _Copied(httpx2.AsyncByteStream):
         await self._stream.aclose()
 
 
-def load(entry_point: str) -> Callable[..., Any]:
-    """What an entry point names: `module.path:function`."""
-    module, _, name = entry_point.partition(":")
-    return getattr(importlib.import_module(module), name)
-
-
-def _runner(entry_point: str) -> Callable[..., Any]:
-    implementation = load(entry_point)
+def _runner(
+    implementation: Implementation, parameters: dict[str, JsonValue]
+) -> Callable[..., Any]:
+    """
+    A tool's function, called with arguments that hold to its parameters;
+    what doesn't hold, or fails, goes back to the model as what it returned.
+    """
 
     def run(**arguments: Any) -> Any:
+        problem = invalid(parameters, arguments)
+
+        if problem is not None:
+            return f"invalid arguments: {problem}"
+
         try:
-            return implementation(**arguments)
+            return implementation.function(**arguments)
         except Exception as e:  # noqa: BLE001
             return f"{type(e).__name__}: {e}"
 

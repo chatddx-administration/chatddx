@@ -379,8 +379,8 @@ def test_an_owner_s_branch_not_shared_isn_t_found_by_the_owner(
 
 
 SENTINEL = {
-    "sentinel_string": "chatddx.runtime.tools:sentinel_string",
-    "sentinel_op": "chatddx.runtime.tools:sentinel_op",
+    "sentinel_string": "chatddx.runtime.tools.sentinel_string:sentinel_string",
+    "sentinel_op": "chatddx.runtime.tools.sentinel_op:sentinel_op",
 }
 
 

@@ -4,8 +4,9 @@ toolset, not a slice (new-datamodel.md §6).
 
 The name, description and parameters reach the model, so they are content,
 and the parameters keep the order they were written in. What runs when the
-model calls it is description: an entry point, and a trial records the
-revision it ran.
+model calls it is description: an entry point into one of chatddx's own tool
+files, and each run records the git blob of the file that ran
+(`chatddx.runtime.implementation`).
 """
 
 from typing import Annotated, ClassVar
@@ -43,12 +44,9 @@ type ToolName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,64}$
 class ToolImplementation(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
-    # `module.path:function`
     entry_point: Annotated[
         str, StringConstraints(pattern=r"^[\w.]+:[A-Za-z_][A-Za-z0-9_]*$")
     ]
-    # a git revision, where one is pinned
-    rev: str | None = None
 
 
 class ToolDetails(Details):

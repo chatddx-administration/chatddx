@@ -48,11 +48,14 @@ from chatddx.runtime.trial import Trial
 
 @dataclass(frozen=True)
 class Branches:
-    """The branch rows whose details resolution read, by their ids."""
+    """
+    The branch rows whose details resolution read, by their ids, and the
+    blob id of the file each tool ran, by its branch's.
+    """
 
     stack: int
     model: int | None
-    tools: list[int] = field(default_factory=list[int])
+    tools: dict[int, str] = field(default_factory=dict[int, str])
 
 
 @dataclass(frozen=True)
@@ -123,7 +126,8 @@ def record(
             error=outcome.error,
         )
         _ = RunToolBranchModel.objects.bulk_create(
-            RunToolBranchModel(run=run, tool_branch_id=tool) for tool in branches.tools
+            RunToolBranchModel(run=run, tool_branch_id=tool, blob=blob)
+            for tool, blob in branches.tools.items()
         )
 
     return run
