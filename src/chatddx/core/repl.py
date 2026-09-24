@@ -675,7 +675,7 @@ class Repl:
 
     def do_replay(self, prefix: str | None = None) -> None:
         runs = RunModel.objects.filter(owner__name=self.identity).select_related(
-            "trial__configuration__output", "session"
+            "trial__configuration__output", "session", "client"
         )
 
         if prefix is not None:
@@ -698,7 +698,9 @@ class Repl:
             f"run {_short(run.uuid)} of trial {_short(run.trial.uuid)}: {what}",
             style="bold",
         )
-        self.console.print(f"{_when(run.timestamp)}, {run.status}", style=LABEL)
+        self.console.print(
+            f"{_when(run.timestamp)}, {run.status}, {_client(run)}", style=LABEL
+        )
 
         stored = list(run.session.messages.all()) if run.session else []
         messages = ModelMessagesTypeAdapter.validate_python(
@@ -1026,6 +1028,20 @@ def _short(value: Any) -> str:
 
 def _when(moment: datetime) -> str:
     return timezone.localtime(moment).strftime("%Y-%m-%d %H:%M")
+
+
+def _client(run: RunModel) -> str:
+    """The client a run ran on: its build, or the revision of a dev shell."""
+    if run.client is None:
+        return "on no client it recorded"
+
+    if run.client.build is not None:
+        return f"on {run.client.build}"
+
+    rev = run.client_rev or ""
+    dirty = "-dirty" if rev.endswith("-dirty") else ""
+
+    return f"from a dev shell at {rev[:12]}{dirty}" if rev else "from a dev shell"
 
 
 def _outcome(run: RunModel) -> Text:

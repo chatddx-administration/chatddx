@@ -36,6 +36,7 @@ from django.db.models import (
 
 from chatddx.core.models import IdentityModel
 from chatddx.repo.entities.case.django import CaseTrailModel
+from chatddx.repo.entities.client.django import ClientTrailModel
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
 from chatddx.repo.entities.model.django import ModelBranchModel
 from chatddx.repo.entities.stack.django import StackBranchModel, StackTrailModel
@@ -232,6 +233,26 @@ class RunModel(Model):
         through="RunToolBranchModel",
         blank=True,
         related_name="runs",
+    )
+
+    client = ForeignKey(
+        ClientTrailModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    client_id: int | None
+    client_rev = CharField(
+        max_length=64,
+        default=None,
+        null=True,
+        blank=True,
+    )
+    client_packages: JSONField[dict[str, str]] = JSONField(
+        default=dict,
+        blank=True,
     )
 
     started = DateTimeField(

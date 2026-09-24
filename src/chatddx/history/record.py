@@ -37,10 +37,12 @@ from chatddx.history.models import (
     SessionModel,
     TrialModel,
 )
+from chatddx.repo.entities.client.django import ClientTrailModel
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.shufflers.trail import dump_trail
+from chatddx.runtime.client import Client, running
 from chatddx.runtime.trial import Trial
 
 
@@ -78,12 +80,16 @@ def record(
     description: str | None = None,
     context: SessionContext = SessionContext.REPL,
     session: SessionModel | None = None,
+    client: Client | None = None,
 ) -> RunModel:
     """
     Write down a run of `trial`, a cell run on the case trail `case`: the
     configuration it ran, as content, and the branches of the stack, model
-    and tools it read. A run that continued `session` adds to it.
+    and tools it read, and the client it ran on: the one running, unless
+    another is given. A run that continued `session` adds to it.
     """
+    client = client or running()
+
     with transaction.atomic():
         identity = IdentityModel.objects.get(name=owner)
         stack = StackBranchModel.objects.get(pk=branches.stack)
@@ -107,6 +113,9 @@ def record(
             status=outcome.status,
             stack_branch=stack,
             model_branch_id=branches.model,
+            client=dump_trail(ClientTrailModel, client.trail),
+            client_rev=client.rev,
+            client_packages=client.packages,
             started=started,
             finished=finished,
             requests=[body.decode() for body in trial.requests],

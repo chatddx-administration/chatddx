@@ -146,6 +146,11 @@ def test_a_run_is_written_down_with_its_trial_session_and_messages():
     assert run.stack_branch_id == stack.pk
     assert run.model_branch == branch("model", "qwen3-8b-awq")
 
+    # and the client it ran on: a dev shell's, as the registry has it
+    assert run.client_id == branch("client", "chatddx-dev").target_id
+    assert run.client_rev is not None
+    assert run.client_packages["pydantic-ai-slim"]
+
     # the session: pydantic-ai's messages, carrying the run's id
     assert run.session is not None
     messages = list(run.session.messages.all())

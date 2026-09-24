@@ -364,7 +364,7 @@ def test_replay_shows_a_run_again_as_it_streamed(say: Say):
 
     assert replayed[0].startswith("run ")
     assert replayed[0].endswith(": test-tools × qwen3-8b-awq@fake × case-1")
-    assert replayed[1].endswith(", completed")
+    assert ", completed, from a dev shell at " in replayed[1]
     # thinking, calls, results, the answer and what it used, line for line
     assert replayed[2:] == live[start + 1 : end]
     assert "[result] asdf" in replayed
