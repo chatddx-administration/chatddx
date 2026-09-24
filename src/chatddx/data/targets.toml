@@ -4,301 +4,500 @@
 # the cases' `expects` in cases.toml; targets are inspect's, not the
 # registry's, so the inventory no longer carries them (new-datamodel.md §7).
 # A target is a pattern of whole words, `*` ending a stem
-# (`chatddx.scoring.scorers.patterns`).
+# (`chatddx.scoring.scorers.patterns`). Each `warning` and `disposition` is
+# guessed from the case's text, `# guessed`, until a clinician settles it.
 
 [DutchFall10w]
 diagnosis = "biliary & (colic | stone*)"
+warning = "dissection | cholangitis | cholecystitis | pancreatitis | perforat*"  # guessed
+disposition = "discharge* | home | outpatient | observation"  # guessed
 
 [Dutchfall11w]
 diagnosis = "aaa | (abdominal | aortic) & aneurysm | dissection"
+warning = "rupture* | dissection | shock | aneurysm*"  # guessed
+disposition = "surg* | operat* | vascular | icu | intensive & care"  # guessed
 
 [Dutchfall12w]
 diagnosis = "pancreatitis"
+warning = "necro* | organ & failure | shock | acute & coronary | myocardial & infarction"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall13w]
 diagnosis = "torsion | ovarian & torsion"
+warning = "torsion | ischemi* | ischaemi* | necro* | rupture*"  # guessed
+disposition = "surg* | operat* | laparoscop* | gynecolog* | gynaecolog*"  # guessed
 
 [Dutchfall14w]
 diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
+warning = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall15w]
 diagnosis = "gastroenteritis"
+warning = "appendicitis | perforat* | peritonitis | sepsis | dehydrat*"  # guessed
+disposition = "discharge* | home | outpatient | observation"  # guessed
 
 [Dutchfall16w]
 diagnosis = "chf | (congestive | failure) & heart"
+warning = "hypoxi* | respiratory & failure | pulmonary & (edema | oedema) | acute & coronary | myocardial & infarction"  # guessed
+disposition = "icu | intensive & care | ccu | coronary & care | admit* | admission | hospital*"  # guessed
 
 [Dutchfall17w]
 diagnosis = "liver & failure | cirrosis | cirrhosis"
+warning = "bleed* | variceal | varices | peritonitis | encephalopath* | hepatorenal"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall18w]
 diagnosis = "pneumonia"
+warning = "sepsis | septic | hypoxi* | respiratory & failure"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall19w]
 diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
+warning = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall1w]
 diagnosis = "pneumonia"
+warning = "pulmonary & embolism | pe | hypoxi* | sepsis"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall20w]
 diagnosis = "vasculitis"
+warning = "renal | kidney | glomerulonephritis | hemorrhag* | haemorrhag* | sepsis"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall21w]
 diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
+warning = "hypoxi* | hypercapni* | respiratory & failure"  # guessed
+disposition = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [Dutchfall22w]
 diagnosis = "uti | urinary & infection* | cystitis | urosepsis"
+warning = "sepsis | septic | urosepsis | pyelonephritis"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall23w]
 diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
+warning = "pulmonary & embolism | pe | dvt | deep & vein & thrombosis | hypoxi* | respiratory & failure"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall24w]
 diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
+warning = "respiratory & failure | hypercapni* | hypoxi* | sepsis | exhaust*"  # guessed
+disposition = "icu | intensive & care | high & dependency | hdu | niv"  # guessed
 
 [Dutchfall25w]
 diagnosis = "pancreatitis"
+warning = "necro* | shock | organ & failure | bradycard* | cholangitis"  # guessed
+disposition = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [Dutchfall26w]
 diagnosis = "pneumonia"
+warning = "pulmonary & embolism | pe | pneumothorax | sepsis"  # guessed
+disposition = "discharge* | home | outpatient"  # guessed
 
 [Dutchfall27w]
 diagnosis = "(renal | kidney) & (colic | stone*) | nephrolithiasis | urolithiasis"
+warning = "sepsis | urosepsis | pyelonephritis | infect*"  # guessed
+disposition = "discharge* | home | outpatient"  # guessed
 
 [Dutchfall28w]
 diagnosis = "pneumonia"
+warning = "sepsis | respiratory & failure | hypoxi* | hypercapni*"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall29w]
 diagnosis = "(renal | kidney) & (colic | stone*) | nephrolithiasis | urolithiasis"
+warning = "pyelonephritis | urosepsis | sepsis | hydronephros* | kidney & injury"  # guessed
+disposition = "admit* | admission | hospital* | urolog*"  # guessed
 
 [Dutchfall2w]
 diagnosis = "(diverticular | gastrointestinal | (gastro & intestinal) | gi) & bleed*"
+warning = "shock | hypovolem* | hemorrhag* | haemorrhag* | massive & bleed*"  # guessed
+disposition = "admit* | admission | hospital* | gastroenterolog* | colonoscop*"  # guessed
 
 [Dutchfall30w]
 diagnosis = "pneumonia"
+warning = "sepsis | septic | respiratory & failure | hypoxi* | heart & failure"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall3w]
 diagnosis = "diverticulitis | (gastro & intestinal | gi) & inflammation"
+warning = "perforat* | abscess | peritonitis | sepsis"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall4w]
 diagnosis = "pancreatitis"
+warning = "necro* | cholangitis | shock | organ & failure | sepsis"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall5w]
 diagnosis = "uti | urinary & infection* | cystitis | urosepsis"
+warning = "sepsis | septic | urosepsis | shock"  # guessed
+disposition = "icu | intensive & care | admit* | admission | hospital*"  # guessed
 
 [Dutchfall6w]
 diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
+warning = "hypoxi* | hypercapni* | respiratory & failure | sepsis"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall7w]
 diagnosis = "hernia"
+warning = "incarcerat* | strangulat* | ischemi* | ischaemi* | perforat* | appendicitis"  # guessed
+disposition = "surg* | operat* | admit* | admission | hospital* | observation"  # guessed
 
 [Dutchfall8w]
 diagnosis = "chf | (congestive | failure) & heart"
+warning = "pneumothorax | tamponade | pulmonary & embolism | pe"  # guessed
+disposition = "admit* | admission | hospital*"  # guessed
 
 [Dutchfall9w]
 diagnosis = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
+warning = "cholangitis | sepsis | septic"  # guessed
+disposition = "admit* | admission | hospital* | ercp"  # guessed
 
 [casesfromedn1]
 diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
+warning = "respiratory & failure | hypercapni* | airway | intubat* | andningssvikt | intuber*"  # guessed
+disposition = "icu | intensive & care | iva | intensivvård*"  # guessed
 
 [casesfromedn10]
 diagnosis = "scad | dissection | dissektion"
+warning = "stemi | st & elevation | myocardial & infarction | dissection | hjärtinfarkt"  # guessed
+disposition = "cath* | pci | angiograph* | angiografi | ccu | coronary & care | hia | hjärtintensiv*"  # guessed
 
 [casesfromedn11]
 diagnosis = "delirium | abstinens"
+warning = "delirium & tremens | withdrawal | seizure* | dissection | abstinens | kramp*"  # guessed
+disposition = "icu | intensive & care | iva | intensivvård* | admit* | admission | hospital*"  # guessed
 
 [casesfromedn12]
 diagnosis = "depression"
+warning = "suicid* | självmord* | postpartum | psychos* | psykos"  # guessed
+disposition = "outpatient | primary & care | follow* | psychiatr* | vårdcentral* | öppenvård*"  # guessed
 
 [casesfromedn13]
 diagnosis = "leptospirosis"
+warning = "kidney & failure | renal & failure | kidney & injury | hemorrhag* | haemorrhag* | sepsis | meningit* | weil*"  # guessed
+disposition = "admit* | admission | hospital* | icu | intensive & care | infect*"  # guessed
 
 [casesfromedn14]
 diagnosis = "ektopisk & graviditet | ektopisk"
+warning = "rupture* | hemorrhag* | haemorrhag* | shock | hypovolem* | blödning | chock"  # guessed
+disposition = "surg* | operat* | laparo* | gyn* | kirurg* | operation"  # guessed
 
 [casesfromedn15]
 diagnosis = "hematom | hematoma"
+warning = "bleed* | hemorrhag* | haemorrhag* | blödning | anticoag*"  # guessed
+disposition = "discharge* | home | outpatient | observation | hemgång"  # guessed
 
 [casesfromedn16]
 diagnosis = "tarmperforation | perforation"
+warning = "perforat* | peritonitis | free & (air | gas) | sepsis | shock | fri & gas"  # guessed
+disposition = "surg* | operat* | laparotom* | kirurg* | operation"  # guessed
 
 [casesfromedn17]
 diagnosis = "porfyri"
+warning = "paralys* | respiratory & failure | seizure* | hyponatrem* | neuropath* | förlamning"  # guessed
+disposition = "admit* | admission | hospital* | inlägg* | vårdavdelning"  # guessed
 
 [casesfromedn18]
 diagnosis = "malaria"
+warning = "falciparum | severe & malaria | cerebral & malaria | allvarlig & malaria"  # guessed
+disposition = "admit* | admission | hospital* | infect* | infektion* | inlägg* | vårdavdelning"  # guessed
 
 [casesfromedn19]
 diagnosis = "meningit*"
+warning = "meningit* | encephalit* | sepsis | septic | herniat*"  # guessed
+disposition = "admit* | admission | hospital* | icu | intensive & care | iva | intensivvård* | infekt*"  # guessed
 
 [casesfromedn2]
 diagnosis = "psychosis | psychotic | psykos | psykotisk"
+warning = "encephalit* | autoimmune | nmda | suicid* | catatoni*"  # guessed
+disposition = "psychiatr* | psykiatri* | neurolog* | admit* | admission | hospital*"  # guessed
 
 [casesfromedn20]
 diagnosis = "viral & meningit* | meningit*"
+warning = "encephalit* | herpes | hsv | bacterial & meningit*"  # guessed
+disposition = "admit* | admission | hospital* | infect* | infekt* | inlägg* | vårdavdelning"  # guessed
 
 [casesfromedn3]
 diagnosis = "psychosis | psychotic | psykos | psykotisk"
+warning = "organic | delirium | encephalit* | tumo* | stroke | suicid*"  # guessed
+disposition = "psychiatr* | psykiatri* | involuntary | compulsory | tvångsvård* | lpt"  # guessed
 
 [casesfromedn4]
 diagnosis = "sepsis | septic"
+warning = "septic & shock | shock | sepsis | multi* & organ | hyperkal* | hypoglyc*"  # guessed
+disposition = "icu | intensive & care | iva | intensivvård*"  # guessed
 
 [casesfromedn5]
 diagnosis = "acl | (cruciate | ligament) & (tear* | injur*)"
+warning = "fracture* | dislocat* | popliteal | compartment & syndrome"  # guessed
+disposition = "discharge* | home | outpatient | orthop* | physio* | follow*"  # guessed
 
 [casesfromedn6]
 diagnosis = "lungbleeding | bleeding | lungblödning | blödning"
+warning = "hemoptys* | haemoptys* | massive | sepsis | pulmonary & embolism | lungblödning | blödning"  # guessed
+disposition = "admit* | admission | hospital* | inlägg* | vårdavdelning"  # guessed
 
 [casesfromedn7]
 diagnosis = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
+warning = "cord & compression | compression | paralys* | cauda | sepsis | ryggmärgskompression"  # guessed
+disposition = "surg* | operat* | neurosurg* | decompress* | neurokirurg*"  # guessed
 
 [casesfromedn8]
 diagnosis = "hjärntumör | tumör| brain & (tumour | tumor)"
+warning = "intracranial & pressure | icp | herniat* | tumo* | hydroceph* | tumör"  # guessed
+disposition = "admit* | admission | hospital* | neurosurg* | neurokirurg* | neurolog* | inlägg* | vårdavdelning"  # guessed
 
 [casesfromedn9]
 diagnosis = "ileus | tarmvred | obstruction | obstruktion"
+warning = "ischemi* | ischaemi* | strangulat* | perforat* | volvulus | necro*"  # guessed
+disposition = "surg* | operat* | laparotom* | kirurg* | operation"  # guessed
 
 [openxddx-case_1]
 diagnosis = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
+warning = "hyperkal* | dialys* | renal & failure | kidney & failure | uremi*"  # guessed
+disposition = "admit* | admission | hospital* | nephrolog*"  # guessed
 
 [openxddx-case_10]
 diagnosis = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
+warning = "tamponade | arrhythmi* | shock | contusion | aortic & injury"  # guessed
+disposition = "icu | intensive & care | ccu | telemetry | trauma | admit* | admission | hospital*"  # guessed
 
 [openxddx-case_11]
 diagnosis = "osteoarthritis | arthritis"
+warning = "cirrhosis | cardiomyopath* | hepatocellular & carcinoma | liver"  # guessed
+disposition = "outpatient | follow* | referr* | rheumatolog* | hepatolog* | gastroenterolog*"  # guessed
 
 [openxddx-case_12]
 diagnosis = "endometriosis"
+warning = "ectopic | torsion | rupture*"  # guessed
+disposition = "outpatient | follow* | referr* | gynecolog* | gynaecolog* | laparoscop* | fertility"  # guessed
 
 [openxddx-case_13]
 diagnosis = "tension & pneumothorax"
+warning = "tension & pneumothorax | hemothorax | haemothorax | aortic & (rupture | injury) | shock"  # guessed
+disposition = "surg* | operat* | trauma | icu | intensive & care"  # guessed
 
 [openxddx-case_14]
 diagnosis = "physiological & jaundice | neonatal & jaundice"
+warning = "kernicterus | bilirubin & encephalopath* | hemoly* | haemoly* | exchange & transfusion"  # guessed
+disposition = "phototherap* | nicu | neonatal & intensive | admit* | admission | hospital*"  # guessed
 
 [openxddx-case_15]
 diagnosis = "aortic & stenosis | valve & dysfunction"
+warning = "heart & failure | endocardit* | dissection"  # guessed
+disposition = "outpatient | follow* | referr* | cardiolog* | echocardiogra*"  # guessed
 
 [openxddx-case_16]
 diagnosis = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
+warning = "suicid* | self & harm"  # guessed
+disposition = "psychiatr* | dialectical | dbt"  # guessed
 
 [openxddx-case_17]
 diagnosis = "(liver & failure) | cirrosis | cirrhosis"
+warning = "peritonitis | sbp | encephalopath* | sepsis | hepatorenal"  # guessed
+disposition = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [openxddx-case_18]
 diagnosis = "toxoplasma & gondi* | toxoplasmosis"
+warning = "microcephal* | congenital & infection | zika | fetal & anomal*"  # guessed
+disposition = "outpatient | follow* | referr* | obstetric* | maternal & fetal | perinatolog*"  # guessed
 
 [openxddx-case_19]
 diagnosis = "stroke | cvl"
+warning = "respiratory & failure | paralys* | botulism | airway"  # guessed
+disposition = "icu | intensive & care | admit* | admission | hospital*"  # guessed
 
 [openxddx-case_2]
 diagnosis = "pneumonia"
+warning = "disseminat* | respiratory & failure | immunocompromis*"  # guessed
+disposition = "outpatient | home | discharge* | follow*"  # guessed
 
 [openxddx-case_20]
 diagnosis = "physiological & jaundice | neonatal & jaundice"
+warning = "biliary & atresia | cirrhosis | liver & failure | cholesta*"  # guessed
+disposition = "surg* | kasai | referr* | admit* | admission"  # guessed
 
 [openxddx-case_21]
 diagnosis = "vascular & insufficiency | vascular & disease"
+warning = "limb & ischemi* | critical & limb | gangren* | amputat*"  # guessed
+disposition = "outpatient | follow* | referr* | vascular"  # guessed
 
 [openxddx-case_22]
 diagnosis = "dementia | alzheimer"
+warning = "tumo* | hydroceph* | safety | capacity"  # guessed
+disposition = "outpatient | follow* | referr* | neurolog* | memory & clinic"  # guessed
 
 [openxddx-case_23]
 diagnosis = "measles | rubeola"
+warning = "encephalit* | pneumonia | superinfect* | secondary & infection | immunocompromis*"  # guessed
+disposition = "discharge* | home | outpatient | isolat*"  # guessed
 
 [openxddx-case_24]
 diagnosis = "takotsubo | cardiomyopathy"
+warning = "cardiogenic & shock | shock | heart & failure | arrhythmi* | thromb*"  # guessed
+disposition = "admit* | admission | hospital* | ccu | coronary & care | cardiolog* | telemetry | icu"  # guessed
 
 [openxddx-case_25]
 diagnosis = "osteoarthritis | arthritis"
+warning = "septic & arthritis | fracture* | infect*"  # guessed
+disposition = "outpatient | follow* | physio* | physical & therap* | rheumatolog* | home"  # guessed
 
 [openxddx-case_26]
 diagnosis = "testicular & torsion"
+warning = "torsion | abscess | orchitis | infarct*"  # guessed
+disposition = "outpatient | home | discharge* | follow* | urolog*"  # guessed
 
 [openxddx-case_27]
 diagnosis = "gynecomastia | hormonal & imbalance"
+warning = "tumo* | malignan* | cancer"  # guessed
+disposition = "reassur* | follow* | outpatient | home"  # guessed
 
 [openxddx-case_28]
 diagnosis = "cholecystitis"
+warning = "sepsis | septic | perforat* | gangren* | empyema"  # guessed
+disposition = "admit* | admission | hospital* | cholecystostom* | palliat* | hospice"  # guessed
 
 [openxddx-case_29]
 diagnosis = "insulinoma"
+warning = "hypoglyc* | seizure* | coma | factitious"  # guessed
+disposition = "admit* | admission | hospital* | observation | endocrinolog* | monitor*"  # guessed
 
 [openxddx-case_3]
 diagnosis = "osteoarthritis | arthritis"
+warning = "septic & arthritis | infect*"  # guessed
+disposition = "outpatient | follow* | referr* | rheumatolog*"  # guessed
 
 [openxddx-case_30]
 diagnosis = "dysmenorrhea"
+warning = "ectopic | pregnan* | pelvic & inflammatory | pid"  # guessed
+disposition = "outpatient | home | follow* | discharge*"  # guessed
 
 [openxddx-case_31]
 diagnosis = "hiv"
+warning = "dengue | hemorrhag* | haemorrhag* | shock | meningit*"  # guessed
+disposition = "outpatient | follow* | referr* | infectious & disease* | infect*"  # guessed
 
 [openxddx-case_32]
 diagnosis = "hernia"
+warning = "testicular & (tumo* | cancer) | malignan* | torsion"  # guessed
+disposition = "outpatient | follow* | referr* | urolog* | elective"  # guessed
 
 [openxddx-case_33]
 diagnosis = "gastroenteritis"
+warning = "dehydrat* | hypovolem*"  # guessed
+disposition = "discharge* | home | outpatient"  # guessed
 
 [openxddx-case_34]
 diagnosis = "basal & cell & carcinoma | bcc"
+warning = "squamous & cell & carcinoma | scc | malignan* | melanoma"  # guessed
+disposition = "outpatient | follow* | referr* | dermatolog* | excision"  # guessed
 
 [openxddx-case_35]
 diagnosis = "pneumonia"
+warning = "sepsis | septic | respiratory & failure | empyema | necrotiz*"  # guessed
+disposition = "admit* | admission | hospital* | ward | icu | intensive & care"  # guessed
 
 [openxddx-case_36]
 diagnosis = "precocious & puberty"
+warning = "abuse | fracture* | malignan* | tumo*"  # guessed
+disposition = "outpatient | follow* | referr* | endocrinolog*"  # guessed
 
 [openxddx-case_37]
 diagnosis = "(liver & failure) | cirrosis | cirrhosis"
+warning = "encephalopath* | bleed* | variceal | sepsis | hypokal* | dehydrat*"  # guessed
+disposition = "admit* | admission | hospital* | ward"  # guessed
 
 [openxddx-case_38]
 diagnosis = "bleeding | hypovolemic & shock | postpartum & bleeding"
+warning = "hypotens* | shock | fetal & distress | bradycard* | hemorrhag* | haemorrhag*"  # guessed
+disposition = "labor | labour | delivery | obstetric* | monitor*"  # guessed
 
 [openxddx-case_39]
 diagnosis = "parkinson | parkinson's & disease"
+warning = "stroke | tumo* | demyelinat* | multiple & sclerosis"  # guessed
+disposition = "outpatient | follow* | referr* | neurolog* | mri"  # guessed
 
 [openxddx-case_4]
 diagnosis = "hirschsprung & disease | intestinal & disease"
+warning = "volvulus | malrotation | enterocolitis | perforat* | shock | sepsis"  # guessed
+disposition = "nicu | neonatal & intensive | surg* | pediatric & surg* | paediatric & surg*"  # guessed
 
 [openxddx-case_40]
 diagnosis = "overdose | drug & use | intoxication"
+warning = "respiratory & (failure | depression) | hypoventilat* | airway | overdose"  # guessed
+disposition = "icu | intensive & care | admit* | admission | hospital* | monitor*"  # guessed
 
 [openxddx-case_41]
 diagnosis = "myopathy"
+warning = "respiratory & (failure | insufficiency) | aspirat* | feeding"  # guessed
+disposition = "admit* | admission | hospital* | referr* | neurolog*"  # guessed
 
 [openxddx-case_42]
 diagnosis = "thyroid & cyst* | benign & thyroid & nodule*"
+warning = "malignan* | carcinoma | cancer | papillary"  # guessed
+disposition = "outpatient | follow* | referr* | biopsy | fna | endocrin* | surg*"  # guessed
 
 [openxddx-case_44]
 diagnosis = "(liver & failure) | cirrosis | cirrhosis"
+warning = "liver & failure | hepatic & failure | encephalopath* | coagulopath* | fetal | hepatitis e"  # guessed
+disposition = "icu | intensive & care | admit* | admission | hospital* | transplant*"  # guessed
 
 [openxddx-case_45]
 diagnosis = "copd | ((exacerbation | obstructive) & pulmonary)"
+warning = "lung & cancer | malignan* | hypoxi*"  # guessed
+disposition = "outpatient | follow* | referr* | home | pulmonolog* | pulmonary & rehab* | smoking & cessation"  # guessed
 
 [openxddx-case_46]
 diagnosis = "dermatitis"
+warning = "lymphoma | malignan* | malabsor*"  # guessed
+disposition = "outpatient | follow* | referr* | dermatolog* | gastroenterolog* | gluten | diet*"  # guessed
 
 [openxddx-case_47]
 diagnosis = "gastroenteritis"
+warning = "dehydrat* | hypovolem* | electrolyte*"  # guessed
+disposition = "discharge* | home | outpatient"  # guessed
 
 [openxddx-case_48]
 diagnosis = "hypocalcemia"
+warning = "tetany | laryngospasm | seizure* | arrhythmi* | qt"  # guessed
+disposition = "admit* | admission | hospital* | monitor* | ward"  # guessed
 
 [openxddx-case_49]
 diagnosis = "gynecomastia | hormonal & imbalance"
+warning = "tumo* | cancer | malignan* | leydig"  # guessed
+disposition = "outpatient | follow* | referr* | urolog* | ultrasound | orchiectom*"  # guessed
 
 [openxddx-case_5]
 diagnosis = "peripheral & artery & disease | arterial & insufficiency | peripheral & arterial & disease"
+warning = "critical & limb | limb & ischemi* | gangren* | amputat* | ulcer*"  # guessed
+disposition = "outpatient | follow* | referr* | vascular | exercise"  # guessed
 
 [openxddx-case_50]
 diagnosis = "spontaneous & abortion | miscarriage"
+warning = "hemorrhag* | haemorrhag* | bleed* | shock | sepsis | ectopic"  # guessed
+disposition = "home | discharge* | follow* | gynecolog* | gynaecolog* | obstetric* | evacuat* | curettage"  # guessed
 
 [openxddx-case_6]
 diagnosis = "hypertension"
+warning = "hypokal* | arrhythmi* | hypertensive & (crisis | emergency | urgency)"  # guessed
+disposition = "outpatient | follow* | referr* | endocrinolog*"  # guessed
 
 [openxddx-case_7]
 diagnosis = "tardive & dyskinesia | dyskinesia"
+warning = "neuroleptic & malignant | nms"  # guessed
+disposition = "psychiatr* | follow* | medication & review"  # guessed
 
 [openxddx-case_8]
 diagnosis = "hemolytic & uremic & syndrome | hus"
+warning = "kidney & injury | renal & failure | anuri* | oliguri* | dialys* | seizure*"  # guessed
+disposition = "admit* | admission | hospital* | picu | (pediatric | paediatric) & intensive | nephrolog* | dialys*"  # guessed
 
 [openxddx-case_9]
 diagnosis = "hyperthyroidism | graves & disease"
+warning = "heart & failure | cardiac & failure | arrhythmi* | tachyarrhythmi* | thyroid & storm"  # guessed
+disposition = "nicu | neonatal & intensive | admit* | admission | hospital*"  # guessed
