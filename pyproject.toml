@@ -59,6 +59,7 @@ reportExplicitAny = false
 
 [tool.pytest.ini_options]
 addopts = ["--liveserver", "localhost:8082"]
+testpaths = ["src/chatddx"]
 markers = [
   "network: requires network access to hosts outside the sandbox. Deselect with -m 'not network'.",
 ]
