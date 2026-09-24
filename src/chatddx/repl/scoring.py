@@ -51,7 +51,7 @@ def score(repl: Repl, prefix: str | None = None) -> None:
         show_scores(repl.console, scored)
         made += scored
 
-    _summary(repl, scoring, made)
+    summary(repl, scoring, made)
 
 
 def scorers(repl: Repl) -> None:
@@ -87,7 +87,8 @@ def scorers(repl: Repl) -> None:
     repl.console.print(table)
 
 
-def _summary(repl: Repl, scoring: Scoring, made: list[ScoreModel]) -> None:
+def summary(repl: Repl, scoring: Scoring, made: list[ScoreModel]) -> None:
+    """Each scorer's scores among `made`: how many, and its metrics."""
     metrics: list[Metric] = [
         metric
         for metric in METRICS

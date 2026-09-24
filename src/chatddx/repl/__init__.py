@@ -6,11 +6,13 @@ repl holds one the way psql holds a database: `use` puts a configuration in
 it, `on` a stack, `set` another variation of one of its slices, and `run`
 runs it on a case. Every run is recorded: `runs` lists them, and
 `replay` shows one again as it streamed. `save` keeps the cell as a
-configuration of the identity's own.
+configuration of the identity's own. `show` shows the cell, and `show
+ENTITY [NAME]` any branch, the cell's or one named, with what came of the
+identity's runs with it, scorer by scorer.
 
 `shell` holds the repl's state and what the identity calls things, `cell`
 the cell, and `commands` names each command, what it takes and the
 function that carries it out, one module to each group of them: `listing`,
-`choosing`, `inspecting`, `running` and `reviewing`. `render` writes a run
-out, and `cli` reads the lines.
+`choosing`, `inspecting`, `running`, `reviewing` and `scoring`. `render`
+writes a run out, and `cli` reads the lines.
 """

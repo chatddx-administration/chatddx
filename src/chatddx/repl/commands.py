@@ -17,6 +17,7 @@ from chatddx.repl import (
 )
 from chatddx.repl.cell import NONE, OPTIONAL, SLICES
 from chatddx.repl.shell import NotFound, Repl
+from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 
 
@@ -60,7 +61,10 @@ COMMANDS: dict[str, Command] = {
         choosing.set_,
     ),
     "show": Command(
-        (), "show the cell, and how it resolves on its stack", inspecting.show
+        ("[ENTITY]", "[NAME]"),
+        "show the cell, and how it resolves on its stack; or an ENTITY, the"
+        + " cell's or NAME, and what came of your runs with it",
+        inspecting.show,
     ),
     "reasoning": Command(
         (),
@@ -162,6 +166,10 @@ def complete(names: dict[str, list[str]], line: str) -> list[str]:
         case "VARIATION":
             entity = words[position - 1]
             candidates = names.get(entity, []) + ([NONE] if entity in OPTIONAL else [])
+        case "[ENTITY]":
+            candidates = list(ENTITY_NAMES)
+        case "[NAME]":
+            candidates = names.get(words[position - 1], [])
         case param:
             key = param.strip("[]").lower()
             candidates = names.get(f"{verb}:{key}", names.get(key, []))

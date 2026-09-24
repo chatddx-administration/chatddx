@@ -1,4 +1,7 @@
-"""What the cell is, and how it resolves on its stack, before anything is sent."""
+"""
+What the cell is, and how it resolves on its stack, before anything is sent;
+and what a branch is, and what came of the runs that used it.
+"""
 
 from collections.abc import Callable
 
@@ -107,3 +110,74 @@ def test_the_reasoning_table_pulls_in_the_cell_s_sampling(say: Say):
     assert "▸ qwen3-8b-awq@fake" in written
     assert "sampling as 'recommended' pulls it in" in written
     assert "temperature=0.7 top_p=0.8" in written
+
+
+def line_of(written: str, start: str) -> str:
+    """The last line written that starts with `start`, spaces aside."""
+    return [line for line in written.splitlines() if line.strip().startswith(start)][-1]
+
+
+def test_show_case_says_its_text_and_its_targets(say: Say):
+    written = say("show case case-1")
+
+    assert "case case-1, archive's" in written
+    assert "vignette" in line_of(written, "vignette")
+    assert "case vignette 1" in written
+    assert "fake & diagnosis & (b | 2)" in line_of(written, "targets.diagnosis")
+    assert "admit*" in line_of(written, "targets.disposition")
+    assert "tag-1 tag-2" in line_of(written, "tags")
+    assert "no runs of yours with this case" in written
+
+
+def test_show_case_counts_your_runs_by_scorer(say: Say):
+    _ = say(
+        "cell free-text qwen3-8b-awq@fake", "run case-1", "run case-1 7", "run case-2"
+    )
+    shown = say("show case case-1")
+
+    assert "2 runs of yours with it" in shown
+    assert line_of(shown, "reciprocal_rank").split()[:2] == ["reciprocal_rank", "2"]
+    assert line_of(shown, "first_mention").split()[:2] == ["first_mention", "2"]
+
+
+def test_show_an_entity_without_a_name_shows_the_cell_s(say: Say):
+    written = say("cell free-text qwen3-8b-awq@fake", "show output")
+
+    assert "output free-text, archive's" in written
+    assert "whole" in line_of(written, "views.text")
+    assert "lines" in line_of(written, "views.differential")
+    assert "no runs of yours with this output" in written
+
+
+def test_show_names_what_a_stack_holds(say: Say):
+    written = say("show stack qwen3-8b-awq@fake")
+
+    assert "fake" in line_of(written, "machine")
+    assert "qwen3-8b-awq" in line_of(written, "llm")
+    assert "http://localhost:12099/v1/" in line_of(written, "endpoint")
+
+
+def test_show_scorer_sums_up_the_runs_it_scored(say: Say):
+    _ = say("cell free-text qwen3-8b-awq@fake", "run case-1")
+    shown = say("show scorer first_mention")
+
+    assert "patterns:first_mention" in line_of(shown, "function")
+    assert "1 run of yours with it" in shown
+    assert line_of(shown, "first_mention").split()[:2] == ["first_mention", "1"]
+    assert "reciprocal_rank" not in shown
+
+
+def test_show_says_what_it_can_t_show(say: Say):
+    assert "no entity 'frobnicate'" in say("show frobnicate")
+    assert "a case isn't in the cell: show case NAME" in say("show case")
+    assert "the cell has no configuration: show output NAME" in say("show output")
+    assert "the cell has no toolset" in say(
+        "cell free-text qwen3-8b-awq@fake", "show toolset"
+    )
+
+
+def test_show_writes_what_is_json_as_json(say: Say):
+    written = say("show tool sentinel_op")
+
+    assert '"additionalProperties": false' in written
+    assert "sentinel_op:sentinel_op" in line_of(written, "implementation.function")

@@ -8,12 +8,12 @@ from rich.text import Text
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import RunModel
-from chatddx.repl.cell import SLICES, Cell
+from chatddx.repl.cell import Cell
 from chatddx.repl.render import LATER, REFUSED
 from chatddx.repo.entities.llm.pydantic import LLMBranchOut, LLMFacts
 from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.entities.tool.pydantic import ToolBranchOut
-from chatddx.repo.entity_names import EntityName
+from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.names import short_fingerprint
 from chatddx.repo.store.branch import (
@@ -69,10 +69,7 @@ class Repl:
         looked up once, and the runs as they are now, the latest first.
         """
         if self._completions is None:
-            self._completions = {
-                entity: self.names(entity)
-                for entity in ("configuration", "stack", "case", *SLICES)
-            }
+            self._completions = {entity: self.names(entity) for entity in ENTITY_NAMES}
 
         latest = RunModel.objects.filter(owner__name=self.identity).order_by(
             "-timestamp", "-pk"

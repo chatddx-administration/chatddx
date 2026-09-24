@@ -64,7 +64,8 @@ def test_it_completes_a_command_and_then_its_names():
         "qwen3-8b-awq@pelle",
     ]
     assert complete(names, "run case-") == ["case-1", "case-2"]
-    assert complete(names, "show ") == []
+    assert complete(names, "show c") == ["client", "coercion", "configuration", "case"]
+    assert complete(names, "show case case-") == ["case-1", "case-2"]
     assert complete(names, "set r") == ["reasoning"]
     assert complete(names, "set reasoning o") == ["off", "on", "on-budget-2048"]
     assert complete(names, "set toolset ") == ["sentinel", "web", "none"]
