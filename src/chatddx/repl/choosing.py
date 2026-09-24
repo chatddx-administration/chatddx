@@ -5,9 +5,9 @@ from django.db import transaction
 from rich.text import Text
 
 from chatddx.core import settings
-from chatddx.core.repl.cell import NONE, OPTIONAL, SLICES
-from chatddx.core.repl.render import LABEL
-from chatddx.core.repl.shell import Repl
+from chatddx.repl.cell import NONE, OPTIONAL, SLICES
+from chatddx.repl.render import LABEL
+from chatddx.repl.shell import Repl
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn

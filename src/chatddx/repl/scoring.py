@@ -3,9 +3,9 @@
 
 from rich.table import Table
 
-from chatddx.core.repl.render import LABEL, show_scores, value_of
-from chatddx.core.repl.reviewing import short, what_ran
-from chatddx.core.repl.shell import Repl
+from chatddx.repl.render import LABEL, show_scores, value_of
+from chatddx.repl.reviewing import short, what_ran
+from chatddx.repl.shell import Repl
 from chatddx.history.models import RunStatus, ScoreModel
 from chatddx.repo.entities.scorer.pydantic import Metric
 from chatddx.scoring.metrics import METRICS

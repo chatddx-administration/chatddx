@@ -4,7 +4,7 @@ import typer
 django.setup()
 
 from chatddx.core import provisioning
-from chatddx.core.repl import cli
+from chatddx.repl import cli
 from chatddx.dev import fake_vllm
 
 app = typer.Typer()

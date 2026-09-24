@@ -6,9 +6,9 @@ from typing import Any
 from rich.table import Table
 from rich.text import Text
 
-from chatddx.core.repl.cell import SLICES
-from chatddx.core.repl.render import LABEL
-from chatddx.core.repl.shell import SHARED_BY, Repl
+from chatddx.repl.cell import SLICES
+from chatddx.repl.render import LABEL
+from chatddx.repl.shell import SHARED_BY, Repl
 from chatddx.repo.store.branch import select_visible_branch_models
 
 

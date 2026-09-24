@@ -4,8 +4,8 @@ from collections.abc import Callable
 
 import pytest
 
-from chatddx.core.repl.commands import COMMANDS, complete, handle
-from chatddx.core.repl.shell import Repl
+from chatddx.repl.commands import COMMANDS, complete, handle
+from chatddx.repl.shell import Repl
 
 type Say = Callable[..., str]
 

@@ -11,8 +11,8 @@ from typer.testing import CliRunner
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
-from chatddx.core.repl.commands import handle
-from chatddx.core.repl.shell import Repl
+from chatddx.repl.commands import handle
+from chatddx.repl.shell import Repl
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.history.models import ConversationModel, RunModel, TrialModel
 from chatddx.manage import app

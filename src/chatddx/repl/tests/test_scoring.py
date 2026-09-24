@@ -6,8 +6,8 @@ from typing import Any
 import httpx2
 import pytest
 
-from chatddx.core.repl.commands import complete
-from chatddx.core.repl.shell import Repl
+from chatddx.repl.commands import complete
+from chatddx.repl.shell import Repl
 from chatddx.history.models import RunModel
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import CaseBranchDetails

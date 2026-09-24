@@ -7,8 +7,8 @@ from rich.text import Text
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
-from chatddx.core.repl.cell import SLICES, Cell
-from chatddx.core.repl.render import LATER, REFUSED
+from chatddx.repl.cell import SLICES, Cell
+from chatddx.repl.render import LATER, REFUSED
 from chatddx.history.models import RunModel
 from chatddx.repo.entities.llm.pydantic import LLMBranchOut, LLMFacts
 from chatddx.repo.entities.stack.pydantic import StackBranchOut

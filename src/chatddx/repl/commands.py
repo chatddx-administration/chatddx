@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from rich.table import Table
 
-from chatddx.core.repl import (
+from chatddx.repl import (
     choosing,
     inspecting,
     listing,
@@ -14,8 +14,8 @@ from chatddx.core.repl import (
     running,
     scoring,
 )
-from chatddx.core.repl.cell import NONE, OPTIONAL, SLICES
-from chatddx.core.repl.shell import NotFound, Repl
+from chatddx.repl.cell import NONE, OPTIONAL, SLICES
+from chatddx.repl.shell import NotFound, Repl
 from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 
 

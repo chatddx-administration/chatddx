@@ -16,8 +16,8 @@ import typer
 from rich.console import Console
 
 from chatddx.core.models import IdentityModel
-from chatddx.core.repl.commands import complete, handle
-from chatddx.core.repl.shell import Repl
+from chatddx.repl.commands import complete, handle
+from chatddx.repl.shell import Repl
 
 HISTORY = Path.home() / ".chatddx_history"
 

@@ -8,9 +8,9 @@ from pydantic import JsonValue
 from rich.table import Table
 from rich.text import Text
 
-from chatddx.core.repl.cell import SLICES
-from chatddx.core.repl.render import LABEL, LATER, REFUSED
-from chatddx.core.repl.shell import Repl
+from chatddx.repl.cell import SLICES
+from chatddx.repl.render import LABEL, LATER, REFUSED
+from chatddx.repl.shell import Repl
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
 from chatddx.repo.entities.output.pydantic import VIEWS
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchOut

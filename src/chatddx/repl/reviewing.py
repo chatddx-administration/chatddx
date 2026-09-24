@@ -9,7 +9,7 @@ from pydantic_ai import ModelMessagesTypeAdapter
 from rich.table import Table
 from rich.text import Text
 
-from chatddx.core.repl.render import (
+from chatddx.repl.render import (
     LABEL,
     REFUSED,
     VALID,
@@ -20,7 +20,7 @@ from chatddx.core.repl.render import (
     show_views,
     value_of,
 )
-from chatddx.core.repl.shell import Repl
+from chatddx.repl.shell import Repl
 from chatddx.history.models import MessageKind, RunModel, RunStatus
 from chatddx.repo.entities.output.pydantic import OutputTrailOut
 from chatddx.repo.store.trail import load_trail
