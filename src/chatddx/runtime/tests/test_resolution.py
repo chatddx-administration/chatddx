@@ -364,6 +364,28 @@ def test_a_mode_needs_what_the_facts_say_it_needs():
     )
 
 
+def test_a_reasoning_parser_is_needed_only_while_the_model_reasons():
+    bare = ServingTrailSchema(engine=ENGINE)
+    native = CoercionTrailSchema(mode="native")
+
+    assert refusals(cell(output=STRUCTURED, coercion=native), serving=bare) == [
+        SliceRefusal(
+            "coercion",
+            "'native' needs a reasoning parser while the model reasons, which the "
+            + "serving doesn't provide",
+        )
+    ]
+
+    # with nothing to think, the grammar may hold from the first token
+    off = ReasoningTrailSchema(effort="off")
+    resolution = resolve(
+        cell(output=STRUCTURED, coercion=native, reasoning=off), STACK, FACTS, bare
+    )
+
+    assert resolution.coercion is not None
+    assert resolution.coercion.mode == "native"
+
+
 def test_auto_ending_at_tool_needs_a_tool_description():
     tooled = FACTS.model_copy(
         update={"coercion": FACTS.coercion.model_copy(update={"default": "tool"})}
@@ -585,6 +607,31 @@ def test_a_refused_cell_keeps_what_its_other_slices_resolve_to():
 @pytest.fixture(scope="module")
 def inventory() -> ParsedInventory:
     return parse(settings.INVENTORY_PATH / "inventory.toml")
+
+
+@pytest.mark.parametrize("configuration_name", ["diagnoses", "diagnoses-tool"])
+def test_on_pelle_a_grammar_leaves_qwen3_no_room_to_think(
+    inventory: ParsedInventory, configuration_name: str
+):
+    # pelle serves Qwen3 without a reasoning parser
+    configuration, _ = inventory.configuration[configuration_name]
+    stack, stack_details = inventory.stack["qwen3-8b-awq@pelle"]
+    _, model = inventory.model["qwen3-8b-awq"]
+    off, _ = inventory.reasoning["off"]
+
+    with pytest.raises(CellRefused) as refused:
+        _ = resolve(configuration, stack_details, model.facts, stack.serving)
+
+    assert [refusal.slice for refusal in refused.value.refusals] == ["coercion"]
+    assert "needs a reasoning parser while the model reasons" in str(refused.value)
+
+    # and with reasoning off, the cell runs
+    thoughtless = configuration.model_copy(update={"reasoning": off})
+    resolution = resolve(thoughtless, stack_details, model.facts, stack.serving)
+
+    assert resolution.reasoning.writes == {
+        "chat_template_kwargs": {"enable_thinking": False}
+    }
 
 
 @pytest.mark.parametrize(

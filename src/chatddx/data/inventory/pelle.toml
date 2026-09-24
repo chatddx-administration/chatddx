@@ -30,27 +30,29 @@ kernel = "6.18.12"  # guessed
 nvidia_driver = "580.95.05"  # guessed
 nixpkgs_rev = "c09727c23bd83e81248764ed6e2dd41aa3113972"  # guessed: the nixpkgs chatddx's own flake pins
 
+# From pelle's configuration.nix (o11n.vllm.servers.qwen3-8b) and the running
+# `vllm serve` process.
 [serving."qwen3-8b-awq@pelle"]
-engine = "/nix/store/5nxjf9n4gzgajv67rd4fb1kdssql7g51-python3.13-vllm-0.13.0"  # guessed
+engine = "/nix/store/6dc8l2c3l0w982yxr6mvnyd64adq6riv-python3.13-vllm-0.24.0"
 
 # arguments that change what the model reads or the numbers: fingerprinted
+#
+# No reasoning parser: it was dropped for memory. vLLM then leaves Qwen3's
+# thinking in the content, and a grammar holds the answer from its first
+# token, so under one (native mode, or tool_choice = required) the model
+# can't think.
 [serving."qwen3-8b-awq@pelle".args]
-max-model-len = 8192  # guessed: what 8 GB leaves for the KV cache
-kv-cache-dtype = "fp8"  # guessed
-enforce-eager = true  # guessed: no CUDA graphs, to spare memory
-reasoning-parser = "qwen3"  # guessed
-enable-auto-tool-choice = true  # guessed
-tool-call-parser = "hermes"  # guessed
-
-[serving."qwen3-8b-awq@pelle".env]
-VLLM_BATCH_INVARIANT = "1"  # guessed
+max-model-len = 8192
+enforce-eager = true
+enable-auto-tool-choice = true
+tool-call-parser = "hermes"
 
 # arguments that only change speed: recorded, not fingerprinted
 [serving."qwen3-8b-awq@pelle".performance]
-gpu-memory-utilization = 0.92  # guessed
-max-num-seqs = 8  # guessed
-enable-prefix-caching = true  # guessed
-host = "0.0.0.0"  # guessed
+gpu-memory-utilization = 0.95
+max-num-seqs = 1
+enable-prefix-caching = true
+host = "::"
 port = 12009
 
 [stack."qwen3-8b-awq@pelle"]
@@ -61,5 +63,5 @@ serving = "qwen3-8b-awq@pelle"
 endpoint = "http://pelle.km:12009/v1/"
 served_name = "Qwen/Qwen3-8B-AWQ"
 api = "vllm"
-# no credential: vLLM runs without --api-key  # guessed
+# no credential: vLLM runs without --api-key
 tags = ["rtx-3070"]

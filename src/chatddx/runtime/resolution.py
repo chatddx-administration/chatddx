@@ -213,7 +213,7 @@ def resolve(
         configuration.reasoning, configuration.sampling, facts, serving
     )
     refusals += found
-    coercion, slots = _output(configuration, facts, serving, refusals)
+    coercion, slots = _output(configuration, reasoning, facts, serving, refusals)
     tools = _toolset(configuration.toolset, serving, refusals)
 
     if configuration.toolset and configuration.toolset.guidance is not None:
@@ -386,6 +386,7 @@ def _budget_fits(
 
 def _output(
     configuration: Configuration,
+    reasoning: Reasoning | None,
     facts: ModelFacts,
     serving: ServingTrailBase | None,
     refusals: list[SliceRefusal],
@@ -401,7 +402,9 @@ def _output(
 
     # free text: whatever the coercion, it contributes nothing
     if output.schema is not None:
-        coercion = _coercion(variation, output.schema, facts, serving, refusals)
+        coercion = _coercion(
+            variation, output.schema, reasoning, facts, serving, refusals
+        )
 
         if coercion and variation.schema_prompt is not None:
             schema = json.dumps(output.schema, indent=2, ensure_ascii=False)
@@ -473,6 +476,7 @@ def _placed(
 def _coercion(
     variation: CoercionTrailBase,
     schema: dict[str, JsonValue],
+    reasoning: Reasoning | None,
     facts: ModelFacts,
     serving: ServingTrailBase | None,
     refusals: list[SliceRefusal],
@@ -499,14 +503,27 @@ def _coercion(
             refusals.append(SliceRefusal("coercion", f"{through}{fact.refused}"))
         case ModeFact():
             provided = serving.provides() if serving else frozenset[Requirement]()
-            missing = [need for need in fact.needs if need not in provided]
+            # a reasoning parser finds where the thinking ends, for a grammar
+            # to hold what follows: a model that doesn't reason needs none
+            reasons = reasoning is None or reasoning.intent != "off"
+            missing = [
+                need
+                for need in fact.needs
+                if need not in provided and (reasons or need != "reasoning_parser")
+            ]
 
             if missing:
+                needed = " and ".join(
+                    "a reasoning parser while the model reasons"
+                    if need == "reasoning_parser"
+                    else "a " + need.replace("_", " ")
+                    for need in missing
+                )
                 refusals.append(
                     SliceRefusal(
                         "coercion",
-                        f"{through}'{mode}' needs {_listed(missing)}, which the "
-                        + "serving doesn't provide",
+                        f"{through}'{mode}' needs {needed}, which the serving "
+                        + "doesn't provide",
                     )
                 )
                 return None

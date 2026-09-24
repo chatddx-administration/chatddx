@@ -49,9 +49,12 @@ top_k = 20
 [model.qwen3-8b-awq.facts.coercion]
 default = "native"  # guessed: what `auto` resolves to
 # vLLM's grammar finds the end of the reasoning through the parser, and
-# constrains only what follows
+# constrains only what follows. Without one it holds from the first token,
+# and the model can't think: a mode that needs the parser needs it only
+# while the model reasons. Tool mode sends tool_choice = required, which
+# vLLM holds with a grammar too.
 native = { needs = "reasoning_parser" }
-tool = {}
+tool = { needs = "reasoning_parser" }
 prompted = {}
 
 # pydantic-ai profile overrides, so nothing hangs on the served name
