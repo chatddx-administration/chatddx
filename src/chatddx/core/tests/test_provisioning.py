@@ -9,10 +9,14 @@ so they run on the registry's own settings:
 from pathlib import Path
 
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
+from chatddx.core.repl import Repl
+from chatddx.dx.fake_vllm import FakeTransport
+from chatddx.history.models import RunModel, SessionModel, TrialModel
 from chatddx.manage import app
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.inventories import ParsedInventory
@@ -28,6 +32,14 @@ INVENTORY = settings.INVENTORY_PATH / "inventory.toml"
 GIFTBAG = settings.INVENTORY_PATH / "giftbag-inventory.toml"
 
 NOTHING: dict[str, set[str]] = {entity: set() for entity in all_entities}
+
+# what wipe-data says of a user with no history
+NO_HISTORY = [
+    "[run]: removed 0, unshared 0",
+    "[message]: removed 0",
+    "[session]: removed 0, unshared 0",
+    "[trial]: removed 0, unshared 0",
+]
 
 
 def run(*args: str) -> list[str]:
@@ -199,7 +211,7 @@ def test_wipe_data_takes_back_what_init_data_gave():
     _ = run("init-data", "alex", "--with-giftbag")
     _ = run("init-data", "other", "--with-giftbag")
 
-    assert run("wipe-data", "alex") == [
+    assert run("wipe-data", "alex") == NO_HISTORY + [
         f"[{entity}]: removed {len(getattr(giftbag, entity))}, "
         + f"unshared {len(getattr(inventory, entity))}"
         for entity in all_entities
@@ -231,7 +243,54 @@ def test_init_data_after_wipe_data_provisions_again():
 
 
 def test_wipe_data_of_nobody_removes_nothing():
-    assert run("wipe-data", "nobody") == [
+    assert run("wipe-data", "nobody") == NO_HISTORY + [
         f"[{entity}]: removed 0, unshared 0" for entity in all_entities
     ]
     assert not IdentityModel.objects.filter(name="nobody").exists()
+
+
+def ran_test_tools(user: str) -> None:
+    """A run of test-tools, on the user's own tools, written down."""
+    case = next(iter(parse(INVENTORY).case))
+    repl = Repl(user, Console(record=True, width=200), transport=FakeTransport())
+
+    assert repl.handle("cell test-tools qwen3-8b-awq@fake")
+    assert repl.handle(f"run {case}")
+    assert "recorded as run 1" in repl.console.export_text()
+
+
+def test_wipe_data_takes_back_the_user_s_history_too():
+    _ = run("init-data", "alex", "--with-giftbag")
+    ran_test_tools("alex")
+
+    # the run read alex's own tools, and goes before them
+    assert run("wipe-data", "alex")[:4] == [
+        "[run]: removed 1, unshared 0",
+        # a round for each tool, then the answer
+        "[message]: removed 6",
+        "[session]: removed 1, unshared 0",
+        "[trial]: removed 1, unshared 0",
+    ]
+    assert not RunModel.objects.exists()
+    assert not TrialModel.objects.exists()
+    assert owned("alex") == NOTHING
+
+
+def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read():
+    giftbag = parse(GIFTBAG)
+    _ = run("init-data", "alex", "--with-giftbag")
+    _ = run("init-data", "bob")
+    ran_test_tools("alex")
+
+    # as if bob had run on alex's tools
+    bob = IdentityModel.objects.get(name="bob")
+    for model in (RunModel, SessionModel, TrialModel):
+        _ = model.objects.update(owner=bob)
+
+    result = CliRunner().invoke(app, ["wipe-data", "alex"])
+
+    assert result.exit_code == 1
+    assert "alex is kept: runs of others read its branches" in result.output
+    # and nothing is taken
+    assert owned("alex") == names(giftbag)
+    assert RunModel.objects.count() == 1

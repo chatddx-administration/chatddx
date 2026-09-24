@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Annotated, Any, get_args
 
 import typer
+from django.utils import timezone
 from pydantic import JsonValue
 from pydantic_ai import (
     AgentRunEvents,
@@ -45,9 +46,14 @@ from rich.text import Text
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
+from chatddx.history.models import RunStatus
+from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
-from chatddx.repo.entities.configuration.pydantic import ConfigurationBranchSpec
+from chatddx.repo.entities.configuration.pydantic import (
+    ConfigurationBranchSpec,
+    ConfigurationTrailSchema,
+)
 from chatddx.repo.entities.model.pydantic import ModelBranchSpec, ModelFacts
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchSpec
 from chatddx.repo.entities.stack.pydantic import StackBranchSpec
@@ -148,7 +154,8 @@ class Repl:
         self.stack: StackBranchSpec | None = None
 
         self._names: dict[tuple[EntityName, int], str] = {}
-        self._facts: dict[int, ModelFacts] = {}
+        # a model's facts, by its trail, and the branch row they were read from
+        self._models: dict[int, tuple[ModelFacts, int | None]] = {}
 
     @property
     def label(self) -> str:
@@ -474,7 +481,12 @@ class Repl:
             self.error(f"{self.identity} has no secret '{resolution.credential}'")
             return
 
-        implementations = self.implementations()
+        tools = self.tools()
+        implementations = {
+            name: branch.details.implementation.entry_point
+            for name, branch in tools.items()
+            if branch.details.implementation is not None
+        }
         missing = [t.name for t in resolution.tools if t.name not in implementations]
 
         if missing:
@@ -482,10 +494,8 @@ class Repl:
             return
 
         seeded = f" (seed {seed})" if seed is not None else ""
-        self.console.print(
-            f"trial: {self.label} × {self.stack.name} × {case.name}{seeded}",
-            style="bold",
-        )
+        header = f"{self.label} × {self.stack.name} × {case.name}{seeded}"
+        self.console.print(f"trial: {header}", style="bold")
 
         trial = Trial(
             resolution,
@@ -496,27 +506,72 @@ class Repl:
             implementations=implementations,
         )
 
+        # an answer that doesn't come, or doesn't parse, is one that doesn't
+        # hold, where one is asked for
+        unheld = False if resolution.coercion is not None else None
+        started = timezone.now()
+
         try:
             streamed = asyncio.run(self.stream(trial))
         except KeyboardInterrupt:
             self.console.print("\n(stopped)", style=LABEL)
+            outcome = Outcome(RunStatus.ERRORED, error="stopped")
         except UnexpectedModelBehavior as e:
             # an answer that doesn't parse is not asked for again
             self.error(f"invalid: the answer doesn't parse ({e})")
+            outcome = Outcome(
+                RunStatus.COMPLETED,
+                valid=unheld,
+                error=f"the answer doesn't parse: {e}",
+            )
         except UsageLimitExceeded:
-            self.error(f"\nstopped: still calling tools after {TOOL_ROUNDS} rounds")
+            stopped = f"stopped: still calling tools after {TOOL_ROUNDS} rounds"
+            self.error(f"\n{stopped}")
+            outcome = Outcome(RunStatus.COMPLETED, valid=unheld, error=stopped)
         except Exception as e:  # noqa: BLE001
             # the model or its server failed mid-run: say so and carry on
             self.error(f"\n{type(e).__name__}: {e}")
+            outcome = Outcome(RunStatus.ERRORED, error=f"{type(e).__name__}: {e}")
         else:
-            self.judge(resolution, streamed)
+            valid = self.judge(resolution, streamed)
+            outcome = Outcome(RunStatus.COMPLETED, output=streamed.answer, valid=valid)
+
+        finished = timezone.now()
+
+        try:
+            run = record(
+                self.identity,
+                ConfigurationTrailSchema.model_validate(
+                    self.slices, from_attributes=True
+                ),
+                Branches(
+                    stack=self.stack.id,
+                    model=self.model_of(self.stack)[1],
+                    tools=[branch.id for branch in tools.values()],
+                ),
+                case.target_id,
+                trial,
+                outcome,
+                started,
+                finished,
+                description=header,
+            )
+        except Exception as e:  # noqa: BLE001
+            self.error(f"not recorded: {type(e).__name__}: {e}")
+            return
+
+        self.console.print(
+            f"recorded as run {run.trial.runs.count()} of trial "
+            + str(run.trial.uuid)[:8],
+            style=LABEL,
+        )
 
     # -------------------------------------------------------------- helpers
 
-    def implementations(self) -> dict[str, str]:
-        """What each of the cell's tools runs, by the tool's name."""
+    def tools(self) -> dict[str, ToolBranchSpec]:
+        """The branch of each of the cell's tools, which says what it runs."""
         toolset = self.variation("toolset") if self.configuration else None
-        found: dict[str, str] = {}
+        found: dict[str, ToolBranchSpec] = {}
 
         for tool in toolset.tools if toolset else []:
             try:
@@ -524,10 +579,7 @@ class Repl:
             except (BranchNotFoundError, AmbiguousBranchError):
                 continue
 
-            implementation = ToolBranchSpec.model_validate(model).details.implementation
-
-            if implementation is not None:
-                found[tool.name] = implementation.entry_point
+            found[tool.name] = ToolBranchSpec.model_validate(model)
 
         return found
 
@@ -544,19 +596,22 @@ class Repl:
 
     def facts_of(self, stack: StackBranchSpec) -> ModelFacts:
         """The facts of the stack's model, as the identity's branch has them."""
+        return self.model_of(stack)[0]
+
+    def model_of(self, stack: StackBranchSpec) -> tuple[ModelFacts, int | None]:
+        """The facts of the stack's model, and the branch row they are read from."""
         model_id = stack.target.model.id
 
-        if model_id not in self._facts:
+        if model_id not in self._models:
             try:
                 model = get_visible_branch_model("model", self.identity, trail=model_id)
                 facts = ModelBranchSpec.model_validate(model).details.facts
+                self._models[model_id] = (facts, model.pk)
             except (BranchNotFoundError, AmbiguousBranchError):
                 # none to read: resolution refuses for want of them
-                facts = ModelFacts()
+                self._models[model_id] = (ModelFacts(), None)
 
-            self._facts[model_id] = facts
-
-        return self._facts[model_id]
+        return self._models[model_id]
 
     def resolve(self) -> Resolution:
         assert self.configuration and self.stack
@@ -572,10 +627,11 @@ class Repl:
         async with trial.stream() as events:
             return await show_events(self.console, events)
 
-    def judge(self, resolution: Resolution, streamed: Streamed) -> None:
+    def judge(self, resolution: Resolution, streamed: Streamed) -> bool | None:
         """
         Whether the model reasoned as it was asked to, whether its answer
         holds to its schema, and what the output's views read from it.
+        Answer with whether it holds, where there is a schema to hold to.
         """
         # The facts are claims: a trial is what shows whether the model
         # honours them (new-datamodel.md §2).
@@ -597,9 +653,11 @@ class Repl:
             )
 
         answer = streamed.answer
+        valid: bool | None = None
 
         if resolution.coercion is not None:
             problem = invalid(resolution.coercion.schema, answer)
+            valid = problem is None
 
             if problem is None:
                 self.console.print("valid", style=VALID)
@@ -616,6 +674,8 @@ class Repl:
 
             if not items:
                 self.console.print("  nothing", style=LABEL)
+
+        return valid
 
     def name_of(self, entity: EntityName, trail: Any) -> str:
         """What the identity calls `trail`, or its short fingerprint."""

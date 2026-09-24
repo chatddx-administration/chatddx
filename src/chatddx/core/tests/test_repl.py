@@ -1,4 +1,5 @@
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from typer.testing import CliRunner
 from chatddx.core.models import IdentityModel
 from chatddx.core.repl import Repl, complete
 from chatddx.dx.fake_vllm import FakeTransport, stream
+from chatddx.history.models import RunModel, TrialModel
 from chatddx.manage import app
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
@@ -128,6 +130,44 @@ def test_run_streams_a_trial_of_the_cell(say: Say, fake: FakeTransport):
 
     [request] = fake.requests
     assert request["messages"][-1] == {"role": "user", "content": "case payload 1"}
+
+
+def test_each_run_is_recorded_as_a_run_of_its_trial(say: Say):
+    written = say("cell free-text qwen3-8b-awq@fake", "run case-1 7", "run case-1 7")
+
+    first, again = re.findall(r"recorded as run (\d+) of trial (\w{8})", written)
+
+    assert (first[0], again[0]) == ("1", "2")
+    assert first[1] == again[1]
+
+    [trial] = TrialModel.objects.all()
+    assert str(trial.uuid).startswith(first[1])
+    assert trial.runs.filter(status="completed").count() == 2
+
+
+def test_a_run_whose_server_fails_is_recorded_as_errored():
+    provision()
+
+    def handler(_request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(400, json={"error": {"message": "no such model"}})
+
+    repl = Repl("alex", Console(record=True, width=200), httpx2.MockTransport(handler))
+    _ = repl.handle("cell free-text qwen3-8b-awq@fake")
+    _ = repl.handle("run case-1")
+
+    assert "recorded as run 1 of trial" in repl.console.export_text()
+
+    [run] = RunModel.objects.all()
+    assert run.status == "errored"
+    assert run.error is not None and "no such model" in run.error
+    # what the server said, as it said it
+    assert run.responses == ['{"error":{"message":"no such model"}}']
+    # and the exchange as far as it got: the response pydantic-ai was
+    # reading when it broke off, and the error
+    assert run.session is not None
+    request, response, error = run.session.messages.all()
+    assert (request.kind, response.kind, error.kind) == ("request", "response", "error")
+    assert response.payload["state"] == "interrupted"
 
 
 def test_run_sends_nothing_for_a_refused_cell(say: Say, fake: FakeTransport):

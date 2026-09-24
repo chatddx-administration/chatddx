@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import django
 import typer
@@ -7,7 +7,11 @@ import typer
 from chatddx.core import settings
 
 django.setup()
+from django.db import transaction
+from django.db.models import ProtectedError, QuerySet
+
 from chatddx.core.utils import ensure_identity
+from chatddx.history.models import MessageModel, RunModel, SessionModel, TrialModel
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.inventories import ParsedInventory
@@ -25,6 +29,50 @@ receipt_text = {
 def wipe_data(
     user_name: Annotated[str, typer.Argument()],
 ):
+    # all of it or none: what another user's history read stays
+    try:
+        with transaction.atomic():
+            lines = _wipe_history(user_name) + _wipe_branches(user_name)
+    except ProtectedError as e:
+        typer.echo(f"{user_name} is kept: runs of others read its branches", err=True)
+        raise typer.Exit(1) from e
+
+    for line in lines:
+        print(line)
+
+
+def _wipe_history(user_name: str) -> list[str]:
+    """The user's runs and trials, and the sessions their messages were in."""
+    # what refers to a row goes before the row
+    runs = _removed(RunModel.objects.filter(owner__name=user_name))
+    messages = _removed(MessageModel.objects.filter(session__owner__name=user_name))
+    sessions = _removed(SessionModel.objects.filter(owner__name=user_name))
+    trials = _removed(TrialModel.objects.filter(owner__name=user_name))
+
+    return [
+        f"[run]: removed {runs}, unshared {_unshared(RunModel, user_name)}",
+        f"[message]: removed {messages}",
+        f"[session]: removed {sessions}, "
+        + f"unshared {_unshared(SessionModel, user_name)}",
+        f"[trial]: removed {trials}, unshared {_unshared(TrialModel, user_name)}",
+    ]
+
+
+def _removed(qs: QuerySet[Any]) -> int:
+    _, removed = qs.delete()
+    return removed.get(qs.model._meta.label, 0)
+
+
+def _unshared(model: type[RunModel | SessionModel | TrialModel], user_name: str) -> int:
+    unshared, _ = model.collaborators.through.objects.filter(
+        identitymodel__name=user_name
+    ).delete()
+    return unshared
+
+
+def _wipe_branches(user_name: str) -> list[str]:
+    lines: list[str] = []
+
     for entity in all_entities:
         branch_model = entity_of(entity).branch_model
 
@@ -33,10 +81,12 @@ def wipe_data(
             identitymodel__name=user_name
         ).delete()
 
-        print(
+        lines.append(
             f"[{entity}]: removed {removed.get(branch_model._meta.label, 0)}, "
             + f"unshared {unshared}"
         )
+
+    return lines
 
 
 def init_data(
