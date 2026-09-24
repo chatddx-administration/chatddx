@@ -25,6 +25,7 @@ from pydantic import JsonValue
 from pydantic_ai import (
     AgentRunEvents,
     AgentRunResultEvent,
+    FunctionToolResultEvent,
     PartDeltaEvent,
     PartEndEvent,
     PartStartEvent,
@@ -34,7 +35,9 @@ from pydantic_ai import (
     ThinkingPartDelta,
     ToolCallPart,
     ToolCallPartDelta,
+    ToolReturnPart,
     UnexpectedModelBehavior,
+    UsageLimitExceeded,
 )
 from rich.console import Console
 from rich.table import Table
@@ -47,6 +50,7 @@ from chatddx.repo.entities.configuration.pydantic import ConfigurationBranchSpec
 from chatddx.repo.entities.model.pydantic import ModelBranchSpec, ModelFacts
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchSpec
 from chatddx.repo.entities.stack.pydantic import StackBranchSpec
+from chatddx.repo.entities.tool.pydantic import ToolBranchSpec
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.names import short_fingerprint
 from chatddx.repo.shufflers.branch import (
@@ -63,10 +67,11 @@ from chatddx.runtime.resolution import (
     Sampling,
     SliceRefusal,
     Slices,
+    Tool,
     realize,
     resolve,
 )
-from chatddx.runtime.trial import FINAL_RESULT, Trial, invalid
+from chatddx.runtime.trial import FINAL_RESULT, TOOL_ROUNDS, Trial, invalid
 
 HISTORY = Path.home() / ".chatddx_history"
 
@@ -307,11 +312,12 @@ class Repl:
                     resolution.reasoning,
                     resolution.sampling,
                     resolution.coercion,
+                    resolution.tools,
                     resolution.slots,
                 )
             except CellRefused as e:
                 refusals = e.refusals
-                parts = (e.reasoning, e.sampling, e.coercion, e.slots)
+                parts = (e.reasoning, e.sampling, e.coercion, e.tools, e.slots)
 
         table = Table(box=None, header_style="bold")
         table.add_column("slice")
@@ -424,6 +430,13 @@ class Repl:
             self.error(f"{self.identity} has no secret '{resolution.credential}'")
             return
 
+        implementations = self.implementations()
+        missing = [t.name for t in resolution.tools if t.name not in implementations]
+
+        if missing:
+            self.error(f"nothing to run for {', '.join(missing)}: no implementation")
+            return
+
         seeded = f" (seed {seed})" if seed is not None else ""
         self.console.print(
             f"trial: {self.label} × {self.stack.name} × {case.name}{seeded}",
@@ -436,6 +449,7 @@ class Repl:
             api_key=api_key,
             transport=self.transport,
             seed=int(seed) if seed is not None else None,
+            implementations=implementations,
         )
 
         try:
@@ -443,9 +457,10 @@ class Repl:
         except KeyboardInterrupt:
             self.console.print("\n(stopped)", style=LABEL)
         except UnexpectedModelBehavior as e:
-            # one trial is one request: an answer that doesn't parse is not
-            # asked for again
+            # an answer that doesn't parse is not asked for again
             self.error(f"invalid: the answer doesn't parse ({e})")
+        except UsageLimitExceeded:
+            self.error(f"\nstopped: still calling tools after {TOOL_ROUNDS} rounds")
         except Exception as e:  # noqa: BLE001
             # the model or its server failed mid-run: say so and carry on
             self.error(f"\n{type(e).__name__}: {e}")
@@ -453,6 +468,24 @@ class Repl:
             self.judge(resolution, streamed)
 
     # -------------------------------------------------------------- helpers
+
+    def implementations(self) -> dict[str, str]:
+        """What each of the cell's tools runs, by the tool's name."""
+        toolset = self.variation("toolset") if self.configuration else None
+        found: dict[str, str] = {}
+
+        for tool in toolset.tools if toolset else []:
+            try:
+                model = get_visible_branch_model("tool", self.identity, trail=tool.id)
+            except (BranchNotFoundError, AmbiguousBranchError):
+                continue
+
+            implementation = ToolBranchSpec.model_validate(model).details.implementation
+
+            if implementation is not None:
+                found[tool.name] = implementation.entry_point
+
+        return found
 
     def put_configuration(self, model: Any) -> None:
         # a configuration goes in as it is: what was set was set in another
@@ -622,11 +655,13 @@ class Repl:
 
 
 # what the slices resolved to, whether or not the cell is refused
-type Parts = tuple[Reasoning | None, Sampling | None, Coercion | None, dict[str, str]]
+type Parts = tuple[
+    Reasoning | None, Sampling | None, Coercion | None, list[Tool], dict[str, str]
+]
 
 
 def _realized(entity: str, slices: Slices, parts: Parts) -> str:
-    reasoning, sampling, coercion, slots = parts
+    reasoning, sampling, coercion, tools, slots = parts
     free_text = slices.output.schema is None
     views = ", ".join(slices.output.views) or "none"
 
@@ -648,6 +683,8 @@ def _realized(entity: str, slices: Slices, parts: Parts) -> str:
             return _coerced(coercion, SCHEMA_PROMPT in slots)
         case "instruction":
             return f"filled: {', '.join(slots) or 'no slots'}"
+        case "toolset" if tools:
+            return f"offered: {', '.join(tool.name for tool in tools)}"
         case _:
             return ""
 
@@ -775,14 +812,19 @@ async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed
                 write(_arguments(args))
             case PartDeltaEvent(delta=ToolCallPartDelta(args_delta=args)) if args:
                 write(_arguments(args))
+            case FunctionToolResultEvent(part=ToolReturnPart(content=content)):
+                begin("result")
+                write(_arguments(content))
+                begin(None)
             case PartEndEvent():
                 begin(None)
             case AgentRunResultEvent(result=result):
                 answer = result.output
                 usage = result.usage
                 begin(None)
+                rounds = f", {usage.requests} requests" if usage.requests > 1 else ""
                 console.out(
-                    f"({usage.input_tokens} in, {usage.output_tokens} out)",
+                    f"({usage.input_tokens} in, {usage.output_tokens} out{rounds})",
                     style=LABEL,
                     highlight=False,
                 )

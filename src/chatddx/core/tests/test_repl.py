@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 from chatddx.core.repl import Repl, complete
 from chatddx.dx.fake_vllm import FakeTransport, stream
 from chatddx.manage import app
+from chatddx.repo.entities.tool.django import ToolBranchModel
 
 pytestmark = pytest.mark.django_db
 
@@ -107,12 +108,13 @@ def test_show_sets_each_variation_beside_what_it_resolves_to(say: Say):
 
 
 def test_show_reports_a_refused_cell_slice_by_slice(say: Say):
-    written = say("cell plan-web gpt-oss-20b@fake", "show")
+    written = say("cell plan-web gpt-oss-20b@fake", "set reasoning off", "show")
 
-    # the toolset waits; the rest resolves regardless
-    assert written.count("not yet:") == 1
-    assert "the model's default, 'medium': reasoning_effort=\"medium\"" in written
+    # the reasoning is refused; the rest resolves regardless
+    assert written.count("refused:") == 1
+    assert "refused: always reasons" in written
     assert "response_format: guided decoding holds the answer" in written
+    assert "offered: web_search" in written
 
 
 def test_run_streams_a_trial_of_the_cell(say: Say, fake: FakeTransport):
@@ -127,9 +129,9 @@ def test_run_streams_a_trial_of_the_cell(say: Say, fake: FakeTransport):
 
 
 def test_run_sends_nothing_for_a_refused_cell(say: Say, fake: FakeTransport):
-    written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
+    written = say("cell baseline gpt-oss-20b@fake", "set reasoning off", "run case-1")
 
-    assert "not yet: toolset: the repl doesn't run tools yet" in written
+    assert "refused: reasoning: always reasons" in written
     assert fake.requests == []
 
 
@@ -355,6 +357,71 @@ def test_run_takes_the_trial_s_seed(say: Say, fake: FakeTransport):
     assert fake.requests[0]["seed"] == 42
     assert "a seed is a whole number, not 'x'" in written
     assert len(fake.requests) == 1
+
+
+# ------------------------------------------------------------------- toolset
+
+
+def test_calls_and_what_they_returned_stream_as_they_come(
+    say: Say, fake: FakeTransport
+):
+    written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
+
+    assert "[sentinel_string] {}\n[result] asdf" in written
+    assert '[sentinel_op] {"v1": 1, "v2": 1}\n[result] 0' in written
+    assert "Fake diagnosis A" in written
+    # a round for each tool, then the answer
+    assert "3 requests)" in written
+    assert len(fake.requests) == 3
+
+
+def test_show_says_which_tools_the_model_is_offered(say: Say):
+    written = say("cell plan-web qwen3-8b-awq@fake", "show")
+
+    assert "offered: web_search" in written
+    # and the guidance fills its slot
+    assert "You have access to a web_search tool." in written
+
+
+def test_a_toolset_can_be_set_in_any_configuration(say: Say, fake: FakeTransport):
+    written = say(
+        "cell baseline qwen3-8b-awq@fake", "set toolset sentinel", "run case-1"
+    )
+
+    assert "[result] asdf" in written
+    assert [t["function"]["name"] for t in fake.requests[0]["tools"]] == [
+        "sentinel_string",
+        "sentinel_op",
+    ]
+
+
+def test_a_model_still_calling_tools_is_stopped():
+    provision()
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        # as if nothing had been called yet: the fake calls on and on
+        text = "".join(stream(body | {"messages": body["messages"][:1]}))
+        return httpx2.Response(
+            200, headers={"content-type": "text/event-stream"}, content=text.encode()
+        )
+
+    repl = Repl("alex", Console(record=True, width=200), httpx2.MockTransport(handler))
+    _ = repl.handle("cell test-tools qwen3-8b-awq@fake")
+    _ = repl.handle("run case-1")
+
+    assert "stopped: still calling tools after 5 rounds" in repl.console.export_text()
+
+
+def test_a_tool_with_nothing_to_run_is_said_before_anything_is_sent(
+    say: Say, fake: FakeTransport
+):
+    _ = ToolBranchModel.objects.filter(name="sentinel_op").update(details={})
+
+    written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
+
+    assert "nothing to run for sentinel_op: no implementation" in written
+    assert fake.requests == []
 
 
 def test_show_says_how_the_answer_is_held_and_what_the_facts_note(say: Say):

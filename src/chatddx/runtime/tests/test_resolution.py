@@ -22,6 +22,7 @@ from chatddx.runtime.resolution import (
     Coercion,
     SliceRefusal,
     Slices,
+    Tool,
     realize,
     resolve,
 )
@@ -290,14 +291,6 @@ def test_a_stack_the_repl_can_t_send_to_is_refused():
     ]
 
 
-def test_a_toolset_waits_for_its_piece():
-    toolset = ToolsetTrailSchema(tools=[ToolTrailSchema(name="lookup")])
-
-    assert refusals(cell(toolset=toolset)) == [
-        SliceRefusal("toolset", "the repl doesn't run tools yet", "later")
-    ]
-
-
 # ------------------------------------------------------------------ coercion
 
 # key order as written: a constrained decoder emits keys in this order
@@ -468,15 +461,121 @@ def test_a_schema_prompt_the_instruction_doesn_t_place_is_refused():
     ]
 
 
+# ------------------------------------------------------------------- toolset
+
+TOOLED = ServingTrailSchema(
+    engine=ENGINE,
+    args={
+        "reasoning-parser": "qwen3",
+        "tool-call-parser": "hermes",
+        "enable-auto-tool-choice": True,
+    },
+)
+
+GUIDED = InstructionTrailSchema(
+    system="{{output_guidance}}{{#if tool_guidance}}\n{{tool_guidance}}{{/if}}",
+    user="{{case}}",
+    variables=["case", "output_guidance", "tool_guidance"],
+)
+
+
+def test_a_toolset_offers_its_tools_in_order_as_the_request_carries_them():
+    lookup = ToolTrailSchema.model_validate(
+        {
+            "name": "lookup",
+            "description": "Look a term up.",
+            "parameters": {
+                "$defs": {"Term": {"type": "string"}},
+                "type": "object",
+                "properties": {"term": {"$ref": "#/$defs/Term"}},
+            },
+        }
+    )
+    toolset = ToolsetTrailSchema(
+        guidance="Look it up.", tools=[lookup, ToolTrailSchema(name="now")]
+    )
+
+    resolution = resolve(
+        cell(instruction=GUIDED, toolset=toolset), STACK, FACTS, TOOLED
+    )
+
+    assert resolution.tools == [
+        # with its references inlined, as a schema is
+        Tool(
+            "lookup",
+            "Look a term up.",
+            {"type": "object", "properties": {"term": {"type": "string"}}},
+        ),
+        Tool("now", "", {"type": "object", "properties": {}}),
+    ]
+    # and the guidance fills its slot
+    assert resolution.slots["tool_guidance"] == "Look it up."
+    assert resolution.render("a cough")[0] == "List the diagnoses.\nLook it up."
+
+
+def test_no_toolset_offers_nothing():
+    resolution = resolve(cell(instruction=GUIDED), STACK, FACTS, TOOLED)
+
+    assert resolution.tools == []
+    assert "tool_guidance" not in resolution.slots
+
+
+def test_tools_need_a_serving_with_a_tool_call_parser():
+    toolset = ToolsetTrailSchema(tools=[ToolTrailSchema(name="lookup")])
+
+    assert refusals(cell(toolset=toolset)) == [
+        SliceRefusal(
+            "toolset",
+            "tools need a tool call parser, which the serving doesn't provide",
+        )
+    ]
+
+
+def test_a_tool_whose_parameters_refer_to_themselves_can_t_be_sent():
+    walk = ToolTrailSchema.model_validate(
+        {
+            "name": "walk",
+            "parameters": {
+                "$defs": {
+                    "Node": {
+                        "type": "object",
+                        "properties": {"next": {"$ref": "#/$defs/Node"}},
+                    }
+                },
+                "$ref": "#/$defs/Node",
+            },
+        }
+    )
+    toolset = ToolsetTrailSchema(tools=[walk])
+
+    assert refusals(cell(toolset=toolset), serving=TOOLED) == [
+        SliceRefusal("toolset", "'walk' can't be sent: #/$defs/Node refers to itself")
+    ]
+
+
+def test_tool_guidance_the_instruction_doesn_t_place_is_refused():
+    toolset = ToolsetTrailSchema(
+        guidance="Look it up.", tools=[ToolTrailSchema(name="lookup")]
+    )
+
+    assert refusals(cell(toolset=toolset), serving=TOOLED) == [
+        SliceRefusal(
+            "instruction", "it doesn't place 'tool_guidance', which the toolset fills"
+        )
+    ]
+
+
 def test_a_refused_cell_keeps_what_its_other_slices_resolve_to():
     toolset = ToolsetTrailSchema(tools=[ToolTrailSchema(name="lookup")])
 
+    # the serving has no tool call parser
     with pytest.raises(CellRefused) as refused:
         _ = resolve(cell(toolset=toolset), STACK, FACTS, SERVING)
 
     assert refused.value.reasoning is not None
     assert refused.value.reasoning.intent == "on"
     assert refused.value.sampling is not None
+    assert [tool.name for tool in refused.value.tools] == ["lookup"]
     assert refused.value.slots == {"output_guidance": "List the diagnoses."}
 
 

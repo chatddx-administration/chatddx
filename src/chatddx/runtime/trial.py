@@ -7,7 +7,8 @@ name, and with every field resolution wrote. The exact request body is kept:
 the request, not the variations' names, says what ran.
 """
 
-from collections.abc import AsyncGenerator
+import importlib
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from typing import Any, cast
 
@@ -21,7 +22,9 @@ from pydantic_ai import (
     NativeOutput,
     PromptedOutput,
     StructuredDict,
+    Tool,
     ToolOutput,
+    UsageLimits,
 )
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles import DEFAULT_PROFILE, ModelProfile, merge_profile
@@ -58,6 +61,10 @@ OWN: OpenAIModelProfile = {
 # the tool a structured answer is given through, in tool mode
 FINAL_RESULT = "final_result"
 
+# the rounds of tool calls a model is let make before it answers: a trial
+# that is still calling after them is stopped
+TOOL_ROUNDS = 5
+
 
 class Trial:
     def __init__(
@@ -67,6 +74,7 @@ class Trial:
         api_key: str | None = None,
         transport: httpx2.AsyncBaseTransport | None = None,
         seed: int | None = None,
+        implementations: dict[str, str] | None = None,
     ):
         self.resolution: Resolution = resolution
         self.case: str = case
@@ -74,8 +82,15 @@ class Trial:
         self.transport: httpx2.AsyncBaseTransport | None = transport
         # the trial's own, not the configuration's (new-datamodel.md §2)
         self.seed: int | None = seed
-        # the request body as it was sent
-        self.request: bytes | None = None
+        # what each tool runs, by its name: the entry point its branch says
+        # it has; it changes the tool's results, not the request
+        self.implementations: dict[str, str] = implementations or {}
+        # the request bodies, as they were sent: one per round
+        self.requests: list[bytes] = []
+
+        for tool in resolution.tools:
+            if tool.name not in self.implementations:
+                raise ValueError(f"the tool '{tool.name}' has nothing to run")
 
     @asynccontextmanager
     async def stream(self) -> AsyncGenerator[AgentRunEvents[Any]]:
@@ -95,17 +110,21 @@ class Trial:
                 provider=provider,
                 profile=self._profile,
             )
-            # One trial is one request: an answer that doesn't hold is
-            # recorded, not repaired by asking again (data-generation.md §2.2).
+            # An answer, or a call, that doesn't hold is recorded, not
+            # repaired by asking again in pydantic-ai's words
+            # (data-generation.md §2.2).
             agent = Agent(
                 model,
                 instructions=system or None,
                 output_type=self._output_type(),
-                retries={"output": 0},
+                tools=self._tools(),
+                retries={"output": 0, "tools": 0},
             )
 
             async with agent.run_stream_events(
-                user, model_settings=self.settings()
+                user,
+                model_settings=self.settings(),
+                usage_limits=UsageLimits(request_limit=TOOL_ROUNDS + 1),
             ) as events:
                 yield events
 
@@ -126,6 +145,17 @@ class Trial:
             settings["seed"] = self.seed
 
         return cast(ModelSettings, cast(object, settings))
+
+    def _tools(self) -> list[Tool[Any]]:
+        return [
+            Tool.from_schema(
+                _runner(self.implementations[tool.name]),
+                name=tool.name,
+                description=tool.description,
+                json_schema=tool.parameters,
+            )
+            for tool in self.resolution.tools
+        ]
 
     def _output_type(self) -> Any:
         coercion = self.resolution.coercion
@@ -161,7 +191,26 @@ class Trial:
         )
 
     async def _keep(self, request: httpx2.Request) -> None:
-        self.request = request.content
+        self.requests.append(request.content)
+
+
+def load(entry_point: str) -> Callable[..., Any]:
+    """What an entry point names: `module.path:function`."""
+    module, _, name = entry_point.partition(":")
+    return getattr(importlib.import_module(module), name)
+
+
+def _runner(entry_point: str) -> Callable[..., Any]:
+    implementation = load(entry_point)
+
+    def run(**arguments: Any) -> Any:
+        # a tool that fails says so to the model, in chatddx's words
+        try:
+            return implementation(**arguments)
+        except Exception as e:  # noqa: BLE001
+            return f"{type(e).__name__}: {e}"
+
+    return run
 
 
 def invalid(schema: dict[str, JsonValue], answer: Any) -> str | None:

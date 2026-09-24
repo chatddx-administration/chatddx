@@ -1,11 +1,14 @@
+"""
+What the inventory's tools run: each is a tool's implementation, named by
+its entry point (`chatddx.runtime.tools:web_search`), and called with the
+arguments the model gave.
+"""
+
 import re
 from html import unescape
 from urllib.parse import parse_qs, urlparse
 
-import httpx
-from pydantic_ai import RunContext
-
-from chatddx.runtime.context import AgentContext
+import httpx2
 
 _WEB_SEARCH_URL = "https://html.duckduckgo.com/html/"
 _RESULT_RE = re.compile(
@@ -35,17 +38,13 @@ def _resolve_result_url(href: str) -> str:
     return href
 
 
-def web_search(
-    _context: RunContext[AgentContext],
-    query: str,
-    max_results: int = 5,
-) -> str:
+def web_search(query: str, max_results: int = 5) -> str:
     """Search the web and return the top results (title, url, snippet).
 
     Use this to look up current facts, documentation, or anything you're not
     confident about from memory, instead of guessing.
     """
-    response = httpx.get(
+    response = httpx2.get(
         _WEB_SEARCH_URL,
         params={"q": query},
         headers={"User-Agent": "Mozilla/5.0 (compatible; chatddx-web-search/1.0)"},
@@ -70,21 +69,21 @@ def web_search(
     return "\n".join(results)
 
 
-def sentinel_string(_: RunContext[AgentContext]) -> str:
+def sentinel_string() -> str:
     """This is tool returns a string that is hard to know in advance"""
     return "asdf"
 
 
-def sentinel_op(_: RunContext[AgentContext], v1: int, v2: int) -> float:
+def sentinel_op(v1: int, v2: int) -> float:
     """This tool takes two arguments and performs an operation on them"""
     return v1 % v2
 
 
-def user_details(_: RunContext[AgentContext]) -> str:
+def user_details() -> str:
     """Run this function to get user's name"""
     return "pelle"
 
 
-def is_prime(_: RunContext[AgentContext], x: int) -> bool:
+def is_prime(x: int) -> bool:
     """Takes an integer x and returns True if it's a prime and False otherwise"""
     return x == 15

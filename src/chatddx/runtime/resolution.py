@@ -10,6 +10,7 @@ resolved once, and each trial renders it with a case of its own.
 """
 
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -37,11 +38,19 @@ from chatddx.repo.entities.reasoning.pydantic import Effort, Intent, ReasoningTr
 from chatddx.repo.entities.sampling.pydantic import SamplingFields, SamplingTrailBase
 from chatddx.repo.entities.serving.pydantic import Requirement, ServingTrailBase
 from chatddx.repo.entities.stack.pydantic import StackDetails
-from chatddx.repo.entities.toolset.pydantic import ToolsetTrailBase
+from chatddx.repo.entities.tool.pydantic import ToolTrailBase
+from chatddx.repo.entities.toolset.pydantic import SLOT as TOOL_GUIDANCE
 
 type Slice = Literal[
     "model", "reasoning", "sampling", "output", "coercion", "instruction", "toolset"
 ]
+
+
+class Toolset(Protocol):
+    @property
+    def guidance(self) -> str | None: ...
+    @property
+    def tools(self) -> Sequence[ToolTrailBase]: ...
 
 
 class Configuration(Protocol):
@@ -56,7 +65,7 @@ class Configuration(Protocol):
     @property
     def sampling(self) -> SamplingTrailBase: ...
     @property
-    def toolset(self) -> ToolsetTrailBase | None: ...
+    def toolset(self) -> Toolset | None: ...
 
 
 @dataclass(frozen=True)
@@ -68,7 +77,7 @@ class Slices:
     coercion: CoercionTrailBase
     reasoning: ReasoningTrailBase
     sampling: SamplingTrailBase
-    toolset: ToolsetTrailBase | None
+    toolset: Toolset | None
 
 
 @dataclass(frozen=True)
@@ -112,6 +121,15 @@ class Coercion:
     note: str | None
 
 
+@dataclass(frozen=True)
+class Tool:
+    # what the model sees of it: its implementation is the trial's
+    name: str
+    description: str
+    # as the request carries them, with their references inlined
+    parameters: dict[str, JsonValue]
+
+
 class CellRefused(Exception):
     """A cell refused, with what its other slices resolve to regardless."""
 
@@ -121,6 +139,7 @@ class CellRefused(Exception):
         reasoning: Reasoning | None,
         sampling: Sampling | None,
         coercion: Coercion | None,
+        tools: list[Tool],
         slots: dict[str, str],
     ):
         super().__init__("; ".join(f"{r.slice}: {r.reason}" for r in refusals))
@@ -128,6 +147,7 @@ class CellRefused(Exception):
         self.reasoning: Reasoning | None = reasoning
         self.sampling: Sampling | None = sampling
         self.coercion: Coercion | None = coercion
+        self.tools: list[Tool] = tools
         self.slots: dict[str, str] = slots
 
 
@@ -142,6 +162,8 @@ class Resolution:
     output: OutputTrailBase
     # None for free text: whatever the coercion, it contributes nothing
     coercion: Coercion | None
+    # the toolset's, in its order
+    tools: list[Tool]
     instruction: InstructionTrailBase
     # the instruction's slots, as the other slices fill them
     slots: dict[str, str]
@@ -192,9 +214,15 @@ def resolve(
     )
     refusals += found
     coercion, slots = _output(configuration, facts, serving, refusals)
+    tools = _toolset(configuration.toolset, serving, refusals)
+
+    if configuration.toolset and configuration.toolset.guidance is not None:
+        slots[TOOL_GUIDANCE] = configuration.toolset.guidance
+
+    _placed(configuration.instruction, slots, refusals)
 
     if refusals:
-        raise CellRefused(refusals, reasoning, sampling, coercion, slots)
+        raise CellRefused(refusals, reasoning, sampling, coercion, tools, slots)
 
     assert stack.endpoint and stack.served_name and reasoning and sampling
 
@@ -207,6 +235,7 @@ def resolve(
         sampling=sampling,
         output=configuration.output,
         coercion=coercion,
+        tools=tools,
         instruction=configuration.instruction,
         slots=slots,
     )
@@ -380,22 +409,65 @@ def _output(
                 {"schema": schema}
             )
 
-    if configuration.toolset is not None:
+    return coercion, slots
+
+
+def _toolset(
+    toolset: Toolset | None,
+    serving: ServingTrailBase | None,
+    refusals: list[SliceRefusal],
+) -> list[Tool]:
+    """The tools the model is offered, as the request carries them."""
+    if toolset is None:
+        return []
+
+    provided = serving.provides() if serving else frozenset[Requirement]()
+
+    if "tool_call_parser" not in provided:
         refusals.append(
-            SliceRefusal("toolset", "the repl doesn't run tools yet", "later")
+            SliceRefusal(
+                "toolset",
+                "tools need a tool call parser, which the serving doesn't provide",
+            )
         )
 
+    tools: list[Tool] = []
+
+    for tool in toolset.tools:
+        try:
+            parameters = inlined(tool.parameters)
+        except ValueError as e:
+            refusals.append(
+                SliceRefusal("toolset", f"'{tool.name}' can't be sent: {e}")
+            )
+            continue
+
+        tools.append(Tool(tool.name, tool.description, parameters))
+
+    return tools
+
+
+# the slice that fills each slot
+FILLERS = {
+    OUTPUT_GUIDANCE: "output",
+    SCHEMA_PROMPT: "coercion",
+    TOOL_GUIDANCE: "toolset",
+}
+
+
+def _placed(
+    instruction: InstructionTrailBase,
+    slots: dict[str, str],
+    refusals: list[SliceRefusal],
+) -> None:
     for slot in slots:
-        if slot not in configuration.instruction.variables:
-            filler = "output" if slot == OUTPUT_GUIDANCE else "coercion"
+        if slot not in instruction.variables:
             refusals.append(
                 SliceRefusal(
                     "instruction",
-                    f"it doesn't place '{slot}', which the {filler} fills",
+                    f"it doesn't place '{slot}', which the {FILLERS[slot]} fills",
                 )
             )
-
-    return coercion, slots
 
 
 def _coercion(

@@ -14,6 +14,7 @@ from pydantic_ai import (
     TextPart,
     ThinkingPart,
     UnexpectedModelBehavior,
+    UsageLimitExceeded,
 )
 
 from chatddx.core import settings
@@ -21,7 +22,7 @@ from chatddx.dx.fake_vllm import ANSWER, FakeTransport, server, stream
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.parsers.inventory import parse
 from chatddx.runtime.resolution import Resolution, Sampling, resolve
-from chatddx.runtime.trial import Trial, invalid
+from chatddx.runtime.trial import TOOL_ROUNDS, Trial, invalid
 
 CASE = "A patient presents with a cough."
 
@@ -74,8 +75,7 @@ async def test_a_trial_sends_what_resolution_wrote(inventory: ParsedInventory):
     ]
 
     # and keeps the body as it was sent
-    assert trial.request is not None
-    assert json.loads(trial.request) == fake.requests[0]
+    assert [json.loads(body) for body in trial.requests] == fake.requests
 
 
 @pytest.mark.asyncio
@@ -299,6 +299,137 @@ async def test_a_seed_is_the_trial_s_and_goes_out_with_it(inventory: ParsedInven
     )
 
     assert fake.requests[0]["seed"] == 42
+
+
+# ------------------------------------------------------------------- toolset
+
+
+def entry_points(inventory: ParsedInventory) -> dict[str, str]:
+    """What each of the inventory's tools runs, by the tool's name."""
+    return {
+        trail.name: details.implementation.entry_point
+        for trail, details in inventory.tool.values()
+        if details.implementation is not None
+    }
+
+
+def returned(request: dict[str, Any]) -> list[str]:
+    """What the tools returned, as a request sends it back."""
+    return [m["content"] for m in request["messages"] if m["role"] == "tool"]
+
+
+@pytest.mark.asyncio
+async def test_a_trial_offers_the_tools_as_resolution_wrote_them(
+    inventory: ParsedInventory,
+):
+    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+    fake = FakeTransport()
+
+    _ = await run(
+        Trial(cell, CASE, transport=fake, implementations=entry_points(inventory))
+    )
+
+    offered: list[dict[str, Any]] = fake.requests[0]["tools"]
+    assert offered == [
+        {
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.parameters,
+            },
+        }
+        for tool in cell.tools
+    ]
+    # in the order written, keywords and all
+    assert [json.dumps(o["function"]["parameters"]) for o in offered] == [
+        json.dumps(tool.parameters) for tool in cell.tools
+    ]
+
+
+@pytest.mark.asyncio
+async def test_each_call_is_run_and_what_it_returned_goes_back(
+    inventory: ParsedInventory,
+):
+    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+    fake = FakeTransport()
+    trial = Trial(cell, CASE, transport=fake, implementations=entry_points(inventory))
+
+    events = await run(trial)
+
+    # a round for each tool, then the answer
+    assert len(fake.requests) == 3
+    assert returned(fake.requests[-1]) == ["asdf", "0"]
+    assert answer(events) == ANSWER
+    # and every body is kept as it was sent
+    assert [json.loads(body) for body in trial.requests] == fake.requests
+
+
+def broken() -> str:
+    raise RuntimeError("the index is down")
+
+
+@pytest.mark.asyncio
+async def test_a_tool_that_fails_tells_the_model_why(inventory: ParsedInventory):
+    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+    implementations = entry_points(inventory) | {
+        "sentinel_string": f"{__name__}:broken"
+    }
+    fake = FakeTransport()
+
+    events = await run(
+        Trial(cell, CASE, transport=fake, implementations=implementations)
+    )
+
+    assert returned(fake.requests[-1]) == ["RuntimeError: the index is down", "0"]
+    # and the trial carries on
+    assert answer(events) == ANSWER
+
+
+@pytest.mark.asyncio
+async def test_a_model_still_calling_after_its_rounds_is_stopped(
+    inventory: ParsedInventory,
+):
+    bodies: list[Any] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        bodies.append(body)
+        # as if nothing had been called yet: the fake calls on and on
+        text = "".join(stream(body | {"messages": body["messages"][:1]}))
+        return httpx2.Response(
+            200, headers={"content-type": "text/event-stream"}, content=text.encode()
+        )
+
+    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+    trial = Trial(
+        cell,
+        CASE,
+        transport=httpx2.MockTransport(handler),
+        implementations=entry_points(inventory),
+    )
+
+    with pytest.raises(UsageLimitExceeded):
+        _ = await run(trial)
+
+    # its rounds, and the one it was to answer in
+    assert len(bodies) == TOOL_ROUNDS + 1
+
+
+def test_a_tool_with_nothing_to_run_is_refused_before_anything_is_sent(
+    inventory: ParsedInventory,
+):
+    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+
+    with pytest.raises(ValueError, match="'sentinel_op' has nothing to run"):
+        _ = Trial(
+            cell,
+            CASE,
+            transport=FakeTransport(),
+            implementations={
+                "sentinel_string": "chatddx.runtime.tools:sentinel_string"
+            },
+        )
 
 
 def test_an_answer_that_doesn_t_hold_says_where():
