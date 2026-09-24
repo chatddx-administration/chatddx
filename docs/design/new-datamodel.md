@@ -189,12 +189,13 @@ As built, `commit()` works like this:
   short fingerprint (`machine 3f9a1c`), with no tags, no collaborators and
   every detail at its default. Where the owner already has a branch of the
   trail, it isn't touched.
-- **Saving someone else's composition copies their branches first.** Before
-  an owner commits a trail they got from another owner, each trail it
-  reaches that the owner has no branch of gets a copy of the other owner's
-  branch, under its name and with its details, so a tool keeps what it
-  runs. A name the owner already gives another trail is left to the rule
-  above.
+- **Saving copies the archive's branches first.** Before the repl saves a
+  configuration as an owner's, each trail it reaches that the owner has no
+  branch of gets a copy of the archive's branch of it, under its name and
+  with its details, so a tool keeps what it runs. A trail the archive has
+  no branch of, or holds under a name the owner already gives another
+  trail, is left to the rule above. (`commit_copies` can copy any owner's
+  branches; the repl copies the archive's, not the configuration owner's.)
 - **Visibility:** an identity can use its own branches and those it
   collaborates on, by name. Its own shadows a shared one of the same name.
   A lookup can be held to one other owner, such as the archive.
