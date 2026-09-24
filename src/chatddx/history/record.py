@@ -77,18 +77,19 @@ def record(
     finished: datetime,
     description: str | None = None,
     context: SessionContext = SessionContext.REPL,
+    session: SessionModel | None = None,
 ) -> RunModel:
     """
     Write down a run of `trial`, a cell run on the case trail `case`: the
     configuration it ran, as content, and the branches of the stack, model
-    and tools it read.
+    and tools it read. A run that continued `session` adds to it.
     """
     with transaction.atomic():
         identity = IdentityModel.objects.get(name=owner)
         stack = StackBranchModel.objects.get(pk=branches.stack)
         trial_model = _trial(identity, configuration, stack.target_id, case, trial.seed)
 
-        session = SessionModel.objects.create(
+        session = session or SessionModel.objects.create(
             uuid=UUID(trial.conversation_id),
             owner=identity,
             context=context,
@@ -112,7 +113,7 @@ def record(
             responses=[bytes(body).decode() for body in trial.responses],
             output=outcome.output,
             valid=outcome.valid,
-            finish_reason=_finish_reason(trial.messages),
+            finish_reason=_finish_reason(trial.new_messages),
             error=outcome.error,
         )
         _ = RunToolBranchModel.objects.bulk_create(
@@ -150,7 +151,7 @@ def _messages(
     error: str | None,
     at: datetime,
 ) -> list[MessageModel]:
-    payloads = ModelMessagesTypeAdapter.dump_python(trial.messages, mode="json")
+    payloads = ModelMessagesTypeAdapter.dump_python(trial.new_messages, mode="json")
     messages = [
         MessageModel(
             session=session,
@@ -160,7 +161,7 @@ def _messages(
             payload=payload,
             timestamp=message.timestamp or at,
         )
-        for message, payload in zip(trial.messages, payloads, strict=True)
+        for message, payload in zip(trial.new_messages, payloads, strict=True)
     ]
 
     if error is not None:

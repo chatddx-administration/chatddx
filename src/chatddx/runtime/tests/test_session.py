@@ -1,27 +1,84 @@
+"""A session holds a conversation, and a run can take it up where it was left."""
+
+import asyncio
+from collections.abc import Callable, Coroutine
+from typing import Any
+
 import pytest
+from django.utils import timezone
+from pydantic_ai import AgentRunResult, ModelMessagesTypeAdapter
 
-from chatddx.core.choices import SessionContextChoices
-from chatddx.core.models import IdentityModel
-from chatddx.history.session import resume_session, start_session
-from chatddx.repo.inventories import InventoryBranchSpec
-from chatddx.runtime.runners import run_from_session
+from chatddx.dx.fake_vllm import ANSWER, FakeTransport
+from chatddx.history.models import RunModel, RunStatus, SessionModel
+from chatddx.history.record import Branches, Outcome, record
+from chatddx.repo.inventories import ParsedInventory
+from chatddx.repo.shufflers.branch import get_visible_branch_model
+from chatddx.runtime.resolution import Resolution
+from chatddx.runtime.trial import Trial
 
-pytestmark = [
-    pytest.mark.network,
-    pytest.mark.asyncio,
-    pytest.mark.django_db(transaction=True),
-]
+type Cell = Callable[..., Resolution]
+type Ran = Callable[[Trial], Coroutine[Any, Any, AgentRunResult[Any]]]
+
+pytestmark = pytest.mark.django_db
+
+STACK = "qwen3-8b-awq@fake"
 
 
-async def test_session(inventory_fixture_bs: InventoryBranchSpec, owner: IdentityModel):
-    agent = inventory_fixture_bs.agent["qwen3-8b baseline"]
+def test_session(
+    provision: Callable[..., None],
+    cell: Cell,
+    ran: Ran,
+    test_inventory: ParsedInventory,
+):
+    provision()
+    configuration, _ = test_inventory.configuration["baseline"]
+    stack = get_visible_branch_model("stack", "alex", STACK)
+    model = get_visible_branch_model("model", "alex", trail=stack.target.model_id)
+    fake = FakeTransport()
 
-    session = await start_session(owner.pk, agent.id, SessionContextChoices.CHAT)
-    result = await run_from_session(session, "say 'aaa'")
+    def run(case_name: str, session: SessionModel | None = None) -> RunModel:
+        case = get_visible_branch_model("case", "alex", case_name)
+        history = ModelMessagesTypeAdapter.validate_python(
+            [message.payload for message in session.messages.all()] if session else []
+        )
+        trial = Trial(
+            cell("baseline", STACK),
+            case.target.payload,
+            transport=fake,
+            history=history,
+            conversation_id=str(session.uuid) if session else None,
+        )
+        started = timezone.now()
+        result = asyncio.run(ran(trial))
 
-    assert result.output in ["aaa", '"aaa"']
+        return record(
+            "alex",
+            configuration,
+            Branches(stack.pk, model.pk),
+            case.target_id,
+            trial,
+            Outcome(RunStatus.COMPLETED, output=result.output),
+            started,
+            timezone.now(),
+            session=session,
+        )
 
-    agent_session = await resume_session(owner.pk, session.uuid)
+    first = run("case-1")
+    assert first.output == ANSWER
+    assert first.session is not None
 
-    result = await run_from_session(agent_session, "say it again")
-    assert "aaa" in str(result.output)
+    again = run("case-2", session=first.session)
+
+    assert again.session_id == first.session_id
+    assert [m["role"] for m in fake.requests[1]["messages"]] == [
+        "user",
+        "assistant",
+        "user",
+    ]
+    assert fake.requests[1]["messages"][-1]["content"] == "case payload 2"
+    assert [m.run_id for m in first.session.messages.all()] == [
+        first.uuid,
+        first.uuid,
+        again.uuid,
+        again.uuid,
+    ]

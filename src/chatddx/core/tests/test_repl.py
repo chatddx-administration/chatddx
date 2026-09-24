@@ -528,7 +528,10 @@ def test_an_answer_that_doesn_t_parse_says_so(provision: Provision):
     _ = repl.handle("cell challenge-coercion-prompted qwen3-8b-awq@fake")
     _ = repl.handle("run case-1")
 
-    assert "invalid: the answer doesn't parse" in repl.console.export_text()
+    assert (
+        "invalid: the answer doesn't parse: Invalid JSON: expected value at line 1"
+        in repl.console.export_text()
+    )
 
 
 def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for(

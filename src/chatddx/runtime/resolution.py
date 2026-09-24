@@ -546,6 +546,16 @@ def _coercion(
                 )
                 return None
 
+            if sent.get("type") != "object":
+                refusals.append(
+                    SliceRefusal(
+                        "coercion",
+                        "the schema can't be sent: an answer is held to an object, "
+                        + f"not to {json.dumps(sent.get('type'))}",
+                    )
+                )
+                return None
+
             return Coercion(
                 variation.mode,
                 mode,

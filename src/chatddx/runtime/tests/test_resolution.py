@@ -450,6 +450,19 @@ def test_a_schema_that_refers_to_itself_can_t_be_sent():
     ]
 
 
+def test_a_schema_whose_root_isn_t_an_object_can_t_be_sent():
+    output = OutputTrailSchema.model_validate(
+        {"schema": {"type": "array", "items": {"type": "string"}}}
+    )
+
+    assert refusals(cell(output=output)) == [
+        SliceRefusal(
+            "coercion",
+            'the schema can\'t be sent: an answer is held to an object, not to "array"',
+        )
+    ]
+
+
 def test_a_mode_the_facts_refuse_or_say_nothing_on_is_refused():
     prompted = CoercionTrailSchema(mode="prompted", schema_prompt="{{schema}}")
     silent = FACTS.model_copy(

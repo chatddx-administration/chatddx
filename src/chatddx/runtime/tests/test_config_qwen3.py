@@ -1,85 +1,84 @@
+"""
+The test configurations as a trial sends them to Qwen3 on pelle, which serves
+it without a reasoning parser.
+"""
+
+from collections.abc import Callable
+
 import pytest
 
-from chatddx.repo.inventories import InventoryBranchSpec
-from chatddx.runtime.builder import build_agent, build_output_type
+from chatddx.runtime.resolution import CellRefused, Resolution
+from chatddx.runtime.trial import Trial
 from chatddx.utils import dig
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.django_db(transaction=True),
-]
+type Cell = Callable[..., Resolution]
+
+STACK = "qwen3-8b-awq@pelle"
 
 
-async def test_baseline(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["qwen3-8b baseline"]
+def test_baseline(cell: Cell):
+    trial = Trial(cell("baseline", STACK, reasoning="off"), "a case", seed=0)
 
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
+    settings = trial.settings()
 
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
+    assert settings.get("seed") == 0
     assert (
-        dig(
-            agent.model_settings,
-            "extra_body",
-            "chat_template_kwargs",
-            "enable_thinking",
-        )
-        is False
+        dig(settings, "extra_body", "chat_template_kwargs", "enable_thinking") is False
     )
 
 
-async def test_challenge_coercion_tool(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["qwen3-8b challenge-coercion tool"]
+def test_challenge_coercion_tool(cell: Cell):
+    with pytest.raises(CellRefused, match="'tool' needs a reasoning parser"):
+        _ = cell("challenge-coercion-tool", STACK)
 
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
+    resolution = cell("challenge-coercion-tool", STACK, reasoning="off")
+    settings = Trial(resolution, "a case", seed=0).settings()
 
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
-
-
-async def test_challenge_coercion_prompted(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["qwen3-8b challenge-coercion prompted"]
-
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
-
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
+    assert resolution.coercion is not None
+    assert resolution.coercion.mode == "tool"
+    assert settings.get("seed") == 0
 
 
-async def test_challenge_coercion_native(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["qwen3-8b challenge-coercion native"]
+def test_challenge_coercion_prompted(cell: Cell):
+    resolution = cell("challenge-coercion-prompted", STACK)
+    settings = Trial(resolution, "a case", seed=0).settings()
 
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
-
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
+    assert resolution.coercion is not None
+    assert resolution.coercion.mode == "prompted"
+    assert settings.get("seed") == 0
 
 
-async def test_enable_thinking(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["qwen3-8b enable-thinking"]
+def test_challenge_coercion_native(cell: Cell):
+    with pytest.raises(CellRefused, match="'native' needs a reasoning parser"):
+        _ = cell("challenge-coercion-native", STACK)
 
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
+    resolution = cell("challenge-coercion-native", STACK, reasoning="off")
+    settings = Trial(resolution, "a case", seed=0).settings()
 
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
+    assert resolution.coercion is not None
+    assert resolution.coercion.mode == "native"
+    assert settings.get("seed") == 0
 
 
-async def test_tools(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["qwen3-8b test-tools"]
+def test_enable_thinking(cell: Cell):
+    trial = Trial(cell("baseline", STACK, reasoning="on"), "a case", seed=0)
 
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
+    settings = trial.settings()
 
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
+    assert settings.get("seed") == 0
+    assert (
+        dig(settings, "extra_body", "chat_template_kwargs", "enable_thinking") is True
+    )
+
+
+def test_tools(cell: Cell, entry_points: dict[str, str]):
+    resolution = cell("test-tools", STACK)
+    settings = Trial(
+        resolution, "a case", seed=0, implementations=entry_points
+    ).settings()
+
+    assert [tool.name for tool in resolution.tools] == [
+        "sentinel_string",
+        "sentinel_op",
+    ]
+    assert settings.get("seed") == 0

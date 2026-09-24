@@ -1,6 +1,6 @@
 import json
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import replace
 from typing import Any
 
@@ -18,25 +18,12 @@ from pydantic_ai import (
 )
 
 from chatddx.dx.fake_vllm import ANSWER, FakeTransport, server, stream, thinking
-from chatddx.repo.inventories import ParsedInventory
-from chatddx.runtime.resolution import Resolution, Sampling, resolve
-from chatddx.runtime.trial import TOOL_ROUNDS, Trial, invalid
+from chatddx.runtime.resolution import Resolution, Sampling
+from chatddx.runtime.trial import TOOL_ROUNDS, Trial, cause_of, invalid
+
+type Cell = Callable[..., Resolution]
 
 CASE = "A patient presents with a cough."
-
-
-def resolution(
-    inventory: ParsedInventory, configuration_name: str, stack_name: str
-) -> Resolution:
-    configuration, _ = inventory.configuration[configuration_name]
-    stack, stack_details = inventory.stack[stack_name]
-    model = next(
-        details
-        for trail, details in inventory.model.values()
-        if trail.fingerprint == stack.model.fingerprint
-    )
-
-    return resolve(configuration, stack_details, model.facts, stack.serving)
 
 
 async def run(trial: Trial) -> list[AgentStreamEvent | AgentRunResultEvent[Any]]:
@@ -45,14 +32,14 @@ async def run(trial: Trial) -> list[AgentStreamEvent | AgentRunResultEvent[Any]]
 
 
 @pytest.mark.asyncio
-async def test_a_trial_sends_what_resolution_wrote(test_inventory: ParsedInventory):
-    cell = resolution(test_inventory, "free-text", "qwen3-8b-awq@fake")
+async def test_a_trial_sends_what_resolution_wrote(cell: Cell):
+    resolved = cell("free-text", "qwen3-8b-awq@fake")
     fake = FakeTransport()
-    trial = Trial(cell, CASE, transport=fake)
+    trial = Trial(resolved, CASE, transport=fake)
 
     _ = await run(trial)
 
-    system, user = cell.render(CASE)
+    system, user = resolved.render(CASE)
 
     assert fake.requests == [
         {
@@ -60,11 +47,11 @@ async def test_a_trial_sends_what_resolution_wrote(test_inventory: ParsedInvento
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            "model": cell.served_name,
+            "model": resolved.served_name,
             "stream": True,
             "stream_options": {"include_usage": True},
         }
-        | cell.fields
+        | resolved.fields
     ]
 
     # and keeps the body as it was sent
@@ -72,10 +59,10 @@ async def test_a_trial_sends_what_resolution_wrote(test_inventory: ParsedInvento
 
 
 @pytest.mark.asyncio
-async def test_a_trial_keeps_each_response_as_it_came(test_inventory: ParsedInventory):
+async def test_a_trial_keeps_each_response_as_it_came(cell: Cell):
     fake = FakeTransport()
     trial = Trial(
-        resolution(test_inventory, "free-text", "qwen3-8b-awq@fake"),
+        cell("free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=fake,
     )
@@ -92,9 +79,9 @@ async def test_a_trial_keeps_each_response_as_it_came(test_inventory: ParsedInve
 
 
 @pytest.mark.asyncio
-async def test_every_message_carries_the_trial_s_ids(test_inventory: ParsedInventory):
+async def test_every_message_carries_the_trial_s_ids(cell: Cell):
     trial = Trial(
-        resolution(test_inventory, "free-text", "qwen3-8b-awq@fake"),
+        cell("free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=FakeTransport(),
         run_id="run-1",
@@ -110,11 +97,9 @@ async def test_every_message_carries_the_trial_s_ids(test_inventory: ParsedInven
 
 
 @pytest.mark.asyncio
-async def test_a_trial_streams_the_thinking_then_the_answer(
-    test_inventory: ParsedInventory,
-):
+async def test_a_trial_streams_the_thinking_then_the_answer(cell: Cell):
     trial = Trial(
-        resolution(test_inventory, "free-text", "qwen3-8b-awq@fake"),
+        cell("free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=FakeTransport(),
     )
@@ -130,13 +115,11 @@ async def test_a_trial_streams_the_thinking_then_the_answer(
 
 
 @pytest.mark.asyncio
-async def test_an_empty_system_prompt_sends_no_system_message(
-    test_inventory: ParsedInventory,
-):
+async def test_an_empty_system_prompt_sends_no_system_message(cell: Cell):
     fake = FakeTransport()
     _ = await run(
         Trial(
-            resolution(test_inventory, "baseline", "gpt-oss-20b@fake"),
+            cell("baseline", "gpt-oss-20b@fake"),
             CASE,
             transport=fake,
         )
@@ -147,16 +130,16 @@ async def test_an_empty_system_prompt_sends_no_system_message(
 
 @pytest.mark.asyncio
 async def test_the_fields_pydantic_ai_types_go_out_as_the_request_names_them(
-    test_inventory: ParsedInventory,
+    cell: Cell,
 ):
-    cell = resolution(test_inventory, "free-text", "qwen3-8b-awq@fake")
-    cell = replace(
-        cell,
+    resolved = cell("free-text", "qwen3-8b-awq@fake")
+    resolved = replace(
+        resolved,
         sampling=Sampling("explicit", {"stop": ["\n\n"], "max_tokens": 64, "top_k": 5}),
     )
     fake = FakeTransport()
 
-    _ = await run(Trial(cell, CASE, transport=fake))
+    _ = await run(Trial(resolved, CASE, transport=fake))
 
     # pydantic-ai sends `max_tokens` by OpenAI's newer name, which vLLM takes
     # as well
@@ -169,7 +152,7 @@ async def test_the_fields_pydantic_ai_types_go_out_as_the_request_names_them(
 
 
 @pytest.mark.asyncio
-async def test_a_credential_goes_out_as_the_api_key(test_inventory: ParsedInventory):
+async def test_a_credential_goes_out_as_the_api_key(cell: Cell):
     headers: list[str | None] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -181,9 +164,9 @@ async def test_a_credential_goes_out_as_the_api_key(test_inventory: ParsedInvent
             content="".join(stream(body)).encode(),
         )
 
-    cell = resolution(test_inventory, "free-text", "qwen3-8b-awq@fake")
+    resolved = cell("free-text", "qwen3-8b-awq@fake")
     _ = await run(
-        Trial(cell, CASE, api_key="s3cret", transport=httpx2.MockTransport(handler))
+        Trial(resolved, CASE, api_key="s3cret", transport=httpx2.MockTransport(handler))
     )
 
     assert headers == ["Bearer s3cret"]
@@ -203,12 +186,10 @@ def fake_endpoint() -> Iterator[str]:
 
 
 @pytest.mark.asyncio
-async def test_a_trial_runs_against_the_fake_over_http(
-    test_inventory: ParsedInventory, fake_endpoint: str
-):
-    cell = resolution(test_inventory, "free-text", "gpt-oss-20b@fake")
-    cell = replace(cell, endpoint=fake_endpoint)
-    trial = Trial(cell, CASE)
+async def test_a_trial_runs_against_the_fake_over_http(cell: Cell, fake_endpoint: str):
+    resolved = cell("free-text", "gpt-oss-20b@fake")
+    resolved = replace(resolved, endpoint=fake_endpoint)
+    trial = Trial(resolved, CASE)
 
     events = await run(trial)
 
@@ -231,27 +212,25 @@ def answer(events: list[AgentStreamEvent | AgentRunResultEvent[Any]]) -> Any:
 
 
 @pytest.mark.asyncio
-async def test_native_asks_for_the_schema_as_written_and_says_nothing_of_it(
-    test_inventory: ParsedInventory,
-):
-    cell = resolution(test_inventory, "plan", "qwen3-8b-awq@fake")
-    assert cell.coercion is not None
+async def test_native_asks_for_the_schema_as_written_and_says_nothing_of_it(cell: Cell):
+    resolved = cell("plan", "qwen3-8b-awq@fake")
+    assert resolved.coercion is not None
     fake = FakeTransport()
 
-    events = await run(Trial(cell, CASE, transport=fake))
+    events = await run(Trial(resolved, CASE, transport=fake))
 
     [request] = fake.requests
-    written: dict[str, Any] = cell.coercion.schema
+    written: dict[str, Any] = resolved.coercion.schema
     sent: dict[str, Any] = request["response_format"]["json_schema"]["schema"]
     assert request["response_format"]["type"] == "json_schema"
     # the schema with its references inlined, as resolution made it: nothing
     # of pydantic-ai's but a sort of its keywords, and its properties in the
     # order written, the order a constrained decoder emits them in
-    assert sent == cell.coercion.sent
+    assert sent == resolved.coercion.sent
     assert "$defs" in written
     assert list(sent["properties"]) == list(written["properties"])
     # and no text of pydantic-ai's reaches the model
-    system, user = cell.render(CASE)
+    system, user = resolved.render(CASE)
     assert request["messages"] == [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
@@ -265,50 +244,44 @@ async def test_native_asks_for_the_schema_as_written_and_says_nothing_of_it(
 
 @pytest.mark.asyncio
 async def test_tool_mode_offers_the_schema_as_a_tool_the_answer_is_given_through(
-    test_inventory: ParsedInventory,
+    cell: Cell,
 ):
-    cell = resolution(test_inventory, "diagnoses-tool", "qwen3-8b-awq@fake")
-    assert cell.coercion is not None
+    resolved = cell("diagnoses-tool", "qwen3-8b-awq@fake")
+    assert resolved.coercion is not None
     fake = FakeTransport()
 
-    events = await run(Trial(cell, CASE, transport=fake))
+    events = await run(Trial(resolved, CASE, transport=fake))
 
     [request] = fake.requests
     [tool] = request["tools"]
     assert tool["function"]["name"] == "final_result"
     # said to be what the coercion says it is, not in pydantic-ai's words
-    assert tool["function"]["description"] == cell.coercion.tool_description
-    assert tool["function"]["parameters"] == cell.coercion.sent
+    assert tool["function"]["description"] == resolved.coercion.tool_description
+    assert tool["function"]["parameters"] == resolved.coercion.sent
     assert "response_format" not in request
 
-    assert invalid(cell.coercion.schema, answer(events)) is None
+    assert invalid(resolved.coercion.schema, answer(events)) is None
 
 
 @pytest.mark.asyncio
-async def test_prompted_shows_the_schema_and_holds_the_answer_to_nothing(
-    test_inventory: ParsedInventory,
-):
-    cell = resolution(
-        test_inventory, "challenge-coercion-prompted", "qwen3-8b-awq@fake"
-    )
-    assert cell.coercion is not None
+async def test_prompted_shows_the_schema_and_holds_the_answer_to_nothing(cell: Cell):
+    resolved = cell("challenge-coercion-prompted", "qwen3-8b-awq@fake")
+    assert resolved.coercion is not None
     fake = FakeTransport()
 
-    events = await run(Trial(cell, CASE, transport=fake))
+    events = await run(Trial(resolved, CASE, transport=fake))
 
     [request] = fake.requests
     # no JSON mode either: prompted is the schema shown and nothing more
     assert "response_format" not in request
     assert "tools" not in request
-    assert cell.slots["schema_prompt"] in request["messages"][0]["content"]
+    assert resolved.slots["schema_prompt"] in request["messages"][0]["content"]
 
-    assert invalid(cell.coercion.schema, answer(events)) is None
+    assert invalid(resolved.coercion.schema, answer(events)) is None
 
 
 @pytest.mark.asyncio
-async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(
-    test_inventory: ParsedInventory,
-):
+async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(cell: Cell):
     bodies: list[Any] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -319,25 +292,22 @@ async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(
             200, headers={"content-type": "text/event-stream"}, content=text.encode()
         )
 
-    cell = resolution(
-        test_inventory, "challenge-coercion-prompted", "qwen3-8b-awq@fake"
-    )
+    resolved = cell("challenge-coercion-prompted", "qwen3-8b-awq@fake")
 
-    with pytest.raises(UnexpectedModelBehavior):
-        _ = await run(Trial(cell, CASE, transport=httpx2.MockTransport(handler)))
+    with pytest.raises(UnexpectedModelBehavior) as unparsed:
+        _ = await run(Trial(resolved, CASE, transport=httpx2.MockTransport(handler)))
 
     assert len(bodies) == 1
+    assert cause_of(unparsed.value) == "Invalid JSON: expected value at line 1 column 1"
 
 
 @pytest.mark.asyncio
-async def test_a_seed_is_the_trial_s_and_goes_out_with_it(
-    test_inventory: ParsedInventory,
-):
+async def test_a_seed_is_the_trial_s_and_goes_out_with_it(cell: Cell):
     fake = FakeTransport()
 
     _ = await run(
         Trial(
-            resolution(test_inventory, "free-text", "qwen3-8b-awq@fake"),
+            cell("free-text", "qwen3-8b-awq@fake"),
             CASE,
             transport=fake,
             seed=42,
@@ -350,15 +320,6 @@ async def test_a_seed_is_the_trial_s_and_goes_out_with_it(
 # ------------------------------------------------------------------- toolset
 
 
-def entry_points(inventory: ParsedInventory) -> dict[str, str]:
-    """What each of the inventory's tools runs, by the tool's name."""
-    return {
-        trail.name: details.implementation.entry_point
-        for trail, details in inventory.tool.values()
-        if details.implementation is not None
-    }
-
-
 def returned(request: dict[str, Any]) -> list[str]:
     """What the tools returned, as a request sends it back."""
     return [m["content"] for m in request["messages"] if m["role"] == "tool"]
@@ -366,14 +327,12 @@ def returned(request: dict[str, Any]) -> list[str]:
 
 @pytest.mark.asyncio
 async def test_a_trial_offers_the_tools_as_resolution_wrote_them(
-    test_inventory: ParsedInventory,
+    cell: Cell, entry_points: dict[str, str]
 ):
-    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
+    resolved = cell("test-tools", "qwen3-8b-awq@fake")
     fake = FakeTransport()
 
-    _ = await run(
-        Trial(cell, CASE, transport=fake, implementations=entry_points(test_inventory))
-    )
+    _ = await run(Trial(resolved, CASE, transport=fake, implementations=entry_points))
 
     offered: list[dict[str, Any]] = fake.requests[0]["tools"]
     assert offered == [
@@ -385,23 +344,21 @@ async def test_a_trial_offers_the_tools_as_resolution_wrote_them(
                 "parameters": tool.parameters,
             },
         }
-        for tool in cell.tools
+        for tool in resolved.tools
     ]
     # in the order written, keywords and all
     assert [json.dumps(o["function"]["parameters"]) for o in offered] == [
-        json.dumps(tool.parameters) for tool in cell.tools
+        json.dumps(tool.parameters) for tool in resolved.tools
     ]
 
 
 @pytest.mark.asyncio
 async def test_each_call_is_run_and_what_it_returned_goes_back(
-    test_inventory: ParsedInventory,
+    cell: Cell, entry_points: dict[str, str]
 ):
-    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
+    resolved = cell("test-tools", "qwen3-8b-awq@fake")
     fake = FakeTransport()
-    trial = Trial(
-        cell, CASE, transport=fake, implementations=entry_points(test_inventory)
-    )
+    trial = Trial(resolved, CASE, transport=fake, implementations=entry_points)
 
     events = await run(trial)
 
@@ -418,15 +375,15 @@ def broken() -> str:
 
 
 @pytest.mark.asyncio
-async def test_a_tool_that_fails_tells_the_model_why(test_inventory: ParsedInventory):
-    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
-    implementations = entry_points(test_inventory) | {
-        "sentinel_string": f"{__name__}:broken"
-    }
+async def test_a_tool_that_fails_tells_the_model_why(
+    cell: Cell, entry_points: dict[str, str]
+):
+    resolved = cell("test-tools", "qwen3-8b-awq@fake")
+    implementations = entry_points | {"sentinel_string": f"{__name__}:broken"}
     fake = FakeTransport()
 
     events = await run(
-        Trial(cell, CASE, transport=fake, implementations=implementations)
+        Trial(resolved, CASE, transport=fake, implementations=implementations)
     )
 
     assert returned(fake.requests[-1]) == ["RuntimeError: the index is down", "0"]
@@ -436,7 +393,7 @@ async def test_a_tool_that_fails_tells_the_model_why(test_inventory: ParsedInven
 
 @pytest.mark.asyncio
 async def test_a_model_still_calling_after_its_rounds_is_stopped(
-    test_inventory: ParsedInventory,
+    cell: Cell, entry_points: dict[str, str]
 ):
     bodies: list[Any] = []
 
@@ -449,12 +406,12 @@ async def test_a_model_still_calling_after_its_rounds_is_stopped(
             200, headers={"content-type": "text/event-stream"}, content=text.encode()
         )
 
-    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
+    resolved = cell("test-tools", "qwen3-8b-awq@fake")
     trial = Trial(
-        cell,
+        resolved,
         CASE,
         transport=httpx2.MockTransport(handler),
-        implementations=entry_points(test_inventory),
+        implementations=entry_points,
     )
 
     with pytest.raises(UsageLimitExceeded):
@@ -467,14 +424,12 @@ async def test_a_model_still_calling_after_its_rounds_is_stopped(
     assert trial.messages[-1].kind == "request"
 
 
-def test_a_tool_with_nothing_to_run_is_refused_before_anything_is_sent(
-    test_inventory: ParsedInventory,
-):
-    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
+def test_a_tool_with_nothing_to_run_is_refused_before_anything_is_sent(cell: Cell):
+    resolved = cell("test-tools", "qwen3-8b-awq@fake")
 
     with pytest.raises(ValueError, match="'sentinel_op' has nothing to run"):
         _ = Trial(
-            cell,
+            resolved,
             CASE,
             transport=FakeTransport(),
             implementations={

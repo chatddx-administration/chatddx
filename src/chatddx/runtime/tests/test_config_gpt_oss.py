@@ -1,78 +1,72 @@
-import pytest
+"""The test configurations as a trial sends them to gpt-oss on malborg."""
 
-from chatddx.repo.inventories import InventoryBranchSpec
-from chatddx.runtime.builder import build_agent, build_output_type
+from collections.abc import Callable
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.django_db(transaction=True),
-]
+from chatddx.runtime.resolution import Resolution
+from chatddx.runtime.trial import Trial
+from chatddx.utils import dig
 
+type Cell = Callable[..., Resolution]
 
-async def test_baseline(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["gpt-oss-20b baseline"]
-
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
-
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-
-    assert agent.model_settings.get("logit_bias") == None
-    assert agent.model_settings.get("seed") == 0
-    assert agent.model_settings.get("openai_reasoning_effort") == "low"
+STACK = "gpt-oss-20b@malborg"
 
 
-async def test_challenge_coercion_tool(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["gpt-oss-20b challenge-coercion tool"]
+def test_baseline(cell: Cell):
+    trial = Trial(cell("baseline", STACK, reasoning="low"), "a case", seed=0)
 
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
+    settings = trial.settings()
 
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
-
-
-async def test_challenge_coercion_prompted(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["gpt-oss-20b challenge-coercion prompted"]
-
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
-
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
+    assert settings.get("logit_bias") is None
+    assert settings.get("seed") == 0
+    assert dig(settings, "extra_body", "reasoning_effort") == "low"
 
 
-async def test_challenge_coercion_native(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["gpt-oss-20b challenge-coercion native"]
+def test_challenge_coercion_tool(cell: Cell):
+    resolution = cell("challenge-coercion-tool", STACK)
+    settings = Trial(resolution, "a case", seed=0).settings()
 
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
-
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
-
-
-async def test_default_reasoning(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["gpt-oss-20b default-reasoning"]
-
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
-
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
+    assert resolution.coercion is not None
+    assert resolution.coercion.mode == "tool"
+    assert resolution.coercion.note is not None
+    assert "tool_choice" in resolution.coercion.note
+    assert settings.get("seed") == 0
 
 
-async def test_tools(inventory_fixture_bs: InventoryBranchSpec):
-    branch = inventory_fixture_bs.agent["gpt-oss-20b test-tools"]
+def test_challenge_coercion_prompted(cell: Cell):
+    resolution = cell("challenge-coercion-prompted", STACK)
+    settings = Trial(resolution, "a case", seed=0).settings()
 
-    output_type = build_output_type(branch.target)
-    agent = build_agent(branch.target, output_type)
+    assert resolution.coercion is not None
+    assert resolution.coercion.mode == "prompted"
+    assert settings.get("seed") == 0
 
-    assert agent.model_settings
-    assert not callable(agent.model_settings)
-    assert agent.model_settings.get("seed") == 0
+
+def test_challenge_coercion_native(cell: Cell):
+    resolution = cell("challenge-coercion-native", STACK)
+    settings = Trial(resolution, "a case", seed=0).settings()
+
+    assert resolution.coercion is not None
+    assert resolution.coercion.mode == "native"
+    assert settings.get("seed") == 0
+
+
+def test_default_reasoning(cell: Cell):
+    trial = Trial(cell("baseline", STACK), "a case", seed=0)
+
+    settings = trial.settings()
+
+    assert settings.get("seed") == 0
+    assert dig(settings, "extra_body", "reasoning_effort") == "medium"
+
+
+def test_tools(cell: Cell, entry_points: dict[str, str]):
+    resolution = cell("test-tools", STACK)
+    settings = Trial(
+        resolution, "a case", seed=0, implementations=entry_points
+    ).settings()
+
+    assert [tool.name for tool in resolution.tools] == [
+        "sentinel_string",
+        "sentinel_op",
+    ]
+    assert settings.get("seed") == 0

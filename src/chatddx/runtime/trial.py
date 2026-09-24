@@ -11,13 +11,13 @@ the run got.
 
 import importlib
 import uuid
-from collections.abc import AsyncGenerator, AsyncIterator, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
 from typing import Any, cast, override
 
 import httpx2
 from jsonschema.validators import validator_for
-from pydantic import JsonValue
+from pydantic import JsonValue, ValidationError
 from pydantic_ai import (
     Agent,
     AgentRunEvents,
@@ -82,6 +82,7 @@ class Trial:
         implementations: dict[str, str] | None = None,
         run_id: str | None = None,
         conversation_id: str | None = None,
+        history: Sequence[ModelMessage] = (),
     ):
         self.resolution: Resolution = resolution
         self.case: str = case
@@ -103,6 +104,7 @@ class Trial:
         # the run's messages, as pydantic-ai keeps them: as far as it got,
         # whether or not it got to an answer
         self.messages: list[ModelMessage] = []
+        self.history: list[ModelMessage] = list(history)
 
         for tool in resolution.tools:
             if tool.name not in self.implementations:
@@ -146,8 +148,14 @@ class Trial:
                     usage_limits=UsageLimits(request_limit=TOOL_ROUNDS + 1),
                     run_id=self.run_id,
                     conversation_id=self.conversation_id,
+                    message_history=self.history or None,
                 ) as events:
                     yield events
+
+    @property
+    def new_messages(self) -> list[ModelMessage]:
+        """The messages the run added to the conversation it continued."""
+        return self.messages[len(self.history) :]
 
     def settings(self) -> ModelSettings:
         settings: dict[str, Any] = {}
@@ -263,6 +271,22 @@ def _runner(entry_point: str) -> Callable[..., Any]:
             return f"{type(e).__name__}: {e}"
 
     return run
+
+
+def cause_of(error: Exception) -> str:
+    """What went wrong beneath pydantic-ai's own message: the first validation error."""
+    cause = error.__cause__
+
+    while cause is not None and not isinstance(cause, ValidationError):
+        cause = cause.__cause__
+
+    if not isinstance(cause, ValidationError):
+        return str(error)
+
+    first = cause.errors(include_url=False, include_input=False)[0]
+    where = ".".join(str(part) for part in first["loc"])
+
+    return f"{where}: {first['msg']}" if where else first["msg"]
 
 
 def invalid(schema: dict[str, JsonValue], answer: Any) -> str | None:

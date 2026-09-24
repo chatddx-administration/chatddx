@@ -93,7 +93,13 @@ from chatddx.runtime.resolution import (
     realize,
     resolve,
 )
-from chatddx.runtime.trial import FINAL_RESULT, TOOL_ROUNDS, Trial, invalid
+from chatddx.runtime.trial import (
+    FINAL_RESULT,
+    TOOL_ROUNDS,
+    Trial,
+    cause_of,
+    invalid,
+)
 
 HISTORY = Path.home() / ".chatddx_history"
 
@@ -547,13 +553,9 @@ class Repl:
             self.console.print("\n(stopped)", style=LABEL)
             outcome = Outcome(RunStatus.ERRORED, error="stopped")
         except UnexpectedModelBehavior as e:
-            # an answer that doesn't parse is not asked for again
-            self.error(f"invalid: the answer doesn't parse ({e})")
-            outcome = Outcome(
-                RunStatus.COMPLETED,
-                valid=unheld,
-                error=f"the answer doesn't parse: {e}",
-            )
+            unparsed = f"the answer doesn't parse: {cause_of(e)}"
+            self.error(f"invalid: {unparsed}")
+            outcome = Outcome(RunStatus.COMPLETED, valid=unheld, error=unparsed)
         except UsageLimitExceeded:
             stopped = f"stopped: still calling tools after {TOOL_ROUNDS} rounds"
             self.error(f"\n{stopped}")
