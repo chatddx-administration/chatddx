@@ -133,20 +133,19 @@ class Trial:
         if coercion is None:
             return str
 
-        # pydantic-ai sorts a schema's keywords, but keeps its properties in
-        # the order they were written: the order a constrained decoder emits
-        structured = StructuredDict(coercion.schema)
+        # Its references inlined already, pydantic-ai has nothing to make of
+        # it but a sort of its keywords; its properties stay in the order
+        # they were written, the order a constrained decoder emits them in.
+        structured = StructuredDict(coercion.sent)
 
         match coercion.mode:
             case "native":
                 return NativeOutput(structured, template=False)
             case "tool":
-                # what the tool is said to be: the text that asks for the
-                # output, rather than pydantic-ai's own
                 return ToolOutput(
                     structured,
                     name=FINAL_RESULT,
-                    description=self.resolution.output.guidance,
+                    description=coercion.tool_description,
                 )
             case "prompted":
                 return PromptedOutput(structured, template=False)

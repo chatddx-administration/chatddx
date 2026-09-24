@@ -10,8 +10,9 @@ Whether the model is shown the schema goes with the mode too. Tool mode shows
 it anyway, as the final-result tool's parameters, and prompted mode is
 nothing but showing it. `schema_prompt` is chatddx's own text for showing
 it, placed through the instruction's `schema_prompt` slot; null means the
-schema isn't shown. `auto` is resolved from the model's facts before
-anything is built from it.
+schema isn't shown. `tool_description` is chatddx's own text for the tool
+the answer is given through, in tool mode. `auto` is resolved from the
+model's facts before anything is built from it.
 """
 
 from typing import Literal
@@ -46,6 +47,9 @@ class CoercionTrailBase(BaseTrail):
     mode: CoercionMode
     # a template that places `{{schema}}`, the output's schema as JSON
     schema_prompt: str | None = None
+    # what the tool the answer is given through is said to be, in tool mode:
+    # text the model reads
+    tool_description: str | None = None
 
     @model_validator(mode="after")
     def _the_prompt_shows_the_schema(self):
@@ -62,6 +66,26 @@ class CoercionTrailBase(BaseTrail):
                     "a schema prompt places {{schema}}, and nothing else; "
                     + f"this one places {sorted(placed.names) or 'nothing'}"
                 )
+
+        return self
+
+    @model_validator(mode="after")
+    def _a_tool_is_said_to_be_something(self):
+        if self.mode == "tool" and self.tool_description is None:
+            raise ValueError(
+                "tool mode gives the answer through a tool the model reads a "
+                + "description of: it needs a tool_description"
+            )
+
+        if self.tool_description is not None:
+            if self.mode not in ("tool", "auto"):
+                raise ValueError(
+                    "a tool description is for tool mode, or for auto, which may "
+                    + "resolve to it"
+                )
+
+            if placements(self.tool_description).names:
+                raise ValueError("a tool description places nothing")
 
         return self
 

@@ -8,6 +8,7 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 class CoercionTrailModel(TrailModel):
     mode = CharField(max_length=16)
     schema_prompt = TextField(null=True, blank=True)
+    tool_description = TextField(null=True, blank=True)
 
 
 class CoercionBranchModel(BranchModel):

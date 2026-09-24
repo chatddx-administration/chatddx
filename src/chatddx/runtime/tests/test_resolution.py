@@ -320,7 +320,9 @@ def test_a_schema_is_held_by_the_mode_the_coercion_asks_for():
         SERVING,
     )
 
-    assert resolution.coercion == Coercion("native", "native", SCHEMA, None)
+    assert resolution.coercion == Coercion(
+        "native", "native", SCHEMA, SCHEMA, None, None
+    )
     # shown to the model by nothing: no schema prompt
     assert resolution.slots == {"output_guidance": "List the diagnoses."}
 
@@ -328,7 +330,7 @@ def test_a_schema_is_held_by_the_mode_the_coercion_asks_for():
 def test_auto_is_the_mode_the_facts_name():
     resolution = resolve(cell(output=STRUCTURED), STACK, FACTS, SERVING)
 
-    assert resolution.coercion == Coercion("auto", "native", SCHEMA, None)
+    assert resolution.coercion == Coercion("auto", "native", SCHEMA, SCHEMA, None, None)
 
 
 def test_the_schema_prompt_fills_its_slot_with_the_schema_as_written():
@@ -346,7 +348,7 @@ def test_the_schema_prompt_fills_its_slot_with_the_schema_as_written():
 
 
 def test_a_mode_needs_what_the_facts_say_it_needs():
-    coercion = CoercionTrailSchema(mode="tool")
+    coercion = CoercionTrailSchema(mode="tool", tool_description="Answer here.")
 
     assert refusals(cell(output=STRUCTURED, coercion=coercion)) == [
         SliceRefusal(
@@ -365,8 +367,74 @@ def test_a_mode_needs_what_the_facts_say_it_needs():
 
     # what the facts say of the mode goes with it
     assert resolution.coercion == Coercion(
-        "tool", "tool", SCHEMA, "tool_choice is ignored"
+        "tool", "tool", SCHEMA, SCHEMA, "Answer here.", "tool_choice is ignored"
     )
+
+
+def test_auto_ending_at_tool_needs_a_tool_description():
+    tooled = FACTS.model_copy(
+        update={"coercion": FACTS.coercion.model_copy(update={"default": "tool"})}
+    )
+    serving = ServingTrailSchema(
+        engine=ENGINE,
+        args={"tool-call-parser": "hermes", "enable-auto-tool-choice": True},
+    )
+
+    assert refusals(cell(output=STRUCTURED), facts=tooled, serving=serving) == [
+        SliceRefusal(
+            "coercion",
+            "it ends at 'tool': 'tool' needs a tool description, which the coercion "
+            + "doesn't give",
+        )
+    ]
+
+
+def test_references_are_inlined_as_the_request_carries_the_schema():
+    schema: dict[str, Any] = {
+        "$defs": {"Item": {"type": "object", "properties": {"z": {}, "a": {}}}},
+        "type": "object",
+        "properties": {
+            "first": {"$ref": "#/$defs/Item", "description": "the first"},
+            "all": {"type": "array", "items": {"$ref": "#/$defs/Item"}},
+        },
+    }
+    output = OutputTrailSchema.model_validate({"schema": schema})
+
+    resolution = resolve(cell(output=output), STACK, FACTS, SERVING)
+
+    assert resolution.coercion is not None
+    assert resolution.coercion.schema == schema
+    assert resolution.coercion.sent == {
+        "type": "object",
+        "properties": {
+            # a reference's siblings stay beside what it refers to
+            "first": {
+                "type": "object",
+                "properties": {"z": {}, "a": {}},
+                "description": "the first",
+            },
+            "all": {
+                "type": "array",
+                "items": {"type": "object", "properties": {"z": {}, "a": {}}},
+            },
+        },
+    }
+
+
+def test_a_schema_that_refers_to_itself_can_t_be_sent():
+    schema: dict[str, Any] = {
+        "$defs": {
+            "Node": {"type": "object", "properties": {"next": {"$ref": "#/$defs/Node"}}}
+        },
+        "$ref": "#/$defs/Node",
+    }
+    output = OutputTrailSchema.model_validate({"schema": schema})
+
+    assert refusals(cell(output=output)) == [
+        SliceRefusal(
+            "coercion", "the schema can't be sent: #/$defs/Node refers to itself"
+        )
+    ]
 
 
 def test_a_mode_the_facts_refuse_or_say_nothing_on_is_refused():

@@ -89,6 +89,7 @@ Answer with a JSON object that matches this JSON Schema, and nothing else:
 # the schema reaches the model anyway, as the final-result tool's parameters
 [coercion.tool]
 mode = "tool"
+tool_description = "Give your answer by calling this tool, with the answer as its arguments."  # guessed: the wording
 
 # the same text as native-shown, so the two differ only in what enforces it
 [coercion.prompted]

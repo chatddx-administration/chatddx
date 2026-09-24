@@ -104,6 +104,10 @@ class Coercion:
     mode: Mode
     # the output's, as it was written
     schema: dict[str, JsonValue]
+    # as the request carries it, with its references inlined
+    sent: dict[str, JsonValue]
+    # what the tool the answer is given through is said to be, in tool mode
+    tool_description: str | None
     # what the facts say of the mode on this model
     note: str | None
 
@@ -425,18 +429,90 @@ def _coercion(
             provided = serving.provides() if serving else frozenset[Requirement]()
             missing = [need for need in fact.needs if need not in provided]
 
-            if not missing:
-                return Coercion(variation.mode, mode, schema, fact.note)
-
-            refusals.append(
-                SliceRefusal(
-                    "coercion",
-                    f"{through}'{mode}' needs {_listed(missing)}, which the serving "
-                    + "doesn't provide",
+            if missing:
+                refusals.append(
+                    SliceRefusal(
+                        "coercion",
+                        f"{through}'{mode}' needs {_listed(missing)}, which the "
+                        + "serving doesn't provide",
+                    )
                 )
+                return None
+
+            if mode == "tool" and variation.tool_description is None:
+                refusals.append(
+                    SliceRefusal(
+                        "coercion",
+                        f"{through}'tool' needs a tool description, which the "
+                        + "coercion doesn't give",
+                    )
+                )
+                return None
+
+            try:
+                sent = inlined(schema)
+            except ValueError as e:
+                refusals.append(
+                    SliceRefusal("coercion", f"the schema can't be sent: {e}")
+                )
+                return None
+
+            return Coercion(
+                variation.mode,
+                mode,
+                schema,
+                sent,
+                variation.tool_description,
+                fact.note,
             )
 
     return None
+
+
+def inlined(schema: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    """
+    `schema` with each reference in it replaced by what it refers to, and its
+    `$defs` dropped: the schema as a request carries it. Done here, it is
+    chatddx's to say what the model is held to, not a library's to make of
+    the schema. A reference's siblings are kept beside what it refers to.
+    """
+
+    def resolve(node: JsonValue, seen: tuple[str, ...]) -> JsonValue:
+        match node:
+            case {"$ref": str(ref), **siblings}:
+                if ref in seen:
+                    raise ValueError(f"{ref} refers to itself")
+
+                target = resolve(_pointer(schema, ref), (*seen, ref))
+                resolved = {k: resolve(v, seen) for k, v in siblings.items()}
+
+                return (target | resolved) if isinstance(target, dict) else target
+            case dict():
+                return {k: resolve(v, seen) for k, v in node.items()}
+            case list():
+                return [resolve(item, seen) for item in node]
+            case _:
+                return node
+
+    top = {k: v for k, v in schema.items() if k not in ("$defs", "definitions")}
+    resolved = resolve(top, ())
+
+    assert isinstance(resolved, dict)
+    return resolved
+
+
+def _pointer(schema: dict[str, JsonValue], ref: str) -> JsonValue:
+    if not ref.startswith("#/"):
+        raise ValueError(f"{ref} is outside the schema")
+
+    node: JsonValue = schema
+
+    for part in ref[2:].split("/"):
+        if not isinstance(node, dict) or part not in node:
+            raise ValueError(f"{ref} refers to nothing")
+        node = node[part]
+
+    return node
 
 
 def _listed(needs: list[str]) -> str:

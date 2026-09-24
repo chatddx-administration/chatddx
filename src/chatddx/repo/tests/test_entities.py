@@ -313,6 +313,24 @@ def test_a_schema_prompt_places_the_schema_and_nothing_else(schema_prompt: str):
         _ = CoercionTrailSchema(mode="native", schema_prompt=schema_prompt)
 
 
+def test_tool_mode_needs_a_tool_description():
+    with pytest.raises(ValidationError, match="it needs a tool_description"):
+        _ = CoercionTrailSchema(mode="tool")
+
+    tool = CoercionTrailSchema(mode="tool", tool_description="Answer here.")
+    auto = CoercionTrailSchema(mode="auto", tool_description="Answer here.")
+
+    assert (tool.tool_description, auto.tool_description) == ("Answer here.",) * 2
+
+
+def test_a_tool_description_is_for_tool_mode_and_places_nothing():
+    with pytest.raises(ValidationError, match="a tool description is for tool mode"):
+        _ = CoercionTrailSchema(mode="native", tool_description="Answer here.")
+
+    with pytest.raises(ValidationError, match="a tool description places nothing"):
+        _ = CoercionTrailSchema(mode="tool", tool_description="Answer {{here}}.")
+
+
 # ------------------------------------------------------------------ outputs
 
 PLAN: dict[str, JsonValue] = {

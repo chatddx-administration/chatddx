@@ -204,9 +204,11 @@ async def test_native_asks_for_the_schema_as_written_and_says_nothing_of_it(
     written: dict[str, Any] = cell.coercion.schema
     sent: dict[str, Any] = request["response_format"]["json_schema"]["schema"]
     assert request["response_format"]["type"] == "json_schema"
-    # pydantic-ai sends the schema normalized, its keywords sorted and its
-    # $defs inlined, but its properties in the order written: the order a
-    # constrained decoder emits them in
+    # the schema with its references inlined, as resolution made it: nothing
+    # of pydantic-ai's but a sort of its keywords, and its properties in the
+    # order written, the order a constrained decoder emits them in
+    assert sent == cell.coercion.sent
+    assert "$defs" in written
     assert list(sent["properties"]) == list(written["properties"])
     # and no text of pydantic-ai's reaches the model
     system, user = cell.render(CASE)
@@ -234,9 +236,9 @@ async def test_tool_mode_offers_the_schema_as_a_tool_the_answer_is_given_through
     [request] = fake.requests
     [tool] = request["tools"]
     assert tool["function"]["name"] == "final_result"
-    # said to be what the output asks for, not pydantic-ai's own words
-    assert tool["function"]["description"] == cell.output.guidance
-    assert tool["function"]["parameters"] == cell.coercion.schema
+    # said to be what the coercion says it is, not in pydantic-ai's words
+    assert tool["function"]["description"] == cell.coercion.tool_description
+    assert tool["function"]["parameters"] == cell.coercion.sent
     assert "response_format" not in request
 
     assert invalid(cell.coercion.schema, answer(events)) is None
