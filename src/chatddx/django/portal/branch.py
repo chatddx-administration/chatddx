@@ -10,17 +10,17 @@ from django.urls import reverse
 from unfold.contrib.inlines.admin import NonrelatedTabularInline
 
 from chatddx.core.utils import ensure_tag
-from chatddx.django.orm.qs import qs_canon, qs_with_details
+from chatddx.django.orm.qs import qs_head, qs_with_relations
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.mixins import ModelAdminFormWithRequest
 from chatddx.django.portal.request_context import RequestContext, request_contexts
 from chatddx.django.portal.typing import TypedModelAdmin
 from chatddx.django.portal.utils import template_registry
-from chatddx.repo.bundles import entity_of, view_of
+from chatddx.repo.bundles import entity_of, presentation_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchProxy
-from chatddx.repo.families.pydantic import BranchSchemaDetails
-from chatddx.repo.shufflers import branch
+from chatddx.repo.families.pydantic import BranchDetails
+from chatddx.repo.store import branch
 
 
 class BranchModelInlineAdmin[T: BranchProxy](NonrelatedTabularInline):
@@ -47,10 +47,10 @@ class BranchModelAdmin[T: BranchProxy](
 
     def get_queryset(self, request: HttpRequest):
         qs: QuerySet[Any] = super().get_queryset(request)
-        return qs_canon(qs, request.user.username)
+        return qs_head(qs, request.user.username)
 
     def get_object(self, request, object_id, from_field=None):
-        queryset = qs_with_details(super().get_queryset(request))
+        queryset = qs_with_relations(super().get_queryset(request))
         model = queryset.model
         field = (
             model._meta.pk if from_field is None else model._meta.get_field(from_field)  # pyright: ignore[reportAttributeAccessIssue]
@@ -166,14 +166,14 @@ class BranchModelAdmin[T: BranchProxy](
     ) -> BranchProxy:
         self._validated_data(form)
 
-        return view_of(self.name).proxy()
+        return presentation_of(self.name).proxy()
 
     def save_model(
         self, request: HttpRequest, obj: BranchProxy, form: BranchForm, change: Any
     ):
 
         data = self._validated_data(form)
-        schema_cls = entity_of(self.name).trail_schema
+        schema_cls = entity_of(self.name).trail_in
 
         schema = schema_cls.model_validate(data.model_dump())
         branch_name = data.name or ""
@@ -181,7 +181,7 @@ class BranchModelAdmin[T: BranchProxy](
         assert data.owner
 
         created: bool = branch.commit(
-            branch_details=BranchSchemaDetails(
+            branch_details=BranchDetails(
                 name=branch_name,
                 owner=data.owner.name,
             ),

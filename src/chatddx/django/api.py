@@ -8,11 +8,11 @@ from pydantic_ai.exceptions import ModelHTTPError
 from chatddx.core.choices import SessionContextChoices
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
-from chatddx.django.orm.qs import qs_canon
+from chatddx.django.orm.qs import qs_head
 from chatddx.history.session import start_session
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.shufflers.agent import get_agent_async, select_agents_async
-from chatddx.repo.shufflers.branch import (
+from chatddx.repo.store.agent import get_agent_async, select_agents_async
+from chatddx.repo.store.branch import (
     BranchNotFoundError,
 )
 from chatddx.runtime.runners import run_from_session
@@ -54,7 +54,7 @@ async def get_agents_endpoint(request: HttpRequest, output_type: str | None = No
 
     if output_type:
         model_cls = entity_of("agent").branch_model
-        qs = qs_canon(model_cls.objects.all(), owner.name)
+        qs = qs_head(model_cls.objects.all(), owner.name)
         qs = qs.filter(target__output_type__definition__title=output_type)
     else:
         qs = None

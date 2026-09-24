@@ -3,17 +3,17 @@ from typing import Any
 
 import pytest
 
-from chatddx.repo.entities.coercion.pydantic import CoercionTrailSchema
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
-from chatddx.repo.entities.instruction.pydantic import InstructionTrailSchema
+from chatddx.repo.entities.coercion.pydantic import CoercionTrailIn
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
+from chatddx.repo.entities.instruction.pydantic import InstructionTrailIn
 from chatddx.repo.entities.model.pydantic import ModelFacts
-from chatddx.repo.entities.output.pydantic import OutputTrailSchema
-from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailSchema
-from chatddx.repo.entities.sampling.pydantic import SamplingTrailSchema
-from chatddx.repo.entities.serving.pydantic import ServingTrailSchema
+from chatddx.repo.entities.output.pydantic import OutputTrailIn
+from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailIn
+from chatddx.repo.entities.sampling.pydantic import SamplingTrailIn
+from chatddx.repo.entities.serving.pydantic import ServingTrailIn
 from chatddx.repo.entities.stack.pydantic import StackDetails
-from chatddx.repo.entities.tool.pydantic import ToolTrailSchema
-from chatddx.repo.entities.toolset.pydantic import ToolsetTrailSchema
+from chatddx.repo.entities.tool.pydantic import ToolTrailIn
+from chatddx.repo.entities.toolset.pydantic import ToolsetTrailIn
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.runtime.resolution import (
     CellRefused,
@@ -63,31 +63,29 @@ STACK = StackDetails.model_validate(
     }
 )
 
-SERVING = ServingTrailSchema(engine=ENGINE, args={"reasoning-parser": "qwen3"})
+SERVING = ServingTrailIn(engine=ENGINE, args={"reasoning-parser": "qwen3"})
 
-INSTRUCTION = InstructionTrailSchema(
+INSTRUCTION = InstructionTrailIn(
     system="{{output_guidance}}{{#if schema_prompt}}\n{{schema_prompt}}{{/if}}",
     user="{{case}}",
     variables=["case", "output_guidance", "schema_prompt"],
 )
 
 
-def cell(**slices: Any) -> ConfigurationTrailSchema:
-    return ConfigurationTrailSchema.model_validate(
+def cell(**slices: Any) -> ConfigurationTrailIn:
+    return ConfigurationTrailIn.model_validate(
         {
             "instruction": INSTRUCTION,
-            "output": OutputTrailSchema(guidance="List the diagnoses."),
-            "coercion": CoercionTrailSchema(mode="auto"),
-            "reasoning": ReasoningTrailSchema(effort="default"),
-            "sampling": SamplingTrailSchema(defaults="recommended"),
+            "output": OutputTrailIn(guidance="List the diagnoses."),
+            "coercion": CoercionTrailIn(mode="auto"),
+            "reasoning": ReasoningTrailIn(effort="default"),
+            "sampling": SamplingTrailIn(defaults="recommended"),
         }
         | slices
     )
 
 
-def refusals(
-    configuration: ConfigurationTrailSchema, **kwargs: Any
-) -> list[SliceRefusal]:
+def refusals(configuration: ConfigurationTrailIn, **kwargs: Any) -> list[SliceRefusal]:
     with pytest.raises(CellRefused) as refused:
         _ = resolve(
             configuration,
@@ -125,7 +123,7 @@ def test_the_case_is_placed_when_a_trial_renders_the_cell():
 
 def test_an_effort_collapses_into_the_intent_the_facts_name():
     resolution = resolve(
-        cell(reasoning=ReasoningTrailSchema(effort="high")), STACK, FACTS, SERVING
+        cell(reasoning=ReasoningTrailIn(effort="high")), STACK, FACTS, SERVING
     )
 
     assert (resolution.reasoning.effort, resolution.reasoning.intent) == ("high", "on")
@@ -136,7 +134,7 @@ def test_an_effort_collapses_into_the_intent_the_facts_name():
 
 def test_recommended_sampling_follows_the_mode_reasoning_resolves_to():
     resolution = resolve(
-        cell(reasoning=ReasoningTrailSchema(effort="off")), STACK, FACTS, SERVING
+        cell(reasoning=ReasoningTrailIn(effort="off")), STACK, FACTS, SERVING
     )
 
     assert resolution.sampling.source == "recommended for 'off'"
@@ -144,7 +142,7 @@ def test_recommended_sampling_follows_the_mode_reasoning_resolves_to():
 
 
 def test_the_model_s_sampling_is_its_generation_config_and_explicit_values_win():
-    sampling = SamplingTrailSchema(defaults="model", temperature=0, max_tokens=512)
+    sampling = SamplingTrailIn(defaults="model", temperature=0, max_tokens=512)
     resolution = resolve(cell(sampling=sampling), STACK, FACTS, SERVING)
 
     assert resolution.sampling.source == "the model's generation config"
@@ -156,7 +154,7 @@ def test_the_model_s_sampling_is_its_generation_config_and_explicit_values_win()
 
 
 def test_a_budget_goes_where_the_facts_say():
-    reasoning = ReasoningTrailSchema(effort="on", budget=512)
+    reasoning = ReasoningTrailIn(effort="on", budget=512)
     resolution = resolve(cell(reasoning=reasoning), STACK, FACTS, SERVING)
 
     assert resolution.reasoning.writes["thinking_token_budget"] == 512
@@ -164,7 +162,7 @@ def test_a_budget_goes_where_the_facts_say():
 
 def test_free_text_places_no_schema_whatever_the_coercion():
     resolution = resolve(
-        cell(coercion=CoercionTrailSchema(mode="prompted", schema_prompt="{{schema}}")),
+        cell(coercion=CoercionTrailIn(mode="prompted", schema_prompt="{{schema}}")),
         STACK,
         FACTS,
         SERVING,
@@ -179,7 +177,7 @@ def test_a_variation_set_in_a_configuration_s_place_resolves_there():
         instruction=configuration.instruction,
         output=configuration.output,
         coercion=configuration.coercion,
-        reasoning=ReasoningTrailSchema(effort="off"),
+        reasoning=ReasoningTrailIn(effort="off"),
         sampling=configuration.sampling,
         toolset=configuration.toolset,
     )
@@ -194,7 +192,7 @@ def test_a_variation_set_in_a_configuration_s_place_resolves_there():
 
 def test_reasoning_realizes_without_a_sampling_to_pull_in():
     reasoning, sampling, refusals = realize(
-        ReasoningTrailSchema(effort="high"), None, FACTS, SERVING
+        ReasoningTrailIn(effort="high"), None, FACTS, SERVING
     )
 
     assert reasoning is not None
@@ -202,19 +200,19 @@ def test_reasoning_realizes_without_a_sampling_to_pull_in():
 
 
 def test_an_effort_the_facts_refuse_is_refused_with_their_reason():
-    assert refusals(cell(reasoning=ReasoningTrailSchema(effort="low"))) == [
+    assert refusals(cell(reasoning=ReasoningTrailIn(effort="low"))) == [
         SliceRefusal("reasoning", "no effort levels")
     ]
 
 
 def test_an_effort_that_collapses_into_a_refused_one_says_where_it_ended():
-    assert refusals(cell(reasoning=ReasoningTrailSchema(effort="xhigh"))) == [
+    assert refusals(cell(reasoning=ReasoningTrailIn(effort="xhigh"))) == [
         SliceRefusal("reasoning", "it ends at 'low': no effort levels")
     ]
 
 
 def test_an_effort_the_facts_say_nothing_on_is_refused():
-    assert refusals(cell(reasoning=ReasoningTrailSchema(effort="minimal"))) == [
+    assert refusals(cell(reasoning=ReasoningTrailIn(effort="minimal"))) == [
         SliceRefusal("reasoning", "the model's facts say nothing on 'minimal'")
     ]
 
@@ -240,10 +238,10 @@ def test_a_mode_with_no_recommendation_is_refused():
 
 
 def test_a_budget_needs_a_serving_with_a_reasoning_parser():
-    reasoning = ReasoningTrailSchema(effort="on", budget=512)
+    reasoning = ReasoningTrailIn(effort="on", budget=512)
 
     assert refusals(
-        cell(reasoning=reasoning), serving=ServingTrailSchema(engine=ENGINE)
+        cell(reasoning=reasoning), serving=ServingTrailIn(engine=ENGINE)
     ) == [
         SliceRefusal(
             "reasoning",
@@ -253,8 +251,8 @@ def test_a_budget_needs_a_serving_with_a_reasoning_parser():
 
 
 def test_a_budget_has_to_fit_in_max_tokens():
-    reasoning = ReasoningTrailSchema(effort="on", budget=512)
-    sampling = SamplingTrailSchema(defaults="recommended", max_tokens=512)
+    reasoning = ReasoningTrailIn(effort="on", budget=512)
+    sampling = SamplingTrailIn(defaults="recommended", max_tokens=512)
 
     assert refusals(cell(reasoning=reasoning, sampling=sampling)) == [
         SliceRefusal("reasoning", "a budget of 512 doesn't fit in max_tokens 512")
@@ -262,7 +260,7 @@ def test_a_budget_has_to_fit_in_max_tokens():
 
 
 def test_a_slot_the_instruction_doesn_t_place_is_refused():
-    bare = InstructionTrailSchema(user="{{case}}", variables=["case"])
+    bare = InstructionTrailIn(user="{{case}}", variables=["case"])
 
     assert refusals(cell(instruction=bare)) == [
         SliceRefusal(
@@ -287,14 +285,14 @@ SCHEMA: dict[str, Any] = {
     "required": ["urgent", "diagnoses"],
 }
 
-STRUCTURED = OutputTrailSchema.model_validate(
+STRUCTURED = OutputTrailIn.model_validate(
     {"schema": SCHEMA, "guidance": "List the diagnoses."}
 )
 
 
 def test_a_schema_is_held_by_the_mode_the_coercion_asks_for():
     resolution = resolve(
-        cell(output=STRUCTURED, coercion=CoercionTrailSchema(mode="native")),
+        cell(output=STRUCTURED, coercion=CoercionTrailIn(mode="native")),
         STACK,
         FACTS,
         SERVING,
@@ -313,7 +311,7 @@ def test_auto_is_the_mode_the_facts_name():
 
 
 def test_the_schema_prompt_fills_its_slot_with_the_schema_as_written():
-    coercion = CoercionTrailSchema(mode="native", schema_prompt="Schema:\n{{schema}}")
+    coercion = CoercionTrailIn(mode="native", schema_prompt="Schema:\n{{schema}}")
     resolution = resolve(
         cell(output=STRUCTURED, coercion=coercion), STACK, FACTS, SERVING
     )
@@ -327,7 +325,7 @@ def test_the_schema_prompt_fills_its_slot_with_the_schema_as_written():
 
 
 def test_a_mode_needs_what_the_facts_say_it_needs():
-    coercion = CoercionTrailSchema(mode="tool", tool_description="Answer here.")
+    coercion = CoercionTrailIn(mode="tool", tool_description="Answer here.")
 
     assert refusals(cell(output=STRUCTURED, coercion=coercion)) == [
         SliceRefusal(
@@ -336,7 +334,7 @@ def test_a_mode_needs_what_the_facts_say_it_needs():
         )
     ]
 
-    serving = ServingTrailSchema(
+    serving = ServingTrailIn(
         engine=ENGINE,
         args={"tool-call-parser": "hermes", "enable-auto-tool-choice": True},
     )
@@ -350,8 +348,8 @@ def test_a_mode_needs_what_the_facts_say_it_needs():
 
 
 def test_a_reasoning_parser_is_needed_only_while_the_model_reasons():
-    bare = ServingTrailSchema(engine=ENGINE)
-    native = CoercionTrailSchema(mode="native")
+    bare = ServingTrailIn(engine=ENGINE)
+    native = CoercionTrailIn(mode="native")
 
     assert refusals(cell(output=STRUCTURED, coercion=native), serving=bare) == [
         SliceRefusal(
@@ -361,7 +359,7 @@ def test_a_reasoning_parser_is_needed_only_while_the_model_reasons():
         )
     ]
 
-    off = ReasoningTrailSchema(effort="off")
+    off = ReasoningTrailIn(effort="off")
     resolution = resolve(
         cell(output=STRUCTURED, coercion=native, reasoning=off), STACK, FACTS, bare
     )
@@ -374,7 +372,7 @@ def test_auto_ending_at_tool_needs_a_tool_description():
     tooled = FACTS.model_copy(
         update={"coercion": FACTS.coercion.model_copy(update={"default": "tool"})}
     )
-    serving = ServingTrailSchema(
+    serving = ServingTrailIn(
         engine=ENGINE,
         args={"tool-call-parser": "hermes", "enable-auto-tool-choice": True},
     )
@@ -397,7 +395,7 @@ def test_references_are_inlined_as_the_request_carries_the_schema():
             "all": {"type": "array", "items": {"$ref": "#/$defs/Item"}},
         },
     }
-    output = OutputTrailSchema.model_validate({"schema": schema})
+    output = OutputTrailIn.model_validate({"schema": schema})
 
     resolution = resolve(cell(output=output), STACK, FACTS, SERVING)
 
@@ -426,7 +424,7 @@ def test_a_schema_that_refers_to_itself_can_t_be_sent():
         },
         "$ref": "#/$defs/Node",
     }
-    output = OutputTrailSchema.model_validate({"schema": schema})
+    output = OutputTrailIn.model_validate({"schema": schema})
 
     assert refusals(cell(output=output)) == [
         SliceRefusal(
@@ -436,7 +434,7 @@ def test_a_schema_that_refers_to_itself_can_t_be_sent():
 
 
 def test_a_schema_whose_root_isn_t_an_object_can_t_be_sent():
-    output = OutputTrailSchema.model_validate(
+    output = OutputTrailIn.model_validate(
         {"schema": {"type": "array", "items": {"type": "string"}}}
     )
 
@@ -449,7 +447,7 @@ def test_a_schema_whose_root_isn_t_an_object_can_t_be_sent():
 
 
 def test_a_mode_the_facts_refuse_or_say_nothing_on_is_refused():
-    prompted = CoercionTrailSchema(mode="prompted", schema_prompt="{{schema}}")
+    prompted = CoercionTrailIn(mode="prompted", schema_prompt="{{schema}}")
     silent = FACTS.model_copy(
         update={"coercion": FACTS.coercion.model_copy(update={"default": None})}
     )
@@ -463,12 +461,12 @@ def test_a_mode_the_facts_refuse_or_say_nothing_on_is_refused():
 
 
 def test_a_schema_prompt_the_instruction_doesn_t_place_is_refused():
-    guidance_only = InstructionTrailSchema(
+    guidance_only = InstructionTrailIn(
         system="{{output_guidance}}",
         user="{{case}}",
         variables=["case", "output_guidance"],
     )
-    coercion = CoercionTrailSchema(mode="native", schema_prompt="{{schema}}")
+    coercion = CoercionTrailIn(mode="native", schema_prompt="{{schema}}")
 
     assert refusals(
         cell(instruction=guidance_only, output=STRUCTURED, coercion=coercion)
@@ -479,7 +477,7 @@ def test_a_schema_prompt_the_instruction_doesn_t_place_is_refused():
     ]
 
 
-TOOLED = ServingTrailSchema(
+TOOLED = ServingTrailIn(
     engine=ENGINE,
     args={
         "reasoning-parser": "qwen3",
@@ -488,7 +486,7 @@ TOOLED = ServingTrailSchema(
     },
 )
 
-GUIDED = InstructionTrailSchema(
+GUIDED = InstructionTrailIn(
     system="{{output_guidance}}{{#if tool_guidance}}\n{{tool_guidance}}{{/if}}",
     user="{{case}}",
     variables=["case", "output_guidance", "tool_guidance"],
@@ -496,7 +494,7 @@ GUIDED = InstructionTrailSchema(
 
 
 def test_a_toolset_offers_its_tools_in_order_as_the_request_carries_them():
-    lookup = ToolTrailSchema.model_validate(
+    lookup = ToolTrailIn.model_validate(
         {
             "name": "lookup",
             "description": "Look a term up.",
@@ -507,8 +505,8 @@ def test_a_toolset_offers_its_tools_in_order_as_the_request_carries_them():
             },
         }
     )
-    toolset = ToolsetTrailSchema(
-        guidance="Look it up.", tools=[lookup, ToolTrailSchema(name="now")]
+    toolset = ToolsetTrailIn(
+        guidance="Look it up.", tools=[lookup, ToolTrailIn(name="now")]
     )
 
     resolution = resolve(
@@ -535,7 +533,7 @@ def test_no_toolset_offers_nothing():
 
 
 def test_tools_need_a_serving_with_a_tool_call_parser():
-    toolset = ToolsetTrailSchema(tools=[ToolTrailSchema(name="lookup")])
+    toolset = ToolsetTrailIn(tools=[ToolTrailIn(name="lookup")])
 
     assert refusals(cell(toolset=toolset)) == [
         SliceRefusal(
@@ -546,7 +544,7 @@ def test_tools_need_a_serving_with_a_tool_call_parser():
 
 
 def test_a_tool_whose_parameters_refer_to_themselves_can_t_be_sent():
-    walk = ToolTrailSchema.model_validate(
+    walk = ToolTrailIn.model_validate(
         {
             "name": "walk",
             "parameters": {
@@ -560,7 +558,7 @@ def test_a_tool_whose_parameters_refer_to_themselves_can_t_be_sent():
             },
         }
     )
-    toolset = ToolsetTrailSchema(tools=[walk])
+    toolset = ToolsetTrailIn(tools=[walk])
 
     assert refusals(cell(toolset=toolset), serving=TOOLED) == [
         SliceRefusal("toolset", "'walk' can't be sent: #/$defs/Node refers to itself")
@@ -568,9 +566,7 @@ def test_a_tool_whose_parameters_refer_to_themselves_can_t_be_sent():
 
 
 def test_tool_guidance_the_instruction_doesn_t_place_is_refused():
-    toolset = ToolsetTrailSchema(
-        guidance="Look it up.", tools=[ToolTrailSchema(name="lookup")]
-    )
+    toolset = ToolsetTrailIn(guidance="Look it up.", tools=[ToolTrailIn(name="lookup")])
 
     assert refusals(cell(toolset=toolset), serving=TOOLED) == [
         SliceRefusal(
@@ -580,7 +576,7 @@ def test_tool_guidance_the_instruction_doesn_t_place_is_refused():
 
 
 def test_a_refused_cell_keeps_what_its_other_slices_resolve_to():
-    toolset = ToolsetTrailSchema(tools=[ToolTrailSchema(name="lookup")])
+    toolset = ToolsetTrailIn(tools=[ToolTrailIn(name="lookup")])
 
     with pytest.raises(CellRefused) as refused:
         _ = resolve(cell(toolset=toolset), STACK, FACTS, SERVING)

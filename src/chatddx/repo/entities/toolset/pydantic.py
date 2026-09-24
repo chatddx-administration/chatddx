@@ -12,17 +12,17 @@ from typing import Annotated
 from pydantic import Field
 
 from chatddx.core.fields import CoercedStr
-from chatddx.repo.entities.tool import ToolFormDataIn, ToolTrailSchema, ToolTrailSpec
+from chatddx.repo.entities.tool import ToolFormDataIn, ToolTrailIn, ToolTrailOut
 from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
-    BranchSchema,
-    BranchSpec,
+    BranchIn,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.families.fields import distinct
 
@@ -30,7 +30,7 @@ from chatddx.repo.families.fields import distinct
 SLOT = "tool_guidance"
 
 
-def _name(tool: ToolTrailSchema) -> str:
+def _name(tool: ToolTrailIn) -> str:
     return tool.name
 
 
@@ -38,28 +38,28 @@ class ToolsetTrailBase(BaseTrail):
     guidance: str | None = None
 
 
-class ToolsetTrailSchema(ToolsetTrailBase, TrailSchema):
+class ToolsetTrailIn(ToolsetTrailBase, TrailIn):
     # two tools of one name would be one tool to the model
     tools: Annotated[
-        list[ToolTrailSchema],
+        list[ToolTrailIn],
         Field(min_length=1),
         distinct(_name),
     ]
 
 
-class ToolsetTrailSchemaRef(TrailSchemaRef, ToolsetTrailBase):
+class ToolsetTrailRef(TrailRef, ToolsetTrailBase):
     pass
 
 
-class ToolsetTrailSpec(ToolsetTrailBase, TrailSpec):
-    tools: list[ToolTrailSpec]
+class ToolsetTrailOut(ToolsetTrailBase, TrailOut):
+    tools: list[ToolTrailOut]
 
 
-class ToolsetBranchSchema(BranchSchema[ToolsetTrailSchema]):
+class ToolsetBranchIn(BranchIn[ToolsetTrailIn]):
     pass
 
 
-class ToolsetBranchSpec(BranchSpec[ToolsetTrailSpec, Details]):
+class ToolsetBranchOut(BranchOut[ToolsetTrailOut, Details]):
     pass
 
 

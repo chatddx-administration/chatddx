@@ -16,7 +16,7 @@ from chatddx.core.repl import (
 )
 from chatddx.core.repl.cell import NONE, OPTIONAL, SLICES
 from chatddx.core.repl.shell import NotFound, Repl
-from chatddx.repo.shufflers.branch import AmbiguousBranchError, BranchNotFoundError
+from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 
 
 @dataclass(frozen=True)

@@ -15,44 +15,44 @@ from pydantic import Field
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.entities.coercion import (
     CoercionFormDataIn,
-    CoercionTrailSchema,
-    CoercionTrailSpec,
+    CoercionTrailIn,
+    CoercionTrailOut,
 )
 from chatddx.repo.entities.instruction import (
     InstructionFormDataIn,
-    InstructionTrailSchema,
-    InstructionTrailSpec,
+    InstructionTrailIn,
+    InstructionTrailOut,
 )
 from chatddx.repo.entities.output import (
     OutputFormDataIn,
-    OutputTrailSchema,
-    OutputTrailSpec,
+    OutputTrailIn,
+    OutputTrailOut,
 )
 from chatddx.repo.entities.reasoning import (
     ReasoningFormDataIn,
-    ReasoningTrailSchema,
-    ReasoningTrailSpec,
+    ReasoningTrailIn,
+    ReasoningTrailOut,
 )
 from chatddx.repo.entities.sampling import (
     SamplingFormDataIn,
-    SamplingTrailSchema,
-    SamplingTrailSpec,
+    SamplingTrailIn,
+    SamplingTrailOut,
 )
 from chatddx.repo.entities.toolset import (
     ToolsetFormDataIn,
-    ToolsetTrailSchema,
-    ToolsetTrailSpec,
+    ToolsetTrailIn,
+    ToolsetTrailOut,
 )
 from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
-    BranchSchema,
-    BranchSpec,
+    BranchIn,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 
 
@@ -60,16 +60,16 @@ class ConfigurationTrailBase(BaseTrail):
     pass
 
 
-class ConfigurationTrailSchema(ConfigurationTrailBase, TrailSchema):
-    instruction: InstructionTrailSchema
-    output: OutputTrailSchema
-    coercion: CoercionTrailSchema
-    reasoning: ReasoningTrailSchema
-    sampling: SamplingTrailSchema
-    toolset: ToolsetTrailSchema | None = None
+class ConfigurationTrailIn(ConfigurationTrailBase, TrailIn):
+    instruction: InstructionTrailIn
+    output: OutputTrailIn
+    coercion: CoercionTrailIn
+    reasoning: ReasoningTrailIn
+    sampling: SamplingTrailIn
+    toolset: ToolsetTrailIn | None = None
 
 
-class ConfigurationTrailSchemaRef(TrailSchemaRef, ConfigurationTrailBase):
+class ConfigurationTrailRef(TrailRef, ConfigurationTrailBase):
     instruction_id: int
     output_id: int
     coercion_id: int
@@ -78,20 +78,20 @@ class ConfigurationTrailSchemaRef(TrailSchemaRef, ConfigurationTrailBase):
     toolset_id: int | None
 
 
-class ConfigurationTrailSpec(ConfigurationTrailBase, TrailSpec):
-    instruction: InstructionTrailSpec
-    output: OutputTrailSpec
-    coercion: CoercionTrailSpec
-    reasoning: ReasoningTrailSpec
-    sampling: SamplingTrailSpec
-    toolset: ToolsetTrailSpec | None
+class ConfigurationTrailOut(ConfigurationTrailBase, TrailOut):
+    instruction: InstructionTrailOut
+    output: OutputTrailOut
+    coercion: CoercionTrailOut
+    reasoning: ReasoningTrailOut
+    sampling: SamplingTrailOut
+    toolset: ToolsetTrailOut | None
 
 
-class ConfigurationBranchSchema(BranchSchema[ConfigurationTrailSchema]):
+class ConfigurationBranchIn(BranchIn[ConfigurationTrailIn]):
     pass
 
 
-class ConfigurationBranchSpec(BranchSpec[ConfigurationTrailSpec, Details]):
+class ConfigurationBranchOut(BranchOut[ConfigurationTrailOut, Details]):
     pass
 
 

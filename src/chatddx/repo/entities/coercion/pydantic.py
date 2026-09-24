@@ -24,12 +24,12 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
-    BranchSchema,
-    BranchSpec,
+    BranchIn,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.templates import placements
 
@@ -90,23 +90,23 @@ class CoercionTrailBase(BaseTrail):
         return self
 
 
-class CoercionTrailSchema(CoercionTrailBase, TrailSchema):
+class CoercionTrailIn(CoercionTrailBase, TrailIn):
     pass
 
 
-class CoercionTrailSchemaRef(TrailSchemaRef, CoercionTrailBase):
+class CoercionTrailRef(TrailRef, CoercionTrailBase):
     pass
 
 
-class CoercionTrailSpec(CoercionTrailBase, TrailSpec):
+class CoercionTrailOut(CoercionTrailBase, TrailOut):
     pass
 
 
-class CoercionBranchSchema(BranchSchema[CoercionTrailSchema]):
+class CoercionBranchIn(BranchIn[CoercionTrailIn]):
     pass
 
 
-class CoercionBranchSpec(BranchSpec[CoercionTrailSpec, Details]):
+class CoercionBranchOut(BranchOut[CoercionTrailOut, Details]):
     pass
 
 

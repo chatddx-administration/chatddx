@@ -16,7 +16,7 @@ from chatddx.core.choices import RoleChoices, RunStatusChoices, SessionContextCh
 from chatddx.core.tests.conftest import AGENT_REPLY, CASE_PAYLOAD
 from chatddx.history.models import MessageModel, RunModel, SessionModel
 from chatddx.history.schemas import SessionSpec
-from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
+from chatddx.repo.entities.agent.pydantic import AgentTrailOut
 
 pytestmark = pytest.mark.django_db(transaction=True)
 runner = CliRunner()
@@ -71,7 +71,7 @@ class StubAgent:
         self,
         session: SessionSpec,
         prompt: str,
-        agent_spec: AgentTrailSpec,
+        agent_spec: AgentTrailOut,
         **kwargs: Any,
     ) -> None:
         self.prompts.append(prompt)

@@ -9,7 +9,7 @@ from rich.text import Text
 from chatddx.core.repl.cell import SLICES
 from chatddx.core.repl.render import LABEL
 from chatddx.core.repl.shell import SHARED_BY, Repl
-from chatddx.repo.shufflers.branch import select_visible_branch_models
+from chatddx.repo.store.branch import select_visible_branch_models
 
 
 def configurations(repl: Repl) -> None:

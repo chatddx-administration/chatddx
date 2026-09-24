@@ -30,12 +30,12 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
-    BranchSchema,
-    BranchSpec,
+    BranchIn,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.families.fields import JsonSchema
 
@@ -256,23 +256,23 @@ with warnings.catch_warnings():
             return self
 
 
-class OutputTrailSchema(OutputTrailBase, TrailSchema):
+class OutputTrailIn(OutputTrailBase, TrailIn):
     pass
 
 
-class OutputTrailSchemaRef(TrailSchemaRef, OutputTrailBase):
+class OutputTrailRef(TrailRef, OutputTrailBase):
     pass
 
 
-class OutputTrailSpec(OutputTrailBase, TrailSpec):
+class OutputTrailOut(OutputTrailBase, TrailOut):
     pass
 
 
-class OutputBranchSchema(BranchSchema[OutputTrailSchema]):
+class OutputBranchIn(BranchIn[OutputTrailIn]):
     pass
 
 
-class OutputBranchSpec(BranchSpec[OutputTrailSpec, Details]):
+class OutputBranchOut(BranchOut[OutputTrailOut, Details]):
     pass
 
 

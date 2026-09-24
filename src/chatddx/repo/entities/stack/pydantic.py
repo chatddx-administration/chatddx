@@ -21,32 +21,32 @@ from pydantic import Field, HttpUrl, model_validator
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.entities.machine import (
     MachineFormDataIn,
-    MachineTrailSchema,
-    MachineTrailSpec,
+    MachineTrailIn,
+    MachineTrailOut,
 )
 from chatddx.repo.entities.model import (
     ModelFormDataIn,
-    ModelTrailSchema,
-    ModelTrailSpec,
+    ModelTrailIn,
+    ModelTrailOut,
 )
-from chatddx.repo.entities.os import OsFormDataIn, OsTrailSchema, OsTrailSpec
+from chatddx.repo.entities.os import OsFormDataIn, OsTrailIn, OsTrailOut
 from chatddx.repo.entities.serving import (
     ServingFormDataIn,
-    ServingTrailSchema,
-    ServingTrailSpec,
+    ServingTrailIn,
+    ServingTrailOut,
 )
 from chatddx.repo.families import (
     BaseBranch,
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 
 # The API a request is sent through: `vllm` for a stack of chatddx's own, and
@@ -68,12 +68,12 @@ class StackTrailBase(BaseTrail):
     pass
 
 
-class StackTrailSchema(StackTrailBase, TrailSchema):
-    machine: MachineTrailSchema
-    os: OsTrailSchema | None = None
-    host_os: OsTrailSchema | None = None
-    model: ModelTrailSchema
-    serving: ServingTrailSchema | None = None
+class StackTrailIn(StackTrailBase, TrailIn):
+    machine: MachineTrailIn
+    os: OsTrailIn | None = None
+    host_os: OsTrailIn | None = None
+    model: ModelTrailIn
+    serving: ServingTrailIn | None = None
 
     @model_validator(mode="after")
     def _a_host_holds_a_container(self):
@@ -89,7 +89,7 @@ class StackTrailSchema(StackTrailBase, TrailSchema):
         return self
 
 
-class StackTrailSchemaRef(TrailSchemaRef, StackTrailBase):
+class StackTrailRef(TrailRef, StackTrailBase):
     machine_id: int
     os_id: int | None
     host_os_id: int | None
@@ -97,15 +97,15 @@ class StackTrailSchemaRef(TrailSchemaRef, StackTrailBase):
     serving_id: int | None
 
 
-class StackTrailSpec(StackTrailBase, TrailSpec):
-    machine: MachineTrailSpec
-    os: OsTrailSpec | None
-    host_os: OsTrailSpec | None
-    model: ModelTrailSpec
-    serving: ServingTrailSpec | None
+class StackTrailOut(StackTrailBase, TrailOut):
+    machine: MachineTrailOut
+    os: OsTrailOut | None
+    host_os: OsTrailOut | None
+    model: ModelTrailOut
+    serving: ServingTrailOut | None
 
 
-class StackBranchDetails(BranchSchemaDetails, StackDetails):
+class StackBranchDetails(BranchDetails, StackDetails):
     pass
 
 
@@ -113,11 +113,11 @@ class StackBranchDetailsPatch(BranchDetailsPatch, StackDetails):
     pass
 
 
-class StackBranchSchema(BaseBranch[StackTrailSchema], StackBranchDetails):
+class StackBranchIn(BaseBranch[StackTrailIn], StackBranchDetails):
     pass
 
 
-class StackBranchSpec(BranchSpec[StackTrailSpec, StackDetails]):
+class StackBranchOut(BranchOut[StackTrailOut, StackDetails]):
     pass
 
 

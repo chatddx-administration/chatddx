@@ -20,13 +20,13 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 
 # What a case can be expected to yield, each read by the scorers that name it
@@ -70,19 +70,19 @@ class CaseTrailBase(BaseTrail):
     payload: str
 
 
-class CaseTrailSchema(CaseTrailBase, TrailSchema):
+class CaseTrailIn(CaseTrailBase, TrailIn):
     pass
 
 
-class CaseTrailSchemaRef(TrailSchemaRef, CaseTrailBase):
+class CaseTrailRef(TrailRef, CaseTrailBase):
     pass
 
 
-class CaseTrailSpec(CaseTrailBase, TrailSpec):
+class CaseTrailOut(CaseTrailBase, TrailOut):
     pass
 
 
-class CaseBranchDetails(BranchSchemaDetails, CaseDetails):
+class CaseBranchDetails(BranchDetails, CaseDetails):
     pass
 
 
@@ -90,11 +90,11 @@ class CaseBranchDetailsPatch(BranchDetailsPatch, CaseDetails):
     pass
 
 
-class CaseBranchSchema(BaseBranch[CaseTrailSchema], CaseBranchDetails):
+class CaseBranchIn(BaseBranch[CaseTrailIn], CaseBranchDetails):
     pass
 
 
-class CaseBranchSpec(BranchSpec[CaseTrailSpec, CaseDetails]):
+class CaseBranchOut(BranchOut[CaseTrailOut, CaseDetails]):
     pass
 
 

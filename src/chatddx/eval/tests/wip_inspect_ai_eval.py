@@ -9,7 +9,7 @@ from inspect_ai.scorer import choice
 from inspect_ai.solver import multiple_choice, user_message
 
 from chatddx.core.models import IdentityModel
-from chatddx.repo.inventories import InventoryBranchSpec
+from chatddx.repo.inventories import InventoryBranchOut
 
 pytestmark = [
     pytest.mark.network,
@@ -54,9 +54,9 @@ def riddle_task() -> Task:
 
 
 def test_inspect_no_thinking(
-    inventory_fixture_bs: InventoryBranchSpec, owner: IdentityModel
+    inventory_fixture_bo: InventoryBranchOut, owner: IdentityModel
 ):
-    spec = inventory_fixture_bs.agent["qwen3-8b baseline"]
+    spec = inventory_fixture_bo.agent["qwen3-8b baseline"]
 
     settings = spec.target.sampling_params.model_dump(
         exclude={"id", "timestamp", "fingerprint"},
@@ -86,8 +86,8 @@ def test_inspect_no_thinking(
     assert log.stats.model_usage["vllm/Qwen/Qwen3-8B-AWQ"].total_tokens == 212
 
 
-def test_inspect_thinking(inventory_fixture_bs: InventoryBranchSpec):
-    spec = inventory_fixture_bs.agent["qwen3-8b baseline"]
+def test_inspect_thinking(inventory_fixture_bo: InventoryBranchOut):
+    spec = inventory_fixture_bo.agent["qwen3-8b baseline"]
 
     settings = spec.target.sampling_params.model_dump(
         exclude={"id", "timestamp", "fingerprint"},

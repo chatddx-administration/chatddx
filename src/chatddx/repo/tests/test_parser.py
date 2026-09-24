@@ -19,10 +19,10 @@ import pytest
 
 from chatddx.core import settings
 from chatddx.repo.entities.model.pydantic import Refusal
+from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.parsers.inventory import ParseError, parse
-from chatddx.repo.todo import all_entities
 
 INVENTORY = settings.INVENTORY_PATH / "inventory.toml"
 
@@ -99,7 +99,7 @@ def inventory() -> ParsedInventory:
 
 
 def test_every_record_of_the_inventory_parses(inventory: ParsedInventory):
-    assert {entity: len(getattr(inventory, entity)) for entity in all_entities} == {
+    assert {entity: len(getattr(inventory, entity)) for entity in ENTITY_NAMES} == {
         "machine": 3,
         "os": 3,
         "model": 2,
@@ -122,7 +122,7 @@ def test_every_record_of_the_inventory_parses(inventory: ParsedInventory):
 def test_every_branch_is_the_record_s_name_and_the_caller_s(
     inventory: ParsedInventory,
 ):
-    for entity in all_entities:
+    for entity in ENTITY_NAMES:
         for name, (_, details) in getattr(inventory, entity).items():
             assert (details.name, details.owner) == (name, "archive")
 

@@ -5,7 +5,7 @@ from django.db import transaction
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import TrailModel
-from chatddx.repo.families.pydantic import TrailSchema, TrailSpec
+from chatddx.repo.families.pydantic import TrailIn, TrailOut
 from chatddx.repo.utils import resolve_trail
 from chatddx.utils import make_async
 
@@ -13,8 +13,8 @@ from chatddx.utils import make_async
 def load_trail(
     bundle: EntityName,
     fingerprint: str,
-    as_schema: type[TrailModel] | type[TrailSpec],
-) -> TrailModel | TrailSpec:
+    as_schema: type[TrailModel] | type[TrailOut],
+) -> TrailModel | TrailOut:
     trail_model_cls = entity_of(bundle).trail_model
     trail_model = trail_model_cls.objects.get(fingerprint=fingerprint)
 
@@ -31,7 +31,7 @@ load_trail_async = make_async(load_trail)
 
 def dump_trail[T: TrailModel](
     model_cls: type[T],
-    schema: TrailSchema,
+    schema: TrailIn,
 ) -> T:
     new_values: dict[str, Any] = {}
     m2m_values: dict[str, list[Any]] = {}
@@ -44,14 +44,14 @@ def dump_trail[T: TrailModel](
 
         # sibling in src/chatddx/repo/families/pydantic.py
         match field_value:
-            case TrailSchema() if associated_model:
+            case TrailIn() if associated_model:
                 new_values[field.attname] = dump_trail(
                     associated_model,
                     field_value,
                 ).pk
 
             case [*values] if associated_model and all(
-                isinstance(value, TrailSchema) for value in values
+                isinstance(value, TrailIn) for value in values
             ):
                 pks = [dump_trail(associated_model, value).pk for value in values]
 

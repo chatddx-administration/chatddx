@@ -46,13 +46,13 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.families.fields import STORE_PATH, PinnedSource
 
@@ -315,19 +315,19 @@ class ModelTrailBase(BaseTrail):
     blob: Annotated[str, AfterValidator(_blob)]
 
 
-class ModelTrailSchema(ModelTrailBase, TrailSchema):
+class ModelTrailIn(ModelTrailBase, TrailIn):
     pass
 
 
-class ModelTrailSchemaRef(TrailSchemaRef, ModelTrailBase):
+class ModelTrailRef(TrailRef, ModelTrailBase):
     pass
 
 
-class ModelTrailSpec(ModelTrailBase, TrailSpec):
+class ModelTrailOut(ModelTrailBase, TrailOut):
     pass
 
 
-class ModelBranchDetails(BranchSchemaDetails, ModelDetails):
+class ModelBranchDetails(BranchDetails, ModelDetails):
     pass
 
 
@@ -335,11 +335,11 @@ class ModelBranchDetailsPatch(BranchDetailsPatch, ModelDetails):
     pass
 
 
-class ModelBranchSchema(BaseBranch[ModelTrailSchema], ModelBranchDetails):
+class ModelBranchIn(BaseBranch[ModelTrailIn], ModelBranchDetails):
     pass
 
 
-class ModelBranchSpec(BranchSpec[ModelTrailSpec, ModelDetails]):
+class ModelBranchOut(BranchOut[ModelTrailOut, ModelDetails]):
     pass
 
 

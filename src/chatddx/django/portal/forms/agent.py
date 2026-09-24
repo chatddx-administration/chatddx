@@ -17,7 +17,7 @@ from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.repo.entities.agent.django import Agent
 from chatddx.repo.entities.agent.pydantic import (
-    AgentBranchSpec,
+    AgentBranchOut,
     AgentFormDataOut,
 )
 from chatddx.repo.entities.connection.django import ConnectionTrailModel
@@ -58,7 +58,7 @@ class AgentForm(BranchForm):
             ToolTrailModel.objects.filter(pk__in=instance.target.tool_group.tools)
         )
 
-        agent_spec_dict = AgentBranchSpec.model_validate(instance).model_dump()
+        agent_spec_dict = AgentBranchOut.model_validate(instance).model_dump()
 
         return AgentFormDataOut.model_validate(
             agent_spec_dict | agent_spec_dict["target"]

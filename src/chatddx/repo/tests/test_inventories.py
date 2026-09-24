@@ -1,12 +1,12 @@
 import pytest
 
+from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.inventories import (
     InventoryBranchModel,
-    InventoryBranchSpec,
+    InventoryBranchOut,
     InventoryFormDataOut,
-    InventoryTrailSchema,
+    InventoryTrailIn,
 )
-from chatddx.repo.todo import all_entities
 
 pytestmark = [
     pytest.mark.django_db(transaction=True),
@@ -34,18 +34,18 @@ COUNTS = {
 }
 
 
-async def test_trail_schema(inventory_fixture_ts: InventoryTrailSchema):
-    assert {e: len(getattr(inventory_fixture_ts, e)) for e in all_entities} == COUNTS
+async def test_trail_schema(inventory_fixture_ti: InventoryTrailIn):
+    assert {e: len(getattr(inventory_fixture_ti, e)) for e in ENTITY_NAMES} == COUNTS
 
 
 async def test_branch_models(inventory_fixture_bm: InventoryBranchModel):
-    assert {e: len(inventory_fixture_bm[e]) for e in all_entities} == COUNTS
+    assert {e: len(inventory_fixture_bm[e]) for e in ENTITY_NAMES} == COUNTS
 
 
-async def test_branch_specs(inventory_fixture_bs: InventoryBranchSpec):
-    assert {e: len(getattr(inventory_fixture_bs, e)) for e in all_entities} == COUNTS
+async def test_branch_specs(inventory_fixture_bo: InventoryBranchOut):
+    assert {e: len(getattr(inventory_fixture_bo, e)) for e in ENTITY_NAMES} == COUNTS
 
-    stack = inventory_fixture_bs.stack["qwen3-8b-awq@malborg"]
+    stack = inventory_fixture_bo.stack["qwen3-8b-awq@malborg"]
 
     # a spec holds the branch's details beside its content
     assert stack.details.served_name == "Qwen/Qwen3-8B-AWQ"
@@ -54,7 +54,7 @@ async def test_branch_specs(inventory_fixture_bs: InventoryBranchSpec):
 
 
 async def test_form_data_out(inventory_fixture_fdo: InventoryFormDataOut):
-    assert {e: len(getattr(inventory_fixture_fdo, e)) for e in all_entities} == COUNTS
+    assert {e: len(getattr(inventory_fixture_fdo, e)) for e in ENTITY_NAMES} == COUNTS
 
     tool = inventory_fixture_fdo.tool["web_search"]
 

@@ -1,7 +1,7 @@
 from typing import Any
 
-from chatddx.repo.entities.configuration.pydantic import ConfigurationBranchSpec
-from chatddx.repo.entities.stack.pydantic import StackBranchSpec
+from chatddx.repo.entities.configuration.pydantic import ConfigurationBranchOut
+from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.entity_names import EntityName
 from chatddx.runtime.resolution import Slices
 
@@ -26,14 +26,14 @@ class Cell:
     """
 
     def __init__(self):
-        self.configuration: ConfigurationBranchSpec | None = None
+        self.configuration: ConfigurationBranchOut | None = None
         self.name: str = ""
         self.variations: dict[str, Any] = {}
-        self.stack: StackBranchSpec | None = None
+        self.stack: StackBranchOut | None = None
 
     def put(self, configuration: Any, name: str) -> None:
         """Put a configuration in as it is: what was set was set in another."""
-        self.configuration = ConfigurationBranchSpec.model_validate(configuration)
+        self.configuration = ConfigurationBranchOut.model_validate(configuration)
         self.name = name
         self.variations = {}
 

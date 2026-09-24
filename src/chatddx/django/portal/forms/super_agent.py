@@ -16,7 +16,7 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import IdentityModel
-from chatddx.django.orm.qs import qs_with_details
+from chatddx.django.orm.qs import qs_with_relations
 from chatddx.django.portal.forms.branch_base import BranchForm
 from chatddx.django.portal.forms.connection import ConnectionForm
 from chatddx.django.portal.forms.output_type import OutputTypeForm
@@ -26,12 +26,12 @@ from chatddx.django.portal.forms.widgets import TemplateSelectWidget
 from chatddx.django.portal.utils import load_form_data
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.agent.django import Agent
-from chatddx.repo.entities.agent.pydantic import AgentBranchSpec
+from chatddx.repo.entities.agent.pydantic import AgentBranchOut
 from chatddx.repo.entities.super_agent.django import SuperAgent
 from chatddx.repo.entities.super_agent.pydantic import SuperAgentFormDataOut
 from chatddx.repo.entities.tool.django import ToolTrailModel
 from chatddx.repo.entity_names import EntityName
-from chatddx.repo.shufflers import branch
+from chatddx.repo.store import branch
 from chatddx.repo.todo import agent_relations
 
 OPTIONAL_FIELDS = {
@@ -166,7 +166,7 @@ class SuperAgentForm(BranchForm):
             ToolTrailModel.objects.filter(pk__in=instance.target.tool_group.tools)
         )
 
-        agent_spec_dict = AgentBranchSpec.model_validate(instance).model_dump()
+        agent_spec_dict = AgentBranchOut.model_validate(instance).model_dump()
 
         agent_dict = SuperAgentFormDataOut.model_validate(
             agent_spec_dict | agent_spec_dict["target"]
@@ -180,7 +180,7 @@ class SuperAgentForm(BranchForm):
                 entity_name=relation,
                 owner_name=owner_name,
                 fingerprint=getattr(instance.target, relation).fingerprint,
-                qs=qs_with_details(entity_of(relation).branch_model.objects.all()),
+                qs=qs_with_relations(entity_of(relation).branch_model.objects.all()),
             )
 
             relations_dict[relation] = load_form_data(branch_model)

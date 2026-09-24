@@ -22,13 +22,13 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.families.fields import StorePath
 
@@ -52,19 +52,19 @@ class OsTrailBase(BaseTrail):
     toplevel: StorePath
 
 
-class OsTrailSchema(OsTrailBase, TrailSchema):
+class OsTrailIn(OsTrailBase, TrailIn):
     pass
 
 
-class OsTrailSchemaRef(TrailSchemaRef, OsTrailBase):
+class OsTrailRef(TrailRef, OsTrailBase):
     pass
 
 
-class OsTrailSpec(OsTrailBase, TrailSpec):
+class OsTrailOut(OsTrailBase, TrailOut):
     pass
 
 
-class OsBranchDetails(BranchSchemaDetails, OsDetails):
+class OsBranchDetails(BranchDetails, OsDetails):
     pass
 
 
@@ -72,11 +72,11 @@ class OsBranchDetailsPatch(BranchDetailsPatch, OsDetails):
     pass
 
 
-class OsBranchSchema(BaseBranch[OsTrailSchema], OsBranchDetails):
+class OsBranchIn(BaseBranch[OsTrailIn], OsBranchDetails):
     pass
 
 
-class OsBranchSpec(BranchSpec[OsTrailSpec, OsDetails]):
+class OsBranchOut(BranchOut[OsTrailOut, OsDetails]):
     pass
 
 

@@ -25,7 +25,7 @@ ORDERED = "ordered"
 
 # Marks a field of a branch-details model as naming rows of another table
 # rather than holding a value. The name is a key into
-# `chatddx.repo.shufflers.branch.RELATION_RESOLVERS`, which turns each name
+# `chatddx.repo.store.branch.RELATION_RESOLVERS`, which turns each name
 # into the row it stands for.
 RELATION = "relation"
 
@@ -39,7 +39,7 @@ class BaseTrail(BaseModel):
     pass
 
 
-class TrailSchema(BaseTrail):
+class TrailIn(BaseTrail):
     """
     An entity's content: everything authored that identifies it, and nothing
     else. Its fingerprint is what a trail row is deduplicated on.
@@ -57,14 +57,14 @@ class TrailSchema(BaseTrail):
         """
         relations: dict[str, Any] = {}
 
-        # sibling in src/chatddx/repo/shufflers/trail.py
+        # sibling in src/chatddx/repo/store/trail.py
         for field_name, value in self:
             match value:
-                case TrailSchema():
+                case TrailIn():
                     relations[field_name] = value.fingerprint
 
                 case [*items] if items and all(
-                    isinstance(item, TrailSchema) for item in items
+                    isinstance(item, TrailIn) for item in items
                 ):
                     relations[field_name] = [item.fingerprint for item in items]
 
@@ -83,11 +83,11 @@ class TrailSchema(BaseTrail):
         return data | relations
 
 
-class TrailSchemaRef(BaseTrail):
+class TrailRef(BaseTrail):
     fingerprint: str
 
 
-class TrailSpec(BaseTrail, NinjaSchema):
+class TrailOut(BaseTrail, NinjaSchema):
     id: int
     fingerprint: str
     timestamp: datetime
@@ -150,7 +150,7 @@ class Details(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
 
-class BranchSchemaDetails(BaseModel):
+class BranchDetails(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     name: str
@@ -190,11 +190,11 @@ class BaseBranch[T: BaseTrail](BaseBranchTarget[T]):
     pass
 
 
-class BranchSchema[T: TrailSchema](BaseBranch[T], BranchSchemaDetails):
+class BranchIn[T: TrailIn](BaseBranch[T], BranchDetails):
     pass
 
 
-class BranchSpec[T: TrailSpec, D: Details](BaseBranch[T], NinjaSchema):
+class BranchOut[T: TrailOut, D: Details](BaseBranch[T], NinjaSchema):
     id: int
     name: str
     owner: IdentitySchemaOut
@@ -222,4 +222,4 @@ class BaseFormDataOut(BaseModel):
 
 
 # Resolve trail's dependence on BaseBranchDetails
-_ = TrailSchema.model_rebuild()
+_ = TrailIn.model_rebuild()

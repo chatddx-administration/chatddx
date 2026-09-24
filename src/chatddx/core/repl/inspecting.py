@@ -13,9 +13,9 @@ from chatddx.core.repl.render import LABEL, LATER, REFUSED
 from chatddx.core.repl.shell import Repl
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
 from chatddx.repo.entities.output.pydantic import VIEWS
-from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchSpec
+from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchOut
 from chatddx.repo.entity_names import EntityName
-from chatddx.repo.shufflers.branch import select_visible_branch_models
+from chatddx.repo.store.branch import select_visible_branch_models
 from chatddx.runtime.resolution import (
     CellRefused,
     Coercion,
@@ -107,7 +107,7 @@ def reasoning(repl: Repl) -> None:
     cell = repl.cell
     variations = sorted(
         (
-            ReasoningBranchSpec.model_validate(model)
+            ReasoningBranchOut.model_validate(model)
             for model in select_visible_branch_models("reasoning", repl.identity)
         ),
         key=lambda v: (

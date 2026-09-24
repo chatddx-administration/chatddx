@@ -16,37 +16,37 @@ from pydantic import ValidationError
 from chatddx.core.models import IdentityModel, TagModel
 from chatddx.core.utils import ensure_tag
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.case.pydantic import CaseTrailSchema
+from chatddx.repo.entities.case.pydantic import CaseTrailIn
 from chatddx.repo.entities.machine.pydantic import (
     MachineBranchDetails,
-    MachineBranchSpec,
-    MachineTrailSchema,
+    MachineBranchOut,
+    MachineTrailIn,
 )
-from chatddx.repo.entities.model.pydantic import ModelBranchDetails, ModelBranchSpec
+from chatddx.repo.entities.model.pydantic import ModelBranchDetails, ModelBranchOut
 from chatddx.repo.entities.stack.pydantic import StackBranchDetails
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.entities.tool.pydantic import ToolBranchDetails
 from chatddx.repo.entities.toolset.django import ToolsetTrailModel
 from chatddx.repo.entity_names import EntityName
-from chatddx.repo.families.pydantic import BranchSchemaDetails
-from chatddx.repo.inventories import InventoryTrailSchema
+from chatddx.repo.families.pydantic import BranchDetails
+from chatddx.repo.inventories import InventoryTrailIn
 from chatddx.repo.names import short_fingerprint
-from chatddx.repo.shufflers.branch import (
+from chatddx.repo.store.branch import (
     AmbiguousBranchError,
     BranchNotFoundError,
     commit,
     commit_copies,
     get_branch_model,
-    get_branch_spec,
+    get_branch_out,
     get_shared_branch_model,
     get_visible_branch_model,
     select_visible_branch_models,
 )
-from chatddx.repo.shufflers.trail import dump_trail
+from chatddx.repo.store.trail import dump_trail
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
-MACHINE = MachineTrailSchema(machine_id="00000000-0000-4000-8000-000000000001")  # pyright: ignore[reportArgumentType]
+MACHINE = MachineTrailIn(machine_id="00000000-0000-4000-8000-000000000001")  # pyright: ignore[reportArgumentType]
 
 
 def versions(entity: EntityName, owner: IdentityModel, name: str) -> list[Any]:
@@ -61,10 +61,10 @@ def machine_details(owner: IdentityModel, **details: Any) -> MachineBranchDetail
     return MachineBranchDetails(name="box", owner=owner.name, **details)
 
 
-def test_a_commit_makes_a_version_canon(owner: IdentityModel):
+def test_a_commit_makes_a_version_the_head(owner: IdentityModel):
     assert commit(MACHINE, machine_details(owner, unreliable=True))
 
-    spec = cast(MachineBranchSpec, get_branch_spec("machine", owner.name, "box"))
+    spec = cast(MachineBranchOut, get_branch_out("machine", owner.name, "box"))
 
     assert spec.target.fingerprint == MACHINE.fingerprint
     assert spec.details.unreliable is True
@@ -93,7 +93,7 @@ def test_committing_the_same_version_again_changes_nothing(owner: IdentityModel)
 
 def test_a_change_to_details_is_a_new_version(
     owner: IdentityModel,
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     """
     The trail stays put, since details aren't content; the branch gets a
@@ -120,11 +120,11 @@ def test_a_change_to_details_is_a_new_version(
     assert first.details["facts"]["reasoning"]["off"] is None
     assert second.details["facts"]["reasoning"]["off"] == {"refused": "always reasons"}
 
-    canon = cast(ModelBranchSpec, get_branch_spec("model", owner.name, "gpt-oss-20b"))
+    head = cast(ModelBranchOut, get_branch_out("model", owner.name, "gpt-oss-20b"))
 
-    assert canon.details.facts.reasoning.resolve("off") == (
+    assert head.details.facts.reasoning.resolve("off") == (
         "off",
-        canon.details.facts.reasoning.off,
+        head.details.facts.reasoning.off,
     )
 
 
@@ -193,7 +193,7 @@ def test_details_are_the_owner_s(
 def test_a_caller_that_says_nothing_of_details_gets_the_defaults(
     owner: IdentityModel,
 ):
-    assert commit(MACHINE, BranchSchemaDetails(name="box", owner=owner.name))
+    assert commit(MACHINE, BranchDetails(name="box", owner=owner.name))
 
     assert get_branch_model("machine", owner.name, "box").details == {
         "unreliable": False,
@@ -222,8 +222,8 @@ def test_a_tag_belongs_to_one_owner_and_one_entity(
 
     for identity in (owner, other_owner):
         assert commit(
-            CaseTrailSchema(payload="case payload"),
-            BranchSchemaDetails(name="case-1", owner=identity.name, tags=["clinical"]),
+            CaseTrailIn(payload="case payload"),
+            BranchDetails(name="case-1", owner=identity.name, tags=["clinical"]),
         )
 
     tags = TagModel.objects.filter(name="clinical")
@@ -242,8 +242,8 @@ def test_two_owners_of_one_case_share_its_trail(
 ):
     for identity in (owner, other_owner):
         assert commit(
-            CaseTrailSchema(payload="case payload"),
-            BranchSchemaDetails(name="case-1", owner=identity.name),
+            CaseTrailIn(payload="case payload"),
+            BranchDetails(name="case-1", owner=identity.name),
         )
 
     mine = get_branch_model("case", owner.name, "case-1")
@@ -255,8 +255,8 @@ def test_two_owners_of_one_case_share_its_trail(
 
 def case(name: str, owner: str, *collaborators: str, payload: str = "") -> None:
     assert commit(
-        CaseTrailSchema(payload=payload or f"{owner}'s {name}"),
-        BranchSchemaDetails(name=name, owner=owner, collaborators=list(collaborators)),
+        CaseTrailIn(payload=payload or f"{owner}'s {name}"),
+        BranchDetails(name=name, owner=owner, collaborators=list(collaborators)),
     )
 
 
@@ -384,7 +384,7 @@ SENTINEL = {
 }
 
 
-def sentinel_tools(owner: str, trails: InventoryTrailSchema) -> None:
+def sentinel_tools(owner: str, trails: InventoryTrailIn) -> None:
     """The sentinel toolset's tools as `owner`'s, each with what it runs."""
     for name, entry_point in SENTINEL.items():
         assert commit(
@@ -406,7 +406,7 @@ def tool_names(owner: IdentityModel) -> list[str]:
 def test_a_copy_is_the_source_s_branch_under_its_name_with_its_details(
     owner: IdentityModel,
     other_owner: IdentityModel,
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     sentinel_tools(other_owner.name, trails)
     toolset = dump_trail(ToolsetTrailModel, trails.toolset["sentinel"])
@@ -419,28 +419,28 @@ def test_a_copy_is_the_source_s_branch_under_its_name_with_its_details(
         mine = get_branch_model("tool", owner.name, name)
         assert mine.details["implementation"]["entry_point"] == entry_point
 
-    assert commit(toolset, BranchSchemaDetails(name="mine", owner=owner.name))
+    assert commit(toolset, BranchDetails(name="mine", owner=owner.name))
     assert tool_names(owner) == ["sentinel_op", "sentinel_string"]
 
 
 def test_what_the_owner_has_or_has_named_otherwise_is_not_copied(
     owner: IdentityModel,
     other_owner: IdentityModel,
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     sentinel_tools(other_owner.name, trails)
     assert commit(
-        trails.tool["sentinel_op"], BranchSchemaDetails(name="my-op", owner=owner.name)
+        trails.tool["sentinel_op"], BranchDetails(name="my-op", owner=owner.name)
     )
     assert commit(
         trails.tool["web_search"],
-        BranchSchemaDetails(name="sentinel_string", owner=owner.name),
+        BranchDetails(name="sentinel_string", owner=owner.name),
     )
     toolset = dump_trail(ToolsetTrailModel, trails.toolset["sentinel"])
 
     assert commit_copies(toolset, owner.name, other_owner.name) == []
 
-    assert commit(toolset, BranchSchemaDetails(name="mine", owner=owner.name))
+    assert commit(toolset, BranchDetails(name="mine", owner=owner.name))
     fingerprint = trails.tool["sentinel_string"].fingerprint
     assert tool_names(owner) == sorted(
         ["my-op", "sentinel_string", f"tool {short_fingerprint(fingerprint)}"]

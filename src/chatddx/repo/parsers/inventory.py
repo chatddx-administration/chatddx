@@ -39,14 +39,13 @@ from typing import IO, Any, cast, get_args, get_origin
 from pydantic import JsonValue, ValidationError
 
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entity_names import EntityName
+from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
 from chatddx.repo.families.pydantic import (
     BRANCH_FIELDS,
     BranchDetailsPatch,
-    TrailSchema,
+    TrailIn,
 )
 from chatddx.repo.inventories import ParsedInventory
-from chatddx.repo.todo import all_entities
 from chatddx.utils import is_str_list
 
 
@@ -123,7 +122,7 @@ def parse(
                 for name, record in records.get(entity, {}).items()
                 if not record.partial
             }
-            for entity in all_entities
+            for entity in ENTITY_NAMES
         }
     )
 
@@ -189,7 +188,7 @@ class _Parser:
 
     def _parse(self, record: Record) -> tuple[Any, Any]:
         bundle = entity_of(record.entity)
-        content_keys = bundle.trail_schema.model_fields
+        content_keys = bundle.trail_in.model_fields
         detail_keys = set(bundle.branch_details_patch.model_fields) - BRANCH_FIELDS
         relations = _relations(record.entity)
 
@@ -227,7 +226,7 @@ class _Parser:
                 )
 
         try:
-            trail = bundle.trail_schema.model_validate(content)
+            trail = bundle.trail_in.model_validate(content)
             branch_details = bundle.branch_details_patch.model_validate(
                 details | {"name": record.name} | self.patch
             )
@@ -258,7 +257,7 @@ def _relations(entity: EntityName) -> dict[str, Relation]:
     """The fields of an entity's trail that point at other entities' trails."""
     relations: dict[str, Relation] = {}
 
-    for field_name, field in entity_of(entity).trail_schema.model_fields.items():
+    for field_name, field in entity_of(entity).trail_in.model_fields.items():
         annotation: Any = field.annotation
 
         # an optional relation: the trail it points at, or none
@@ -275,7 +274,7 @@ def _relations(entity: EntityName) -> dict[str, Relation]:
         if many:
             annotation = get_args(annotation)[0]
 
-        if isinstance(annotation, type) and issubclass(annotation, TrailSchema):
+        if isinstance(annotation, type) and issubclass(annotation, TrailIn):
             relations[field_name] = Relation(entity_of(annotation).name, many)
 
     return relations
@@ -326,10 +325,10 @@ def _read_inventory(path: Path, chain: tuple[Path, ...], base: Path) -> Records:
     records: Records = {}
 
     for entity, table in data.items():
-        if entity not in all_entities:
+        if entity not in ENTITY_NAMES:
             raise ParseError(
                 f"unknown entity '{entity}' ({where}); the entities are "
-                + ", ".join(all_entities)
+                + ", ".join(ENTITY_NAMES)
             )
 
         if not isinstance(table, dict):

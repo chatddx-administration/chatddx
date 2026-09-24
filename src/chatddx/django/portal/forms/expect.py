@@ -8,20 +8,20 @@ from unfold.forms import UnfoldAdminSelectWidget
 from unfold.widgets import UnfoldAdminTextareaWidget
 
 from chatddx.core import settings
-from chatddx.django.orm.qs import qs_canon
+from chatddx.django.orm.qs import qs_head
 from chatddx.django.portal.forms.branch_base import (
     BranchFormSet,
     PydanticValidationError,
 )
 from chatddx.dx.error_handling import print_pydantic_errors
-from chatddx.repo.bundles import view_of
+from chatddx.repo.bundles import presentation_of
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.expect.django import Expect
-from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
+from chatddx.repo.entities.expect.pydantic import ExpectTrailIn
 from chatddx.repo.entities.scorer.django import Scorer
 from chatddx.repo.entity_names import EntityName
-from chatddx.repo.families.pydantic import BaseFormDataIn, BranchSchemaDetails
-from chatddx.repo.shufflers.branch import commit, get_branch_model
+from chatddx.repo.families.pydantic import BaseFormDataIn, BranchDetails
+from chatddx.repo.store.branch import commit, get_branch_model
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class ExpectInlineForm(ModelForm):
 
             scorer_branch = None
             if target.scorer_id:
-                scorer_branch = qs_canon(
+                scorer_branch = qs_head(
                     Scorer.objects.filter(target_id=target.scorer_id),
                     self.instance.owner.name,
                 ).first()
@@ -68,7 +68,7 @@ class ExpectInlineForm(ModelForm):
 
     def validate(self, data: dict[str, Any]):
         try:
-            validated_data = view_of(self.entity_name).form_data_in.model_validate(data)
+            validated_data = presentation_of(self.entity_name).form_data_in.model_validate(data)
             return validated_data
         except PydanticValidationError as e:
             if settings.MODE == "dev":
@@ -142,11 +142,11 @@ class ExpectInlineFormSet(BranchFormSet):
             raise ValueError("form.validated_data is unexpectedly None")
 
         owner_name = self.instance.owner.name
-        schema = ExpectTrailSchema.model_validate(data.model_dump())
+        schema = ExpectTrailIn.model_validate(data.model_dump())
 
         created = commit(
             trail=schema,
-            branch_details=BranchSchemaDetails(
+            branch_details=BranchDetails(
                 name=branch_name,
                 owner=owner_name,
             ),

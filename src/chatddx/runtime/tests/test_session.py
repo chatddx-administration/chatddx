@@ -12,7 +12,7 @@ from chatddx.dx.fake_vllm import ANSWER, FakeTransport
 from chatddx.history.models import RunModel, RunStatus, SessionModel
 from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.inventories import ParsedInventory
-from chatddx.repo.shufflers.branch import get_visible_branch_model
+from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import Resolution
 from chatddx.runtime.trial import Trial
 

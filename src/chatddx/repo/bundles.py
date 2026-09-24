@@ -27,27 +27,27 @@ ALL_ENTITIES: tuple[AnyEntity, ...] = (
     SCORER,
 )
 
-ALL_VIEWS: tuple[AnyView, ...] = (
-    MACHINE_VIEW,
-    OS_VIEW,
-    MODEL_VIEW,
-    SERVING_VIEW,
-    CLIENT_VIEW,
-    STACK_VIEW,
-    TOOL_VIEW,
-    TOOLSET_VIEW,
-    INSTRUCTION_VIEW,
-    OUTPUT_VIEW,
-    COERCION_VIEW,
-    REASONING_VIEW,
-    SAMPLING_VIEW,
-    CONFIGURATION_VIEW,
-    CASE_VIEW,
-    SCORER_VIEW,
+ALL_PRESENTATIONS: tuple[AnyPresentation, ...] = (
+    MACHINE_PRESENTATION,
+    OS_PRESENTATION,
+    MODEL_PRESENTATION,
+    SERVING_PRESENTATION,
+    CLIENT_PRESENTATION,
+    STACK_PRESENTATION,
+    TOOL_PRESENTATION,
+    TOOLSET_PRESENTATION,
+    INSTRUCTION_PRESENTATION,
+    OUTPUT_PRESENTATION,
+    COERCION_PRESENTATION,
+    REASONING_PRESENTATION,
+    SAMPLING_PRESENTATION,
+    CONFIGURATION_PRESENTATION,
+    CASE_PRESENTATION,
+    SCORER_PRESENTATION,
 )
 
 
-def _index_by_class[T: AnyEntity | AnyView](
+def _index_by_class[T: AnyEntity | AnyPresentation](
     owners: tuple[T, ...],
     members: str,
     label: str,
@@ -78,14 +78,20 @@ _ENTITY_BY_CLASS: dict[type, AnyEntity] = _index_by_class(
     ALL_ENTITIES, "members", "entity"
 )
 
-_VIEW_BY_NAME: dict[ViewName, AnyView] = {v.name: v for v in ALL_VIEWS}
-_VIEW_BY_CLASS: dict[type, AnyView] = _index_by_class(ALL_VIEWS, "proxies", "view")
+_PRESENTATION_BY_NAME: dict[PresentationName, AnyPresentation] = {
+    v.name: v for v in ALL_PRESENTATIONS
+}
+_PRESENTATION_BY_CLASS: dict[type, AnyPresentation] = _index_by_class(
+    ALL_PRESENTATIONS, "proxies", "presentation"
+)
 
 
-# Every entity is presented through a view of its own name, so an
-# `EntityName` is always a `ViewName`.
+# Every entity is presented through a presentation of its own name, so an
+# `EntityName` is always a `PresentationName`.
 for _entity in ALL_ENTITIES:
-    assert _entity.name in _VIEW_BY_NAME, f"'{_entity.name}' has no view of its name"
+    assert _entity.name in _PRESENTATION_BY_NAME, (
+        f"'{_entity.name}' has no presentation of its name"
+    )
 
 
 def _by_mro[T](index: dict[type, T], x: object) -> T | None:
@@ -222,23 +228,27 @@ def entity_of(
     return entity
 
 
-def view_of(
-    x: BranchProxy | AnyEntityMember | type[BranchProxy | AnyEntityMember] | ViewName,
-) -> AnyView:
+def presentation_of(
+    x: BranchProxy
+    | AnyEntityMember
+    | type[BranchProxy | AnyEntityMember]
+    | PresentationName,
+) -> AnyPresentation:
     """
-    The view a name, proxy or branch is rendered through.
+    The presentation a name, proxy or branch is rendered through.
 
-    Every entity has a view of its own name, so an `EntityName` is a
-    `ViewName` and reaches the entity's view. A proxy is rendered through the
-    view that registered it, and anything else through its entity's.
+    Every entity has a presentation of its own name, so an `EntityName` is a
+    `PresentationName` and reaches the entity's presentation. A proxy is
+    rendered through the presentation that registered it, and anything else
+    through its entity's.
     """
     if isinstance(x, str):
-        return _VIEW_BY_NAME[x]
+        return _PRESENTATION_BY_NAME[x]
 
-    view = _by_mro(_VIEW_BY_CLASS, x)
+    presentation = _by_mro(_PRESENTATION_BY_CLASS, x)
 
-    if view is not None:
-        return view
+    if presentation is not None:
+        return presentation
 
-    # not a registered proxy, so it is an entity class and has a view
-    return _VIEW_BY_NAME[entity_of(cast(AnyEntityMember, x)).name]
+    # not a registered proxy, so it is an entity class and has a presentation
+    return _PRESENTATION_BY_NAME[entity_of(cast(AnyEntityMember, x)).name]

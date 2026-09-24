@@ -19,12 +19,12 @@ from chatddx.history.models import (
     TrialModel,
 )
 from chatddx.repo.bundles import entity_of
+from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.names import short_fingerprint
 from chatddx.repo.parsers.inventory import ParseError, parse
-from chatddx.repo.shufflers import inventory
-from chatddx.repo.todo import all_entities
+from chatddx.repo.store import inventory
 
 receipt_text = {
     True: "created",
@@ -86,7 +86,7 @@ def _unshared(model: type[RunModel | SessionModel], user_name: str) -> int:
 def _wipe_branches(user_name: str) -> list[str]:
     lines: list[str] = []
 
-    for entity in all_entities:
+    for entity in ENTITY_NAMES:
         branch_model = entity_of(entity).branch_model
 
         _, removed = branch_model.objects.filter(owner__name=user_name).delete()
@@ -143,7 +143,7 @@ def init_data(
     # The archive keeps the inventory, and its users collaborate on it.
     archive_branch_models = inventory.owned_inventory(settings.ARCHIVE_IDENTITY_NAME)
 
-    for entity in all_entities:
+    for entity in ENTITY_NAMES:
         for name in archive_receipt[entity]:
             archive_branch_models[entity][name].collaborators.add(user)
 
@@ -162,7 +162,7 @@ def _parse(path: Path, owner_name: str) -> ParsedInventory:
 def _commit(label: str, parsed: ParsedInventory) -> inventory.InventoryCommitReceipt:
     receipt = inventory.commit_parsed_inventory(parsed)
 
-    for entity in all_entities:
+    for entity in ENTITY_NAMES:
         for name, (trail, _) in getattr(parsed, entity).items():
             print(
                 f"[{label} {entity}]: {name} ({receipt_text[receipt[entity][name]]} "

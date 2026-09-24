@@ -15,7 +15,7 @@ from unfold.widgets import (
 )
 
 from chatddx.core.models import TagModel
-from chatddx.django.orm.qs import qs_canon, qs_owned_trails
+from chatddx.django.orm.qs import qs_head, qs_owned_trails
 from chatddx.history.proxies import Batch
 from chatddx.repo.entities.agent.django import AgentTrailModel
 from chatddx.repo.entities.scorer.django import Scorer
@@ -75,7 +75,7 @@ class BatchForm(ModelForm):
             owner__name=owner_name,
             entity=CASE_ENTITY,
         ).order_by("name")
-        self._choices("scorers").queryset = qs_canon(
+        self._choices("scorers").queryset = qs_head(
             Scorer.objects.all(),
             owner_name,
         ).order_by("name")

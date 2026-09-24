@@ -17,11 +17,11 @@ from chatddx.dx.fake_vllm import FakeTransport
 from chatddx.history.models import RunModel, SessionModel, TrialModel
 from chatddx.manage import app
 from chatddx.repo.bundles import entity_of
+from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.names import short_fingerprint
 from chatddx.repo.parsers.inventory import parse
-from chatddx.repo.shufflers.inventory import owned_inventory
-from chatddx.repo.todo import all_entities
+from chatddx.repo.store.inventory import owned_inventory
 
 pytestmark = pytest.mark.django_db
 
@@ -29,7 +29,7 @@ ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
 INVENTORY = settings.INVENTORY_PATH / "inventory.toml"
 GIFTBAG = settings.INVENTORY_PATH / "giftbag-inventory.toml"
 
-NOTHING: dict[str, set[str]] = {entity: set() for entity in all_entities}
+NOTHING: dict[str, set[str]] = {entity: set() for entity in ENTITY_NAMES}
 
 NO_HISTORY = [
     "[score]: removed 0",
@@ -51,20 +51,20 @@ def receipts(parsed: ParsedInventory, label: str, receipt: str) -> list[str]:
     """What init-data prints for every record of `parsed`."""
     return [
         f"[{label} {entity}]: {name} ({receipt} {short_fingerprint(trail.fingerprint)})"
-        for entity in all_entities
+        for entity in ENTITY_NAMES
         for name, (trail, _) in getattr(parsed, entity).items()
     ]
 
 
 def names(parsed: ParsedInventory) -> dict[str, set[str]]:
     """The names of the records of `parsed`, by entity."""
-    return {entity: set(getattr(parsed, entity)) for entity in all_entities}
+    return {entity: set(getattr(parsed, entity)) for entity in ENTITY_NAMES}
 
 
 def owned(owner_name: str) -> dict[str, set[str]]:
     """The names of the branches `owner_name` owns, by entity."""
     inventory = owned_inventory(owner_name)
-    return {entity: set(inventory[entity]) for entity in all_entities}
+    return {entity: set(inventory[entity]) for entity in ENTITY_NAMES}
 
 
 def shared_with(identity_name: str) -> dict[str, set[str]]:
@@ -75,7 +75,7 @@ def shared_with(identity_name: str) -> dict[str, set[str]]:
             .branch_model.objects.filter(collaborators__name=identity_name)
             .values_list("name", flat=True)
         )
-        for entity in all_entities
+        for entity in ENTITY_NAMES
     }
 
 
@@ -83,7 +83,7 @@ def versions() -> dict[str, int]:
     """How many versions there are of every entity's branches."""
     return {
         entity: entity_of(entity).branch_model.objects.count()
-        for entity in all_entities
+        for entity in ENTITY_NAMES
     }
 
 
@@ -94,7 +94,7 @@ def test_init_data_archives_the_inventory_and_shares_it():
 
     archived = owned_inventory(ARCHIVE)
 
-    for entity in all_entities:
+    for entity in ENTITY_NAMES:
         for name, (trail, _) in getattr(inventory, entity).items():
             branch_model = archived[entity][name]
 
@@ -140,7 +140,7 @@ def test_init_data_with_giftbag_gives_the_user_their_own():
     mine = owned_inventory("alex")
     archived = owned_inventory(ARCHIVE)
 
-    for entity in all_entities:
+    for entity in ENTITY_NAMES:
         for name, branch_model in mine[entity].items():
             assert branch_model.target_id == archived[entity][name].target_id
 
@@ -198,7 +198,7 @@ def test_wipe_data_takes_back_what_init_data_gave():
     assert run("wipe-data", "alex") == NO_HISTORY + [
         f"[{entity}]: removed {len(getattr(giftbag, entity))}, "
         + f"unshared {len(getattr(inventory, entity))}"
-        for entity in all_entities
+        for entity in ENTITY_NAMES
     ]
 
     assert owned("alex") == NOTHING
@@ -225,7 +225,7 @@ def test_init_data_after_wipe_data_provisions_again():
 
 def test_wipe_data_of_nobody_removes_nothing():
     assert run("wipe-data", "nobody") == NO_HISTORY + [
-        f"[{entity}]: removed 0, unshared 0" for entity in all_entities
+        f"[{entity}]: removed 0, unshared 0" for entity in ENTITY_NAMES
     ]
     assert not IdentityModel.objects.filter(name="nobody").exists()
 

@@ -19,12 +19,12 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
-    BranchSchema,
-    BranchSpec,
+    BranchIn,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 
 type SamplingDefaults = Literal["model", "recommended"]
@@ -53,23 +53,23 @@ class SamplingTrailBase(SamplingFields, BaseTrail):
     defaults: SamplingDefaults
 
 
-class SamplingTrailSchema(SamplingTrailBase, TrailSchema):
+class SamplingTrailIn(SamplingTrailBase, TrailIn):
     pass
 
 
-class SamplingTrailSchemaRef(TrailSchemaRef, SamplingTrailBase):
+class SamplingTrailRef(TrailRef, SamplingTrailBase):
     pass
 
 
-class SamplingTrailSpec(SamplingTrailBase, TrailSpec):
+class SamplingTrailOut(SamplingTrailBase, TrailOut):
     pass
 
 
-class SamplingBranchSchema(BranchSchema[SamplingTrailSchema]):
+class SamplingBranchIn(BranchIn[SamplingTrailIn]):
     pass
 
 
-class SamplingBranchSpec(BranchSpec[SamplingTrailSpec, Details]):
+class SamplingBranchOut(BranchOut[SamplingTrailOut, Details]):
     pass
 
 

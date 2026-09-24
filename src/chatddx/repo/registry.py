@@ -5,239 +5,239 @@ from chatddx.repo.entities.case import (
     Case as CaseProxy,
     CaseBranchDetails,
     CaseBranchDetailsPatch,
+    CaseBranchIn,
     CaseBranchModel,
-    CaseBranchSchema,
-    CaseBranchSpec,
+    CaseBranchOut,
     CaseFormDataIn,
     CaseFormDataOut,
+    CaseTrailIn,
     CaseTrailModel,
-    CaseTrailSchema,
-    CaseTrailSchemaRef,
-    CaseTrailSpec,
+    CaseTrailOut,
+    CaseTrailRef,
     SharedCase as SharedCaseProxy,
 )
 from chatddx.repo.entities.client import (
     Client as ClientProxy,
     ClientBranchDetails,
     ClientBranchDetailsPatch,
+    ClientBranchIn,
     ClientBranchModel,
-    ClientBranchSchema,
-    ClientBranchSpec,
+    ClientBranchOut,
     ClientFormDataIn,
     ClientFormDataOut,
+    ClientTrailIn,
     ClientTrailModel,
-    ClientTrailSchema,
-    ClientTrailSchemaRef,
-    ClientTrailSpec,
+    ClientTrailOut,
+    ClientTrailRef,
 )
 from chatddx.repo.entities.coercion import (
     Coercion as CoercionProxy,
+    CoercionBranchIn,
     CoercionBranchModel,
-    CoercionBranchSchema,
-    CoercionBranchSpec,
+    CoercionBranchOut,
     CoercionFormDataIn,
     CoercionFormDataOut,
+    CoercionTrailIn,
     CoercionTrailModel,
-    CoercionTrailSchema,
-    CoercionTrailSchemaRef,
-    CoercionTrailSpec,
+    CoercionTrailOut,
+    CoercionTrailRef,
 )
 from chatddx.repo.entities.configuration import (
     Configuration as ConfigurationProxy,
+    ConfigurationBranchIn,
     ConfigurationBranchModel,
-    ConfigurationBranchSchema,
-    ConfigurationBranchSpec,
+    ConfigurationBranchOut,
     ConfigurationFormDataIn,
     ConfigurationFormDataOut,
+    ConfigurationTrailIn,
     ConfigurationTrailModel,
-    ConfigurationTrailSchema,
-    ConfigurationTrailSchemaRef,
-    ConfigurationTrailSpec,
+    ConfigurationTrailOut,
+    ConfigurationTrailRef,
     SharedConfiguration as SharedConfigurationProxy,
 )
 from chatddx.repo.entities.instruction import (
     Instruction as InstructionProxy,
+    InstructionBranchIn,
     InstructionBranchModel,
-    InstructionBranchSchema,
-    InstructionBranchSpec,
+    InstructionBranchOut,
     InstructionFormDataIn,
     InstructionFormDataOut,
+    InstructionTrailIn,
     InstructionTrailModel,
-    InstructionTrailSchema,
-    InstructionTrailSchemaRef,
-    InstructionTrailSpec,
+    InstructionTrailOut,
+    InstructionTrailRef,
 )
 from chatddx.repo.entities.machine import (
     Machine as MachineProxy,
     MachineBranchDetails,
     MachineBranchDetailsPatch,
+    MachineBranchIn,
     MachineBranchModel,
-    MachineBranchSchema,
-    MachineBranchSpec,
+    MachineBranchOut,
     MachineFormDataIn,
     MachineFormDataOut,
+    MachineTrailIn,
     MachineTrailModel,
-    MachineTrailSchema,
-    MachineTrailSchemaRef,
-    MachineTrailSpec,
+    MachineTrailOut,
+    MachineTrailRef,
 )
 from chatddx.repo.entities.model import (
     LanguageModel as LanguageModelProxy,
     ModelBranchDetails,
     ModelBranchDetailsPatch,
+    ModelBranchIn,
     ModelBranchModel,
-    ModelBranchSchema,
-    ModelBranchSpec,
+    ModelBranchOut,
     ModelFormDataIn,
     ModelFormDataOut,
+    ModelTrailIn,
     ModelTrailModel,
-    ModelTrailSchema,
-    ModelTrailSchemaRef,
-    ModelTrailSpec,
+    ModelTrailOut,
+    ModelTrailRef,
 )
 from chatddx.repo.entities.os import (
     Os as OsProxy,
     OsBranchDetails,
     OsBranchDetailsPatch,
+    OsBranchIn,
     OsBranchModel,
-    OsBranchSchema,
-    OsBranchSpec,
+    OsBranchOut,
     OsFormDataIn,
     OsFormDataOut,
+    OsTrailIn,
     OsTrailModel,
-    OsTrailSchema,
-    OsTrailSchemaRef,
-    OsTrailSpec,
+    OsTrailOut,
+    OsTrailRef,
 )
 from chatddx.repo.entities.output import (
     Output as OutputProxy,
+    OutputBranchIn,
     OutputBranchModel,
-    OutputBranchSchema,
-    OutputBranchSpec,
+    OutputBranchOut,
     OutputFormDataIn,
     OutputFormDataOut,
+    OutputTrailIn,
     OutputTrailModel,
-    OutputTrailSchema,
-    OutputTrailSchemaRef,
-    OutputTrailSpec,
+    OutputTrailOut,
+    OutputTrailRef,
 )
 from chatddx.repo.entities.reasoning import (
     Reasoning as ReasoningProxy,
+    ReasoningBranchIn,
     ReasoningBranchModel,
-    ReasoningBranchSchema,
-    ReasoningBranchSpec,
+    ReasoningBranchOut,
     ReasoningFormDataIn,
     ReasoningFormDataOut,
+    ReasoningTrailIn,
     ReasoningTrailModel,
-    ReasoningTrailSchema,
-    ReasoningTrailSchemaRef,
-    ReasoningTrailSpec,
+    ReasoningTrailOut,
+    ReasoningTrailRef,
 )
 from chatddx.repo.entities.sampling import (
     Sampling as SamplingProxy,
+    SamplingBranchIn,
     SamplingBranchModel,
-    SamplingBranchSchema,
-    SamplingBranchSpec,
+    SamplingBranchOut,
     SamplingFormDataIn,
     SamplingFormDataOut,
+    SamplingTrailIn,
     SamplingTrailModel,
-    SamplingTrailSchema,
-    SamplingTrailSchemaRef,
-    SamplingTrailSpec,
+    SamplingTrailOut,
+    SamplingTrailRef,
 )
 from chatddx.repo.entities.scorer import (
     Scorer as ScorerProxy,
     ScorerBranchDetails,
     ScorerBranchDetailsPatch,
+    ScorerBranchIn,
     ScorerBranchModel,
-    ScorerBranchSchema,
-    ScorerBranchSpec,
+    ScorerBranchOut,
     ScorerFormDataIn,
     ScorerFormDataOut,
+    ScorerTrailIn,
     ScorerTrailModel,
-    ScorerTrailSchema,
-    ScorerTrailSchemaRef,
-    ScorerTrailSpec,
+    ScorerTrailOut,
+    ScorerTrailRef,
 )
 from chatddx.repo.entities.serving import (
     Serving as ServingProxy,
     ServingBranchDetails,
     ServingBranchDetailsPatch,
+    ServingBranchIn,
     ServingBranchModel,
-    ServingBranchSchema,
-    ServingBranchSpec,
+    ServingBranchOut,
     ServingFormDataIn,
     ServingFormDataOut,
+    ServingTrailIn,
     ServingTrailModel,
-    ServingTrailSchema,
-    ServingTrailSchemaRef,
-    ServingTrailSpec,
+    ServingTrailOut,
+    ServingTrailRef,
 )
 from chatddx.repo.entities.stack import (
     Stack as StackProxy,
     StackBranchDetails,
     StackBranchDetailsPatch,
+    StackBranchIn,
     StackBranchModel,
-    StackBranchSchema,
-    StackBranchSpec,
+    StackBranchOut,
     StackFormDataIn,
     StackFormDataOut,
+    StackTrailIn,
     StackTrailModel,
-    StackTrailSchema,
-    StackTrailSchemaRef,
-    StackTrailSpec,
+    StackTrailOut,
+    StackTrailRef,
 )
 from chatddx.repo.entities.tool import (
     Tool as ToolProxy,
     ToolBranchDetails,
     ToolBranchDetailsPatch,
+    ToolBranchIn,
     ToolBranchModel,
-    ToolBranchSchema,
-    ToolBranchSpec,
+    ToolBranchOut,
     ToolFormDataIn,
     ToolFormDataOut,
+    ToolTrailIn,
     ToolTrailModel,
-    ToolTrailSchema,
-    ToolTrailSchemaRef,
-    ToolTrailSpec,
+    ToolTrailOut,
+    ToolTrailRef,
 )
 from chatddx.repo.entities.toolset import (
     Toolset as ToolsetProxy,
+    ToolsetBranchIn,
     ToolsetBranchModel,
-    ToolsetBranchSchema,
-    ToolsetBranchSpec,
+    ToolsetBranchOut,
     ToolsetFormDataIn,
     ToolsetFormDataOut,
+    ToolsetTrailIn,
     ToolsetTrailModel,
-    ToolsetTrailSchema,
-    ToolsetTrailSchemaRef,
-    ToolsetTrailSpec,
+    ToolsetTrailOut,
+    ToolsetTrailRef,
 )
-from chatddx.repo.entity_names import EntityName, ViewName
+from chatddx.repo.entity_names import EntityName, PresentationName
 from chatddx.repo.families import (
     BaseBranch,
     BaseFormDataIn,
     BaseFormDataOut,
+    BranchDetails,
     BranchDetailsPatch,
     BranchModel,
+    BranchOut,
     BranchProxy,
-    BranchSchemaDetails,
-    BranchSpec,
+    TrailIn,
     TrailModel,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailOut,
+    TrailRef,
 )
 
 
 @dataclass(frozen=True)
 class Entity[
     BS: BaseBranch[Any],
-    BP: BranchSpec[Any, Any],
-    TS: TrailSchema,
-    TP: TrailSpec,
-    TR: TrailSchemaRef,
-    BD: BranchSchemaDetails,
+    BP: BranchOut[Any, Any],
+    TS: TrailIn,
+    TP: TrailOut,
+    TR: TrailRef,
+    BD: BranchDetails,
     BDP: BranchDetailsPatch,
     TM: TrailModel,
     BM: BranchModel,
@@ -250,11 +250,11 @@ class Entity[
     """
 
     name: EntityName
-    branch_schema: type[BS]
-    branch_spec: type[BP]
-    trail_schema: type[TS]
-    trail_spec: type[TP]
-    trail_schema_ref: type[TR]
+    branch_in: type[BS]
+    branch_out: type[BP]
+    trail_in: type[TS]
+    trail_out: type[TP]
+    trail_ref: type[TR]
     branch_details: type[BD]
     branch_details_patch: type[BDP]
     trail_model: type[TM]
@@ -262,11 +262,11 @@ class Entity[
 
     def members(self) -> tuple[type, ...]:
         return (
-            self.branch_schema,
-            self.branch_spec,
-            self.trail_schema,
-            self.trail_spec,
-            self.trail_schema_ref,
+            self.branch_in,
+            self.branch_out,
+            self.trail_in,
+            self.trail_out,
+            self.trail_ref,
             self.trail_model,
             self.branch_model,
         )
@@ -274,11 +274,11 @@ class Entity[
 
 type AnyEntity = Entity[
     BaseBranch[Any],
-    BranchSpec[Any, Any],
-    TrailSchema,
-    TrailSpec,
-    TrailSchemaRef,
-    BranchSchemaDetails,
+    BranchOut[Any, Any],
+    TrailIn,
+    TrailOut,
+    TrailRef,
+    BranchDetails,
     BranchDetailsPatch,
     TrailModel,
     BranchModel,
@@ -286,376 +286,376 @@ type AnyEntity = Entity[
 
 type AnyEntityMember = (
     BaseBranch[Any]
-    | BranchSpec[Any, Any]
-    | TrailSchema
-    | TrailSpec
-    | TrailSchemaRef
+    | BranchOut[Any, Any]
+    | TrailIn
+    | TrailOut
+    | TrailRef
     | TrailModel
     | BranchModel
 )
 
 
 type MachineEntity = Entity[
-    MachineBranchSchema,
-    MachineBranchSpec,
-    MachineTrailSchema,
-    MachineTrailSpec,
-    MachineTrailSchemaRef,
+    MachineBranchIn,
+    MachineBranchOut,
+    MachineTrailIn,
+    MachineTrailOut,
+    MachineTrailRef,
     MachineBranchDetails,
     MachineBranchDetailsPatch,
     MachineTrailModel,
     MachineBranchModel,
 ]
 type MachineMember = (
-    MachineBranchSchema
-    | MachineBranchSpec
-    | MachineTrailSchema
-    | MachineTrailSpec
-    | MachineTrailSchemaRef
+    MachineBranchIn
+    | MachineBranchOut
+    | MachineTrailIn
+    | MachineTrailOut
+    | MachineTrailRef
     | MachineTrailModel
     | MachineBranchModel
 )
 
 
 type OsEntity = Entity[
-    OsBranchSchema,
-    OsBranchSpec,
-    OsTrailSchema,
-    OsTrailSpec,
-    OsTrailSchemaRef,
+    OsBranchIn,
+    OsBranchOut,
+    OsTrailIn,
+    OsTrailOut,
+    OsTrailRef,
     OsBranchDetails,
     OsBranchDetailsPatch,
     OsTrailModel,
     OsBranchModel,
 ]
 type OsMember = (
-    OsBranchSchema
-    | OsBranchSpec
-    | OsTrailSchema
-    | OsTrailSpec
-    | OsTrailSchemaRef
+    OsBranchIn
+    | OsBranchOut
+    | OsTrailIn
+    | OsTrailOut
+    | OsTrailRef
     | OsTrailModel
     | OsBranchModel
 )
 
 
 type ModelEntity = Entity[
-    ModelBranchSchema,
-    ModelBranchSpec,
-    ModelTrailSchema,
-    ModelTrailSpec,
-    ModelTrailSchemaRef,
+    ModelBranchIn,
+    ModelBranchOut,
+    ModelTrailIn,
+    ModelTrailOut,
+    ModelTrailRef,
     ModelBranchDetails,
     ModelBranchDetailsPatch,
     ModelTrailModel,
     ModelBranchModel,
 ]
 type ModelMember = (
-    ModelBranchSchema
-    | ModelBranchSpec
-    | ModelTrailSchema
-    | ModelTrailSpec
-    | ModelTrailSchemaRef
+    ModelBranchIn
+    | ModelBranchOut
+    | ModelTrailIn
+    | ModelTrailOut
+    | ModelTrailRef
     | ModelTrailModel
     | ModelBranchModel
 )
 
 
 type ServingEntity = Entity[
-    ServingBranchSchema,
-    ServingBranchSpec,
-    ServingTrailSchema,
-    ServingTrailSpec,
-    ServingTrailSchemaRef,
+    ServingBranchIn,
+    ServingBranchOut,
+    ServingTrailIn,
+    ServingTrailOut,
+    ServingTrailRef,
     ServingBranchDetails,
     ServingBranchDetailsPatch,
     ServingTrailModel,
     ServingBranchModel,
 ]
 type ServingMember = (
-    ServingBranchSchema
-    | ServingBranchSpec
-    | ServingTrailSchema
-    | ServingTrailSpec
-    | ServingTrailSchemaRef
+    ServingBranchIn
+    | ServingBranchOut
+    | ServingTrailIn
+    | ServingTrailOut
+    | ServingTrailRef
     | ServingTrailModel
     | ServingBranchModel
 )
 
 
 type ClientEntity = Entity[
-    ClientBranchSchema,
-    ClientBranchSpec,
-    ClientTrailSchema,
-    ClientTrailSpec,
-    ClientTrailSchemaRef,
+    ClientBranchIn,
+    ClientBranchOut,
+    ClientTrailIn,
+    ClientTrailOut,
+    ClientTrailRef,
     ClientBranchDetails,
     ClientBranchDetailsPatch,
     ClientTrailModel,
     ClientBranchModel,
 ]
 type ClientMember = (
-    ClientBranchSchema
-    | ClientBranchSpec
-    | ClientTrailSchema
-    | ClientTrailSpec
-    | ClientTrailSchemaRef
+    ClientBranchIn
+    | ClientBranchOut
+    | ClientTrailIn
+    | ClientTrailOut
+    | ClientTrailRef
     | ClientTrailModel
     | ClientBranchModel
 )
 
 
 type StackEntity = Entity[
-    StackBranchSchema,
-    StackBranchSpec,
-    StackTrailSchema,
-    StackTrailSpec,
-    StackTrailSchemaRef,
+    StackBranchIn,
+    StackBranchOut,
+    StackTrailIn,
+    StackTrailOut,
+    StackTrailRef,
     StackBranchDetails,
     StackBranchDetailsPatch,
     StackTrailModel,
     StackBranchModel,
 ]
 type StackMember = (
-    StackBranchSchema
-    | StackBranchSpec
-    | StackTrailSchema
-    | StackTrailSpec
-    | StackTrailSchemaRef
+    StackBranchIn
+    | StackBranchOut
+    | StackTrailIn
+    | StackTrailOut
+    | StackTrailRef
     | StackTrailModel
     | StackBranchModel
 )
 
 
 type ToolEntity = Entity[
-    ToolBranchSchema,
-    ToolBranchSpec,
-    ToolTrailSchema,
-    ToolTrailSpec,
-    ToolTrailSchemaRef,
+    ToolBranchIn,
+    ToolBranchOut,
+    ToolTrailIn,
+    ToolTrailOut,
+    ToolTrailRef,
     ToolBranchDetails,
     ToolBranchDetailsPatch,
     ToolTrailModel,
     ToolBranchModel,
 ]
 type ToolMember = (
-    ToolBranchSchema
-    | ToolBranchSpec
-    | ToolTrailSchema
-    | ToolTrailSpec
-    | ToolTrailSchemaRef
+    ToolBranchIn
+    | ToolBranchOut
+    | ToolTrailIn
+    | ToolTrailOut
+    | ToolTrailRef
     | ToolTrailModel
     | ToolBranchModel
 )
 
 
 type ToolsetEntity = Entity[
-    ToolsetBranchSchema,
-    ToolsetBranchSpec,
-    ToolsetTrailSchema,
-    ToolsetTrailSpec,
-    ToolsetTrailSchemaRef,
-    BranchSchemaDetails,
+    ToolsetBranchIn,
+    ToolsetBranchOut,
+    ToolsetTrailIn,
+    ToolsetTrailOut,
+    ToolsetTrailRef,
+    BranchDetails,
     BranchDetailsPatch,
     ToolsetTrailModel,
     ToolsetBranchModel,
 ]
 type ToolsetMember = (
-    ToolsetBranchSchema
-    | ToolsetBranchSpec
-    | ToolsetTrailSchema
-    | ToolsetTrailSpec
-    | ToolsetTrailSchemaRef
+    ToolsetBranchIn
+    | ToolsetBranchOut
+    | ToolsetTrailIn
+    | ToolsetTrailOut
+    | ToolsetTrailRef
     | ToolsetTrailModel
     | ToolsetBranchModel
 )
 
 
 type InstructionEntity = Entity[
-    InstructionBranchSchema,
-    InstructionBranchSpec,
-    InstructionTrailSchema,
-    InstructionTrailSpec,
-    InstructionTrailSchemaRef,
-    BranchSchemaDetails,
+    InstructionBranchIn,
+    InstructionBranchOut,
+    InstructionTrailIn,
+    InstructionTrailOut,
+    InstructionTrailRef,
+    BranchDetails,
     BranchDetailsPatch,
     InstructionTrailModel,
     InstructionBranchModel,
 ]
 type InstructionMember = (
-    InstructionBranchSchema
-    | InstructionBranchSpec
-    | InstructionTrailSchema
-    | InstructionTrailSpec
-    | InstructionTrailSchemaRef
+    InstructionBranchIn
+    | InstructionBranchOut
+    | InstructionTrailIn
+    | InstructionTrailOut
+    | InstructionTrailRef
     | InstructionTrailModel
     | InstructionBranchModel
 )
 
 
 type OutputEntity = Entity[
-    OutputBranchSchema,
-    OutputBranchSpec,
-    OutputTrailSchema,
-    OutputTrailSpec,
-    OutputTrailSchemaRef,
-    BranchSchemaDetails,
+    OutputBranchIn,
+    OutputBranchOut,
+    OutputTrailIn,
+    OutputTrailOut,
+    OutputTrailRef,
+    BranchDetails,
     BranchDetailsPatch,
     OutputTrailModel,
     OutputBranchModel,
 ]
 type OutputMember = (
-    OutputBranchSchema
-    | OutputBranchSpec
-    | OutputTrailSchema
-    | OutputTrailSpec
-    | OutputTrailSchemaRef
+    OutputBranchIn
+    | OutputBranchOut
+    | OutputTrailIn
+    | OutputTrailOut
+    | OutputTrailRef
     | OutputTrailModel
     | OutputBranchModel
 )
 
 
 type CoercionEntity = Entity[
-    CoercionBranchSchema,
-    CoercionBranchSpec,
-    CoercionTrailSchema,
-    CoercionTrailSpec,
-    CoercionTrailSchemaRef,
-    BranchSchemaDetails,
+    CoercionBranchIn,
+    CoercionBranchOut,
+    CoercionTrailIn,
+    CoercionTrailOut,
+    CoercionTrailRef,
+    BranchDetails,
     BranchDetailsPatch,
     CoercionTrailModel,
     CoercionBranchModel,
 ]
 type CoercionMember = (
-    CoercionBranchSchema
-    | CoercionBranchSpec
-    | CoercionTrailSchema
-    | CoercionTrailSpec
-    | CoercionTrailSchemaRef
+    CoercionBranchIn
+    | CoercionBranchOut
+    | CoercionTrailIn
+    | CoercionTrailOut
+    | CoercionTrailRef
     | CoercionTrailModel
     | CoercionBranchModel
 )
 
 
 type ReasoningEntity = Entity[
-    ReasoningBranchSchema,
-    ReasoningBranchSpec,
-    ReasoningTrailSchema,
-    ReasoningTrailSpec,
-    ReasoningTrailSchemaRef,
-    BranchSchemaDetails,
+    ReasoningBranchIn,
+    ReasoningBranchOut,
+    ReasoningTrailIn,
+    ReasoningTrailOut,
+    ReasoningTrailRef,
+    BranchDetails,
     BranchDetailsPatch,
     ReasoningTrailModel,
     ReasoningBranchModel,
 ]
 type ReasoningMember = (
-    ReasoningBranchSchema
-    | ReasoningBranchSpec
-    | ReasoningTrailSchema
-    | ReasoningTrailSpec
-    | ReasoningTrailSchemaRef
+    ReasoningBranchIn
+    | ReasoningBranchOut
+    | ReasoningTrailIn
+    | ReasoningTrailOut
+    | ReasoningTrailRef
     | ReasoningTrailModel
     | ReasoningBranchModel
 )
 
 
 type SamplingEntity = Entity[
-    SamplingBranchSchema,
-    SamplingBranchSpec,
-    SamplingTrailSchema,
-    SamplingTrailSpec,
-    SamplingTrailSchemaRef,
-    BranchSchemaDetails,
+    SamplingBranchIn,
+    SamplingBranchOut,
+    SamplingTrailIn,
+    SamplingTrailOut,
+    SamplingTrailRef,
+    BranchDetails,
     BranchDetailsPatch,
     SamplingTrailModel,
     SamplingBranchModel,
 ]
 type SamplingMember = (
-    SamplingBranchSchema
-    | SamplingBranchSpec
-    | SamplingTrailSchema
-    | SamplingTrailSpec
-    | SamplingTrailSchemaRef
+    SamplingBranchIn
+    | SamplingBranchOut
+    | SamplingTrailIn
+    | SamplingTrailOut
+    | SamplingTrailRef
     | SamplingTrailModel
     | SamplingBranchModel
 )
 
 
 type ConfigurationEntity = Entity[
-    ConfigurationBranchSchema,
-    ConfigurationBranchSpec,
-    ConfigurationTrailSchema,
-    ConfigurationTrailSpec,
-    ConfigurationTrailSchemaRef,
-    BranchSchemaDetails,
+    ConfigurationBranchIn,
+    ConfigurationBranchOut,
+    ConfigurationTrailIn,
+    ConfigurationTrailOut,
+    ConfigurationTrailRef,
+    BranchDetails,
     BranchDetailsPatch,
     ConfigurationTrailModel,
     ConfigurationBranchModel,
 ]
 type ConfigurationMember = (
-    ConfigurationBranchSchema
-    | ConfigurationBranchSpec
-    | ConfigurationTrailSchema
-    | ConfigurationTrailSpec
-    | ConfigurationTrailSchemaRef
+    ConfigurationBranchIn
+    | ConfigurationBranchOut
+    | ConfigurationTrailIn
+    | ConfigurationTrailOut
+    | ConfigurationTrailRef
     | ConfigurationTrailModel
     | ConfigurationBranchModel
 )
 
 
 type CaseEntity = Entity[
-    CaseBranchSchema,
-    CaseBranchSpec,
-    CaseTrailSchema,
-    CaseTrailSpec,
-    CaseTrailSchemaRef,
+    CaseBranchIn,
+    CaseBranchOut,
+    CaseTrailIn,
+    CaseTrailOut,
+    CaseTrailRef,
     CaseBranchDetails,
     CaseBranchDetailsPatch,
     CaseTrailModel,
     CaseBranchModel,
 ]
 type CaseMember = (
-    CaseBranchSchema
-    | CaseBranchSpec
-    | CaseTrailSchema
-    | CaseTrailSpec
-    | CaseTrailSchemaRef
+    CaseBranchIn
+    | CaseBranchOut
+    | CaseTrailIn
+    | CaseTrailOut
+    | CaseTrailRef
     | CaseTrailModel
     | CaseBranchModel
 )
 
 
 type ScorerEntity = Entity[
-    ScorerBranchSchema,
-    ScorerBranchSpec,
-    ScorerTrailSchema,
-    ScorerTrailSpec,
-    ScorerTrailSchemaRef,
+    ScorerBranchIn,
+    ScorerBranchOut,
+    ScorerTrailIn,
+    ScorerTrailOut,
+    ScorerTrailRef,
     ScorerBranchDetails,
     ScorerBranchDetailsPatch,
     ScorerTrailModel,
     ScorerBranchModel,
 ]
 type ScorerMember = (
-    ScorerBranchSchema
-    | ScorerBranchSpec
-    | ScorerTrailSchema
-    | ScorerTrailSpec
-    | ScorerTrailSchemaRef
+    ScorerBranchIn
+    | ScorerBranchOut
+    | ScorerTrailIn
+    | ScorerTrailOut
+    | ScorerTrailRef
     | ScorerTrailModel
     | ScorerBranchModel
 )
 
 
 @dataclass(frozen=True)
-class View[
+class Presentation[
     P: BranchProxy,
     FDI: BaseFormDataIn,
     FDO: BaseFormDataOut,
 ]:
     """How an entity is presented: its proxies and its form data."""
 
-    name: ViewName
+    name: PresentationName
     entity: AnyEntity
     proxy: type[P]
     shared_proxy: type[BranchProxy] | None
@@ -669,16 +669,16 @@ class View[
         return (self.proxy, self.shared_proxy)
 
 
-type AnyView = View[BranchProxy, BaseFormDataIn, BaseFormDataOut]
+type AnyPresentation = Presentation[BranchProxy, BaseFormDataIn, BaseFormDataOut]
 
 
 MACHINE: MachineEntity = Entity(
     name="machine",
-    branch_schema=MachineBranchSchema,
-    branch_spec=MachineBranchSpec,
-    trail_schema=MachineTrailSchema,
-    trail_spec=MachineTrailSpec,
-    trail_schema_ref=MachineTrailSchemaRef,
+    branch_in=MachineBranchIn,
+    branch_out=MachineBranchOut,
+    trail_in=MachineTrailIn,
+    trail_out=MachineTrailOut,
+    trail_ref=MachineTrailRef,
     branch_details=MachineBranchDetails,
     branch_details_patch=MachineBranchDetailsPatch,
     trail_model=MachineTrailModel,
@@ -687,11 +687,11 @@ MACHINE: MachineEntity = Entity(
 
 OS: OsEntity = Entity(
     name="os",
-    branch_schema=OsBranchSchema,
-    branch_spec=OsBranchSpec,
-    trail_schema=OsTrailSchema,
-    trail_spec=OsTrailSpec,
-    trail_schema_ref=OsTrailSchemaRef,
+    branch_in=OsBranchIn,
+    branch_out=OsBranchOut,
+    trail_in=OsTrailIn,
+    trail_out=OsTrailOut,
+    trail_ref=OsTrailRef,
     branch_details=OsBranchDetails,
     branch_details_patch=OsBranchDetailsPatch,
     trail_model=OsTrailModel,
@@ -700,11 +700,11 @@ OS: OsEntity = Entity(
 
 MODEL: ModelEntity = Entity(
     name="model",
-    branch_schema=ModelBranchSchema,
-    branch_spec=ModelBranchSpec,
-    trail_schema=ModelTrailSchema,
-    trail_spec=ModelTrailSpec,
-    trail_schema_ref=ModelTrailSchemaRef,
+    branch_in=ModelBranchIn,
+    branch_out=ModelBranchOut,
+    trail_in=ModelTrailIn,
+    trail_out=ModelTrailOut,
+    trail_ref=ModelTrailRef,
     branch_details=ModelBranchDetails,
     branch_details_patch=ModelBranchDetailsPatch,
     trail_model=ModelTrailModel,
@@ -713,11 +713,11 @@ MODEL: ModelEntity = Entity(
 
 SERVING: ServingEntity = Entity(
     name="serving",
-    branch_schema=ServingBranchSchema,
-    branch_spec=ServingBranchSpec,
-    trail_schema=ServingTrailSchema,
-    trail_spec=ServingTrailSpec,
-    trail_schema_ref=ServingTrailSchemaRef,
+    branch_in=ServingBranchIn,
+    branch_out=ServingBranchOut,
+    trail_in=ServingTrailIn,
+    trail_out=ServingTrailOut,
+    trail_ref=ServingTrailRef,
     branch_details=ServingBranchDetails,
     branch_details_patch=ServingBranchDetailsPatch,
     trail_model=ServingTrailModel,
@@ -726,11 +726,11 @@ SERVING: ServingEntity = Entity(
 
 CLIENT: ClientEntity = Entity(
     name="client",
-    branch_schema=ClientBranchSchema,
-    branch_spec=ClientBranchSpec,
-    trail_schema=ClientTrailSchema,
-    trail_spec=ClientTrailSpec,
-    trail_schema_ref=ClientTrailSchemaRef,
+    branch_in=ClientBranchIn,
+    branch_out=ClientBranchOut,
+    trail_in=ClientTrailIn,
+    trail_out=ClientTrailOut,
+    trail_ref=ClientTrailRef,
     branch_details=ClientBranchDetails,
     branch_details_patch=ClientBranchDetailsPatch,
     trail_model=ClientTrailModel,
@@ -739,11 +739,11 @@ CLIENT: ClientEntity = Entity(
 
 STACK: StackEntity = Entity(
     name="stack",
-    branch_schema=StackBranchSchema,
-    branch_spec=StackBranchSpec,
-    trail_schema=StackTrailSchema,
-    trail_spec=StackTrailSpec,
-    trail_schema_ref=StackTrailSchemaRef,
+    branch_in=StackBranchIn,
+    branch_out=StackBranchOut,
+    trail_in=StackTrailIn,
+    trail_out=StackTrailOut,
+    trail_ref=StackTrailRef,
     branch_details=StackBranchDetails,
     branch_details_patch=StackBranchDetailsPatch,
     trail_model=StackTrailModel,
@@ -752,11 +752,11 @@ STACK: StackEntity = Entity(
 
 TOOL: ToolEntity = Entity(
     name="tool",
-    branch_schema=ToolBranchSchema,
-    branch_spec=ToolBranchSpec,
-    trail_schema=ToolTrailSchema,
-    trail_spec=ToolTrailSpec,
-    trail_schema_ref=ToolTrailSchemaRef,
+    branch_in=ToolBranchIn,
+    branch_out=ToolBranchOut,
+    trail_in=ToolTrailIn,
+    trail_out=ToolTrailOut,
+    trail_ref=ToolTrailRef,
     branch_details=ToolBranchDetails,
     branch_details_patch=ToolBranchDetailsPatch,
     trail_model=ToolTrailModel,
@@ -765,12 +765,12 @@ TOOL: ToolEntity = Entity(
 
 TOOLSET: ToolsetEntity = Entity(
     name="toolset",
-    branch_schema=ToolsetBranchSchema,
-    branch_spec=ToolsetBranchSpec,
-    trail_schema=ToolsetTrailSchema,
-    trail_spec=ToolsetTrailSpec,
-    trail_schema_ref=ToolsetTrailSchemaRef,
-    branch_details=BranchSchemaDetails,
+    branch_in=ToolsetBranchIn,
+    branch_out=ToolsetBranchOut,
+    trail_in=ToolsetTrailIn,
+    trail_out=ToolsetTrailOut,
+    trail_ref=ToolsetTrailRef,
+    branch_details=BranchDetails,
     branch_details_patch=BranchDetailsPatch,
     trail_model=ToolsetTrailModel,
     branch_model=ToolsetBranchModel,
@@ -778,12 +778,12 @@ TOOLSET: ToolsetEntity = Entity(
 
 INSTRUCTION: InstructionEntity = Entity(
     name="instruction",
-    branch_schema=InstructionBranchSchema,
-    branch_spec=InstructionBranchSpec,
-    trail_schema=InstructionTrailSchema,
-    trail_spec=InstructionTrailSpec,
-    trail_schema_ref=InstructionTrailSchemaRef,
-    branch_details=BranchSchemaDetails,
+    branch_in=InstructionBranchIn,
+    branch_out=InstructionBranchOut,
+    trail_in=InstructionTrailIn,
+    trail_out=InstructionTrailOut,
+    trail_ref=InstructionTrailRef,
+    branch_details=BranchDetails,
     branch_details_patch=BranchDetailsPatch,
     trail_model=InstructionTrailModel,
     branch_model=InstructionBranchModel,
@@ -791,12 +791,12 @@ INSTRUCTION: InstructionEntity = Entity(
 
 OUTPUT: OutputEntity = Entity(
     name="output",
-    branch_schema=OutputBranchSchema,
-    branch_spec=OutputBranchSpec,
-    trail_schema=OutputTrailSchema,
-    trail_spec=OutputTrailSpec,
-    trail_schema_ref=OutputTrailSchemaRef,
-    branch_details=BranchSchemaDetails,
+    branch_in=OutputBranchIn,
+    branch_out=OutputBranchOut,
+    trail_in=OutputTrailIn,
+    trail_out=OutputTrailOut,
+    trail_ref=OutputTrailRef,
+    branch_details=BranchDetails,
     branch_details_patch=BranchDetailsPatch,
     trail_model=OutputTrailModel,
     branch_model=OutputBranchModel,
@@ -804,12 +804,12 @@ OUTPUT: OutputEntity = Entity(
 
 COERCION: CoercionEntity = Entity(
     name="coercion",
-    branch_schema=CoercionBranchSchema,
-    branch_spec=CoercionBranchSpec,
-    trail_schema=CoercionTrailSchema,
-    trail_spec=CoercionTrailSpec,
-    trail_schema_ref=CoercionTrailSchemaRef,
-    branch_details=BranchSchemaDetails,
+    branch_in=CoercionBranchIn,
+    branch_out=CoercionBranchOut,
+    trail_in=CoercionTrailIn,
+    trail_out=CoercionTrailOut,
+    trail_ref=CoercionTrailRef,
+    branch_details=BranchDetails,
     branch_details_patch=BranchDetailsPatch,
     trail_model=CoercionTrailModel,
     branch_model=CoercionBranchModel,
@@ -817,12 +817,12 @@ COERCION: CoercionEntity = Entity(
 
 REASONING: ReasoningEntity = Entity(
     name="reasoning",
-    branch_schema=ReasoningBranchSchema,
-    branch_spec=ReasoningBranchSpec,
-    trail_schema=ReasoningTrailSchema,
-    trail_spec=ReasoningTrailSpec,
-    trail_schema_ref=ReasoningTrailSchemaRef,
-    branch_details=BranchSchemaDetails,
+    branch_in=ReasoningBranchIn,
+    branch_out=ReasoningBranchOut,
+    trail_in=ReasoningTrailIn,
+    trail_out=ReasoningTrailOut,
+    trail_ref=ReasoningTrailRef,
+    branch_details=BranchDetails,
     branch_details_patch=BranchDetailsPatch,
     trail_model=ReasoningTrailModel,
     branch_model=ReasoningBranchModel,
@@ -830,12 +830,12 @@ REASONING: ReasoningEntity = Entity(
 
 SAMPLING: SamplingEntity = Entity(
     name="sampling",
-    branch_schema=SamplingBranchSchema,
-    branch_spec=SamplingBranchSpec,
-    trail_schema=SamplingTrailSchema,
-    trail_spec=SamplingTrailSpec,
-    trail_schema_ref=SamplingTrailSchemaRef,
-    branch_details=BranchSchemaDetails,
+    branch_in=SamplingBranchIn,
+    branch_out=SamplingBranchOut,
+    trail_in=SamplingTrailIn,
+    trail_out=SamplingTrailOut,
+    trail_ref=SamplingTrailRef,
+    branch_details=BranchDetails,
     branch_details_patch=BranchDetailsPatch,
     trail_model=SamplingTrailModel,
     branch_model=SamplingBranchModel,
@@ -843,12 +843,12 @@ SAMPLING: SamplingEntity = Entity(
 
 CONFIGURATION: ConfigurationEntity = Entity(
     name="configuration",
-    branch_schema=ConfigurationBranchSchema,
-    branch_spec=ConfigurationBranchSpec,
-    trail_schema=ConfigurationTrailSchema,
-    trail_spec=ConfigurationTrailSpec,
-    trail_schema_ref=ConfigurationTrailSchemaRef,
-    branch_details=BranchSchemaDetails,
+    branch_in=ConfigurationBranchIn,
+    branch_out=ConfigurationBranchOut,
+    trail_in=ConfigurationTrailIn,
+    trail_out=ConfigurationTrailOut,
+    trail_ref=ConfigurationTrailRef,
+    branch_details=BranchDetails,
     branch_details_patch=BranchDetailsPatch,
     trail_model=ConfigurationTrailModel,
     branch_model=ConfigurationBranchModel,
@@ -856,11 +856,11 @@ CONFIGURATION: ConfigurationEntity = Entity(
 
 CASE: CaseEntity = Entity(
     name="case",
-    branch_schema=CaseBranchSchema,
-    branch_spec=CaseBranchSpec,
-    trail_schema=CaseTrailSchema,
-    trail_spec=CaseTrailSpec,
-    trail_schema_ref=CaseTrailSchemaRef,
+    branch_in=CaseBranchIn,
+    branch_out=CaseBranchOut,
+    trail_in=CaseTrailIn,
+    trail_out=CaseTrailOut,
+    trail_ref=CaseTrailRef,
     branch_details=CaseBranchDetails,
     branch_details_patch=CaseBranchDetailsPatch,
     trail_model=CaseTrailModel,
@@ -869,11 +869,11 @@ CASE: CaseEntity = Entity(
 
 SCORER: ScorerEntity = Entity(
     name="scorer",
-    branch_schema=ScorerBranchSchema,
-    branch_spec=ScorerBranchSpec,
-    trail_schema=ScorerTrailSchema,
-    trail_spec=ScorerTrailSpec,
-    trail_schema_ref=ScorerTrailSchemaRef,
+    branch_in=ScorerBranchIn,
+    branch_out=ScorerBranchOut,
+    trail_in=ScorerTrailIn,
+    trail_out=ScorerTrailOut,
+    trail_ref=ScorerTrailRef,
     branch_details=ScorerBranchDetails,
     branch_details_patch=ScorerBranchDetailsPatch,
     trail_model=ScorerTrailModel,
@@ -881,7 +881,9 @@ SCORER: ScorerEntity = Entity(
 )
 
 
-MACHINE_VIEW: View[MachineProxy, MachineFormDataIn, MachineFormDataOut] = View(
+MACHINE_PRESENTATION: Presentation[
+    MachineProxy, MachineFormDataIn, MachineFormDataOut
+] = Presentation(
     name="machine",
     entity=MACHINE,
     proxy=MachineProxy,
@@ -890,7 +892,7 @@ MACHINE_VIEW: View[MachineProxy, MachineFormDataIn, MachineFormDataOut] = View(
     form_data_out=MachineFormDataOut,
 )
 
-OS_VIEW: View[OsProxy, OsFormDataIn, OsFormDataOut] = View(
+OS_PRESENTATION: Presentation[OsProxy, OsFormDataIn, OsFormDataOut] = Presentation(
     name="os",
     entity=OS,
     proxy=OsProxy,
@@ -899,7 +901,9 @@ OS_VIEW: View[OsProxy, OsFormDataIn, OsFormDataOut] = View(
     form_data_out=OsFormDataOut,
 )
 
-MODEL_VIEW: View[LanguageModelProxy, ModelFormDataIn, ModelFormDataOut] = View(
+MODEL_PRESENTATION: Presentation[
+    LanguageModelProxy, ModelFormDataIn, ModelFormDataOut
+] = Presentation(
     name="model",
     entity=MODEL,
     proxy=LanguageModelProxy,
@@ -908,7 +912,9 @@ MODEL_VIEW: View[LanguageModelProxy, ModelFormDataIn, ModelFormDataOut] = View(
     form_data_out=ModelFormDataOut,
 )
 
-SERVING_VIEW: View[ServingProxy, ServingFormDataIn, ServingFormDataOut] = View(
+SERVING_PRESENTATION: Presentation[
+    ServingProxy, ServingFormDataIn, ServingFormDataOut
+] = Presentation(
     name="serving",
     entity=SERVING,
     proxy=ServingProxy,
@@ -917,34 +923,42 @@ SERVING_VIEW: View[ServingProxy, ServingFormDataIn, ServingFormDataOut] = View(
     form_data_out=ServingFormDataOut,
 )
 
-CLIENT_VIEW: View[ClientProxy, ClientFormDataIn, ClientFormDataOut] = View(
-    name="client",
-    entity=CLIENT,
-    proxy=ClientProxy,
-    shared_proxy=None,
-    form_data_in=ClientFormDataIn,
-    form_data_out=ClientFormDataOut,
+CLIENT_PRESENTATION: Presentation[ClientProxy, ClientFormDataIn, ClientFormDataOut] = (
+    Presentation(
+        name="client",
+        entity=CLIENT,
+        proxy=ClientProxy,
+        shared_proxy=None,
+        form_data_in=ClientFormDataIn,
+        form_data_out=ClientFormDataOut,
+    )
 )
 
-STACK_VIEW: View[StackProxy, StackFormDataIn, StackFormDataOut] = View(
-    name="stack",
-    entity=STACK,
-    proxy=StackProxy,
-    shared_proxy=None,
-    form_data_in=StackFormDataIn,
-    form_data_out=StackFormDataOut,
+STACK_PRESENTATION: Presentation[StackProxy, StackFormDataIn, StackFormDataOut] = (
+    Presentation(
+        name="stack",
+        entity=STACK,
+        proxy=StackProxy,
+        shared_proxy=None,
+        form_data_in=StackFormDataIn,
+        form_data_out=StackFormDataOut,
+    )
 )
 
-TOOL_VIEW: View[ToolProxy, ToolFormDataIn, ToolFormDataOut] = View(
-    name="tool",
-    entity=TOOL,
-    proxy=ToolProxy,
-    shared_proxy=None,
-    form_data_in=ToolFormDataIn,
-    form_data_out=ToolFormDataOut,
+TOOL_PRESENTATION: Presentation[ToolProxy, ToolFormDataIn, ToolFormDataOut] = (
+    Presentation(
+        name="tool",
+        entity=TOOL,
+        proxy=ToolProxy,
+        shared_proxy=None,
+        form_data_in=ToolFormDataIn,
+        form_data_out=ToolFormDataOut,
+    )
 )
 
-TOOLSET_VIEW: View[ToolsetProxy, ToolsetFormDataIn, ToolsetFormDataOut] = View(
+TOOLSET_PRESENTATION: Presentation[
+    ToolsetProxy, ToolsetFormDataIn, ToolsetFormDataOut
+] = Presentation(
     name="toolset",
     entity=TOOLSET,
     proxy=ToolsetProxy,
@@ -953,9 +967,9 @@ TOOLSET_VIEW: View[ToolsetProxy, ToolsetFormDataIn, ToolsetFormDataOut] = View(
     form_data_out=ToolsetFormDataOut,
 )
 
-INSTRUCTION_VIEW: View[
+INSTRUCTION_PRESENTATION: Presentation[
     InstructionProxy, InstructionFormDataIn, InstructionFormDataOut
-] = View(
+] = Presentation(
     name="instruction",
     entity=INSTRUCTION,
     proxy=InstructionProxy,
@@ -964,16 +978,20 @@ INSTRUCTION_VIEW: View[
     form_data_out=InstructionFormDataOut,
 )
 
-OUTPUT_VIEW: View[OutputProxy, OutputFormDataIn, OutputFormDataOut] = View(
-    name="output",
-    entity=OUTPUT,
-    proxy=OutputProxy,
-    shared_proxy=None,
-    form_data_in=OutputFormDataIn,
-    form_data_out=OutputFormDataOut,
+OUTPUT_PRESENTATION: Presentation[OutputProxy, OutputFormDataIn, OutputFormDataOut] = (
+    Presentation(
+        name="output",
+        entity=OUTPUT,
+        proxy=OutputProxy,
+        shared_proxy=None,
+        form_data_in=OutputFormDataIn,
+        form_data_out=OutputFormDataOut,
+    )
 )
 
-COERCION_VIEW: View[CoercionProxy, CoercionFormDataIn, CoercionFormDataOut] = View(
+COERCION_PRESENTATION: Presentation[
+    CoercionProxy, CoercionFormDataIn, CoercionFormDataOut
+] = Presentation(
     name="coercion",
     entity=COERCION,
     proxy=CoercionProxy,
@@ -982,7 +1000,9 @@ COERCION_VIEW: View[CoercionProxy, CoercionFormDataIn, CoercionFormDataOut] = Vi
     form_data_out=CoercionFormDataOut,
 )
 
-REASONING_VIEW: View[ReasoningProxy, ReasoningFormDataIn, ReasoningFormDataOut] = View(
+REASONING_PRESENTATION: Presentation[
+    ReasoningProxy, ReasoningFormDataIn, ReasoningFormDataOut
+] = Presentation(
     name="reasoning",
     entity=REASONING,
     proxy=ReasoningProxy,
@@ -991,7 +1011,9 @@ REASONING_VIEW: View[ReasoningProxy, ReasoningFormDataIn, ReasoningFormDataOut] 
     form_data_out=ReasoningFormDataOut,
 )
 
-SAMPLING_VIEW: View[SamplingProxy, SamplingFormDataIn, SamplingFormDataOut] = View(
+SAMPLING_PRESENTATION: Presentation[
+    SamplingProxy, SamplingFormDataIn, SamplingFormDataOut
+] = Presentation(
     name="sampling",
     entity=SAMPLING,
     proxy=SamplingProxy,
@@ -1000,9 +1022,9 @@ SAMPLING_VIEW: View[SamplingProxy, SamplingFormDataIn, SamplingFormDataOut] = Vi
     form_data_out=SamplingFormDataOut,
 )
 
-CONFIGURATION_VIEW: View[
+CONFIGURATION_PRESENTATION: Presentation[
     ConfigurationProxy, ConfigurationFormDataIn, ConfigurationFormDataOut
-] = View(
+] = Presentation(
     name="configuration",
     entity=CONFIGURATION,
     proxy=ConfigurationProxy,
@@ -1011,20 +1033,24 @@ CONFIGURATION_VIEW: View[
     form_data_out=ConfigurationFormDataOut,
 )
 
-CASE_VIEW: View[CaseProxy, CaseFormDataIn, CaseFormDataOut] = View(
-    name="case",
-    entity=CASE,
-    proxy=CaseProxy,
-    shared_proxy=SharedCaseProxy,
-    form_data_in=CaseFormDataIn,
-    form_data_out=CaseFormDataOut,
+CASE_PRESENTATION: Presentation[CaseProxy, CaseFormDataIn, CaseFormDataOut] = (
+    Presentation(
+        name="case",
+        entity=CASE,
+        proxy=CaseProxy,
+        shared_proxy=SharedCaseProxy,
+        form_data_in=CaseFormDataIn,
+        form_data_out=CaseFormDataOut,
+    )
 )
 
-SCORER_VIEW: View[ScorerProxy, ScorerFormDataIn, ScorerFormDataOut] = View(
-    name="scorer",
-    entity=SCORER,
-    proxy=ScorerProxy,
-    shared_proxy=None,
-    form_data_in=ScorerFormDataIn,
-    form_data_out=ScorerFormDataOut,
+SCORER_PRESENTATION: Presentation[ScorerProxy, ScorerFormDataIn, ScorerFormDataOut] = (
+    Presentation(
+        name="scorer",
+        entity=SCORER,
+        proxy=ScorerProxy,
+        shared_proxy=None,
+        form_data_in=ScorerFormDataIn,
+        form_data_out=ScorerFormDataOut,
+    )
 )

@@ -10,13 +10,13 @@ from chatddx.core.models import IdentityModel
 from chatddx.core.repl.cell import SLICES, Cell
 from chatddx.core.repl.render import LATER, REFUSED
 from chatddx.history.models import RunModel
-from chatddx.repo.entities.model.pydantic import ModelBranchSpec, ModelFacts
-from chatddx.repo.entities.stack.pydantic import StackBranchSpec
-from chatddx.repo.entities.tool.pydantic import ToolBranchSpec
+from chatddx.repo.entities.model.pydantic import ModelBranchOut, ModelFacts
+from chatddx.repo.entities.stack.pydantic import StackBranchOut
+from chatddx.repo.entities.tool.pydantic import ToolBranchOut
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.names import short_fingerprint
-from chatddx.repo.shufflers.branch import (
+from chatddx.repo.store.branch import (
     AmbiguousBranchError,
     BranchNotFoundError,
     get_shared_branch_model,
@@ -150,17 +150,17 @@ class Repl:
 
         return get_shared_branch_model("configuration", self.identity, owner, branch)
 
-    def stacks(self) -> list[StackBranchSpec]:
+    def stacks(self) -> list[StackBranchOut]:
         return [
-            StackBranchSpec.model_validate(model)
+            StackBranchOut.model_validate(model)
             for model in select_visible_branch_models("stack", self.identity)
         ]
 
-    def facts_of(self, stack: StackBranchSpec) -> ModelFacts:
+    def facts_of(self, stack: StackBranchOut) -> ModelFacts:
         """The facts of the stack's model, as the identity's branch has them."""
         return self.model_of(stack)[0]
 
-    def model_of(self, stack: StackBranchSpec) -> tuple[ModelFacts, int | None]:
+    def model_of(self, stack: StackBranchOut) -> tuple[ModelFacts, int | None]:
         """
         The facts of the stack's model, and the branch row they are read
         from: none where the identity has no branch of it, and resolution
@@ -171,17 +171,17 @@ class Repl:
         if model_id not in self._models:
             try:
                 model = get_visible_branch_model("model", self.identity, trail=model_id)
-                facts = ModelBranchSpec.model_validate(model).details.facts
+                facts = ModelBranchOut.model_validate(model).details.facts
                 self._models[model_id] = (facts, model.pk)
             except (BranchNotFoundError, AmbiguousBranchError):
                 self._models[model_id] = (ModelFacts(), None)
 
         return self._models[model_id]
 
-    def tools(self) -> dict[str, ToolBranchSpec]:
+    def tools(self) -> dict[str, ToolBranchOut]:
         """The branch of each of the cell's tools, which says what it runs."""
         toolset = self.cell.variation("toolset") if self.cell.configuration else None
-        found: dict[str, ToolBranchSpec] = {}
+        found: dict[str, ToolBranchOut] = {}
 
         for tool in toolset.tools if toolset else []:
             try:
@@ -189,7 +189,7 @@ class Repl:
             except (BranchNotFoundError, AmbiguousBranchError):
                 continue
 
-            found[tool.name] = ToolBranchSpec.model_validate(model)
+            found[tool.name] = ToolBranchOut.model_validate(model)
 
         return found
 

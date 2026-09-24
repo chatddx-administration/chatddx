@@ -8,14 +8,14 @@ from django.urls import reverse
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
 from chatddx.repo.entities.case.django import CaseBranchModel, CaseTrailModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails, CaseTrailSchema
+from chatddx.repo.entities.case.pydantic import CaseBranchDetails, CaseTrailIn
 from chatddx.repo.entities.expect.django import ExpectBranchModel
-from chatddx.repo.entities.expect.pydantic import ExpectTrailSchema
+from chatddx.repo.entities.expect.pydantic import ExpectTrailIn
 from chatddx.repo.entities.scorer.django import ScorerBranchModel
-from chatddx.repo.entities.scorer.pydantic import ScorerTrailSchema
-from chatddx.repo.families.pydantic import BranchSchemaDetails
+from chatddx.repo.entities.scorer.pydantic import ScorerTrailIn
+from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.repo.inventories import InventoryFormDataOut
-from chatddx.repo.shufflers.branch import commit
+from chatddx.repo.store.branch import commit
 
 pytestmark = [
     pytest.mark.django_db(transaction=True),
@@ -89,8 +89,8 @@ def scorer_c(owner: IdentityModel) -> ScorerBranchModel:
     """A scorer none of the inventory's cases has an expectation for."""
 
     _ = commit(
-        trail=ScorerTrailSchema(command="scorer-c command"),
-        branch_details=BranchSchemaDetails(name="scorer-c", owner=owner.name),
+        trail=ScorerTrailIn(command="scorer-c command"),
+        branch_details=BranchDetails(name="scorer-c", owner=owner.name),
     )
 
     return ScorerBranchModel.objects.get(owner=owner, name="scorer-c")
@@ -464,19 +464,19 @@ def test_a_collaborators_edit_leaves_the_owners_expects_alone(
     owner: IdentityModel,
 ):
     other = ensure_identity("olof")
-    scorer = ScorerTrailSchema(command="scorer-a command")
+    scorer = ScorerTrailIn(command="scorer-a command")
 
     for trail, name in (
         (scorer, "scorer-a"),
-        (ExpectTrailSchema(payload="their expectation", scorer=scorer), "shared|a"),
+        (ExpectTrailIn(payload="their expectation", scorer=scorer), "shared|a"),
     ):
         _ = commit(
             trail=trail,
-            branch_details=BranchSchemaDetails(name=name, owner=other.name),
+            branch_details=BranchDetails(name=name, owner=other.name),
         )
 
     _ = commit(
-        trail=CaseTrailSchema(payload="shared payload"),
+        trail=CaseTrailIn(payload="shared payload"),
         branch_details=CaseBranchDetails(
             name="shared-case",
             owner=other.name,
@@ -532,14 +532,14 @@ def test_the_inline_leaves_out_another_cases_identical_expectation(
     case = case_branch(owner)
     expect_a, _ = linked_expects(case)
 
-    scorer = ScorerTrailSchema(command="scorer-a command")
+    scorer = ScorerTrailIn(command="scorer-a command")
 
     _ = commit(
-        trail=ExpectTrailSchema(payload=expect_a.target.payload, scorer=scorer),
-        branch_details=BranchSchemaDetails(name="case-2|scorer-a", owner=owner.name),
+        trail=ExpectTrailIn(payload=expect_a.target.payload, scorer=scorer),
+        branch_details=BranchDetails(name="case-2|scorer-a", owner=owner.name),
     )
     _ = commit(
-        trail=CaseTrailSchema(payload="case payload 2"),
+        trail=CaseTrailIn(payload="case payload 2"),
         branch_details=CaseBranchDetails(
             name="case-2",
             owner=owner.name,

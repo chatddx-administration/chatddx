@@ -14,7 +14,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import chatddx
-from chatddx.repo.entities.client.pydantic import ClientTrailSchema
+from chatddx.repo.entities.client.pydantic import ClientTrailIn
 
 PACKAGES = ("pydantic-ai-slim", "openai", "inspect-ai")
 
@@ -28,8 +28,8 @@ class Client:
     packages: dict[str, str] = field(default_factory=dict[str, str])
 
     @property
-    def trail(self) -> ClientTrailSchema:
-        return ClientTrailSchema(build=self.build)
+    def trail(self) -> ClientTrailIn:
+        return ClientTrailIn(build=self.build)
 
 
 @cache

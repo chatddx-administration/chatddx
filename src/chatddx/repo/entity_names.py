@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, get_args
 
 # In commit order: anything an entity references comes before it
 # (new-datamodel.md §10), so committing in this order finds the branch an
@@ -22,5 +22,8 @@ type EntityName = Literal[
     "scorer",
 ]
 
-# Every entity is presented through one view of its own name.
-type ViewName = EntityName
+# every entity, in commit order
+ENTITY_NAMES: tuple[EntityName, ...] = get_args(EntityName.__value__)
+
+# Every entity is presented through one presentation of its own name.
+type PresentationName = EntityName

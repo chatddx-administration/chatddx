@@ -9,18 +9,18 @@ import re
 
 import pytest
 
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
-from chatddx.repo.entities.output.pydantic import OutputTrailSchema
-from chatddx.repo.entities.serving.pydantic import ServingTrailSchema
-from chatddx.repo.entities.tool.pydantic import ToolTrailSchema
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
+from chatddx.repo.entities.output.pydantic import OutputTrailIn
+from chatddx.repo.entities.serving.pydantic import ServingTrailIn
+from chatddx.repo.entities.tool.pydantic import ToolTrailIn
 from chatddx.repo.families.canonical import (
     canonical_json,
     fingerprint,
     fingerprint_digest,
     ordered,
 )
-from chatddx.repo.inventories import InventoryTrailSchema
-from chatddx.repo.names import resolve_branch_name, short_fingerprint
+from chatddx.repo.inventories import InventoryTrailIn
+from chatddx.repo.names import closure_branch_name, short_fingerprint
 
 ENGINE = "/nix/store/22222222222222222222222222222222-vllm"
 
@@ -109,13 +109,13 @@ def test_a_short_fingerprint_reads_the_hex_part():
 
     assert short_fingerprint(long) == fingerprint_digest(long)[:6]
     assert (
-        resolve_branch_name("sampling", long)
+        closure_branch_name("sampling", long)
         == f"sampling {fingerprint_digest(long)[:6]}"
     )
 
 
 def test_every_trail_of_the_inventory_has_a_fingerprint_of_the_scheme(
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     for entity, records in trails:
         for name, trail in records.items():
@@ -132,7 +132,7 @@ def test_a_schema_s_order_is_content():
     A constrained decoder emits keys in the order `properties` gives them, so
     the model commits to its answer before or after its reasons by it.
     """
-    reasons_first = OutputTrailSchema(
+    reasons_first = OutputTrailIn(
         schema={
             "type": "object",
             "properties": {
@@ -141,7 +141,7 @@ def test_a_schema_s_order_is_content():
             },
         }
     )
-    answer_first = OutputTrailSchema(
+    answer_first = OutputTrailIn(
         schema={
             "type": "object",
             "properties": {
@@ -155,8 +155,8 @@ def test_a_schema_s_order_is_content():
 
 
 def test_a_tool_s_parameters_keep_their_order_too():
-    def tool(*names: str) -> ToolTrailSchema:
-        return ToolTrailSchema(
+    def tool(*names: str) -> ToolTrailIn:
+        return ToolTrailIn(
             name="t",
             parameters={
                 "type": "object",
@@ -169,22 +169,22 @@ def test_a_tool_s_parameters_keep_their_order_too():
 
 def test_what_is_read_as_a_set_is_not_ordered():
     """vLLM reads its arguments and environment as sets."""
-    one = ServingTrailSchema(engine=ENGINE, args={"seed": 0, "max-model-len": 8192})
-    other = ServingTrailSchema(engine=ENGINE, args={"max-model-len": 8192, "seed": 0})
+    one = ServingTrailIn(engine=ENGINE, args={"seed": 0, "max-model-len": 8192})
+    other = ServingTrailIn(engine=ENGINE, args={"max-model-len": 8192, "seed": 0})
 
     assert one.fingerprint == other.fingerprint
 
 
 def test_two_spellings_of_one_argument_are_one_argument():
-    one = ServingTrailSchema(engine=ENGINE, args={"--max_model_len": 8192})
-    other = ServingTrailSchema(engine=ENGINE, args={"max-model-len": 8192})
+    one = ServingTrailIn(engine=ENGINE, args={"--max_model_len": 8192})
+    other = ServingTrailIn(engine=ENGINE, args={"max-model-len": 8192})
 
     assert one.args == {"max-model-len": 8192}
     assert one.fingerprint == other.fingerprint
 
 
 def test_a_relation_stands_in_as_its_fingerprint(
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     plan = trails.configuration["plan"]
 
@@ -198,7 +198,7 @@ def test_a_relation_stands_in_as_its_fingerprint(
 
 
 def test_a_relation_left_out_is_null_in_the_canonical_input(
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     plan = trails.configuration["plan"]
     plan_web = trails.configuration["plan-web"]
@@ -209,7 +209,7 @@ def test_a_relation_left_out_is_null_in_the_canonical_input(
 
 
 def test_the_fingerprint_is_computed_not_kept(
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     plan = trails.configuration["plan"]
     before = plan.fingerprint
@@ -220,10 +220,10 @@ def test_the_fingerprint_is_computed_not_kept(
 
 
 def test_the_same_content_is_the_same_fingerprint_whoever_writes_it(
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     plan = trails.configuration["plan"]
 
-    assert ConfigurationTrailSchema.model_validate(plan.model_dump()).fingerprint == (
+    assert ConfigurationTrailIn.model_validate(plan.model_dump()).fingerprint == (
         plan.fingerprint
     )

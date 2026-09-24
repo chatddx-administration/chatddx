@@ -39,9 +39,9 @@ from chatddx.history.models import (
 )
 from chatddx.repo.entities.client.django import ClientTrailModel
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.entities.stack.django import StackBranchModel
-from chatddx.repo.shufflers.trail import dump_trail
+from chatddx.repo.store.trail import dump_trail
 from chatddx.runtime.client import Client, running
 from chatddx.runtime.trial import Trial
 
@@ -70,7 +70,7 @@ class Outcome:
 
 def record(
     owner: str,
-    configuration: ConfigurationTrailSchema,
+    configuration: ConfigurationTrailIn,
     branches: Branches,
     case: int,
     trial: Trial,
@@ -134,7 +134,7 @@ def record(
 
 
 def _trial(
-    configuration: ConfigurationTrailSchema,
+    configuration: ConfigurationTrailIn,
     stack: int,
     case: int,
     seed: int | None,

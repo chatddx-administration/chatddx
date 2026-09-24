@@ -22,13 +22,13 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 
 
@@ -59,19 +59,19 @@ class MachineTrailBase(BaseTrail):
     machine_id: UUID
 
 
-class MachineTrailSchema(MachineTrailBase, TrailSchema):
+class MachineTrailIn(MachineTrailBase, TrailIn):
     pass
 
 
-class MachineTrailSchemaRef(TrailSchemaRef, MachineTrailBase):
+class MachineTrailRef(TrailRef, MachineTrailBase):
     pass
 
 
-class MachineTrailSpec(MachineTrailBase, TrailSpec):
+class MachineTrailOut(MachineTrailBase, TrailOut):
     pass
 
 
-class MachineBranchDetails(BranchSchemaDetails, MachineDetails):
+class MachineBranchDetails(BranchDetails, MachineDetails):
     pass
 
 
@@ -79,11 +79,11 @@ class MachineBranchDetailsPatch(BranchDetailsPatch, MachineDetails):
     pass
 
 
-class MachineBranchSchema(BaseBranch[MachineTrailSchema], MachineBranchDetails):
+class MachineBranchIn(BaseBranch[MachineTrailIn], MachineBranchDetails):
     pass
 
 
-class MachineBranchSpec(BranchSpec[MachineTrailSpec, MachineDetails]):
+class MachineBranchOut(BranchOut[MachineTrailOut, MachineDetails]):
     pass
 
 

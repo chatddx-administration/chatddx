@@ -2,8 +2,8 @@ import pytest
 
 from chatddx.core.models import IdentityModel
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.queries import qs_canon
-from chatddx.repo.shufflers.configuration import (
+from chatddx.repo.queries import qs_head
+from chatddx.repo.store.configuration import (
     get_configuration_async,
     select_configurations_async,
 )
@@ -47,7 +47,7 @@ async def test_configurations_are_selected_by_what_they_name(
 ):
     _ = inventory_fixture_commit
 
-    qs = qs_canon(entity_of("configuration").branch_model.objects.all(), owner.name)
+    qs = qs_head(entity_of("configuration").branch_model.objects.all(), owner.name)
 
     free_text = await select_configurations_async(
         owner_name=owner.name,

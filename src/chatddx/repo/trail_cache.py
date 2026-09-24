@@ -2,7 +2,7 @@ from collections import OrderedDict
 from typing import cast
 
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.families import TrailSpec
+from chatddx.repo.families import TrailOut
 from chatddx.repo.utils import (
     resolve_trail,
     resolve_trail_async,
@@ -10,13 +10,13 @@ from chatddx.repo.utils import (
 
 
 class TrailCache:
-    cache: OrderedDict[tuple[type[TrailSpec], int], TrailSpec]
+    cache: OrderedDict[tuple[type[TrailOut], int], TrailOut]
 
     def __init__(self, max_size: int):
         self.max_size: int = max_size
         self.cache = OrderedDict()
 
-    def get_sync[T: TrailSpec](self, Spec: type[T], pk: int) -> T:
+    def get_sync[T: TrailOut](self, Spec: type[T], pk: int) -> T:
         key = (Spec, pk)
 
         if key in self.cache:
@@ -30,7 +30,7 @@ class TrailCache:
 
         return spec
 
-    async def get_async[T: TrailSpec](self, Spec: type[T], pk: int) -> T:
+    async def get_async[T: TrailOut](self, Spec: type[T], pk: int) -> T:
         key = (Spec, pk)
 
         if key in self.cache:
@@ -45,7 +45,7 @@ class TrailCache:
 
         return spec
 
-    def _keep(self, key: tuple[type[TrailSpec], int], spec: TrailSpec) -> None:
+    def _keep(self, key: tuple[type[TrailOut], int], spec: TrailOut) -> None:
         # a trail is immutable, so what is kept is never stale
         self.cache[key] = spec
 

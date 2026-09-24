@@ -4,11 +4,11 @@ import pytest
 
 from chatddx.repo.bundles import (
     ALL_ENTITIES,
-    ALL_VIEWS,
+    ALL_PRESENTATIONS,
     RegistryCollisionError,
     _index_by_class,  # pyright: ignore[reportPrivateUsage]
     entity_of,
-    view_of,
+    presentation_of,
 )
 from chatddx.repo.entities.case.django import Case, SharedCase
 from chatddx.repo.entities.configuration.django import (
@@ -18,37 +18,36 @@ from chatddx.repo.entities.configuration.django import (
     SharedConfiguration,
 )
 from chatddx.repo.entities.configuration.pydantic import (
-    ConfigurationBranchSpec,
+    ConfigurationBranchOut,
     ConfigurationFormDataOut,
-    ConfigurationTrailSchema,
-    ConfigurationTrailSpec,
+    ConfigurationTrailIn,
+    ConfigurationTrailOut,
 )
 from chatddx.repo.entities.model.django import LanguageModel
-from chatddx.repo.entity_names import EntityName, ViewName
+from chatddx.repo.entity_names import ENTITY_NAMES, EntityName, PresentationName
 from chatddx.repo.families.pydantic import (
     BRANCH_FIELDS,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
     plain_detail_fields,
     relation_fields,
 )
 from chatddx.repo.inventories import (
     InventoryBranchModel,
-    InventoryBranchSpec,
+    InventoryBranchOut,
     InventoryFormDataOut,
-    InventoryTrailSchema,
+    InventoryTrailIn,
     ParsedInventory,
 )
 from chatddx.repo.parsers.inventory import (
     _relations,  # pyright: ignore[reportPrivateUsage]
 )
 from chatddx.repo.registry import CASE, CONFIGURATION, MODEL
-from chatddx.repo.todo import all_entities
 
 
 def test_the_registry_is_the_new_datamodel_s():
     """new-datamodel.md §10, in its commit order."""
-    assert all_entities == (
+    assert ENTITY_NAMES == (
         "machine",
         "os",
         "model",
@@ -66,7 +65,7 @@ def test_the_registry_is_the_new_datamodel_s():
         "case",
         "scorer",
     )
-    assert tuple(entity.name for entity in ALL_ENTITIES) == all_entities
+    assert tuple(entity.name for entity in ALL_ENTITIES) == ENTITY_NAMES
 
 
 def test_what_an_entity_references_is_committed_before_it():
@@ -75,9 +74,9 @@ def test_what_an_entity_references_is_committed_before_it():
     Committed in this order, the parts of a composition already have the
     names their records gave them when the composition reaches them.
     """
-    for entity in all_entities:
+    for entity in ENTITY_NAMES:
         for relation in _relations(entity).values():
-            assert all_entities.index(relation.entity) < all_entities.index(entity), (
+            assert ENTITY_NAMES.index(relation.entity) < ENTITY_NAMES.index(entity), (
                 f"{entity} references {relation.entity}, committed after it"
             )
 
@@ -85,7 +84,7 @@ def test_what_an_entity_references_is_committed_before_it():
 @pytest.mark.parametrize("proxy", [Configuration, SharedConfiguration])
 def test_every_configuration_proxy_answers_configuration(proxy: type):
     assert entity_of(proxy) is CONFIGURATION
-    assert view_of(proxy).entity is CONFIGURATION
+    assert presentation_of(proxy).entity is CONFIGURATION
 
 
 def test_a_case_proxy_answers_case():
@@ -102,15 +101,15 @@ def test_the_model_s_proxy_is_not_called_model():
 
 
 def test_two_entities_may_not_claim_one_class():
-    with pytest.raises(RegistryCollisionError, match="ConfigurationBranchSchema"):
+    with pytest.raises(RegistryCollisionError, match="ConfigurationBranchIn"):
         _ = _index_by_class((CONFIGURATION, CONFIGURATION), "members", "entity")
 
 
 def test_every_entity_has_a_view_of_its_name():
-    assert [view.name for view in ALL_VIEWS] == list(all_entities)
+    assert [view.name for view in ALL_PRESENTATIONS] == list(ENTITY_NAMES)
 
     for entity in ALL_ENTITIES:
-        assert view_of(entity.name).entity is entity
+        assert presentation_of(entity.name).entity is entity
 
 
 def test_the_flat_form_is_the_configuration_s():
@@ -118,7 +117,7 @@ def test_the_flat_form_is_the_configuration_s():
     super_agent's flat form became the configuration's (new-datamodel.md §7):
     each slice is a template chosen from.
     """
-    assert view_of(Configuration).form_data_out is ConfigurationFormDataOut
+    assert presentation_of(Configuration).form_data_out is ConfigurationFormDataOut
 
     jsonschema = ConfigurationFormDataOut.model_json_schema(mode="serialization")
 
@@ -159,7 +158,7 @@ def test_the_request_time_slices_have_no_details():
 
     for entity in ALL_ENTITIES:
         if entity.name not in described:
-            assert entity.branch_details is BranchSchemaDetails
+            assert entity.branch_details is BranchDetails
             assert entity.branch_details_patch is BranchDetailsPatch
 
 
@@ -181,7 +180,7 @@ def test_content_and_details_share_no_key_but_a_tool_s_name():
     name the model sees.
     """
     for entity in ALL_ENTITIES:
-        shared = set(entity.trail_schema.model_fields) & set(
+        shared = set(entity.trail_in.model_fields) & set(
             entity.branch_details_patch.model_fields
         )
 
@@ -192,34 +191,34 @@ def test_content_and_details_share_no_key_but_a_tool_s_name():
 def test_every_inventory_holds_every_entity():
     for inventory in (
         ParsedInventory,
-        InventoryTrailSchema,
-        InventoryBranchSpec,
+        InventoryTrailIn,
+        InventoryBranchOut,
         InventoryFormDataOut,
     ):
-        assert tuple(inventory.model_fields) == all_entities
+        assert tuple(inventory.model_fields) == ENTITY_NAMES
 
-    assert tuple(InventoryBranchModel.__annotations__) == all_entities
+    assert tuple(InventoryBranchModel.__annotations__) == ENTITY_NAMES
 
 
 def test_entity_of():
-    configuration_trail_schema = entity_of("configuration").trail_schema
+    configuration_trail_schema = entity_of("configuration").trail_in
 
-    assert configuration_trail_schema is ConfigurationTrailSchema
-    _ = assert_type(configuration_trail_schema, type[ConfigurationTrailSchema])
+    assert configuration_trail_schema is ConfigurationTrailIn
+    _ = assert_type(configuration_trail_schema, type[ConfigurationTrailIn])
 
-    configuration_trail_spec = entity_of(configuration_trail_schema).trail_spec
+    configuration_trail_spec = entity_of(configuration_trail_schema).trail_out
 
-    assert configuration_trail_spec is ConfigurationTrailSpec
-    _ = assert_type(configuration_trail_spec, type[ConfigurationTrailSpec])
+    assert configuration_trail_spec is ConfigurationTrailOut
+    _ = assert_type(configuration_trail_spec, type[ConfigurationTrailOut])
 
-    configuration_branch_spec = entity_of(configuration_trail_spec).branch_spec
+    configuration_branch_spec = entity_of(configuration_trail_spec).branch_out
 
-    assert configuration_branch_spec is ConfigurationBranchSpec
-    _ = assert_type(configuration_branch_spec, type[ConfigurationBranchSpec])
+    assert configuration_branch_spec is ConfigurationBranchOut
+    _ = assert_type(configuration_branch_spec, type[ConfigurationBranchOut])
 
     assert entity_of(ConfigurationTrailModel) is CONFIGURATION
     assert entity_of(ConfigurationBranchModel) is CONFIGURATION
 
 
 def test_every_view_is_an_entity_s():
-    assert ViewName.__value__ is EntityName
+    assert PresentationName.__value__ is EntityName

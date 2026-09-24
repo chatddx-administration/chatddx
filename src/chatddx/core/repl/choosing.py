@@ -10,16 +10,16 @@ from chatddx.core.repl.render import LABEL
 from chatddx.core.repl.shell import Repl
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
-from chatddx.repo.entities.stack.pydantic import StackBranchSpec
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
+from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.names import short_fingerprint
-from chatddx.repo.shufflers.branch import (
+from chatddx.repo.store.branch import (
     commit,
     commit_copies,
     get_branch_model,
     get_visible_branch_model,
 )
-from chatddx.repo.shufflers.trail import dump_trail
+from chatddx.repo.store.trail import dump_trail
 
 
 def use(repl: Repl, name: str) -> None:
@@ -29,7 +29,7 @@ def use(repl: Repl, name: str) -> None:
 
 def on(repl: Repl, name: str) -> None:
     model = get_visible_branch_model("stack", repl.identity, name)
-    repl.cell.stack = StackBranchSpec.model_validate(model)
+    repl.cell.stack = StackBranchOut.model_validate(model)
     repl.say_cell()
 
 
@@ -39,7 +39,7 @@ def cell(repl: Repl, configuration: str, stack: str) -> None:
     stack_model = get_visible_branch_model("stack", repl.identity, stack)
 
     repl.cell.put(configuration_model, _called(repl, configuration))
-    repl.cell.stack = StackBranchSpec.model_validate(stack_model)
+    repl.cell.stack = StackBranchOut.model_validate(stack_model)
     repl.say_cell()
 
 
@@ -72,7 +72,7 @@ def set_(repl: Repl, entity: str, name: str) -> None:
         return
 
     model = get_visible_branch_model(entity, repl.identity, name)
-    spec = entity_of(entity).branch_spec.model_validate(model)
+    spec = entity_of(entity).branch_out.model_validate(model)
 
     if own is not None and own.fingerprint == spec.target.fingerprint:
         _ = cell.variations.pop(entity, None)
@@ -99,7 +99,7 @@ def save(repl: Repl, name: str) -> None:
         return
 
     entity = entity_of("configuration")
-    schema = ConfigurationTrailSchema.model_validate(cell.slices, from_attributes=True)
+    schema = ConfigurationTrailIn.model_validate(cell.slices, from_attributes=True)
     had = entity.branch_model.objects.filter(
         owner__name=repl.identity, name=name
     ).exists()

@@ -22,16 +22,16 @@ from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Target
 from chatddx.repo.entities.configuration.pydantic import (
-    ConfigurationBranchSpec,
-    ConfigurationTrailSchema,
+    ConfigurationBranchOut,
+    ConfigurationTrailIn,
 )
-from chatddx.repo.entities.model.pydantic import ModelBranchSpec
+from chatddx.repo.entities.model.pydantic import ModelBranchOut
 from chatddx.repo.entities.scorer.pydantic import (
     ScorerBranchDetails,
-    ScorerTrailSchema,
+    ScorerTrailIn,
 )
-from chatddx.repo.entities.stack.pydantic import StackBranchSpec
-from chatddx.repo.shufflers.branch import commit, get_visible_branch_model
+from chatddx.repo.entities.stack.pydantic import StackBranchOut
+from chatddx.repo.store.branch import commit, get_visible_branch_model
 from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import resolve
 from chatddx.runtime.trial import Trial
@@ -72,16 +72,16 @@ def ran(
     user: str = "alex",
 ) -> RunModel:
     """A run of `configuration` on `case`, against the fake vLLM, written down."""
-    own = ConfigurationBranchSpec.model_validate(
+    own = ConfigurationBranchOut.model_validate(
         get_visible_branch_model("configuration", "alex", configuration)
     )
     slices: dict[str, Any] = {entity: getattr(own.target, entity) for entity in SLICES}
-    cell = ConfigurationTrailSchema.model_validate(slices, from_attributes=True)
-    stack = StackBranchSpec.model_validate(
+    cell = ConfigurationTrailIn.model_validate(slices, from_attributes=True)
+    stack = StackBranchOut.model_validate(
         get_visible_branch_model("stack", "alex", STACK)
     )
     model = get_visible_branch_model("model", "alex", trail=stack.target.model.id)
-    facts = ModelBranchSpec.model_validate(model).details.facts
+    facts = ModelBranchOut.model_validate(model).details.facts
     case_model = get_visible_branch_model("case", "alex", case)
 
     trial = Trial(
@@ -167,7 +167,7 @@ def test_the_scorers_are_the_archive_s_and_one_s_own():
 
 def test_a_scorer_of_one_s_own_shadows_the_archive_s_of_its_name():
     _ = commit(
-        ScorerTrailSchema(
+        ScorerTrailIn(
             function="chatddx.scoring.scorers.patterns:mentions",
             view="text",
             target_kind="diagnosis",

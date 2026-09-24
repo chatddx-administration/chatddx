@@ -18,13 +18,13 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.families.fields import StorePath
 
@@ -39,19 +39,19 @@ class ClientTrailBase(BaseTrail):
     build: StorePath | None = None
 
 
-class ClientTrailSchema(ClientTrailBase, TrailSchema):
+class ClientTrailIn(ClientTrailBase, TrailIn):
     pass
 
 
-class ClientTrailSchemaRef(TrailSchemaRef, ClientTrailBase):
+class ClientTrailRef(TrailRef, ClientTrailBase):
     pass
 
 
-class ClientTrailSpec(ClientTrailBase, TrailSpec):
+class ClientTrailOut(ClientTrailBase, TrailOut):
     pass
 
 
-class ClientBranchDetails(BranchSchemaDetails, ClientDetails):
+class ClientBranchDetails(BranchDetails, ClientDetails):
     pass
 
 
@@ -59,11 +59,11 @@ class ClientBranchDetailsPatch(BranchDetailsPatch, ClientDetails):
     pass
 
 
-class ClientBranchSchema(BaseBranch[ClientTrailSchema], ClientBranchDetails):
+class ClientBranchIn(BaseBranch[ClientTrailIn], ClientBranchDetails):
     pass
 
 
-class ClientBranchSpec(BranchSpec[ClientTrailSpec, ClientDetails]):
+class ClientBranchOut(BranchOut[ClientTrailOut, ClientDetails]):
     pass
 
 

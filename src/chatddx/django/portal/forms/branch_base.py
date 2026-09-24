@@ -12,11 +12,11 @@ from chatddx.core import settings
 from chatddx.core.utils import ensure_identity
 from chatddx.django.portal.utils import load_form_data, template_choices
 from chatddx.dx.error_handling import print_pydantic_errors
-from chatddx.repo.bundles import entity_of, view_of
+from chatddx.repo.bundles import entity_of, presentation_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import BaseFormDataIn
-from chatddx.repo.shufflers.trail import load_trail
+from chatddx.repo.store.trail import load_trail
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class BranchForm(ModelForm):
 
     def validate(self, data: dict[str, Any]):
         try:
-            validated_data = view_of(self.entity_name).form_data_in.model_validate(data)
+            validated_data = presentation_of(self.entity_name).form_data_in.model_validate(data)
             return validated_data
         except PydanticValidationError as e:
             if settings.MODE == "dev":

@@ -19,8 +19,8 @@ from chatddx.core.repl.render import (
 from chatddx.core.repl.shell import SHARED_BY, Repl
 from chatddx.history.models import RunStatus
 from chatddx.history.record import Branches, Outcome, record
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
-from chatddx.repo.shufflers.branch import get_visible_branch_model
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
+from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import CellRefused, Resolution
 from chatddx.runtime.trial import TOOL_ROUNDS, Trial, cause_of, invalid
 from chatddx.scoring.score import Scoring
@@ -115,7 +115,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     try:
         recorded = record(
             repl.identity,
-            ConfigurationTrailSchema.model_validate(cell.slices, from_attributes=True),
+            ConfigurationTrailIn.model_validate(cell.slices, from_attributes=True),
             Branches(
                 stack=cell.stack.id,
                 model=repl.model_of(cell.stack)[1],

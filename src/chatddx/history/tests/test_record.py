@@ -26,15 +26,15 @@ from chatddx.history.models import (
 from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.configuration.pydantic import (
-    ConfigurationBranchSpec,
-    ConfigurationTrailSchema,
+    ConfigurationBranchOut,
+    ConfigurationTrailIn,
 )
-from chatddx.repo.entities.model.pydantic import ModelBranchSpec
-from chatddx.repo.entities.reasoning.pydantic import ReasoningBranchSpec
-from chatddx.repo.entities.stack.pydantic import StackBranchSpec
-from chatddx.repo.entities.tool.pydantic import ToolBranchSpec
+from chatddx.repo.entities.model.pydantic import ModelBranchOut
+from chatddx.repo.entities.reasoning.pydantic import ReasoningBranchOut
+from chatddx.repo.entities.stack.pydantic import StackBranchOut
+from chatddx.repo.entities.tool.pydantic import ToolBranchOut
 from chatddx.repo.entity_names import EntityName
-from chatddx.repo.shufflers.branch import get_visible_branch_model
+from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime import tools
 from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import resolve
@@ -81,22 +81,22 @@ def written(
     A run of `configuration`, with `reasoning` set in it if given, on case-1,
     written down as `user`'s.
     """
-    own = ConfigurationBranchSpec.model_validate(branch("configuration", configuration))
+    own = ConfigurationBranchOut.model_validate(branch("configuration", configuration))
     slices: dict[str, Any] = {entity: getattr(own.target, entity) for entity in SLICES}
 
     if reasoning is not None:
-        slices["reasoning"] = ReasoningBranchSpec.model_validate(
+        slices["reasoning"] = ReasoningBranchOut.model_validate(
             branch("reasoning", reasoning)
         ).target
 
-    cell = ConfigurationTrailSchema.model_validate(slices, from_attributes=True)
+    cell = ConfigurationTrailIn.model_validate(slices, from_attributes=True)
 
-    stack = StackBranchSpec.model_validate(branch("stack", STACK))
+    stack = StackBranchOut.model_validate(branch("stack", STACK))
     model = branch("model", trail=stack.target.model.id)
-    facts = ModelBranchSpec.model_validate(model).details.facts
+    facts = ModelBranchOut.model_validate(model).details.facts
     toolset = own.target.toolset
     tools = [
-        ToolBranchSpec.model_validate(branch("tool", trail=tool.id))
+        ToolBranchOut.model_validate(branch("tool", trail=tool.id))
         for tool in (toolset.tools if toolset else [])
     ]
     case = branch("case", "case-1")

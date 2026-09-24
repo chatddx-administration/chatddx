@@ -23,13 +23,13 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.families.fields import StorePath
 
@@ -93,12 +93,12 @@ def canonical_args(
     }[where]
 
     def canonical(args: dict[str, JsonValue]) -> dict[str, JsonValue]:
-        canon: dict[str, JsonValue] = {}
+        canonical_form: dict[str, JsonValue] = {}
 
         for key, value in args.items():
             name = key.lstrip("-").replace("_", "-")
 
-            if name in canon:
+            if name in canonical_form:
                 raise ValueError(f"'{key}' is given twice")
 
             if name in ELSEWHERE:
@@ -107,9 +107,9 @@ def canonical_args(
             if name in misplaced:
                 raise ValueError(f"'{key}' {belongs}")
 
-            canon[name] = value
+            canonical_form[name] = value
 
-        return dict(sorted(canon.items()))
+        return dict(sorted(canonical_form.items()))
 
     return canonical
 
@@ -145,19 +145,19 @@ class ServingTrailBase(BaseTrail):
         return frozenset(provided)
 
 
-class ServingTrailSchema(ServingTrailBase, TrailSchema):
+class ServingTrailIn(ServingTrailBase, TrailIn):
     pass
 
 
-class ServingTrailSchemaRef(TrailSchemaRef, ServingTrailBase):
+class ServingTrailRef(TrailRef, ServingTrailBase):
     pass
 
 
-class ServingTrailSpec(ServingTrailBase, TrailSpec):
+class ServingTrailOut(ServingTrailBase, TrailOut):
     pass
 
 
-class ServingBranchDetails(BranchSchemaDetails, ServingDetails):
+class ServingBranchDetails(BranchDetails, ServingDetails):
     pass
 
 
@@ -165,11 +165,11 @@ class ServingBranchDetailsPatch(BranchDetailsPatch, ServingDetails):
     pass
 
 
-class ServingBranchSchema(BaseBranch[ServingTrailSchema], ServingBranchDetails):
+class ServingBranchIn(BaseBranch[ServingTrailIn], ServingBranchDetails):
     pass
 
 
-class ServingBranchSpec(BranchSpec[ServingTrailSpec, ServingDetails]):
+class ServingBranchOut(BranchOut[ServingTrailOut, ServingDetails]):
     pass
 
 

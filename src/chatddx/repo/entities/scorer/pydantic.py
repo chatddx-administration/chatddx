@@ -26,13 +26,13 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.families.fields import EntryPoint, distinct
 
@@ -56,19 +56,19 @@ class ScorerTrailBase(BaseTrail):
     args: dict[str, JsonValue] = Field(default_factory=dict)
 
 
-class ScorerTrailSchema(ScorerTrailBase, TrailSchema):
+class ScorerTrailIn(ScorerTrailBase, TrailIn):
     pass
 
 
-class ScorerTrailSchemaRef(TrailSchemaRef, ScorerTrailBase):
+class ScorerTrailRef(TrailRef, ScorerTrailBase):
     pass
 
 
-class ScorerTrailSpec(ScorerTrailBase, TrailSpec):
+class ScorerTrailOut(ScorerTrailBase, TrailOut):
     pass
 
 
-class ScorerBranchDetails(BranchSchemaDetails, ScorerDetails):
+class ScorerBranchDetails(BranchDetails, ScorerDetails):
     pass
 
 
@@ -76,11 +76,11 @@ class ScorerBranchDetailsPatch(BranchDetailsPatch, ScorerDetails):
     pass
 
 
-class ScorerBranchSchema(BaseBranch[ScorerTrailSchema], ScorerBranchDetails):
+class ScorerBranchIn(BaseBranch[ScorerTrailIn], ScorerBranchDetails):
     pass
 
 
-class ScorerBranchSpec(BranchSpec[ScorerTrailSpec, ScorerDetails]):
+class ScorerBranchOut(BranchOut[ScorerTrailOut, ScorerDetails]):
     pass
 
 

@@ -8,7 +8,7 @@ from chatddx.repo.entities.agent.django import Agent, AgentBranchModel, AgentTra
 from chatddx.repo.entities.connection.django import ConnectionTrailModel
 from chatddx.repo.entities.sampling_params.pydantic import SamplingParamsFormDataIn
 from chatddx.repo.inventories import InventoryFormDataOut
-from chatddx.repo.shufflers.inventory import InventoryCommitReceipt
+from chatddx.repo.store.inventory import InventoryCommitReceipt
 
 pytestmark = [
     pytest.mark.django_db(transaction=True),

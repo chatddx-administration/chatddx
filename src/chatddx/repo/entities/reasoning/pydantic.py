@@ -17,12 +17,12 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
-    BranchSchema,
-    BranchSpec,
+    BranchIn,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 
 # pydantic-ai's ThinkingLevel, plus `default` for the model's own
@@ -59,23 +59,23 @@ class ReasoningTrailBase(BaseTrail):
         return self
 
 
-class ReasoningTrailSchema(ReasoningTrailBase, TrailSchema):
+class ReasoningTrailIn(ReasoningTrailBase, TrailIn):
     pass
 
 
-class ReasoningTrailSchemaRef(TrailSchemaRef, ReasoningTrailBase):
+class ReasoningTrailRef(TrailRef, ReasoningTrailBase):
     pass
 
 
-class ReasoningTrailSpec(ReasoningTrailBase, TrailSpec):
+class ReasoningTrailOut(ReasoningTrailBase, TrailOut):
     pass
 
 
-class ReasoningBranchSchema(BranchSchema[ReasoningTrailSchema]):
+class ReasoningBranchIn(BranchIn[ReasoningTrailIn]):
     pass
 
 
-class ReasoningBranchSpec(BranchSpec[ReasoningTrailSpec, Details]):
+class ReasoningBranchOut(BranchOut[ReasoningTrailOut, Details]):
     pass
 
 

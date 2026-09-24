@@ -22,8 +22,8 @@ from chatddx.core.repl.render import (
 )
 from chatddx.core.repl.shell import Repl
 from chatddx.history.models import MessageKind, RunModel, RunStatus
-from chatddx.repo.entities.output.pydantic import OutputTrailSpec
-from chatddx.repo.shufflers.trail import load_trail
+from chatddx.repo.entities.output.pydantic import OutputTrailOut
+from chatddx.repo.store.trail import load_trail
 from chatddx.runtime.trial import invalid
 from chatddx.scoring.score import Scoring
 
@@ -86,11 +86,11 @@ def replay(repl: Repl, prefix: str | None = None) -> None:
 
     if answered:
         output = cast(
-            OutputTrailSpec,
+            OutputTrailOut,
             load_trail(
                 "output",
                 run.trial.configuration.output.fingerprint,
-                OutputTrailSpec,
+                OutputTrailOut,
             ),
         )
 

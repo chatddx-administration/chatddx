@@ -11,7 +11,7 @@ from chatddx.core.repl.shell import Repl
 from chatddx.history.models import RunModel
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import CaseBranchDetails
-from chatddx.repo.shufflers.branch import commit
+from chatddx.repo.store.branch import commit
 
 type Say = Callable[..., str]
 

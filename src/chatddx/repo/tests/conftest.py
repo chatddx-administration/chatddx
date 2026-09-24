@@ -1,10 +1,10 @@
 import pytest
 
-from chatddx.repo.inventories import InventoryTrailSchema, ParsedInventory
-from chatddx.repo.shufflers import inventory
+from chatddx.repo.inventories import InventoryTrailIn, ParsedInventory
+from chatddx.repo.store import inventory
 
 
 @pytest.fixture
-def trails(test_inventory: ParsedInventory) -> InventoryTrailSchema:
+def trails(test_inventory: ParsedInventory) -> InventoryTrailIn:
     """The test inventory's trails, with no database to own them."""
-    return inventory.trail_schema(test_inventory)
+    return inventory.trails_in(test_inventory)

@@ -31,12 +31,12 @@ from pgqueuer.domain.types import QueueExecutionMode
 from pgqueuer.models import Job, Schedule
 
 from chatddx.core.choices import RunStatusChoices, SessionContextChoices
-from chatddx.django.orm.qs import qs_canon
+from chatddx.django.orm.qs import qs_head
 from chatddx.eval.scorers import resolve_scorer
 from chatddx.history.models import ExperimentModel, RunModel
 from chatddx.history.session import start_session
 from chatddx.repo.entities.agent.django import AgentBranchModel
-from chatddx.repo.entities.agent.pydantic import AgentTrailSpec
+from chatddx.repo.entities.agent.pydantic import AgentTrailOut
 from chatddx.repo.trail_cache import trail_cache
 from chatddx.runtime.runners import run_from_session
 
@@ -174,7 +174,7 @@ async def execute_run(run_id: int) -> None:
             pk=run.experiment_id
         )
 
-        agent_branch = await qs_canon(
+        agent_branch = await qs_head(
             AgentBranchModel.objects.filter(target_id=experiment.agent_id),
             run.owner.name,
         ).afirst()
@@ -192,7 +192,7 @@ async def execute_run(run_id: int) -> None:
         )
         session_id = session.id
 
-        agent_spec = await trail_cache.get_async(AgentTrailSpec, experiment.agent_id)
+        agent_spec = await trail_cache.get_async(AgentTrailOut, experiment.agent_id)
 
         _ = await run_from_session(
             session=session,

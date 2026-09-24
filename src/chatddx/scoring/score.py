@@ -23,11 +23,11 @@ from chatddx.core.models import IdentityModel
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import TargetKind
-from chatddx.repo.entities.output.pydantic import OutputTrailSpec, View
+from chatddx.repo.entities.output.pydantic import OutputTrailOut, View
 from chatddx.repo.entities.scorer.django import ScorerTrailModel
 from chatddx.repo.entities.scorer.pydantic import Metric, ScorerDetails
-from chatddx.repo.shufflers.branch import select_visible_branch_models
-from chatddx.repo.shufflers.trail import load_trail
+from chatddx.repo.store.branch import select_visible_branch_models
+from chatddx.repo.store.trail import load_trail
 from chatddx.runtime.implementation import (
     SCORERS as PACKAGE,
     Implementation,
@@ -79,7 +79,7 @@ class Scoring:
         )
         self.scorers: tuple[Scorer, ...] = tuple(self._visible())
         self._implementations: dict[int, Implementation] = {}
-        self._outputs: dict[int, OutputTrailSpec] = {}
+        self._outputs: dict[int, OutputTrailOut] = {}
         self._cases: dict[int, CaseBranchModel | None] = {}
 
     def _visible(self) -> list[Scorer]:
@@ -215,13 +215,13 @@ class Scoring:
             ),
         )
 
-    def output_of(self, run: RunModel) -> OutputTrailSpec:
+    def output_of(self, run: RunModel) -> OutputTrailOut:
         output = run.trial.configuration.output
 
         if output.pk not in self._outputs:
             self._outputs[output.pk] = cast(
-                OutputTrailSpec,
-                load_trail("output", output.fingerprint, OutputTrailSpec),
+                OutputTrailOut,
+                load_trail("output", output.fingerprint, OutputTrailOut),
             )
 
         return self._outputs[output.pk]

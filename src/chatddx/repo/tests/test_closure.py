@@ -5,25 +5,25 @@ import pytest
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_tag
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.coercion.pydantic import CoercionTrailSchema
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
-from chatddx.repo.entities.instruction.pydantic import InstructionTrailSchema
+from chatddx.repo.entities.coercion.pydantic import CoercionTrailIn
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
+from chatddx.repo.entities.instruction.pydantic import InstructionTrailIn
 from chatddx.repo.entities.machine.pydantic import MachineBranchDetails
-from chatddx.repo.entities.output.pydantic import OutputTrailSchema
-from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailSchema
-from chatddx.repo.entities.sampling.pydantic import SamplingTrailSchema
-from chatddx.repo.entities.tool.pydantic import ToolTrailSchema
-from chatddx.repo.entities.toolset.pydantic import ToolsetTrailSchema
+from chatddx.repo.entities.output.pydantic import OutputTrailIn
+from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailIn
+from chatddx.repo.entities.sampling.pydantic import SamplingTrailIn
+from chatddx.repo.entities.tool.pydantic import ToolTrailIn
+from chatddx.repo.entities.toolset.pydantic import ToolsetTrailIn
+from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.families.django import TrailModel
-from chatddx.repo.families.pydantic import BranchSchemaDetails
-from chatddx.repo.inventories import InventoryTrailSchema
-from chatddx.repo.names import resolve_branch_name
-from chatddx.repo.shufflers.branch import (
+from chatddx.repo.families.pydantic import BranchDetails
+from chatddx.repo.inventories import InventoryTrailIn
+from chatddx.repo.names import closure_branch_name
+from chatddx.repo.store.branch import (
     commit,
     get_branch_model,
     select_branch_models,
 )
-from chatddx.repo.todo import all_entities
 from chatddx.repo.utils import trail_closure
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -43,7 +43,7 @@ def dangling_trails(owner_name: str) -> list[TrailModel]:
     """
     dangling: list[TrailModel] = []
 
-    for entity_name in all_entities:
+    for entity_name in ENTITY_NAMES:
         for branch_model in select_branch_models(entity_name, owner_name):
             for trail in trail_closure(branch_model.target):
                 if not branches_on(trail, owner_name).exists():
@@ -57,20 +57,20 @@ def a_configuration(guidance: str = "nobody named the parts of this"):
     A configuration whose whole closure is new and unnamed: five slices and a
     toolset of two tools.
     """
-    return ConfigurationTrailSchema(
-        instruction=InstructionTrailSchema(
+    return ConfigurationTrailIn(
+        instruction=InstructionTrailIn(
             system="{{output_guidance}}",
             user="{{case}}",
             variables=["case", "output_guidance"],
         ),
-        output=OutputTrailSchema(guidance=guidance),
-        coercion=CoercionTrailSchema(mode="native"),
-        reasoning=ReasoningTrailSchema(effort="default"),
-        sampling=SamplingTrailSchema(defaults="model"),
-        toolset=ToolsetTrailSchema(
+        output=OutputTrailIn(guidance=guidance),
+        coercion=CoercionTrailIn(mode="native"),
+        reasoning=ReasoningTrailIn(effort="default"),
+        sampling=SamplingTrailIn(defaults="model"),
+        toolset=ToolsetTrailIn(
             tools=[
-                ToolTrailSchema(name="closure_tool_1"),
-                ToolTrailSchema(name="closure_tool_2"),
+                ToolTrailIn(name="closure_tool_1"),
+                ToolTrailIn(name="closure_tool_2"),
             ],
         ),
     )
@@ -81,7 +81,7 @@ def commit_configuration(
 ) -> bool:
     return commit(
         trail=a_configuration(**kwargs),
-        branch_details=BranchSchemaDetails(name=name, owner=owner_name),
+        branch_details=BranchDetails(name=name, owner=owner_name),
     )
 
 
@@ -104,12 +104,12 @@ def test_a_commit_leaves_nothing_in_its_closure_branchless(owner: IdentityModel)
 
 def test_a_stack_s_closure_is_its_things(
     owner: IdentityModel,
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     """A container's stack reaches both systems, its own and its host's."""
     assert commit(
         trails.stack["qwen3-8b-awq@malborg"],
-        BranchSchemaDetails(name="a stack", owner=owner.name),
+        BranchDetails(name="a stack", owner=owner.name),
     )
 
     stack = get_branch_model("stack", owner.name, "a stack")
@@ -136,7 +136,7 @@ def test_a_branch_made_for_the_closure_is_named_by_the_resolver(
 
     made = branches_on(output, owner.name).get()
 
-    assert made.name == resolve_branch_name("output", output.fingerprint)
+    assert made.name == closure_branch_name("output", output.fingerprint)
     assert made.name == f"output {output.fingerprint.rpartition(':')[2][:6]}"
 
 
@@ -145,7 +145,7 @@ def test_a_trail_the_owner_already_has_a_branch_on_is_left_alone(
 ):
     assert commit(
         trail=a_configuration().output,
-        branch_details=BranchSchemaDetails(name="my output", owner=owner.name),
+        branch_details=BranchDetails(name="my output", owner=owner.name),
     )
 
     assert commit_configuration(owner.name)
@@ -173,7 +173,7 @@ def test_committing_the_same_configuration_again_makes_no_further_branches(
         for trail in trail_closure(configuration.target)
     }
 
-    # same content, so the canon does not move
+    # same content, so the head does not move
     assert not commit_configuration(owner.name)
 
     after = {
@@ -245,11 +245,11 @@ def test_the_closure_of_a_shared_configuration_belongs_to_the_owner(
 
 def test_a_branch_made_for_the_closure_carries_nothing_beside_its_content(
     owner: IdentityModel,
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     assert commit(
         trails.stack["qwen3-8b-awq@pelle"],
-        BranchSchemaDetails(name="a stack", owner=owner.name),
+        BranchDetails(name="a stack", owner=owner.name),
     )
 
     stack = get_branch_model("stack", owner.name, "a stack")
@@ -268,7 +268,7 @@ def test_a_branch_made_for_the_closure_carries_nothing_beside_its_content(
 
 def test_the_owner_s_own_branch_keeps_what_it_carries(
     owner: IdentityModel,
-    trails: InventoryTrailSchema,
+    trails: InventoryTrailIn,
 ):
     """
     The other half of leaving an already-branched trail alone: a commit that
@@ -287,7 +287,7 @@ def test_the_owner_s_own_branch_keeps_what_it_carries(
         ),
     )
 
-    assert commit(stack, BranchSchemaDetails(name="a stack", owner=owner.name))
+    assert commit(stack, BranchDetails(name="a stack", owner=owner.name))
 
     machine = get_branch_model("machine", owner.name, "my machine")
 
@@ -315,7 +315,7 @@ def test_committed_in_order_every_part_keeps_the_name_its_record_gave_it(
     """
     _ = inventory_fixture_commit
 
-    for entity_name in all_entities:
+    for entity_name in ENTITY_NAMES:
         for branch in select_branch_models(entity_name, owner.name):
             assert not branch.name.startswith(f"{entity_name} "), branch.name
 

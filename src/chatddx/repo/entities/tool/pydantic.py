@@ -27,13 +27,13 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
+    BranchDetails,
     BranchDetailsPatch,
-    BranchSchemaDetails,
-    BranchSpec,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.families.fields import EntryPoint, JsonSchema
 
@@ -61,19 +61,19 @@ class ToolTrailBase(BaseTrail):
     )
 
 
-class ToolTrailSchema(ToolTrailBase, TrailSchema):
+class ToolTrailIn(ToolTrailBase, TrailIn):
     pass
 
 
-class ToolTrailSchemaRef(TrailSchemaRef, ToolTrailBase):
+class ToolTrailRef(TrailRef, ToolTrailBase):
     pass
 
 
-class ToolTrailSpec(ToolTrailBase, TrailSpec):
+class ToolTrailOut(ToolTrailBase, TrailOut):
     pass
 
 
-class ToolBranchDetails(BranchSchemaDetails, ToolDetails):
+class ToolBranchDetails(BranchDetails, ToolDetails):
     pass
 
 
@@ -81,11 +81,11 @@ class ToolBranchDetailsPatch(BranchDetailsPatch, ToolDetails):
     pass
 
 
-class ToolBranchSchema(BaseBranch[ToolTrailSchema], ToolBranchDetails):
+class ToolBranchIn(BaseBranch[ToolTrailIn], ToolBranchDetails):
     pass
 
 
-class ToolBranchSpec(BranchSpec[ToolTrailSpec, ToolDetails]):
+class ToolBranchOut(BranchOut[ToolTrailOut, ToolDetails]):
     pass
 
 

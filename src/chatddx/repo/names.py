@@ -9,5 +9,5 @@ def short_fingerprint(fingerprint: str) -> str:
     return fingerprint_digest(fingerprint)[:SHORT_FINGERPRINT_LENGTH]
 
 
-def resolve_branch_name(entity_name: EntityName, fingerprint: str) -> str:
+def closure_branch_name(entity_name: EntityName, fingerprint: str) -> str:
     return f"{entity_name} {short_fingerprint(fingerprint)}"

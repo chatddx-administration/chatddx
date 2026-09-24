@@ -8,34 +8,34 @@ from typing import Any
 import pytest
 from pydantic import JsonValue, ValidationError
 
-from chatddx.repo.entities.coercion.pydantic import CoercionTrailSchema
-from chatddx.repo.entities.instruction.pydantic import InstructionTrailSchema
-from chatddx.repo.entities.machine.pydantic import MachineTrailSchema
+from chatddx.repo.entities.coercion.pydantic import CoercionTrailIn
+from chatddx.repo.entities.instruction.pydantic import InstructionTrailIn
+from chatddx.repo.entities.machine.pydantic import MachineTrailIn
 from chatddx.repo.entities.model.pydantic import (
     ModeFact,
     ModelDetails,
     ModelFacts,
-    ModelTrailSchema,
+    ModelTrailIn,
     ReasoningFacts,
     Refusal,
 )
-from chatddx.repo.entities.os.pydantic import OsTrailSchema
-from chatddx.repo.entities.output.pydantic import OutputTrailSchema
-from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailSchema
-from chatddx.repo.entities.sampling.pydantic import SamplingTrailSchema
-from chatddx.repo.entities.serving.pydantic import ServingDetails, ServingTrailSchema
-from chatddx.repo.entities.stack.pydantic import StackTrailSchema
-from chatddx.repo.entities.tool.pydantic import ToolTrailSchema
-from chatddx.repo.entities.toolset.pydantic import ToolsetTrailSchema
+from chatddx.repo.entities.os.pydantic import OsTrailIn
+from chatddx.repo.entities.output.pydantic import OutputTrailIn
+from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailIn
+from chatddx.repo.entities.sampling.pydantic import SamplingTrailIn
+from chatddx.repo.entities.serving.pydantic import ServingDetails, ServingTrailIn
+from chatddx.repo.entities.stack.pydantic import StackTrailIn
+from chatddx.repo.entities.tool.pydantic import ToolTrailIn
+from chatddx.repo.entities.toolset.pydantic import ToolsetTrailIn
 from chatddx.repo.templates import TemplateError, placements
 
 ENGINE = "/nix/store/22222222222222222222222222222222-vllm"
-MACHINE = MachineTrailSchema(machine_id="00000000-0000-4000-8000-000000000001")  # pyright: ignore[reportArgumentType]
-MODEL = ModelTrailSchema(blob="/nix/store/11111111111111111111111111111111-m")
+MACHINE = MachineTrailIn(machine_id="00000000-0000-4000-8000-000000000001")  # pyright: ignore[reportArgumentType]
+MODEL = ModelTrailIn(blob="/nix/store/11111111111111111111111111111111-m")
 
 
-def os(name: str) -> OsTrailSchema:
-    return OsTrailSchema(toplevel=f"/nix/store/{'0' * 32}-nixos-system-{name}")
+def os(name: str) -> OsTrailIn:
+    return OsTrailIn(toplevel=f"/nix/store/{'0' * 32}-nixos-system-{name}")
 
 
 # ------------------------------------------------------------------- things
@@ -50,7 +50,7 @@ def os(name: str) -> OsTrailSchema:
     ],
 )
 def test_a_model_is_its_blob(blob: str):
-    assert ModelTrailSchema(blob=blob).blob == blob
+    assert ModelTrailIn(blob=blob).blob == blob
 
 
 @pytest.mark.parametrize(
@@ -65,7 +65,7 @@ def test_a_model_is_its_blob(blob: str):
 )
 def test_a_blob_is_a_store_path_or_a_cloud_name(blob: str, problem: str):
     with pytest.raises(ValidationError, match=problem):
-        _ = ModelTrailSchema(blob=blob)
+        _ = ModelTrailIn(blob=blob)
 
 
 def test_a_source_pins_a_commit():
@@ -77,14 +77,14 @@ def test_a_source_pins_a_commit():
 
 def test_an_os_is_its_system_s_store_path():
     with pytest.raises(ValidationError, match="not a Nix store path"):
-        _ = OsTrailSchema(toplevel="/run/current-system")
+        _ = OsTrailIn(toplevel="/run/current-system")
 
 
 # ---------------------------------------------------------------- servings
 
 
 def test_serving_arguments_are_held_in_one_spelling():
-    serving = ServingTrailSchema(
+    serving = ServingTrailIn(
         engine=ENGINE,
         args={"--max_model_len": 8192, "reasoning-parser": "qwen3"},
     )
@@ -105,7 +105,7 @@ def test_serving_arguments_are_held_in_one_spelling():
 )
 def test_an_argument_that_isn_t_content_is_refused(args: dict[str, Any], problem: str):
     with pytest.raises(ValidationError, match=problem):
-        _ = ServingTrailSchema(engine=ENGINE, args=args)
+        _ = ServingTrailIn(engine=ENGINE, args=args)
 
 
 @pytest.mark.parametrize(
@@ -118,9 +118,9 @@ def test_what_changes_the_output_is_not_performance(performance: dict[str, Any])
 
 
 def test_a_serving_provides_what_its_arguments_set_up():
-    assert ServingTrailSchema(engine=ENGINE).provides() == frozenset()
+    assert ServingTrailIn(engine=ENGINE).provides() == frozenset()
 
-    serving = ServingTrailSchema(
+    serving = ServingTrailIn(
         engine=ENGINE,
         args={"reasoning-parser": "qwen3", "tool-call-parser": "hermes"},
     )
@@ -137,7 +137,7 @@ def test_a_serving_provides_what_its_arguments_set_up():
 
 
 def test_a_container_s_stack_names_both_systems():
-    stack = StackTrailSchema(
+    stack = StackTrailIn(
         machine=MACHINE,
         os=os("container"),
         host_os=os("host"),
@@ -149,10 +149,10 @@ def test_a_container_s_stack_names_both_systems():
 
 def test_a_host_os_is_for_a_container():
     with pytest.raises(ValidationError, match="name the container's OS too"):
-        _ = StackTrailSchema(machine=MACHINE, host_os=os("host"), model=MODEL)
+        _ = StackTrailIn(machine=MACHINE, host_os=os("host"), model=MODEL)
 
     with pytest.raises(ValidationError, match="not its host's"):
-        _ = StackTrailSchema(machine=MACHINE, os=os("a"), host_os=os("a"), model=MODEL)
+        _ = StackTrailIn(machine=MACHINE, os=os("a"), host_os=os("a"), model=MODEL)
 
 
 # ------------------------------------------------------------------- facts
@@ -265,7 +265,7 @@ def test_a_template_is_plain_handlebars(template: str):
 
 
 def test_an_instruction_declares_what_it_places():
-    instruction = InstructionTrailSchema(
+    instruction = InstructionTrailIn(
         system="{{output_guidance}}{{#if schema_prompt}}\n\n{{schema_prompt}}{{/if}}",
         user="{{case}}",
         variables=["schema_prompt", "output_guidance", "case"],
@@ -291,7 +291,7 @@ def test_an_instruction_that_doesn_t_declare_what_it_places_is_refused(
     system: str, user: str, variables: list[str], problem: str
 ):
     with pytest.raises(ValidationError, match=problem):
-        _ = InstructionTrailSchema(system=system, user=user, variables=variables)  # pyright: ignore[reportArgumentType]
+        _ = InstructionTrailIn(system=system, user=user, variables=variables)  # pyright: ignore[reportArgumentType]
 
 
 # ----------------------------------------------------------------- coercion
@@ -299,7 +299,7 @@ def test_an_instruction_that_doesn_t_declare_what_it_places_is_refused(
 
 def test_prompted_mode_needs_a_schema_prompt():
     with pytest.raises(ValidationError, match="needs a schema_prompt"):
-        _ = CoercionTrailSchema(mode="prompted")
+        _ = CoercionTrailIn(mode="prompted")
 
 
 @pytest.mark.parametrize(
@@ -310,25 +310,25 @@ def test_a_schema_prompt_places_the_schema_and_nothing_else(schema_prompt: str):
     with pytest.raises(
         ValidationError, match=r"places \{\{schema\}\}, and nothing else"
     ):
-        _ = CoercionTrailSchema(mode="native", schema_prompt=schema_prompt)
+        _ = CoercionTrailIn(mode="native", schema_prompt=schema_prompt)
 
 
 def test_tool_mode_needs_a_tool_description():
     with pytest.raises(ValidationError, match="it needs a tool_description"):
-        _ = CoercionTrailSchema(mode="tool")
+        _ = CoercionTrailIn(mode="tool")
 
-    tool = CoercionTrailSchema(mode="tool", tool_description="Answer here.")
-    auto = CoercionTrailSchema(mode="auto", tool_description="Answer here.")
+    tool = CoercionTrailIn(mode="tool", tool_description="Answer here.")
+    auto = CoercionTrailIn(mode="auto", tool_description="Answer here.")
 
     assert (tool.tool_description, auto.tool_description) == ("Answer here.",) * 2
 
 
 def test_a_tool_description_is_for_tool_mode_and_places_nothing():
     with pytest.raises(ValidationError, match="a tool description is for tool mode"):
-        _ = CoercionTrailSchema(mode="native", tool_description="Answer here.")
+        _ = CoercionTrailIn(mode="native", tool_description="Answer here.")
 
     with pytest.raises(ValidationError, match="a tool description places nothing"):
-        _ = CoercionTrailSchema(mode="tool", tool_description="Answer {{here}}.")
+        _ = CoercionTrailIn(mode="tool", tool_description="Answer {{here}}.")
 
 
 # ------------------------------------------------------------------ outputs
@@ -366,7 +366,7 @@ PLAN: dict[str, JsonValue] = {
     ],
 )
 def test_a_view_is_a_path_the_schema_proves(path: str):
-    output = OutputTrailSchema(schema=PLAN, views={"differential": path})
+    output = OutputTrailIn(schema=PLAN, views={"differential": path})
 
     assert output.views == {"differential": path}
 
@@ -388,25 +388,23 @@ def test_a_view_is_a_path_the_schema_proves(path: str):
 )
 def test_a_path_the_schema_doesn_t_prove_is_refused(path: str, problem: str):
     with pytest.raises(ValidationError, match=problem):
-        _ = OutputTrailSchema(schema=PLAN, views={"differential": path})
+        _ = OutputTrailIn(schema=PLAN, views={"differential": path})
 
 
 def test_free_text_gives_its_views_through_parsers():
-    output = OutputTrailSchema(
-        guidance="One per line.", views={"differential": "lines"}
-    )
+    output = OutputTrailIn(guidance="One per line.", views={"differential": "lines"})
 
     assert output.schema is None
 
     with pytest.raises(ValidationError, match="through a parser"):
-        _ = OutputTrailSchema(views={"differential": "$.names[*]"})
+        _ = OutputTrailIn(views={"differential": "$.names[*]"})
 
     with pytest.raises(ValidationError, match="not a path"):
-        _ = OutputTrailSchema(schema=PLAN, views={"differential": "lines"})
+        _ = OutputTrailIn(schema=PLAN, views={"differential": "lines"})
 
 
 def test_free_text_offers_its_text_whole():
-    output = OutputTrailSchema(views={"text": "whole", "differential": "lines"})
+    output = OutputTrailIn(views={"text": "whole", "differential": "lines"})
 
     assert output.view("text", "Pneumonia, most likely.\nCOPD") == [
         "Pneumonia, most likely.\nCOPD"
@@ -414,37 +412,35 @@ def test_free_text_offers_its_text_whole():
     assert output.view("text", "  \n") == []
 
     with pytest.raises(ValidationError, match="through a parser"):
-        _ = OutputTrailSchema(views={"text": "lines"})
+        _ = OutputTrailIn(views={"text": "lines"})
 
 
 def test_a_structured_output_offers_text_only_where_a_path_proves_a_string():
-    output = OutputTrailSchema(schema=PLAN, views={"text": "$.summary"})
+    output = OutputTrailIn(schema=PLAN, views={"text": "$.summary"})
 
     assert output.view("text", {"summary": "pneumonia"}) == ["pneumonia"]
 
     with pytest.raises(ValidationError, match="not a string"):
-        _ = OutputTrailSchema(schema=PLAN, views={"text": "$"})
+        _ = OutputTrailIn(schema=PLAN, views={"text": "$"})
 
 
 def test_a_warning_may_be_null_and_reads_as_nothing():
-    output = OutputTrailSchema(schema=PLAN, views={"warning": "$.diagnoses[*].maybe"})
+    output = OutputTrailIn(schema=PLAN, views={"warning": "$.diagnoses[*].maybe"})
     answer: JsonValue = {"diagnoses": [{"maybe": "sepsis"}, {"maybe": None}]}
 
     assert output.view("warning", answer) == ["sepsis"]
 
     with pytest.raises(ValidationError, match=r"of type \['string', 'null'\]"):
-        _ = OutputTrailSchema(
-            schema=PLAN, views={"disposition": "$.diagnoses[*].maybe"}
-        )
+        _ = OutputTrailIn(schema=PLAN, views={"disposition": "$.diagnoses[*].maybe"})
 
 
 def test_a_view_the_code_doesn_t_know_is_refused():
     with pytest.raises(ValidationError, match="views.plan"):
-        _ = OutputTrailSchema(schema=PLAN, views={"plan": "$"})  # pyright: ignore[reportArgumentType]
+        _ = OutputTrailIn(schema=PLAN, views={"plan": "$"})  # pyright: ignore[reportArgumentType]
 
 
 def test_a_view_reads_what_its_path_reaches_in_an_answer():
-    output = OutputTrailSchema(
+    output = OutputTrailIn(
         schema=PLAN, views={"differential": "$.diagnoses[*].diagnosis"}
     )
     answer: JsonValue = {
@@ -460,14 +456,14 @@ def test_a_view_reads_what_its_path_reaches_in_an_answer():
 
 
 def test_a_view_of_one_string_reads_a_list_of_one():
-    output = OutputTrailSchema(schema=PLAN, views={"differential": "$.summary"})
+    output = OutputTrailIn(schema=PLAN, views={"differential": "$.summary"})
 
     assert output.view("differential", {"summary": "pneumonia"}) == ["pneumonia"]
     assert output.view("differential", {}) == []
 
 
 def test_free_text_is_read_a_line_at_a_time_its_list_markers_stripped():
-    output = OutputTrailSchema(views={"differential": "lines"})
+    output = OutputTrailIn(views={"differential": "lines"})
     answer = (
         "1. Pneumonia\n\n- COPD exacerbation\n* Asthma\n2) Heart failure\n  Embolism "
     )
@@ -483,17 +479,17 @@ def test_free_text_is_read_a_line_at_a_time_its_list_markers_stripped():
 
 def test_a_schema_is_a_json_schema():
     with pytest.raises(ValidationError, match="not a valid JSON Schema"):
-        _ = OutputTrailSchema(schema={"type": "objet"})
+        _ = OutputTrailIn(schema={"type": "objet"})
 
 
 # ---------------------------------------------------- reasoning, sampling
 
 
 def test_a_budget_is_for_reasoning_that_is_on():
-    assert ReasoningTrailSchema(effort="on", budget=1024).budget == 1024
+    assert ReasoningTrailIn(effort="on", budget=1024).budget == 1024
 
     with pytest.raises(ValidationError, match="budget for reasoning that is off"):
-        _ = ReasoningTrailSchema(effort="off", budget=1024)
+        _ = ReasoningTrailIn(effort="off", budget=1024)
 
 
 @pytest.mark.parametrize(
@@ -511,12 +507,12 @@ def test_a_budget_is_for_reasoning_that_is_on():
 )
 def test_sampling_holds_its_values_to_their_ranges(values: dict[str, Any]):
     with pytest.raises(ValidationError):
-        _ = SamplingTrailSchema(defaults="model", **values)
+        _ = SamplingTrailIn(defaults="model", **values)
 
 
 def test_sampling_says_what_a_value_left_out_means():
     with pytest.raises(ValidationError, match="defaults"):
-        _ = SamplingTrailSchema.model_validate({"temperature": 0.7})
+        _ = SamplingTrailIn.model_validate({"temperature": 0.7})
 
 
 def test_what_sampling_params_held_that_isn_t_sampling_is_gone():
@@ -526,7 +522,7 @@ def test_what_sampling_params_held_that_isn_t_sampling_is_gone():
     reasoning switches, which are the reasoning slice's now
     (new-datamodel.md §7).
     """
-    fields = set(SamplingTrailSchema.model_fields)
+    fields = set(SamplingTrailIn.model_fields)
 
     assert fields.isdisjoint({"seed", "n", "logit_bias", "provider_params"})
     assert "stop" in fields and "stop_sequences" not in fields
@@ -536,18 +532,18 @@ def test_what_sampling_params_held_that_isn_t_sampling_is_gone():
 
 
 def test_a_toolset_has_tools_of_different_names():
-    def tool(name: str) -> ToolTrailSchema:
-        return ToolTrailSchema(name=name)
+    def tool(name: str) -> ToolTrailIn:
+        return ToolTrailIn(name=name)
 
-    assert ToolsetTrailSchema(tools=[tool("a"), tool("b")])
+    assert ToolsetTrailIn(tools=[tool("a"), tool("b")])
 
     with pytest.raises(ValidationError, match="'a' appears twice"):
-        _ = ToolsetTrailSchema(tools=[tool("a"), tool("a")])
+        _ = ToolsetTrailIn(tools=[tool("a"), tool("a")])
 
     with pytest.raises(ValidationError, match="at least 1"):
-        _ = ToolsetTrailSchema(tools=[])
+        _ = ToolsetTrailIn(tools=[])
 
 
 def test_a_tool_is_named_as_the_api_allows():
     with pytest.raises(ValidationError, match="name"):
-        _ = ToolTrailSchema(name="web search")
+        _ = ToolTrailIn(name="web search")

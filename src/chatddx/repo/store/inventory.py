@@ -1,16 +1,15 @@
 from typing import Any, Literal, cast
 
-from chatddx.repo.entity_names import EntityName
-from chatddx.repo.families.pydantic import BranchSchemaDetails
+from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
+from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.repo.inventories import (
     InventoryBranchModel,
-    InventoryBranchSpec,
+    InventoryBranchOut,
     InventoryFormDataOut,
-    InventoryTrailSchema,
+    InventoryTrailIn,
     ParsedInventory,
 )
-from chatddx.repo.shufflers.branch import commit, select_branch_models
-from chatddx.repo.todo import all_entities
+from chatddx.repo.store.branch import commit, select_branch_models
 
 type InventoryCommitReceipt = dict[EntityName, dict[str, bool]]
 
@@ -25,7 +24,7 @@ def owned_inventory(
     """
     inventory: dict[str, Any] = {}
 
-    for entity_name in all_entities:
+    for entity_name in ENTITY_NAMES:
         inventory[entity_name] = {}
 
         branch_models = select_branch_models(
@@ -49,8 +48,8 @@ def commit_parsed_inventory(inventory: ParsedInventory) -> InventoryCommitReceip
     Commit a parsed inventory to database and use the attached BranchDetails.
 
     Returns a bool for each branch in the inventory
-    True: canon was updated
-    False: trail schema was already canon
+    True: the head was updated
+    False: the trail was already the head
     """
 
     return {
@@ -61,12 +60,12 @@ def commit_parsed_inventory(inventory: ParsedInventory) -> InventoryCommitReceip
             )
             for name, (trail, branch_details) in getattr(inventory, entity).items()
         }
-        for entity in all_entities
+        for entity in ENTITY_NAMES
     }
 
 
-def commit_trail_schemas(
-    inventory: InventoryTrailSchema,
+def commit_trails_in(
+    inventory: InventoryTrailIn,
     owner_name: str,
 ) -> InventoryCommitReceipt:
     """
@@ -74,34 +73,34 @@ def commit_trail_schemas(
     Use dict-keys as branch name and passed owner_name as owner name.
 
     Returns a bool for each branch in the inventory
-    True: canon was updated
-    False: trail schema was already canon
+    True: the head was updated
+    False: the trail was already the head
     """
 
     return {
         entity: {
             name: commit(
                 trail=trail,
-                branch_details=BranchSchemaDetails(name=name, owner=owner_name),
+                branch_details=BranchDetails(name=name, owner=owner_name),
             )
             for name, trail in getattr(inventory, entity).items()
         }
-        for entity in all_entities
+        for entity in ENTITY_NAMES
     }
 
 
-def trail_schema(parsed_inventory: ParsedInventory) -> InventoryTrailSchema:
+def trails_in(parsed_inventory: ParsedInventory) -> InventoryTrailIn:
     inventory: dict[str, Any] = {
         entity: {
             name: trail
             for name, (trail, _) in getattr(parsed_inventory, entity).items()
         }
-        for entity in all_entities
+        for entity in ENTITY_NAMES
     }
-    return InventoryTrailSchema.model_validate(inventory)
+    return InventoryTrailIn.model_validate(inventory)
 
 
-def form_data_out(inventory_fixture_bs: InventoryBranchSpec) -> InventoryFormDataOut:
+def form_data_out(branches: InventoryBranchOut) -> InventoryFormDataOut:
     """
     Validate a spec model inventory into a form_data_out inventory.
 
@@ -112,12 +111,12 @@ def form_data_out(inventory_fixture_bs: InventoryBranchSpec) -> InventoryFormDat
     """
     inventory = {}
 
-    for entity_name in all_entities:
+    for entity_name in ENTITY_NAMES:
         inventory[entity_name] = {}
-        for branch_name, branch_spec in getattr(
-            inventory_fixture_bs, entity_name
+        for branch_name, branch_out in getattr(
+            branches, entity_name
         ).items():
-            branch = branch_spec.model_dump(mode="json")
+            branch = branch_out.model_dump(mode="json")
             inventory[entity_name][branch_name] = (
                 branch["target"]
                 | branch["details"]

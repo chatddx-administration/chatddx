@@ -10,148 +10,148 @@ from pydantic import BaseModel
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import (
     CaseBranchDetailsPatch,
-    CaseBranchSpec,
+    CaseBranchOut,
     CaseFormDataOut,
-    CaseTrailSchema,
+    CaseTrailIn,
 )
 from chatddx.repo.entities.client.django import ClientBranchModel
 from chatddx.repo.entities.client.pydantic import (
     ClientBranchDetailsPatch,
-    ClientBranchSpec,
+    ClientBranchOut,
     ClientFormDataOut,
-    ClientTrailSchema,
+    ClientTrailIn,
 )
 from chatddx.repo.entities.coercion.django import CoercionBranchModel
 from chatddx.repo.entities.coercion.pydantic import (
-    CoercionBranchSpec,
+    CoercionBranchOut,
     CoercionFormDataOut,
-    CoercionTrailSchema,
+    CoercionTrailIn,
 )
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.configuration.pydantic import (
-    ConfigurationBranchSpec,
+    ConfigurationBranchOut,
     ConfigurationFormDataOut,
-    ConfigurationTrailSchema,
+    ConfigurationTrailIn,
 )
 from chatddx.repo.entities.instruction.django import InstructionBranchModel
 from chatddx.repo.entities.instruction.pydantic import (
-    InstructionBranchSpec,
+    InstructionBranchOut,
     InstructionFormDataOut,
-    InstructionTrailSchema,
+    InstructionTrailIn,
 )
 from chatddx.repo.entities.machine.django import MachineBranchModel
 from chatddx.repo.entities.machine.pydantic import (
     MachineBranchDetailsPatch,
-    MachineBranchSpec,
+    MachineBranchOut,
     MachineFormDataOut,
-    MachineTrailSchema,
+    MachineTrailIn,
 )
 from chatddx.repo.entities.model.django import ModelBranchModel
 from chatddx.repo.entities.model.pydantic import (
     ModelBranchDetailsPatch,
-    ModelBranchSpec,
+    ModelBranchOut,
     ModelFormDataOut,
-    ModelTrailSchema,
+    ModelTrailIn,
 )
 from chatddx.repo.entities.os.django import OsBranchModel
 from chatddx.repo.entities.os.pydantic import (
     OsBranchDetailsPatch,
-    OsBranchSpec,
+    OsBranchOut,
     OsFormDataOut,
-    OsTrailSchema,
+    OsTrailIn,
 )
 from chatddx.repo.entities.output.django import OutputBranchModel
 from chatddx.repo.entities.output.pydantic import (
-    OutputBranchSpec,
+    OutputBranchOut,
     OutputFormDataOut,
-    OutputTrailSchema,
+    OutputTrailIn,
 )
 from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
 from chatddx.repo.entities.reasoning.pydantic import (
-    ReasoningBranchSpec,
+    ReasoningBranchOut,
     ReasoningFormDataOut,
-    ReasoningTrailSchema,
+    ReasoningTrailIn,
 )
 from chatddx.repo.entities.sampling.django import SamplingBranchModel
 from chatddx.repo.entities.sampling.pydantic import (
-    SamplingBranchSpec,
+    SamplingBranchOut,
     SamplingFormDataOut,
-    SamplingTrailSchema,
+    SamplingTrailIn,
 )
 from chatddx.repo.entities.scorer.django import ScorerBranchModel
 from chatddx.repo.entities.scorer.pydantic import (
     ScorerBranchDetailsPatch,
-    ScorerBranchSpec,
+    ScorerBranchOut,
     ScorerFormDataOut,
-    ScorerTrailSchema,
+    ScorerTrailIn,
 )
 from chatddx.repo.entities.serving.django import ServingBranchModel
 from chatddx.repo.entities.serving.pydantic import (
     ServingBranchDetailsPatch,
-    ServingBranchSpec,
+    ServingBranchOut,
     ServingFormDataOut,
-    ServingTrailSchema,
+    ServingTrailIn,
 )
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entities.stack.pydantic import (
     StackBranchDetailsPatch,
-    StackBranchSpec,
+    StackBranchOut,
     StackFormDataOut,
-    StackTrailSchema,
+    StackTrailIn,
 )
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.entities.tool.pydantic import (
     ToolBranchDetailsPatch,
-    ToolBranchSpec,
+    ToolBranchOut,
     ToolFormDataOut,
-    ToolTrailSchema,
+    ToolTrailIn,
 )
 from chatddx.repo.entities.toolset.django import ToolsetBranchModel
 from chatddx.repo.entities.toolset.pydantic import (
-    ToolsetBranchSpec,
+    ToolsetBranchOut,
     ToolsetFormDataOut,
-    ToolsetTrailSchema,
+    ToolsetTrailIn,
 )
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 
 
 class ParsedInventory(BaseModel):
     # a record's content, and what its branch says beside it
-    machine: dict[str, tuple[MachineTrailSchema, MachineBranchDetailsPatch]]
-    os: dict[str, tuple[OsTrailSchema, OsBranchDetailsPatch]]
-    model: dict[str, tuple[ModelTrailSchema, ModelBranchDetailsPatch]]
-    serving: dict[str, tuple[ServingTrailSchema, ServingBranchDetailsPatch]]
-    client: dict[str, tuple[ClientTrailSchema, ClientBranchDetailsPatch]]
-    stack: dict[str, tuple[StackTrailSchema, StackBranchDetailsPatch]]
-    tool: dict[str, tuple[ToolTrailSchema, ToolBranchDetailsPatch]]
-    toolset: dict[str, tuple[ToolsetTrailSchema, BranchDetailsPatch]]
-    instruction: dict[str, tuple[InstructionTrailSchema, BranchDetailsPatch]]
-    output: dict[str, tuple[OutputTrailSchema, BranchDetailsPatch]]
-    coercion: dict[str, tuple[CoercionTrailSchema, BranchDetailsPatch]]
-    reasoning: dict[str, tuple[ReasoningTrailSchema, BranchDetailsPatch]]
-    sampling: dict[str, tuple[SamplingTrailSchema, BranchDetailsPatch]]
-    configuration: dict[str, tuple[ConfigurationTrailSchema, BranchDetailsPatch]]
-    case: dict[str, tuple[CaseTrailSchema, CaseBranchDetailsPatch]]
-    scorer: dict[str, tuple[ScorerTrailSchema, ScorerBranchDetailsPatch]]
+    machine: dict[str, tuple[MachineTrailIn, MachineBranchDetailsPatch]]
+    os: dict[str, tuple[OsTrailIn, OsBranchDetailsPatch]]
+    model: dict[str, tuple[ModelTrailIn, ModelBranchDetailsPatch]]
+    serving: dict[str, tuple[ServingTrailIn, ServingBranchDetailsPatch]]
+    client: dict[str, tuple[ClientTrailIn, ClientBranchDetailsPatch]]
+    stack: dict[str, tuple[StackTrailIn, StackBranchDetailsPatch]]
+    tool: dict[str, tuple[ToolTrailIn, ToolBranchDetailsPatch]]
+    toolset: dict[str, tuple[ToolsetTrailIn, BranchDetailsPatch]]
+    instruction: dict[str, tuple[InstructionTrailIn, BranchDetailsPatch]]
+    output: dict[str, tuple[OutputTrailIn, BranchDetailsPatch]]
+    coercion: dict[str, tuple[CoercionTrailIn, BranchDetailsPatch]]
+    reasoning: dict[str, tuple[ReasoningTrailIn, BranchDetailsPatch]]
+    sampling: dict[str, tuple[SamplingTrailIn, BranchDetailsPatch]]
+    configuration: dict[str, tuple[ConfigurationTrailIn, BranchDetailsPatch]]
+    case: dict[str, tuple[CaseTrailIn, CaseBranchDetailsPatch]]
+    scorer: dict[str, tuple[ScorerTrailIn, ScorerBranchDetailsPatch]]
 
 
-class InventoryTrailSchema(BaseModel):
-    machine: dict[str, MachineTrailSchema]
-    os: dict[str, OsTrailSchema]
-    model: dict[str, ModelTrailSchema]
-    serving: dict[str, ServingTrailSchema]
-    client: dict[str, ClientTrailSchema]
-    stack: dict[str, StackTrailSchema]
-    tool: dict[str, ToolTrailSchema]
-    toolset: dict[str, ToolsetTrailSchema]
-    instruction: dict[str, InstructionTrailSchema]
-    output: dict[str, OutputTrailSchema]
-    coercion: dict[str, CoercionTrailSchema]
-    reasoning: dict[str, ReasoningTrailSchema]
-    sampling: dict[str, SamplingTrailSchema]
-    configuration: dict[str, ConfigurationTrailSchema]
-    case: dict[str, CaseTrailSchema]
-    scorer: dict[str, ScorerTrailSchema]
+class InventoryTrailIn(BaseModel):
+    machine: dict[str, MachineTrailIn]
+    os: dict[str, OsTrailIn]
+    model: dict[str, ModelTrailIn]
+    serving: dict[str, ServingTrailIn]
+    client: dict[str, ClientTrailIn]
+    stack: dict[str, StackTrailIn]
+    tool: dict[str, ToolTrailIn]
+    toolset: dict[str, ToolsetTrailIn]
+    instruction: dict[str, InstructionTrailIn]
+    output: dict[str, OutputTrailIn]
+    coercion: dict[str, CoercionTrailIn]
+    reasoning: dict[str, ReasoningTrailIn]
+    sampling: dict[str, SamplingTrailIn]
+    configuration: dict[str, ConfigurationTrailIn]
+    case: dict[str, CaseTrailIn]
+    scorer: dict[str, ScorerTrailIn]
 
 
 class InventoryFormDataOut(BaseModel):
@@ -173,23 +173,23 @@ class InventoryFormDataOut(BaseModel):
     scorer: dict[str, ScorerFormDataOut]
 
 
-class InventoryBranchSpec(BaseModel):
-    machine: dict[str, MachineBranchSpec]
-    os: dict[str, OsBranchSpec]
-    model: dict[str, ModelBranchSpec]
-    serving: dict[str, ServingBranchSpec]
-    client: dict[str, ClientBranchSpec]
-    stack: dict[str, StackBranchSpec]
-    tool: dict[str, ToolBranchSpec]
-    toolset: dict[str, ToolsetBranchSpec]
-    instruction: dict[str, InstructionBranchSpec]
-    output: dict[str, OutputBranchSpec]
-    coercion: dict[str, CoercionBranchSpec]
-    reasoning: dict[str, ReasoningBranchSpec]
-    sampling: dict[str, SamplingBranchSpec]
-    configuration: dict[str, ConfigurationBranchSpec]
-    case: dict[str, CaseBranchSpec]
-    scorer: dict[str, ScorerBranchSpec]
+class InventoryBranchOut(BaseModel):
+    machine: dict[str, MachineBranchOut]
+    os: dict[str, OsBranchOut]
+    model: dict[str, ModelBranchOut]
+    serving: dict[str, ServingBranchOut]
+    client: dict[str, ClientBranchOut]
+    stack: dict[str, StackBranchOut]
+    tool: dict[str, ToolBranchOut]
+    toolset: dict[str, ToolsetBranchOut]
+    instruction: dict[str, InstructionBranchOut]
+    output: dict[str, OutputBranchOut]
+    coercion: dict[str, CoercionBranchOut]
+    reasoning: dict[str, ReasoningBranchOut]
+    sampling: dict[str, SamplingBranchOut]
+    configuration: dict[str, ConfigurationBranchOut]
+    case: dict[str, CaseBranchOut]
+    scorer: dict[str, ScorerBranchOut]
 
 
 class InventoryBranchModel(TypedDict):

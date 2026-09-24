@@ -11,15 +11,15 @@ from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import (
-    BranchSchemaDetails,
-    BranchSpec,
-    TrailSchema,
+    BranchDetails,
+    BranchOut,
+    TrailIn,
     dump_details,
     relation_fields,
 )
-from chatddx.repo.names import resolve_branch_name
-from chatddx.repo.queries import qs_canon, qs_canon_col, qs_with_details
-from chatddx.repo.shufflers.trail import dump_trail
+from chatddx.repo.names import closure_branch_name
+from chatddx.repo.queries import qs_head, qs_head_visible, qs_with_relations
+from chatddx.repo.store.trail import dump_trail
 from chatddx.repo.utils import (
     resolve_trail,
     resolve_trails,
@@ -45,7 +45,7 @@ def get_branch_model(
     qs: QuerySet[Any] | None = None,
 ) -> BranchModel:
     """
-    Get latest branch model of `entity_name` owned by `owner_name` (aka canon).
+    Get latest branch model of `entity_name` owned by `owner_name` (its head).
 
     `branch_name`: Choose which name to select from
     `fingerprint`: Look-up the branch by it's trail's fingerprint
@@ -64,7 +64,7 @@ def get_branch_model(
     if branch_name:
         qs = qs.filter(name=branch_name)
 
-    model = qs_canon(qs, owner_name).first()
+    model = qs_head(qs, owner_name).first()
 
     if model is None:
         raise BranchNotFoundError(
@@ -87,7 +87,7 @@ def select_branch_models(
     """
     if qs is None:
         model_cls = entity_of(entity_name).branch_model
-        qs = qs_with_details(qs_canon(model_cls.objects.all(), owner_name))
+        qs = qs_with_relations(qs_head(model_cls.objects.all(), owner_name))
 
     models = list(qs)
 
@@ -105,13 +105,13 @@ def select_visible_branch_models(
     shared_by: str | None = None,
 ) -> list[BranchModel]:
     """
-    The canon of every branch of `entity_name` that `identity_name` can use,
+    The head of every branch of `entity_name` that `identity_name` can use,
     by name: its own, and those shared with it, by `shared_by` alone where
     it is given. Its own shadows a shared one of the same name.
     """
     model_cls = entity_of(entity_name).branch_model
     qs = _shared_by(model_cls.objects.all(), identity_name, shared_by)
-    visible = _prefer_own(list(qs_canon_col(qs, identity_name)), identity_name)
+    visible = _prefer_own(list(qs_head_visible(qs, identity_name)), identity_name)
     models = sorted(visible, key=lambda model: (model.name, model.owner.name))
 
     _ = resolve_trails([model.target for model in models])
@@ -127,7 +127,7 @@ def get_visible_branch_model(
     shared_by: str | None = None,
 ) -> BranchModel:
     """
-    The canon of the branch of `entity_name` that `identity_name` means by
+    The head of the branch of `entity_name` that `identity_name` means by
     `branch_name`, or that holds `trail`: its own if it has one, else the
     one shared with it, by `shared_by` alone where it is given.
     """
@@ -142,7 +142,7 @@ def get_visible_branch_model(
     if trail:
         qs = qs.filter(target=trail)
 
-    candidates = _prefer_own(list(qs_canon_col(qs, identity_name)), identity_name)
+    candidates = _prefer_own(list(qs_head_visible(qs, identity_name)), identity_name)
     what = f"{entity_name} '{branch_name}'" if branch_name else f"{entity_name} branch"
 
     if not candidates:
@@ -165,13 +165,13 @@ def get_shared_branch_model(
     branch_name: str,
 ) -> BranchModel:
     """
-    The canon of `owner_name`'s branch `branch_name` of `entity_name`, as
+    The head of `owner_name`'s branch `branch_name` of `entity_name`, as
     `identity_name` sees it: its own, or shared with it.
     """
     qs = entity_of(entity_name).branch_model.objects.filter(
         owner__name=owner_name, name=branch_name
     )
-    model = qs_canon_col(qs, identity_name).first()
+    model = qs_head_visible(qs, identity_name).first()
 
     if model is None:
         raise BranchNotFoundError(
@@ -202,15 +202,15 @@ def _prefer_own(models: list[BranchModel], identity_name: str) -> list[BranchMod
     ]
 
 
-def get_branch_spec(
+def get_branch_out(
     entity_name: EntityName,
     owner_name: str,
     branch_name: str | None = None,
     fingerprint: str | None = None,
     qs: QuerySet[Any] | None = None,
-) -> BranchSpec[Any, Any]:
+) -> BranchOut[Any, Any]:
     """
-    Get latest branch spec of `entity_name` owned by `owner_name` (aka canon).
+    Get latest branch spec of `entity_name` owned by `owner_name` (its head).
 
     `branch_name`: Choose which name to select from
     `fingerprint`: Look-up the branch by it's trail's fingerprint
@@ -225,7 +225,7 @@ def get_branch_spec(
         qs,
     )
 
-    spec_cls = entity_of(entity_name).branch_spec
+    spec_cls = entity_of(entity_name).branch_out
 
     try:
         return spec_cls.model_validate(model)
@@ -237,40 +237,40 @@ def get_branch_spec(
         raise
 
 
-get_branch_async = make_async(get_branch_spec)
+get_branch_async = make_async(get_branch_out)
 
 
-def select_branch_specs(
+def select_branch_outs(
     entity_name: EntityName,
     owner_name: str,
     qs: QuerySet[Any] | None = None,
-) -> list[BranchSpec[Any, Any]]:
+) -> list[BranchOut[Any, Any]]:
     """
     Find all branch specs of `entity_name` directly owned by `owner_name`
     `qs`: Start from custom queryset (default: all)
     """
 
     models = select_branch_models(entity_name, owner_name, qs)
-    spec_cls = entity_of(entity_name).branch_spec
+    spec_cls = entity_of(entity_name).branch_out
 
-    specs: list[BranchSpec[Any, Any]] = []
+    specs: list[BranchOut[Any, Any]] = []
     for model in models:
         specs.append(spec_cls.model_validate(model))
 
     return specs
 
 
-select_branch_async = make_async(select_branch_specs)
+select_branch_async = make_async(select_branch_outs)
 
 
 def commit(
-    trail: TrailSchema | TrailModel,
-    branch_details: BranchSchemaDetails,
+    trail: TrailIn | TrailModel,
+    branch_details: BranchDetails,
 ) -> bool:
     """
-    Embed trail in a branch and make it canon
-    True: Canon changed
-    False: Canon not changed, the trail was already canon in the branch
+    Embed trail in a branch and make it the head
+    True: the head changed
+    False: the head didn't, the trail was already the branch's head
 
     A version is its trail and its details: what the branch says about the
     content without being part of it, such as a model's facts or a stack's
@@ -289,22 +289,22 @@ def commit(
 
     qs = branch_model_cls.objects.all()
 
-    canon = qs_canon(
+    head = qs_head(
         qs.filter(name=branch_details.name),
         branch_details.owner,
     ).first()
 
     if (
-        canon
-        and trail.fingerprint == canon.target.fingerprint
-        and details == canon.details
+        head
+        and trail.fingerprint == head.target.fingerprint
+        and details == head.details
     ):
-        commit_relations(canon, canon, branch_details)
-        _ = commit_closure(canon.target, branch_details.owner)
+        commit_relations(head, head, branch_details)
+        _ = commit_closure(head.target, branch_details.owner)
         return False
 
     match trail:
-        case TrailSchema():
+        case TrailIn():
             target = dump_trail(trail_model_cls, trail)
         case TrailModel():
             target = trail
@@ -316,7 +316,7 @@ def commit(
         details=details,
     )
 
-    commit_relations(branch_model, canon, branch_details)
+    commit_relations(branch_model, head, branch_details)
     _ = commit_closure(target, branch_details.owner)
 
     return True
@@ -337,7 +337,7 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
     committed is committed too.
 
     Only a trail the owner has *no* branch of gets one. Where they already
-    have one, which of their versions is canon and what it is called is
+    have one, which of their versions is the head and what it is called is
     theirs, and a save of something referencing it is not the place to
     revisit that.
 
@@ -361,11 +361,11 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
         if has_branch:
             continue
 
-        branch_name = resolve_branch_name(entity.name, trail.fingerprint)
+        branch_name = closure_branch_name(entity.name, trail.fingerprint)
 
         _ = commit(
             trail=trail,
-            branch_details=BranchSchemaDetails(
+            branch_details=BranchDetails(
                 name=branch_name,
                 owner=owner_name,
             ),
@@ -401,7 +401,7 @@ def commit_copies(target: TrailModel, owner_name: str, source_name: str) -> list
         if branches.filter(target=trail, owner__name=owner_name).exists():
             continue
 
-        source = qs_canon(branches.filter(target=trail), source_name).first()
+        source = qs_head(branches.filter(target=trail), source_name).first()
 
         if source is None or (
             branches.filter(owner__name=owner_name, name=source.name).exists()
@@ -449,7 +449,7 @@ RELATION_RESOLVERS: dict[
 def commit_relations(
     branch_model: BranchModel,
     previous: BranchModel | None,
-    branch_details: BranchSchemaDetails,
+    branch_details: BranchDetails,
 ) -> None:
     """
     Give `branch_model` what `branch_details` names beside its content, and

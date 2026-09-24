@@ -25,13 +25,13 @@ from chatddx.core.utils import ensure_identity_async
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.inventories import (
     InventoryBranchModel,
-    InventoryBranchSpec,
+    InventoryBranchOut,
     InventoryFormDataOut,
-    InventoryTrailSchema,
+    InventoryTrailIn,
     ParsedInventory,
 )
 from chatddx.repo.parsers.inventory import parse
-from chatddx.repo.shufflers import inventory
+from chatddx.repo.store import inventory
 from chatddx.utils import make_async
 
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
@@ -92,19 +92,19 @@ async def parsed_inventory(owner: IdentityModel) -> ParsedInventory:
 
 
 @pytest_asyncio.fixture
-async def inventory_fixture_ts(
+async def inventory_fixture_ti(
     parsed_inventory: ParsedInventory,
-) -> InventoryTrailSchema:
-    return await make_async(inventory.trail_schema)(parsed_inventory)
+) -> InventoryTrailIn:
+    return await make_async(inventory.trails_in)(parsed_inventory)
 
 
 @pytest_asyncio.fixture
 async def inventory_fixture_commit_branchless(
-    inventory_fixture_ts: InventoryTrailSchema,
+    inventory_fixture_ti: InventoryTrailIn,
     owner: IdentityModel,
 ) -> inventory.InventoryCommitReceipt:
-    return await make_async(inventory.commit_trail_schemas)(
-        inventory_fixture_ts, owner.name
+    return await make_async(inventory.commit_trails_in)(
+        inventory_fixture_ti, owner.name
     )
 
 
@@ -125,12 +125,12 @@ async def inventory_fixture_bm(
 
 
 @pytest_asyncio.fixture
-async def inventory_fixture_bs(inventory_fixture_bm: InventoryBranchModel):
-    return await make_async(InventoryBranchSpec.model_validate)(inventory_fixture_bm)
+async def inventory_fixture_bo(inventory_fixture_bm: InventoryBranchModel):
+    return await make_async(InventoryBranchOut.model_validate)(inventory_fixture_bm)
 
 
 @pytest_asyncio.fixture
 async def inventory_fixture_fdo(
-    inventory_fixture_bs: InventoryBranchSpec,
+    inventory_fixture_bo: InventoryBranchOut,
 ) -> InventoryFormDataOut:
-    return await make_async(inventory.form_data_out)(inventory_fixture_bs)
+    return await make_async(inventory.form_data_out)(inventory_fixture_bo)

@@ -1,28 +1,28 @@
 import json
 from typing import Any, Literal
 
-from chatddx.django.orm.qs import qs_canon, qs_with_details
-from chatddx.repo.bundles import entity_of, view_of
+from chatddx.django.orm.qs import qs_head, qs_with_relations
+from chatddx.repo.bundles import entity_of, presentation_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel
-from chatddx.repo.families.pydantic import BranchSpec, TrailSpec
+from chatddx.repo.families.pydantic import BranchOut, TrailOut
 from chatddx.repo.utils import resolve_trails
 
 
 def load_form_data(
-    branch: BranchModel | BranchSpec[TrailSpec],
+    branch: BranchModel | BranchOut[TrailOut],
     mode: Literal["python", "json"] = "python",
 ) -> dict[str, Any]:
     match branch:
         case BranchModel():
             branch.target = resolve_trails([branch.target])[0]
-            branch_spec = entity_of(branch).branch_spec.model_validate(branch)
-        case BranchSpec():
-            branch_spec = branch
+            branch_out = entity_of(branch).branch_out.model_validate(branch)
+        case BranchOut():
+            branch_out = branch
 
-    branch_dict = branch_spec.model_dump()
+    branch_dict = branch_out.model_dump()
 
-    form_data = view_of(branch).form_data_out.model_validate(
+    form_data = presentation_of(branch).form_data_out.model_validate(
         branch_dict | branch_dict["target"]
     )
     return form_data.model_dump(mode=mode, by_alias=True)
@@ -36,8 +36,8 @@ def template_registry(owner_name: str, entities: tuple[EntityName, ...]) -> str:
 
 def _entity_registry(entity: EntityName, owner_name: str) -> dict[str, Any]:
     branches = list(
-        qs_with_details(
-            qs_canon(entity_of(entity).branch_model.objects.all(), owner_name)
+        qs_with_relations(
+            qs_head(entity_of(entity).branch_model.objects.all(), owner_name)
         )
     )
 
@@ -53,7 +53,7 @@ def template_choices(
     model_cls: type[BranchModel],
     owner_name: str,
 ) -> list[tuple[str, str]]:
-    owned = qs_canon(model_cls.objects.all(), owner_name)
+    owned = qs_head(model_cls.objects.all(), owner_name)
 
     return [("", "--- clear ---")] + [
         (str(target_id), name)

@@ -22,12 +22,12 @@ from chatddx.repo.families import (
     BaseFormDataIn,
     BaseFormDataOut,
     BaseTrail,
-    BranchSchema,
-    BranchSpec,
+    BranchIn,
+    BranchOut,
     Details,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
 from chatddx.repo.templates import placements
 
@@ -75,23 +75,23 @@ class InstructionTrailBase(BaseTrail):
         return self
 
 
-class InstructionTrailSchema(InstructionTrailBase, TrailSchema):
+class InstructionTrailIn(InstructionTrailBase, TrailIn):
     pass
 
 
-class InstructionTrailSchemaRef(TrailSchemaRef, InstructionTrailBase):
+class InstructionTrailRef(TrailRef, InstructionTrailBase):
     pass
 
 
-class InstructionTrailSpec(InstructionTrailBase, TrailSpec):
+class InstructionTrailOut(InstructionTrailBase, TrailOut):
     pass
 
 
-class InstructionBranchSchema(BranchSchema[InstructionTrailSchema]):
+class InstructionBranchIn(BranchIn[InstructionTrailIn]):
     pass
 
 
-class InstructionBranchSpec(BranchSpec[InstructionTrailSpec, Details]):
+class InstructionBranchOut(BranchOut[InstructionTrailOut, Details]):
     pass
 
 

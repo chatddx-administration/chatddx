@@ -1,5 +1,5 @@
 """
-The queries the registry answers itself: an owner's canon, and a branch with
+The queries the registry answers itself: an owner's heads, and a branch with
 what it carries.
 
 `chatddx.django.orm.qs` builds the portal's pages on these; the registry
@@ -20,20 +20,20 @@ def qs_owned[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
     return qs.filter(owner__name=owner_name)
 
 
-def qs_canon[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
+def qs_head[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
     """The newest version of each of `owner_name`'s branches."""
-    return _canon(qs, qs_owned(qs, owner_name))
+    return _head(qs, qs_owned(qs, owner_name))
 
 
-def qs_canon_col[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    """As `qs_canon`, with the branches `owner_name` collaborates on."""
-    return _canon(
+def qs_head_visible[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
+    """As `qs_head`, with the branches `owner_name` collaborates on."""
+    return _head(
         qs,
         qs.filter(Q(owner__name=owner_name) | Q(collaborators__name=owner_name)),
     )
 
 
-def _canon[T: BranchModel](qs: QuerySet[T], owned: QuerySet[T]) -> QuerySet[T]:
+def _head[T: BranchModel](qs: QuerySet[T], owned: QuerySet[T]) -> QuerySet[T]:
     version_count = (
         qs.filter(owner_id=OuterRef("owner_id"), name=OuterRef("name"))
         .values("owner_id", "name")
@@ -60,7 +60,7 @@ def qs_with_trail[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
     return qs.select_related(*paths) if paths else qs
 
 
-def qs_with_details[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
+def qs_with_relations[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
     prefetch: list[str | Prefetch[Any]] = []
 
     for m2m in qs.model._meta.many_to_many:
@@ -68,7 +68,7 @@ def qs_with_details[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
 
         if issubclass(related, BranchModel):
             prefetch.append(
-                Prefetch(m2m.name, queryset=qs_with_details(related.objects.all()))
+                Prefetch(m2m.name, queryset=qs_with_relations(related.objects.all()))
             )
         else:
             prefetch.append(m2m.name)
