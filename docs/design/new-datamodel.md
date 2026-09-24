@@ -23,34 +23,34 @@ For inspect-ai, option C of `data-generation.md` §5 was chosen: chatddx
 generates and inspect scores. So the registry keeps what generation needs,
 and what only evaluation needs moves to inspect. §11 makes one change to
 that: the scorers and the targets are registered too, since people are to
-keep them in the portal, and inspect's model shapes them.
+keep them in the portal, and inspect's data model shapes them.
 
 Terms used here:
 
 - **Entity:** a registered kind of record, with a trail table and a branch
   table.
-- **Bundle:** the set of schemas and models attached to an entity (`Entity`
-  in `repo/registry.py`): trail schema, spec and ref; branch schema and
-  spec; details and details patch; trail and branch models. The word means
-  nothing else in this note.
+- **Bundle:** the set of pydantic classes and Django models attached to an
+  entity (`Entity` in `repo/registry.py`): trail in, out and ref; branch in
+  and out; details and details patch; trail and branch models. The word
+  means nothing else in this note.
 - **Trail:** an entity's content, content-addressed and immutable.
 - **Branch:** an owner's named version, pointing at a trail.
 - **Details:** an entity's non-fingerprinted fields. They form a side schema
   that lives on the branch.
 - **Slice:** one dimension of the configuration surface that a batch can
-  vary while it holds the others fixed. The slices are the model,
+  vary while it holds the others fixed. The slices are the stack,
   instruction, output, coercion, reasoning, sampling and toolset. A slice
   is vertical: it owns everything specific to it, wherever that lands in
   the request, in the prompt text or in how the output is read (§2).
   `data-generation.md` first called these bundles. Bundle now keeps only
   the meaning above.
 - **Variation:** one value of a slice, such as reasoning `off`, output
-  `diagnoses` or the model `qwen3-8b-awq`. A variation of a request-time
-  slice is a record of that slice's entity. A variation of the model slice
-  is a stack. Where `data-generation.md` says a configuration is one slice
+  `diagnoses` or the stack `qwen3-8b-awq@pelle`. A variation of a
+  request-time slice is a record of that slice's entity. A variation of the
+  stack slice is a stack. Where `data-generation.md` says a configuration is one slice
   of each kind, this note says one variation of each slice.
 - **Configuration:** one variation of each request-time slice, that is, of
-  every slice but the model.
+  every slice but the stack.
 - **Cell:** a configuration and a stack, so one variation of every slice. A
   trial runs one cell on one case, with one seed.
 - **Trial and run:** a trial is a cell on a case with a seed, or with none.
@@ -98,7 +98,7 @@ trail field that cannot take part in the fingerprint is not content", and
   `extra="forbid"`. Details hold the branch's name and owner, its relations
   (collaborators and tags), and descriptive values, such as a machine's
   specs or a stack's endpoint. Most entities have no descriptive values:
-  only machine, os, model, serving, client, stack, tool, case and scorer do
+  only machine, os, llm, serving, client, stack, tool, case and scorer do
   (§6, §11).
 - **Details live on the branch.** That is the layer that already carries
   the owner, the name, collaborators and tags, so details are owned and
@@ -113,7 +113,7 @@ The inventory parser (`repo/parsers/inventory.py`) treats one authored
 record as two:
 
 - A key the trail schema declares is content. Content is looked at first,
-  so a tool's `name` is the name the model sees, not its branch's.
+  so a tool's `name` is the name the LLM sees, not its branch's.
 - A key the details schema declares passes through to the details.
 - `name` and `owner` are refused: a record's name is its key, and its owner
   is whoever parses the inventory.
@@ -124,8 +124,8 @@ So an author still writes one record per entity, and the bundle decides
 which keys are content and which are description:
 
 ```toml
-[model.qwen3-8b-awq]
-blob = "/nix/store/…-qwen3-8b-awq"      # trail: fingerprinted
+[llm.qwen3-8b-awq]
+snapshot = "/nix/store/…-qwen3-8b-awq"  # trail: fingerprinted
 source = "Qwen/Qwen3-8B-AWQ@<commit>"    # details: passes through
 facts.reasoning.default = "on"           # details: passes through
 tags = ["local"]                         # details: passes through
@@ -151,7 +151,7 @@ The rest of the inventory's rules:
 - **A relation names a record of the entity it points at:** one name, or a
   list of names for a list. A record written inline would be committed
   without a name, so it isn't accepted.
-- **A case with no `payload`** reads it from `cases/<name>.txt` next to its
+- **A case with no `vignette`** reads it from `cases/<name>.txt` next to its
   file.
 - **`init-data` commits the inventory as the archive's** (the identity
   `archive`). The user it is run for becomes a collaborator on every branch
@@ -160,13 +160,13 @@ The rest of the inventory's rules:
 
 ### One change to commit
 
-When only details change, `commit()` edits the canon branch in place:
+When only details change, `commit()` edits the head branch in place:
 "What a branch carries besides its content is not fingerprinted, so it can
-change while the canon stays put."
+change while the head stays put."
 
 - That is fine for tags.
-- It is not fine for details that resolution reads, such as a model's facts
-  or a stack's served name. A trial must be able to say which version it
+- It is not fine for details that resolution reads, such as an LLM's facts
+  or a stack's served name. A run must be able to say which version it
   resolved against.
 - So a change to details makes a new branch row. That is the "fingerprint
   the commit, not only the tree" item already listed in
@@ -177,12 +177,12 @@ change while the canon stays put."
 As built, `commit()` works like this:
 
 - **A version is a trail and its plain details.** A commit whose trail or
-  details differ from the canon's makes a new branch row. A commit that
-  matches the canon makes no row and answers that nothing changed.
+  details differ from the head's makes a new branch row. A commit that
+  matches the head makes no row and answers that nothing changed.
 - **Relations change in place.** A commit that names tags or collaborators
   sets them on the row it lands on. One that names none keeps what the
   version before had.
-- **The canon is the newest row** of an owner's branch of a name, by
+- **The head is the newest row** of an owner's branch of a name, by
   timestamp and then id. The rows before it are its versions.
 - **A commit reaches everything its trail does.** Every trail it reaches,
   such as a stack's machine or a toolset's tools, gets a branch of the
@@ -206,11 +206,11 @@ As built, `commit()` works like this:
 A field is fingerprinted if and only if it is trail content. Trail content
 is:
 
-- for a thing (machine, OS, model, client): its one identifying field;
+- for a thing (machine, OS, LLM, client): its one identifying field;
 - for a composition (stack, configuration, toolset): the things it
   combines;
 - for a variation of a request-time slice, and for serving: everything
-  authored that can change a request, the model's output, or how the
+  authored that can change a request, the LLM's output, or how the
   output is read for scoring.
 
 Names, owners, tags, endpoints, credentials, specs and facts are details,
@@ -223,8 +223,8 @@ The kinds of hash identify different things:
   belong to each run, since a trial can be run on a later client, or after
   a fact changed, and send something else. They aren't computed yet. Until
   they are, a run keeps the exact bodies it sent and got back (§6).
-- A model's facts can change a request without moving any trail
-  fingerprint. That is by design, since a model is its blob, and the
+- An LLM's facts can change a request without moving any trail
+  fingerprint. That is by design, since an LLM is its snapshot, and the
   request hash catches it.
 - An output's views can change its fingerprint without changing a request.
   Two outputs that differ only in their views have equal contributions:
@@ -234,14 +234,14 @@ The kinds of hash identify different things:
 
 ### What a slice is
 
-- **A slice is a question a batch can ask.** Which model? Does reasoning
+- **A slice is a question a batch can ask.** Which LLM? Does reasoning
   help? Should the answer be a management plan or a list? Each question has
   a few answers worth comparing: the slice's variations. A batch compares
   them while every other slice holds one variation (§5).
 - **A slice is vertical.** It owns everything specific to it, wherever that
   lands: request fields, prompt text, and the reading of the output.
   - The output slice shows why. A management plan and a list of diagnoses
-    differ in their schema. They also differ in what the model is told
+    differ in their schema. They also differ in what the LLM is told
     ("Fill in the management plan", "List the plausible diagnoses") and in
     where a scorer finds the differential.
   - Those sentences were agent instructions (the two partial agents in
@@ -250,14 +250,14 @@ The kinds of hash identify different things:
   - If the instruction kept the sentence, instruction and output could not
     be varied apart: half of any grid would ask for one output and enforce
     another.
-- **The model is a slice too.** Its variations are the stacks at hand. Two
+- **The stack is a slice too.** Its variations are the stacks at hand. Two
   things set it apart:
   - it writes almost nothing into the request: the `model` field, and where
     the request goes;
   - every other slice is resolved against it.
 
   So it stays out of the configuration. A cell joins a configuration to a
-  stack, and one configuration runs on every model.
+  stack, and one configuration runs on every stack.
 
 ### Where to cut
 
@@ -266,7 +266,7 @@ A concern is a slice of its own when it passes three tests:
 1. **It is varied on its own.** Some batch asks about it while everything
    else stays put.
 2. **Its variations make sense against facts alone.** A variation may read
-   the model's facts, fill slots, and act on what another slice hands it,
+   the LLM's facts, fill slots, and act on what another slice hands it,
    such as the output's schema. It may not assume which variation of
    another slice it is paired with.
 3. **It owns everything specific to it.** No text, request field or reading
@@ -277,27 +277,27 @@ compound (§3). Two that pass it, and vary for different reasons, are two.
 
 **Decision: coercion is a slice, split from output.**
 
-- The output's schema says what is asked for. The mode says how the model
+- The output's schema says what is asked for. The mode says how the LLM
   is held to it.
 - They vary for different reasons, and they go with different things: the
-  schema with guidance and scorers, the mode with the model's
+  schema with guidance and scorers, the mode with the LLM's
   capabilities. `compatibility.md` in PR #68 makes the same case.
 - Kept together, varying the mode meant copying the schema once per mode
   (`diagnoses tool`, `diagnoses native`, `diagnoses prompted`). Split, a
   batch crosses them.
-- Whether the schema is also shown to the model goes with the mode. Tool
+- Whether the schema is also shown to the LLM goes with the mode. Tool
   mode shows it anyway, and prompted mode is nothing but showing it.
 
 ### The slices
 
 | Slice | A variation is | It writes | Resolved against |
 |---|---|---|---|
-| model | a stack | the request's `model` field, and where the request goes | nothing: the other slices are resolved against it |
+| stack | a stack | the request's `model` field, and where the request goes | nothing: the other slices are resolved against it |
 | instruction | system and user templates, with declared slots | the messages | the slots the other slices fill |
 | output | a schema (none for free text), its guidance and its views | the `output_guidance` slot, the schema that coercion delivers, and what scorers read | nothing |
-| coercion | a mode (native, tool, prompted or auto), a schema prompt, and for tool mode a tool description | `response_format` or a final-result tool, and the `schema_prompt` slot | the model's facts (which modes work, and what `auto` stands for), the serving (a parser a mode needs) and the output's schema |
-| reasoning | an effort (default, off, on, minimal, low, medium, high or xhigh) and an optional budget | whatever the model's facts say: `chat_template_kwargs`, `reasoning_effort`, `thinking_token_budget` | the model's facts |
-| sampling | explicit values, and what a null means: the model's generation config, or its recommendation for the resolved reasoning mode | temperature, top-p, top-k, penalties, stop and max tokens | the model's facts and the resolved reasoning mode |
+| coercion | a mode (native, tool, prompted or auto), a schema prompt, and for tool mode a tool description | `response_format` or a final-result tool, and the `schema_prompt` slot | the LLM's facts (which modes work, and what `auto` stands for), the serving (a parser a mode needs) and the output's schema |
+| reasoning | an effort (default, off, on, minimal, low, medium, high or xhigh) and an optional budget | whatever the LLM's facts say: `chat_template_kwargs`, `reasoning_effort`, `thinking_token_budget` | the LLM's facts |
+| sampling | explicit values, and what a null means: the LLM's generation config, or its recommendation for the resolved reasoning mode | temperature, top-p, top-k, penalties, stop and max tokens | the LLM's facts and the resolved reasoning mode |
 | toolset | tool definitions and their guidance | `tools`, and the `tool_guidance` slot | the serving: tools need a tool-call parser |
 
 ### Intent and realization
@@ -325,21 +325,21 @@ compound (§3). Two that pass it, and vary for different reasons, are two.
   cells are one treatment is decided by their requests, never by their
   variations' names.
 - **Facts are claims.** A realized cell rests on facts, and only an
-  experiment shows whether the model honours them. For example, whether
+  experiment shows whether the LLM honours them. For example, whether
   gpt-oss honours low, medium and high is still open (`data-generation.md`
   §6). The batch's report and each run record the facts a cell rested on,
   as the branch rows read, so a doubtful fact can be traced to every cell
-  that used it. A run in the repl says when the model didn't honour its
+  that used it. A run in the repl says when the LLM didn't honour its
   reasoning: no thinking came back though reasoning resolved to a mode that
   thinks, or some came back though it resolved to `off`.
 
-### Example: reasoning, per model
+### Example: reasoning, per LLM
 
-The model's facts translate each intent into one of three things: a
+The LLM's facts translate each intent into one of three things: a
 request fragment, another intent it collapses into, or a refusal.
 
 ```toml
-[model.qwen3-8b-awq.facts.reasoning]
+[llm.qwen3-8b-awq.facts.reasoning]
 default = "on"
 off = { chat_template_kwargs = { enable_thinking = false } }
 on = { chat_template_kwargs = { enable_thinking = true } }
@@ -350,11 +350,11 @@ high = "on"
 xhigh = "on"
 budget = { field = "thinking_token_budget", needs = "reasoning_parser" }
 
-[model.qwen3-8b-awq.facts.sampling.recommended]   # the model card, per mode
+[llm.qwen3-8b-awq.facts.sampling.recommended]     # the model card, per mode
 on = { temperature = 0.6, top_p = 0.95, top_k = 20 }
 off = { temperature = 0.7, top_p = 0.8, top_k = 20 }
 
-[model.gpt-oss-20b.facts.reasoning]
+[llm.gpt-oss-20b.facts.reasoning]
 default = "medium"
 off = { refused = "always reasons: vLLM rejects reasoning_effort = none for harmony" }
 on = "medium"
@@ -367,7 +367,7 @@ budget = { refused = "no thinking budget is documented for harmony" }
 ```
 
 A batch that varies reasoning over `off`, `low`, `medium` and `high` on
-both models, with sampling at `recommended`, resolves to:
+both LLMs, with sampling at `recommended`, resolves to:
 
 | Reasoning | qwen3-8b-awq | gpt-oss-20b |
 |---|---|---|
@@ -376,9 +376,9 @@ both models, with sampling at `recommended`, resolves to:
 | medium | collapsed into low | `reasoning_effort: medium` |
 | high | collapsed into low | `reasoning_effort: high` |
 
-The same study today needs a sampling params record per model and
+The same study today needs a sampling params record per LLM and
 setting: `disable-thinking` for Qwen3 and `low-reasoning` for gpt-oss.
-Each is honoured by one model and ignored by the other. And nothing shows
+Each is honoured by one LLM and ignored by the other. And nothing shows
 the collapse or the refusal until the runs come back.
 
 ### Example: output and coercion
@@ -387,14 +387,14 @@ From `inventory/slices.toml`:
 
 ```toml
 [output.management-plan]
-schema_path = "schemas/management_plan_v1.json"
+json_schema_path = "schemas/management_plan_v1.json"
 guidance = "Fill in the management plan for the case."
 views.differential = "$.diagnoses[*].diagnosis"
 views.warning = "$.acute_warning"
 views.disposition = "$.management.disposition"
 
 [output.diagnoses]
-schema_path = "schemas/diagnoses.json"
+json_schema_path = "schemas/diagnoses.json"
 guidance = "List the plausible diagnoses, most likely first."
 views.differential = "$.diagnoses[*]"
 
@@ -403,11 +403,11 @@ guidance = "List the plausible diagnoses, one per line, most likely first."
 views.text = "whole"
 views.differential = "lines"
 
-[output.raw]                    # no guidance: whatever the model makes of the case
+[output.raw]                    # no guidance: whatever the LLM makes of the case
 views.text = "whole"
 
 [coercion.native]
-mode = "native"                 # on vLLM, guided decoding only: the model never reads the schema
+mode = "native"                 # on vLLM, guided decoding only: the LLM never reads the schema
 
 [coercion.native-shown]
 mode = "native"
@@ -425,7 +425,7 @@ extends = "native-shown"        # the same text, so the two differ only in what 
 mode = "prompted"
 
 [coercion.auto]
-mode = "auto"                   # whatever the model's facts name as its default
+mode = "auto"                   # whatever the LLM's facts name as its default
 ```
 
 - **The guidance and the view keep one promise.** The `differential` view
@@ -453,23 +453,23 @@ Generic composability would mean two things:
 Three things rule it out. Each can be seen in the code pinned in `uv.lock`
 or in vLLM's documentation.
 
-1. **Realization depends on the model.**
+1. **Realization depends on the LLM.**
    - Qwen3 turns thinking off with a chat-template switch and has no effort
      levels. gpt-oss has effort levels and can't turn reasoning off.
    - Left alone, the libraries hide this. pydantic-ai ignores `thinking =
-     False` on a model that always reasons, and it drops `thinking`
-     altogether unless the model's profile declares support. vLLM ignores
+     False` on an LLM that always reasons, and it drops `thinking`
+     altogether unless its pydantic-ai profile declares support. vLLM ignores
      `tool_choice = "required"` for gpt-oss (pydantic-ai's vLLM provider
      notes it), so tool mode can't force gpt-oss to answer through its
      tool.
-   - So one variation on two models is one intent, not one request.
+   - So one variation on two LLMs is one intent, not one request.
 2. **Slices share resources.**
    - Qwen3's recommended sampling depends on the thinking mode.
    - A thinking budget spends `max_tokens`.
-   - Native output on a reasoning model needs a reasoning parser. vLLM's
+   - Native output on a reasoning LLM needs a reasoning parser. vLLM's
      grammar engine uses the parser to find where the reasoning ends, and
      it constrains only what follows. vLLM keeps these facts in its own
-     table, one row per model family: the parser, and whether structured
+     table, one row per LLM family: the parser, and whether structured
      output and tool calling work with reasoning on.
    - Tool-mode coercion puts its final-result tool into the same `tools`
      list as a toolset.
@@ -491,12 +491,12 @@ measures, not a defect of the data model.
 | Trick | What becomes composable | What it costs |
 |---|---|---|
 | **Slots.** The instruction declares holes (`output_guidance`, `schema_prompt` and `tool_guidance`; later `reasoning_guidance`), and each is filled by exactly one slice. | instruction with output, coercion and toolset, and later with reasoning: an instruction never names an output | The instruction must place every slot that is filled. Nothing checks that the joined text reads well. |
-| **Intents plus facts.** A variation states an intent. The model's facts translate it, alias it or refuse it. | reasoning and coercion across models | Facts to write and keep: one row per model and intent, not one per pair of records. |
-| **Symbolic values.** Some values are defined by reference: sampling `recommended` (for the resolved reasoning mode), reasoning `default`, coercion `auto` (the mode the model's facts name as its default), and a sampling field left out under `defaults = "model"` (the model's generation config, as its facts give it). | sampling with reasoning and model | The numbers differ per model. Only the request says what was sent. |
+| **Intents plus facts.** A variation states an intent. The LLM's facts translate it, alias it or refuse it. | reasoning and coercion across LLMs | Facts to write and keep: one row per LLM and intent, not one per pair of records. |
+| **Symbolic values.** Some values are defined by reference: sampling `recommended` (for the resolved reasoning mode), reasoning `default`, coercion `auto` (the mode the LLM's facts name as its default), and a sampling field left out under `defaults = "generation_config"` (the LLM's generation config, as its facts give it). | sampling with reasoning and LLM | The numbers differ per LLM. Only the request says what was sent. |
 | **Disjoint writes.** Each slice declares the request paths and slots it may write. Write sets belong to slices, not to variations, and no two slices share one. | every slice with every other, with no merge rule | It is checked once, over the slices in code, not once per configuration. A concern that needs two slices' paths becomes a coupling. |
-| **Couplings.** The few requirements that cross slices are declared in the model's facts, as what a fact needs of the serving (`needs`), and resolution checks them against the serving's arguments. For example, a budget needs a reasoning parser on Qwen3, and a structured mode needs one while the model reasons. Two are resolution's own: a budget must fit in `max_tokens`, and tools need a tool-call parser. | the cells they allow | Each coupling is data someone has to write. Where a symbolic value dissolves a coupling, prefer it. |
+| **Couplings.** The few requirements that cross slices are declared in the LLM's facts, as what a fact needs of the serving (`needs`), and resolution checks them against the serving's arguments. For example, a budget needs a reasoning parser on Qwen3, and a structured mode needs one while the LLM reasons. Two are resolution's own: a budget must fit in `max_tokens`, and tools need a tool-call parser. | the cells they allow | Each coupling is data someone has to write. Where a symbolic value dissolves a coupling, prefer it. |
 | **Views.** Scorers read a named reading of an output, and each output declares its readings (§4). | scorer and output | One view per output and reading. Free text needs a parser. |
-| **Collapse detection.** Cells whose requests match on a stack are one treatment. | variations a model can't tell apart | None. This is what the hashes of `data-generation.md` §3 are for. |
+| **Collapse detection.** Cells whose requests match on a stack are one treatment. | variations an LLM can't tell apart | None. This is what the hashes of `data-generation.md` §3 are for. |
 | **Compound slices.** Two concerns that can't be separated become one slice. For example, "thinking with its sampling", when a study wants the vendor's pairing rather than a fixed sampling. | an inseparable pair | Their separate effects can't be estimated. |
 
 ### What is not worth doing
@@ -504,8 +504,8 @@ measures, not a defect of the data model.
 - **A declared table of pairs.**
   - Pairs of records multiply with every variation anyone makes, and the
     same fact is written again for every pair.
-  - Facts are declared once per model or serving, where they are true, and
-    the table is derived from them (§5). With m models and r reasoning
+  - Facts are declared once per LLM or serving, where they are true, and
+    the table is derived from them (§5). With m LLMs and r reasoning
     intents, that is m × r rows of facts, however many sampling or output
     variations exist.
 - **A general constraint language.** The couplings are few and local.
@@ -513,10 +513,10 @@ measures, not a defect of the data model.
   new one is a small change.
 - **Filling every cell.** Faking "reasoning off" on gpt-oss with an
   instruction to be brief would make `off` mean different things on
-  different models. That is a different variation, and it should be named
+  different LLMs. That is a different variation, and it should be named
   as one.
 - **Raw provider parameters in a variation.** A bag of provider
-  parameters, like today's `provider_params`, is valid on one model only.
+  parameters, like today's `provider_params`, is valid on one LLM only.
   It fails the second test of §2, so it can't be a variation of any slice.
 
 ## 4. Outputs and scorers
@@ -548,7 +548,7 @@ Read from inspect-ai 0.3.263:
 - **An answer delivered another way is moved into the completion.**
   - inspect's own `react()` agent writes the `submit()` tool's argument into
     `state.output.completion` ("set the output to the answer for scoring").
-    It is appended to any text the model wrote beside the call, or stands
+    It is appended to any text the LLM wrote beside the call, or stands
     alone with `answer_only`.
   - By default the submit call is also removed from the messages.
   - So the mechanism that carried the answer never reaches the scorer.
@@ -570,7 +570,7 @@ Read from inspect-ai 0.3.263:
   recorded in the log header (`EvalScorer.options`) and on each score event
   (`scorer_args`).
 - **Failures are attributed.**
-  - `Score.reason` separates failures of the model under test
+  - `Score.reason` separates failures of the LLM under test
     (`invalid_response_format`, `refusal`, `no_response`) from failures of
     the instrument (`grader_failed`, `scoring_failed`).
   - `Score.unscored()` records a NaN that metrics and reducers skip.
@@ -676,7 +676,7 @@ output variation.
 - **Views are fingerprinted.** They change no request, but they decide
   what is measured, so a score can cite exactly which reading it applied
   (§1). A batch that varies only views generates once, and reads the same
-  trials each way.
+  runs each way.
 - **A parser is a view, not an output mode.** pydantic-ai's `TextOutput`
   would parse at generation time and keep only the parsed value. chatddx
   keeps the text and parses when scoring, so a parser can be fixed without
@@ -694,25 +694,25 @@ the output spec:
 - **An answer is held to an object.** `T` is `StructuredDict` of the
   schema. A schema whose top level isn't an object is refused at
   resolution, so no answer travels in pydantic-ai's envelope, and a run's
-  output is the answer as the model gave it.
+  `answer` is the answer as the LLM gave it.
 - **The schema a request carries is chatddx's to say.** Resolution inlines
   its references and drops `$defs`, so pydantic-ai is left with nothing to
   make of it but a sort of its keywords; the properties keep the order they
   were written in. A schema that refers to itself can't be sent, and is
   refused.
 - `template` is always `False`. The schema prompt, when there is one,
-  reaches the model through the `schema_prompt` slot, never through
+  reaches the LLM through the `schema_prompt` slot, never through
   pydantic-ai's default text. It shows the schema as written, not inlined.
-- `auto` is resolved to one of the three from the model's facts before the
+- `auto` is resolved to one of the three from the LLM's facts before the
   spec is built. Left to pydantic-ai, it would also bring the profile's
   default template along on vLLM.
-- **No words of pydantic-ai's own reach the model.** The profile is
-  pydantic-ai's default, then its vLLM provider's, then the model's facts,
+- **No words of pydantic-ai's own reach the LLM.** The profile is
+  pydantic-ai's default, then its vLLM provider's, then the LLM's facts,
   then chatddx's own on top: no JSON schema transformer, no schema added to
   the instructions, no JSON object mode, and no OpenAI reasoning field. The
-  model's facts give the profile instead of the served name.
-- **A trial asks once.** Nothing is retried: an answer that doesn't hold is
-  recorded, not asked for again. A model may call tools for five rounds,
+  LLM's facts give the profile instead of the served name.
+- **A run asks once.** Nothing is retried: an answer that doesn't hold is
+  recorded, not asked for again. An LLM may call tools for five rounds,
   and a run still calling them after that stops with no answer.
 - **What isn't an OpenAI field goes in `extra_body`:** `top_k`, and
   whatever the reasoning facts write (`chat_template_kwargs`,
@@ -738,15 +738,15 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
     return score
 ```
 
-### What a trial records, and what the log carries
+### What a run records, and what the log carries
 
-- **A trial's run records the value, not only the transcript.** `output`
-  is `result.output`, the same whichever mode carried it (PR #68's
+- **A run records the value, not only the transcript.** `answer` is
+  `result.output`, the same whichever mode carried it (PR #68's
   `RunModel.output`): an object for a structured output, the text for free
   text. `valid` says whether it holds to the output's schema. It is null
   for free text. It is false where no answer that parses came, and then
-  there is no output, and where one parsed but doesn't hold, and then the
-  output is kept.
+  there is no answer, and where one parsed but doesn't hold, and then the
+  answer is kept.
 - **Until inspect scores runs, chatddx does,** with scorers of its own and
   rules of their own (below, How chatddx scores).
 - **chatddx writes one inspect sample per trial** (`data-generation.md` §5,
@@ -755,14 +755,14 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
   | Sample field | Holds |
   |---|---|
   | `id`, `epoch` | the case, and the replicate: the position of the trial's seed among the batch's seeds, from 1 |
-  | `input` | the case, as the model received it |
+  | `input` | the case, as the LLM received it |
   | `output.completion` | the answer as text: where inspect expects an answer, and where `react()` puts a submitted one. It is the `text` view where the output offers one, and a structured answer's JSON otherwise |
   | `messages`, and a `ModelEvent` | the exchange as it happened, tool call or `response_format` included, with the raw request and response |
   | `target` | the case's target of the kind the batch's scorers read, where they read one kind; for `diagnosis`, read by `reciprocal_rank` and `first_mention`, one pattern |
   | `metadata` | one key per slice, naming the cell's variation; the identities and hashes; the output's fingerprint and its views; the case's targets, by kind, for scorers that read another (§11) |
 
 - **A batch writes one log per cell.**
-  - An inspect log is one task on one model, and a sample id appears once
+  - An inspect log is one task on one LLM, and a sample id appears once
     per epoch. So a cell, one configuration on one stack, is the natural
     unit.
   - `data-generation.md` wrote one log per batch, when a batch held one
@@ -784,7 +784,7 @@ theirs until then (below).
 - **Unreadable at scoring.**
   - An output that isn't valid, or whose view yields a value that fails
     the view's schema, scores 0 with `reason = "invalid_response_format"`.
-    That is the model's failure, and it counts as a miss.
+    That is the LLM's failure, and it counts as a miss.
   - A reply cut off at `max_tokens` scores 0 with `reason = "truncated"`
     instead. `data-generation.md` §4 keeps a truncated answer apart from a
     wrong one.
@@ -844,8 +844,8 @@ differ from inspect's above.
   makes it outstanding again, and the scores before stay. The latest score
   from each scorer, by its name, is the one shown.
 - **Its rules for what can't be read:**
-  - A view reads whatever output the run kept, valid or not.
-  - A run with no output scores 0 with the reason `no answer`, or no value
+  - A view reads whatever answer the run kept, valid or not.
+  - A run with no answer scores 0 with the reason `no answer`, or no value
     for `first_mention`.
   - A reply cut off at `max_tokens` isn't told apart, though the run keeps
     its finish reason.
@@ -881,7 +881,7 @@ between `plan` and `generate` stays.
 | Field | Holds |
 |---|---|
 | `base` | a configuration and a stack: the variation every slice keeps unless it is varied |
-| `varied` | groups of slices, each slice with its variations, such as `[{model: [qwen3-8b, gpt-oss-20b], reasoning: [off, low, high]}, {output: [management-plan, diagnoses, free-text]}]` |
+| `varied` | groups of slices, each slice with its variations, such as `[{stack: [qwen3-8b-awq@pelle, gpt-oss-20b@malborg], reasoning: [off, low, high]}, {output: [management-plan, diagnoses, free-text]}]` |
 | `case_tags` | as today; the cases are resolved when the batch generates |
 | `scorers` | inspect scorers with their arguments, which include the view each reads: the registry's scorers, by their trails (§11) |
 | `replicates` | its seeds, one per replicate. A replicate's position among them, from 1, is its epoch in the cell's inspect log. Each seed makes a trial of every cell on every case. |
@@ -891,7 +891,7 @@ between `plan` and `generate` stays.
   - Groups of one slice each give a one-slice-at-a-time design: every cell
     differs from the base in exactly one slice.
   - One group holding every varied slice is a full cross.
-  - The example above does both. It crosses model with reasoning, which
+  - The example above does both. It crosses stack with reasoning, which
     gives the table of §2, and varies output on its own.
   - A batch with nothing varied is today's batch: one configuration.
 - **A cell is content, not a name.**
@@ -900,7 +900,7 @@ between `plan` and `generate` stays.
   - It needs no branch. A trial points at trails, and the worker never
     looks for a branch to run it (`research-data-model.md`, item 19).
   - Within its batch, a cell is labelled by its varied slices
-    (`model=gpt-oss-20b reasoning=low`), for people only.
+    (`stack=gpt-oss-20b@malborg reasoning=low`), for people only.
   - To keep a cell is to commit its configuration, under a name the
     committer chooses.
 
@@ -910,9 +910,9 @@ between `plan` and `generate` stays.
 resolves every cell against its stack, as a dry run (`data-generation.md`
 §2.4). The report of that run is the table.
 
-- **Its inputs are all in the model already:**
+- **Its inputs are all in the datamodel already:**
   - the variations' content;
-  - model facts and serving settings, each declared once per model or
+  - LLM facts and serving settings, each declared once per LLM or
     serving, where it is true;
   - the scorers' views and the outputs' views;
   - the cases' targets, in their details (§11).
@@ -924,16 +924,16 @@ resolves every cell against its stack, as a dry run (`data-generation.md`
 - **Per scorer and case,** it says whether the case has a target the scorer
   reads. A case without one is left out for that scorer, as `plan` does
   today.
-- **Pairwise tables are views of the report.** Model × reasoning (§2) is
+- **Pairwise tables are views of the report.** Stack × reasoning (§2) is
   the report projected onto two slices.
 - **Collapsed cells are shown and not run.** Refused cells are shown and
-  not run either, so a sweep whose base variation some model can't honour
+  not run either, so a sweep whose base variation some LLM can't honour
   says so before generating. For example, a base with reasoning `off`
-  swept across models refuses the gpt-oss cell.
+  swept across stacks refuses the gpt-oss cell.
 - **The batch keeps its report,** so a missing cell can still be explained
   after generation.
 
-### PR #68's pairs, in the new model
+### PR #68's pairs, in the new datamodel
 
 `compatibility.md` in PR #68 listed the pairs a table would hold. Each one
 has a home now:
@@ -941,8 +941,8 @@ has a home now:
 | Pair in PR #68 | Now | Kind |
 |---|---|---|
 | scorer × output type | the scorer's view is among the output's views; each view is proved once, at commit | derived |
-| output type × connection (coercion) | the coercion's mode against the model's capabilities, with `auto` resolved from the model's facts | derived from facts |
-| sampling params × connection (the provider settings a model honours) | reasoning × model: reasoning is an intent that the model's facts translate, and `provider_params` is dissolved | derived from facts |
+| output type × connection (coercion) | the coercion's mode against the LLM's capabilities, with `auto` resolved from the LLM's facts | derived from facts |
+| sampling params × connection (the provider settings an LLM honours) | reasoning × LLM: reasoning is an intent that the LLM's facts translate, and `provider_params` is dissolved | derived from facts |
 | sampling params × connection (settings never sent: `top_k`, `n`) | gone: `top_k` goes out in `extra_body`, and `n` is scrapped | none |
 | instruction × output type | the output's guidance fills the instruction's slot, and resolution checks that the slot is placed | derived |
 | scorer × expectation | scorer × case: does the case have a target the scorer reads, and does it parse? Both are checked when the batch is planned, not when the run is scored. | derived |
@@ -963,8 +963,9 @@ has a home now:
 ## 6. The entities
 
 Every entity keeps the branch fields it has today: `name`, `owner`,
-`timestamp`, `target`, `collaborators` and `tags`, and gains `details`, the
-JSON column of its plain details (§1). None of them is fingerprinted.
+`timestamp`, `collaborators` and `tags`, and `trail`, the trail it points
+at (once `target`), and gains `details`, the JSON column of its plain
+details (§1). None of them is fingerprinted.
 
 The notes say what each field holds, and the rules a record is held to when
 it is committed. A record that breaks one is refused, with the reason.
@@ -990,21 +991,21 @@ it is committed. A record that breaks one is refused, with the reason.
 A store path is `/nix/store/<32 characters of Nix's base32>-<name>`,
 wherever one is asked for.
 
-**model**: a thing.
+**llm**: a thing.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `blob` | trail | yes | a hash of the directory vLLM loads: the store path of a fixed-output derivation. For a cloud model, the provider's dated model name stands in, unverified. A value that starts with `/` must be a store path. Any other value with a `/` in it is refused as a repository name, which vLLM would resolve to whatever revision it finds when it starts. |
+| `snapshot` | trail | yes | the directory vLLM loads, named by the store path of the fixed-output derivation that fetched it, which is a hash of it. For a cloud LLM, the provider's dated model name stands in, unverified. A value that starts with `/` must be a store path. Any other value with a `/` in it is refused as a repository name, which vLLM would resolve to whatever revision it finds when it starts. |
 | `source` | details | no | the Hugging Face repository and commit, pinned: `<owner>/<repository>@<40 hex digits>` |
 | `specs` | details | no | family, parameter count, active parameter count for a mixture of experts, quantization, context length, licence |
 | `facts` | details | no | what resolution reads (§2), below |
 
-A model's facts have four parts:
+An LLM's facts have four parts:
 
 - **`reasoning`** translates each intent: `off`, `on`, `minimal`, `low`,
   `medium`, `high` and `xhigh`. A fact is a request fragment, the name of
   another intent it collapses into, or `{ refused = "why" }`, and an intent
-  with none is refused for want of one. `default` names the model's own
+  with none is refused for want of one. `default` names the LLM's own
   intent.
   - A fragment writes only reasoning's fields: `chat_template_kwargs`,
     `reasoning_effort` and `thinking_token_budget`.
@@ -1019,7 +1020,7 @@ A model's facts have four parts:
 - **`coercion`** says which modes work: each is `{ needs = …, note = … }`
   or a refusal. `default` names the mode `auto` resolves to, and it must be
   one that works. The note is what a report says about the mode on this
-  model.
+  LLM.
 - **`profile`** overrides pydantic-ai's profile, so that nothing hangs on
   the served name.
 
@@ -1031,7 +1032,7 @@ parser.
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
 | `engine` | trail | yes | the store path of the vLLM package |
-| `args` | trail | yes | arguments that change what the model reads or the numbers, in canonical form (the table in `data-generation.md` §1). Resolution reads them for couplings, such as whether a reasoning parser is set. |
+| `args` | trail | yes | arguments that change what the LLM reads or the numbers, in canonical form (the table in `data-generation.md` §1). Resolution reads them for couplings, such as whether a reasoning parser is set. |
 | `env` | trail | yes | environment variables that do the same, such as `VLLM_BATCH_INVARIANT` and `VLLM_SYSTEM_START_DATE` |
 | `performance` | details | no | arguments that only change speed, recorded for latency comparisons |
 
@@ -1040,7 +1041,7 @@ parser.
   argument given twice is an error, and the arguments are kept sorted.
 - **Each argument has one home.** Code lists the arguments that change the
   output and those that only change speed, and one in the other's place is
-  refused. `--model` is refused as the model's blob, `--served-model-name`
+  refused. `--model` is refused as the LLM's snapshot, `--served-model-name`
   as the stack's served name, and `--api-key` as a secret the stack names.
 - **What a serving provides:** a reasoning parser where `reasoning-parser`
   is set, and a tool-call parser where `tool-call-parser` and
@@ -1057,7 +1058,7 @@ parser.
 A run records the client it ran on itself: the build's trail, and the
 revision and versions where it ran. It reads no client branch.
 
-**stack**: a composition, and a variation of the model slice. It replaces
+**stack**: a composition, and a variation of the stack slice. It replaces
 `connection`.
 
 | Field | In | Fingerprinted | Notes |
@@ -1065,7 +1066,7 @@ revision and versions where it ran. It reads no client branch.
 | `machine` | trail | yes | |
 | `os` | trail | yes | null for cloud |
 | `host_os` | trail | yes | for a NixOS container, the host's OS, which holds the kernel and the NVIDIA driver; null otherwise. It needs the container's OS beside it, and must differ from it. |
-| `model` | trail | yes | |
+| `llm` | trail | yes | |
 | `serving` | trail | yes | null for cloud |
 | `endpoint` | details | no | where requests go: a URL |
 | `served_name` | details | no | the `model` field of the request |
@@ -1105,7 +1106,7 @@ Each entity below is one slice, and each of its records is a variation.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `schema` | trail | yes | a valid JSON Schema (draft 2020-12 unless it names its own), kept as written, key order included; null for free text |
+| `json_schema` | trail | yes | a valid JSON Schema (draft 2020-12 unless it names its own), kept as written, key order included; null for free text |
 | `guidance` | trail | yes | the text for the `output_guidance` slot: what to produce, and in what order; null for none |
 | `views` | trail | yes | the readings it offers scorers (§4). Each maps a view name to a path into the schema or, for free text, to a parser. Views are not part of the contribution. |
 
@@ -1113,29 +1114,29 @@ Each entity below is one slice, and each of its records is a variation.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `mode` | trail | yes | native, tool, prompted or auto (resolved from the model's facts) |
-| `schema_prompt` | trail | yes | the template that shows the schema to the model, for the `schema_prompt` slot. It places `{{schema}}`, the output's schema as indented JSON, and nothing else. Null means the schema isn't shown. Prompted mode requires one. |
-| `tool_description` | trail | yes | what the tool the answer is given through is said to be, in tool mode: text the model reads, placing nothing. Tool mode requires one, and so does `auto` where it resolves to tool. Native and prompted modes refuse one. |
+| `mode` | trail | yes | native, tool, prompted or auto (resolved from the LLM's facts) |
+| `schema_prompt` | trail | yes | the template that shows the schema to the LLM, for the `schema_prompt` slot. It places `{{schema}}`, the output's schema as indented JSON, and nothing else. Null means the schema isn't shown. Prompted mode requires one. |
+| `tool_description` | trail | yes | what the tool the answer is given through is said to be, in tool mode: text the LLM reads, placing nothing. Tool mode requires one, and so does `auto` where it resolves to tool. Native and prompted modes refuse one. |
 
 **reasoning**: new.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `effort` | trail | yes | default, off, on, minimal, low, medium, high or xhigh: pydantic-ai's `ThinkingLevel`, plus `default` for the model's own, which resolution looks up and writes out |
+| `effort` | trail | yes | default, off, on, minimal, low, medium, high or xhigh: pydantic-ai's `ThinkingLevel`, plus `default` for the LLM's own, which resolution looks up and writes out |
 | `budget` | trail | yes | a positive number of tokens, or null. `off` refuses one. |
 
 **sampling**
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `defaults` | trail | yes | what a field left out means: `model` for the model's generation config, or `recommended` for what the model's facts recommend in the resolved reasoning mode. A cell whose model's facts don't give the one asked for is refused. |
+| `defaults` | trail | yes | what a field left out means: `generation_config` for the LLM's generation config, or `recommended` for what the LLM's facts recommend in the resolved reasoning mode. A cell whose LLM's facts don't give the one asked for is refused. |
 | `temperature`, `top_p`, `top_k`, `max_tokens`, `presence_penalty`, `frequency_penalty`, `stop` | trail | yes | an explicit value overrides the defaults; resolution writes every value it used into the request. Temperature is 0 to 2, top-p above 0 and up to 1, top-k −1 (off) or more, the penalties −2 to 2, and max tokens positive. |
 
 **toolset**: it replaces `tool_group`.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `tools` | trail | yes | ordered; at least one, and no two of one name, which would be one tool to the model |
+| `tools` | trail | yes | ordered; at least one, and no two of one name, which would be one tool to the LLM |
 | `guidance` | trail | yes | the text for the `tool_guidance` slot; null for none |
 
 Tools need a tool-call parser on the serving: resolution refuses a toolset
@@ -1145,10 +1146,10 @@ on a serving without one.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `name` | trail | yes | the name the model sees, as the OpenAI API takes it: letters, digits, `_` and `-`, at most 64 |
+| `name` | trail | yes | the name the LLM sees, as the OpenAI API takes it: letters, digits, `_` and `-`, at most 64 |
 | `description` | trail | yes | empty by default |
 | `parameters` | trail | yes | a JSON Schema, kept as written, key order included; an object with no properties by default |
-| `implementation` | details | no | an entry point into one of chatddx's own tool files, `chatddx.runtime.tools.<file>:<function>`; each run records the git blob of the file that ran |
+| `implementation` | details | no | its `function`: an entry point into one of chatddx's own tool files, `chatddx.runtime.tools.<file>:<function>`; each run records the git blob of the file that ran |
 
 - **Only chatddx's own tool files run,** whoever's branch names them: an
   entry point outside `chatddx.runtime.tools` is refused. A file is loaded
@@ -1156,7 +1157,7 @@ on a serving without one.
   blob id: `git cat-file blob <id>` gets them back. A tool file imports
   nothing else of chatddx's, so the file is all of chatddx that ran.
 - **A call's arguments are held to the parameters first.** What doesn't
-  hold goes back to the model as the tool's answer, and so does an error
+  hold goes back to the LLM as the tool's answer, and so does an error
   the function raises.
 - **A request carries a tool's parameters inlined,** as it does an
   answer's schema (§4).
@@ -1177,7 +1178,7 @@ on a serving without one.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `payload` | trail | yes | unchanged: the case as the model receives it, through the instruction's `case` variable |
+| `vignette` | trail | yes | the case as the LLM receives it, through the instruction's `case` variable |
 | `targets` | details | no | what the case is expected to yield, by kind (§11) |
 
 **scorer**: what a run's answer comes to, by a function of chatddx's own,
@@ -1197,20 +1198,20 @@ are draws that can't be repeated.
 Each run records:
 
 - who ran it, when it started and finished, and whether it completed or
-  errored. It completes when the model answered, even with an answer that
+  errored. It completes when the LLM answered, even with an answer that
   doesn't parse or hold, or with none after five rounds of tools. It errors
-  when the model or the server failed, or when it was stopped;
+  when the LLM or the server failed, or when it was stopped;
 - the client it ran on: its build's trail, and the revision and package
   versions it ran with;
 - the branch rows whose details resolution read, the stack's and the
-  model's, and each tool's, with the git blob of the file that ran for it;
+  LLM's, and each tool's, with the git blob of the file that ran for it;
 - the requests and responses themselves, byte for byte
   (`data-generation.md` §4);
-- the output value, whether it is valid, the last response's finish
-  reason, and the error, if any (§4);
-- its session: the exchange as pydantic-ai's messages, with a message for
-  the error where there was one. A run can continue a session, as a chat
-  would; the repl doesn't yet;
+- the answer, whether it is valid, the last response's finish reason, and
+  the error, if any (§4);
+- its conversation: the exchange as pydantic-ai's messages, with a message
+  for the error where there was one. A run can continue a conversation, as
+  a chat would; the repl doesn't yet;
 - its scores (§4, §11): per scorer and whoever scored, the value, what in
   the answer it rests on or why there is none, and what it was made with:
   the scorer, the case branch whose targets were read, the target, and the
@@ -1225,14 +1226,15 @@ A batch is history too (§5).
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
 | `id` | kept | no |
-| `fingerprint` | kept. Its format gains a scheme and version, for example `cddx-trail/1:sha256:…`, and canonicalization keeps order wherever the model reads it (`data-generation.md` §3). | it is the fingerprint |
+| `fingerprint` | kept. Its format gains a scheme and version, for example `cddx-trail/1:sha256:…`, and canonicalization keeps order wherever the LLM reads it (`data-generation.md` §3). | it is the fingerprint |
 | `timestamp` | kept, as the time the content was first seen | no |
 
 **Every branch**
 
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
-| `id`, `name`, `owner`, `timestamp`, `target`, `collaborators`, `tags` | kept | no |
+| `id`, `name`, `owner`, `timestamp`, `collaborators`, `tags` | kept | no |
+| `target` | `trail`, the trail the branch points at | no |
 | `version_count` (an annotation) | kept | no |
 
 **instruction**
@@ -1246,9 +1248,9 @@ A batch is history too (§5).
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
 | `provider` | `stack.api` (details) | no |
-| `model` | `stack.served_name` (the request's `model` field) and `model.source` (details); identity moves to the new `model.blob` | no |
+| `model` | `stack.served_name` (the request's `model` field) and `llm.source` (details); identity moves to the new `llm.snapshot` | no |
 | `endpoint` | `stack.endpoint` (details) | no |
-| `profile` | `model.facts` (details) | no |
+| `profile` | `llm.facts` (details) | no |
 
 **sampling_params** (removed; split into sampling and reasoning)
 
@@ -1260,13 +1262,13 @@ A batch is history too (§5).
 | `seed` | scrapped from the registry; it becomes the trial's, one per replicate of a batch | no |
 | `n` | scrapped | no |
 | `logit_bias` | scrapped: its keys are token ids, so a variation carrying them would fit only one tokenizer | no |
-| `provider_params` | dissolved. The reasoning switches it carried (`chat_template_kwargs.enable_thinking`, `openai_reasoning_effort`) become `reasoning.effort`, which the model's facts translate. Anything else needed later becomes a typed field of the slice it belongs to. | yes, as those fields |
+| `provider_params` | dissolved. The reasoning switches it carried (`chat_template_kwargs.enable_thinking`, `openai_reasoning_effort`) become `reasoning.effort`, which the LLM's facts translate. Anything else needed later becomes a typed field of the slice it belongs to. | yes, as those fields |
 
 **output_type** (split into output and coercion)
 
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
-| `definition` | `output.schema` | yes |
+| `definition` | `output.json_schema` | yes |
 | `coercion_strategy` | `coercion.mode`; PR #68's `auto` is kept as a mode | yes |
 | `validation_strategy` | scrapped: research trials record validity instead | no |
 | `output_retries` | scrapped with it | no |
@@ -1275,7 +1277,7 @@ A batch is history too (§5).
 
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
-| `command` | split into `tool.name` (what the model sees) and `tool.implementation` (what runs) | yes and no, respectively |
+| `command` | split into `tool.name` (what the LLM sees) and `tool.implementation.function` (what runs) | yes and no, respectively |
 | `type` | scrapped: only `function` tools were ever built | no |
 | `description` | `tool.description` | yes |
 | `parameters` | `tool.parameters` | yes |
@@ -1292,7 +1294,7 @@ A batch is history too (§5).
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
 | `instruction` | `configuration.instruction` | yes |
-| `connection` | removed: the stack is chosen per trial, so one configuration can run on any model | no |
+| `connection` | removed: the stack is chosen per trial, so one configuration can run on any stack | no |
 | `sampling_params` | `configuration.sampling` and `configuration.reasoning` | yes |
 | `output_type` | `configuration.output` and `configuration.coercion` | yes |
 | `tool_group` | `configuration.toolset` | yes |
@@ -1301,7 +1303,7 @@ A batch is history too (§5).
 
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
-| `payload` | `case.payload` | yes |
+| `payload` | `case.vignette` | yes |
 | `expects` (details) | `targets` (details), by kind (§11) | no |
 
 **expect** (removed)
@@ -1317,8 +1319,9 @@ A batch is history too (§5).
 |---|---|---|
 | `command` | a new `scorer` entity (§11): a function, the view it reads and the kind of target it holds that to. `regex_match` becomes `reciprocal_rank` over `differential` (as in PR #68), and `exact_match` would read `text`. | no |
 
-**Views.** `super_agent`'s flat form becomes the configuration's, and every
-other view follows its entity. Form data isn't identity.
+**Views**, the registry's presentations now (`Presentation`). `super_agent`'s
+flat form becomes the configuration's, and every other presentation follows
+its entity. Form data isn't identity.
 
 **batch** (history, not registry)
 
@@ -1331,25 +1334,25 @@ other view follows its entity. Form data isn't identity.
 
 An experiment becomes a trial, which `data-generation.md` §4 describes,
 and a run stays: one go at a trial, one pydantic-ai agent run. PR #68's
-`RunModel.output` stays the run's `output`.
+`RunModel.output` is the run's `answer`.
 
 ## 8. New fields, and what was left out
 
 Only the fields the redesign cannot work without were added:
 
-- **`machine.machine_id`, `os.toplevel`, `model.blob`, `client.build`:**
+- **`machine.machine_id`, `os.toplevel`, `llm.snapshot`, `client.build`:**
   the single identifying fields of the things below a request.
 - **`machine.unreliable`:** marks what can't be checked.
 - **`serving.engine`, `serving.args`, `serving.env`:** the start-up
   settings, identified separately from the OS.
 - **`stack` and its relations:** which things answered a request.
-- **`model.facts`:** what resolution reads to realize variations on each
-  model, structured as in §2.
+- **`llm.facts`:** what resolution reads to realize variations on each
+  LLM, structured as in §2.
 - **`instruction.user`, `instruction.variables`:** templating instead of a
   text blob, with its slots declared.
 - **`output.guidance`, `coercion.schema_prompt`, `coercion.tool_description`,
   `toolset.guidance`:** the text a slice brings with it, and whether the
-  model sees the schema.
+  LLM sees the schema.
 - **`output.views`:** where scorers read an output.
 - **`case.targets`, and the `scorer` entity:** what a case is expected to
   yield, and what reads a run's answer against it (§11).
@@ -1380,20 +1383,20 @@ Left out for good: an authored table of compatible pairs (§3).
 
 - **A configuration only names variations, one per request-time slice.**
   Resolution turns a cell into one coherent request. It:
-  - translates each intent with the model's facts;
+  - translates each intent with the LLM's facts;
   - looks up defaults;
   - fills the instruction's slots;
   - checks couplings.
 
   Write sets are disjoint by construction, so no two slices ever write one
   field. Resolution is `runtime/resolution.py`.
-- **A cell is resolved once, without its case.** Each trial renders the
+- **A cell is resolved once, without its case.** Each run renders the
   messages with a case of its own.
 - **Its order follows what each slice is resolved against:**
-  1. the model;
+  1. the stack;
   2. reasoning, translated by the facts;
   3. sampling, whose defaults need the resolved reasoning mode;
-  4. output and coercion, the mode checked against the model's facts and
+  4. output and coercion, the mode checked against the LLM's facts and
      the serving;
   5. the toolset, which fills the `tool_guidance` slot;
   6. the instruction, with every filled slot placed.
@@ -1406,10 +1409,10 @@ Left out for good: an authored table of compatible pairs (§3).
   - slot names, fixed by convention for each slice: `output_guidance`,
     `schema_prompt` and `tool_guidance`, and later `reasoning_guidance`;
   - the instruction's declared variables;
-  - the model's facts, structured as in §2;
+  - the LLM's facts, structured as in §2;
   - the serving's arguments, for couplings such as a reasoning parser;
   - each slice's write set, declared in code, once per slice;
-  - couplings, as what the model's facts need of the serving.
+  - couplings, as what the LLM's facts need of the serving.
 - **Where its result goes:** into the requests a run sends, which the run
   keeps with the branch rows resolution read (§6), and for a batch into its
   report (§5).
@@ -1417,15 +1420,22 @@ Left out for good: an authored table of compatible pairs (§3).
 ## 10. Order and storage
 
 - **Commit order.** `EntityName` keeps its rule that anything an entity
-  references is committed first. The order becomes: machine, os, model,
+  references is committed first. The order becomes: machine, os, llm,
   serving, client, stack, tool, toolset, instruction, output, coercion,
   reasoning, sampling, configuration, case, scorer.
-- **Schema storage.** `output.schema` is stored as text, not `jsonb`,
+- **Schema storage.** `output.json_schema` is stored as text, not `jsonb`,
   because `jsonb` re-sorts keys. So are a tool's `parameters` and a run's
-  `output`.
+  `answer`.
 - **Fingerprint column.** A versioned fingerprint no longer fits
   `TrailModel.fingerprint` (`max_length=64`), so the column grows. Short
   forms such as `short_fingerprint` read the hex part.
+- **Apps and tables.** Three Django apps hold the tables: `core` the
+  identities and tags, `repo` each entity's trails and branches, and
+  `history` the trials, runs, conversations, messages and scores. `repo`
+  installs the trigger that keeps a trail from being updated or deleted.
+  Each table is named for its app and what it holds, with no `Model` in
+  it: `repo_case_trail`, `repo_case_branch`, `history_run`,
+  `core_identity`.
 
 ## 11. Scorers and targets in the registry
 
@@ -1480,8 +1490,8 @@ A scorer is an entity:
   them leaves every run scored.
 - **The view and the target kind are fields of their own,** unlike
   inspect's options, because pairing a scorer with a run reads them: set
-  membership, as in §4. The field is `target_kind` rather than `target`,
-  which a form holds for the branch's trail.
+  membership, as in §4. The field is `target_kind` rather than `target`:
+  the target is the case's, and a scorer names only the kind it reads.
 - **The function runs as a tool's does:** from an allowlisted package,
   loaded afresh, with its file's git blob recorded on each score. Where
   inspect names a commit, and can only say that the tree was dirty, the
@@ -1514,8 +1524,8 @@ A case's targets are its details:
 - **inspect keeps the target with the sample, and a case is chatddx's
   sample.** The kinds are chatddx's own: inspect has one target per sample,
   and each of chatddx's scorers reads the kind it names.
-- **Details, not content:** a target changes nothing the model reads, and a
-  case's fingerprint names what it reads. Like a model's facts, targets are
+- **Details, not content:** a target changes nothing the LLM reads, and a
+  case's fingerprint names what it reads. Like an LLM's facts, targets are
   versioned by branch row: a changed target makes a new row, and a score
   records the row it read.
 - **The kinds are a vocabulary kept in code,** as the views are. Only
@@ -1531,7 +1541,7 @@ A case's targets are its details:
 - **Which targets a run is held to:** those of the scoring identity's own
   branch of the run's case, or else the archive's, where the identity can
   see it: the newest row that holds the run's case trail. So a fixed target
-  reaches earlier runs of the same payload, and a new payload comes with
+  reaches earlier runs of the same vignette, and a new vignette comes with
   targets of its own.
 
 ### Scores
@@ -1573,16 +1583,17 @@ The portal's case page predates this note, and its registration is off. It
 ports with little change:
 
 - **What carries over as is:** `CaseAdmin` and `SharedCaseAdmin` list a
-  case's name, versions, payload, tags and collaborators, step through its
-  versions, and offer templates to start from. `CaseForm` edits the name,
-  the payload and the tags. A case is still its payload, and its branch
-  still carries its tags and collaborators.
+  case's name, versions, vignette (their `payload`), tags and
+  collaborators, step through its versions, and offer templates to start
+  from. `CaseForm` edits the name, the vignette and the tags. A case is
+  still its vignette, and its branch still carries its tags and
+  collaborators.
 - **Expects become three fields.** `ExpectInline` was a formset whose rows
   each paired an expected payload with a scorer, committed as an `expect`
   entity named `<case>|<scorer>` and linked to the case's branch. Targets
   make that simpler: one field per kind on the case's form, the warning's
   with a way to say that none is expected, and no entity, formset or link.
-  A changed target is a new version of the case, as a changed payload is.
+  A changed target is a new version of the case, as a changed vignette is.
 - **Two changes are generic, and needed by every entity with details.**
   `BranchModelAdmin.save_model` commits the name and the owner alone, so it
   would commit every detail at its default: a saved case would lose its
@@ -1609,9 +1620,6 @@ ports with little change:
 
 Where this note and the code differ, the note is what was decided:
 
-- **Run status:** the model keeps statuses from the worker before the
-  redesign: stored, queued, running and scored. Only completed and errored
-  are set.
 - **Request hashes** (`data-generation.md` §3) aren't computed yet.
 
 ## Sources
