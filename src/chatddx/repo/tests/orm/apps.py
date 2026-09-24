@@ -4,7 +4,7 @@ from django.db.models.signals import post_migrate
 
 
 class RepoOrmConfig(AppConfig):
-    """The `orm` app, holding the registry's models and nothing else."""
+    """The `orm` app, holding the registry's models and history's."""
 
     name = "chatddx.repo.tests.orm"
     label = "orm"
