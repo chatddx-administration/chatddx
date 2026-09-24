@@ -9,7 +9,7 @@ class ReasoningTrailModel(TrailModel):
     effort = CharField(max_length=16)
     budget = PositiveIntegerField(null=True, blank=True)
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_reasoning_trail"
 
 

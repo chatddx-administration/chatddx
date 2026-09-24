@@ -58,7 +58,7 @@ class ConfigurationTrailModel(TrailModel):
         related_name="configurations",
     )
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_configuration_trail"
 
 

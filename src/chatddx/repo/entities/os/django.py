@@ -8,7 +8,7 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 class OsTrailModel(TrailModel):
     toplevel = TextField()
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_os_trail"
 
 

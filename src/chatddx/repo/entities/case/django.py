@@ -13,7 +13,7 @@ from chatddx.repo.families.django import (
 class CaseTrailModel(TrailModel):
     vignette = TextField()
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_case_trail"
 
 

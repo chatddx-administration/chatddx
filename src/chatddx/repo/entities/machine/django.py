@@ -8,7 +8,7 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 class MachineTrailModel(TrailModel):
     machine_id = UUIDField()
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_machine_trail"
 
 

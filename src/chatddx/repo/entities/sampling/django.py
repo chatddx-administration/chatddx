@@ -25,7 +25,7 @@ class SamplingTrailModel(TrailModel):
     frequency_penalty = FloatField(null=True, blank=True)
     stop = JSONField(null=True, blank=True)
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_sampling_trail"
 
 

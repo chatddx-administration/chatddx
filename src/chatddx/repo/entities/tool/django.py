@@ -15,7 +15,7 @@ class ToolTrailModel(TrailModel):
     description = TextField(blank=True)
     parameters = OrderedJSONField()
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_tool_trail"
 
 

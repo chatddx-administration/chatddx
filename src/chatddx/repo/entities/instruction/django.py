@@ -11,7 +11,7 @@ class InstructionTrailModel(TrailModel):
     # a list, whose order jsonb keeps
     variables = JSONField(default=list)
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_instruction_trail"
 
 

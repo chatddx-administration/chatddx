@@ -8,7 +8,7 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 class LLMTrailModel(TrailModel):
     snapshot = TextField()
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_llm_trail"
 
 

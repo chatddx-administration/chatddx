@@ -16,7 +16,7 @@ class ToolsetTrailModel(TrailModel):
         default=list,
     )
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_toolset_trail"
 
 

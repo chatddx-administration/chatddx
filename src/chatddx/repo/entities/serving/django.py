@@ -11,7 +11,7 @@ class ServingTrailModel(TrailModel):
     args = JSONField(default=dict, blank=True)
     env = JSONField(default=dict, blank=True)
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_serving_trail"
 
 

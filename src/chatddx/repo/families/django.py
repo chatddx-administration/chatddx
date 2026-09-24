@@ -54,6 +54,7 @@ class TrailModel(Model):
 
     class Meta:
         abstract = True
+        app_label = "repo"
 
     def __str__(self) -> str:
         return self.branch_name or short_fingerprint(self.fingerprint)
@@ -99,6 +100,7 @@ class BranchModel(Model):
 
     class Meta:
         abstract = True
+        app_label = "repo"
         indexes = (Index(fields=["owner", "name", "-timestamp"]),)
 
     def as_proxy[ModelT: Model](self, proxy_model: type[ModelT]) -> ModelT:
@@ -118,6 +120,7 @@ class BranchProxy(Model):
 
     class Meta:
         abstract = True
+        app_label = "repo"
 
     def __str__(self) -> str:
         return self.name

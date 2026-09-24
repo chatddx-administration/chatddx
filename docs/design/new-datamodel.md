@@ -1429,13 +1429,15 @@ Left out for good: an authored table of compatible pairs (§3).
 - **Fingerprint column.** A versioned fingerprint no longer fits
   `TrailModel.fingerprint` (`max_length=64`), so the column grows. Short
   forms such as `short_fingerprint` read the hex part.
-- **Apps and tables.** Three Django apps hold the tables: `core` the
-  identities and tags, `repo` each entity's trails and branches, and
-  `history` the trials, runs, conversations, messages and scores. `repo`
-  installs the trigger that keeps a trail from being updated or deleted.
-  Each table is named for its app and what it holds, with no `Model` in
-  it: `repo_case_trail`, `repo_case_branch`, `history_run`,
-  `core_identity`.
+- **Apps and tables.** chatddx has Django rather than being it. Three
+  thin Django apps under `chatddx/django/` hold the tables and their
+  migrations, each importing its models from the package that defines
+  them: `core` the identities and tags, `repo` each entity's trails and
+  branches, and `history` the trials, runs, conversations, messages and
+  scores. The models name their app. `repo` installs the trigger that
+  keeps a trail from being updated or deleted. Each table is named for
+  its app and what it holds, with no `Model` in it: `repo_case_trail`,
+  `repo_case_branch`, `history_run`, `core_identity`.
 
 ## 11. Scorers and targets in the registry
 

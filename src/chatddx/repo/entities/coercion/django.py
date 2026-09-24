@@ -10,7 +10,7 @@ class CoercionTrailModel(TrailModel):
     schema_prompt = TextField(null=True, blank=True)
     tool_description = TextField(null=True, blank=True)
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_coercion_trail"
 
 

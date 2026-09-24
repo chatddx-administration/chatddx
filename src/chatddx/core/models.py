@@ -19,6 +19,7 @@ from encrypted_fields import EncryptedJSONField
 
 class IdentityModel(Model):
     class Meta:
+        app_label = "core"
         db_table = "core_identity"
         ordering = ("name",)
 
@@ -46,6 +47,7 @@ class IdentityModel(Model):
 
 class Identity(IdentityModel):
     class Meta:
+        app_label = "core"
         proxy = True
         verbose_name = "Identity"
         verbose_name_plural = "Identities"
@@ -56,6 +58,7 @@ class Identity(IdentityModel):
 
 class TagModel(Model):
     class Meta:
+        app_label = "core"
         db_table = "core_tag"
         ordering = ("name",)
         constraints = (

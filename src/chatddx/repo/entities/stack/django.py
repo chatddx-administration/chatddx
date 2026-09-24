@@ -49,7 +49,7 @@ class StackTrailModel(TrailModel):
         related_name="stacks",
     )
 
-    class Meta:
+    class Meta(TrailModel.Meta):
         db_table = "repo_stack_trail"
 
 

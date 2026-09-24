@@ -8,7 +8,7 @@ SQL = Path(__file__).parent / "sql"
 
 
 class RepoConfig(AppConfig):
-    name = "chatddx.repo"
+    name = "chatddx.django.repo"
     label = "repo"
 
     def ready(self):
