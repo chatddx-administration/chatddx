@@ -1,9 +1,6 @@
 """
 `chatddx init-data` and `chatddx wipe-data`, run as the command line runs
-them. They need only the registry and the identities its branches hang off,
-so they run on the registry's own settings:
-
-    pytest --ds=chatddx.repo.tests.settings src/chatddx/core/tests/test_provisioning.py
+them on the live inventory and giftbag they provision.
 """
 
 from pathlib import Path

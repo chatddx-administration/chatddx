@@ -17,19 +17,12 @@ from pydantic_ai import (
     UsageLimitExceeded,
 )
 
-from chatddx.core import settings
 from chatddx.dx.fake_vllm import ANSWER, FakeTransport, server, stream, thinking
 from chatddx.repo.inventories import ParsedInventory
-from chatddx.repo.parsers.inventory import parse
 from chatddx.runtime.resolution import Resolution, Sampling, resolve
 from chatddx.runtime.trial import TOOL_ROUNDS, Trial, invalid
 
 CASE = "A patient presents with a cough."
-
-
-@pytest.fixture(scope="module")
-def inventory() -> ParsedInventory:
-    return parse(settings.INVENTORY_PATH / "inventory.toml")
 
 
 def resolution(
@@ -52,8 +45,8 @@ async def run(trial: Trial) -> list[AgentStreamEvent | AgentRunResultEvent[Any]]
 
 
 @pytest.mark.asyncio
-async def test_a_trial_sends_what_resolution_wrote(inventory: ParsedInventory):
-    cell = resolution(inventory, "free-text", "qwen3-8b-awq@fake")
+async def test_a_trial_sends_what_resolution_wrote(test_inventory: ParsedInventory):
+    cell = resolution(test_inventory, "free-text", "qwen3-8b-awq@fake")
     fake = FakeTransport()
     trial = Trial(cell, CASE, transport=fake)
 
@@ -79,10 +72,10 @@ async def test_a_trial_sends_what_resolution_wrote(inventory: ParsedInventory):
 
 
 @pytest.mark.asyncio
-async def test_a_trial_keeps_each_response_as_it_came(inventory: ParsedInventory):
+async def test_a_trial_keeps_each_response_as_it_came(test_inventory: ParsedInventory):
     fake = FakeTransport()
     trial = Trial(
-        resolution(inventory, "free-text", "qwen3-8b-awq@fake"),
+        resolution(test_inventory, "free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=fake,
     )
@@ -99,9 +92,9 @@ async def test_a_trial_keeps_each_response_as_it_came(inventory: ParsedInventory
 
 
 @pytest.mark.asyncio
-async def test_every_message_carries_the_trial_s_ids(inventory: ParsedInventory):
+async def test_every_message_carries_the_trial_s_ids(test_inventory: ParsedInventory):
     trial = Trial(
-        resolution(inventory, "free-text", "qwen3-8b-awq@fake"),
+        resolution(test_inventory, "free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=FakeTransport(),
         run_id="run-1",
@@ -117,9 +110,11 @@ async def test_every_message_carries_the_trial_s_ids(inventory: ParsedInventory)
 
 
 @pytest.mark.asyncio
-async def test_a_trial_streams_the_thinking_then_the_answer(inventory: ParsedInventory):
+async def test_a_trial_streams_the_thinking_then_the_answer(
+    test_inventory: ParsedInventory,
+):
     trial = Trial(
-        resolution(inventory, "free-text", "qwen3-8b-awq@fake"),
+        resolution(test_inventory, "free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=FakeTransport(),
     )
@@ -136,12 +131,14 @@ async def test_a_trial_streams_the_thinking_then_the_answer(inventory: ParsedInv
 
 @pytest.mark.asyncio
 async def test_an_empty_system_prompt_sends_no_system_message(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
     fake = FakeTransport()
     _ = await run(
         Trial(
-            resolution(inventory, "baseline", "gpt-oss-20b@fake"), CASE, transport=fake
+            resolution(test_inventory, "baseline", "gpt-oss-20b@fake"),
+            CASE,
+            transport=fake,
         )
     )
 
@@ -150,9 +147,9 @@ async def test_an_empty_system_prompt_sends_no_system_message(
 
 @pytest.mark.asyncio
 async def test_the_fields_pydantic_ai_types_go_out_as_the_request_names_them(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
-    cell = resolution(inventory, "free-text", "qwen3-8b-awq@fake")
+    cell = resolution(test_inventory, "free-text", "qwen3-8b-awq@fake")
     cell = replace(
         cell,
         sampling=Sampling("explicit", {"stop": ["\n\n"], "max_tokens": 64, "top_k": 5}),
@@ -172,7 +169,7 @@ async def test_the_fields_pydantic_ai_types_go_out_as_the_request_names_them(
 
 
 @pytest.mark.asyncio
-async def test_a_credential_goes_out_as_the_api_key(inventory: ParsedInventory):
+async def test_a_credential_goes_out_as_the_api_key(test_inventory: ParsedInventory):
     headers: list[str | None] = []
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -184,7 +181,7 @@ async def test_a_credential_goes_out_as_the_api_key(inventory: ParsedInventory):
             content="".join(stream(body)).encode(),
         )
 
-    cell = resolution(inventory, "free-text", "qwen3-8b-awq@fake")
+    cell = resolution(test_inventory, "free-text", "qwen3-8b-awq@fake")
     _ = await run(
         Trial(cell, CASE, api_key="s3cret", transport=httpx2.MockTransport(handler))
     )
@@ -207,9 +204,9 @@ def fake_endpoint() -> Iterator[str]:
 
 @pytest.mark.asyncio
 async def test_a_trial_runs_against_the_fake_over_http(
-    inventory: ParsedInventory, fake_endpoint: str
+    test_inventory: ParsedInventory, fake_endpoint: str
 ):
-    cell = resolution(inventory, "free-text", "gpt-oss-20b@fake")
+    cell = resolution(test_inventory, "free-text", "gpt-oss-20b@fake")
     cell = replace(cell, endpoint=fake_endpoint)
     trial = Trial(cell, CASE)
 
@@ -235,9 +232,9 @@ def answer(events: list[AgentStreamEvent | AgentRunResultEvent[Any]]) -> Any:
 
 @pytest.mark.asyncio
 async def test_native_asks_for_the_schema_as_written_and_says_nothing_of_it(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
-    cell = resolution(inventory, "plan", "qwen3-8b-awq@fake")
+    cell = resolution(test_inventory, "plan", "qwen3-8b-awq@fake")
     assert cell.coercion is not None
     fake = FakeTransport()
 
@@ -268,9 +265,9 @@ async def test_native_asks_for_the_schema_as_written_and_says_nothing_of_it(
 
 @pytest.mark.asyncio
 async def test_tool_mode_offers_the_schema_as_a_tool_the_answer_is_given_through(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
-    cell = resolution(inventory, "diagnoses-tool", "qwen3-8b-awq@fake")
+    cell = resolution(test_inventory, "diagnoses-tool", "qwen3-8b-awq@fake")
     assert cell.coercion is not None
     fake = FakeTransport()
 
@@ -289,9 +286,11 @@ async def test_tool_mode_offers_the_schema_as_a_tool_the_answer_is_given_through
 
 @pytest.mark.asyncio
 async def test_prompted_shows_the_schema_and_holds_the_answer_to_nothing(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
-    cell = resolution(inventory, "challenge-coercion-prompted", "qwen3-8b-awq@fake")
+    cell = resolution(
+        test_inventory, "challenge-coercion-prompted", "qwen3-8b-awq@fake"
+    )
     assert cell.coercion is not None
     fake = FakeTransport()
 
@@ -308,7 +307,7 @@ async def test_prompted_shows_the_schema_and_holds_the_answer_to_nothing(
 
 @pytest.mark.asyncio
 async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
     bodies: list[Any] = []
 
@@ -320,7 +319,9 @@ async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(
             200, headers={"content-type": "text/event-stream"}, content=text.encode()
         )
 
-    cell = resolution(inventory, "challenge-coercion-prompted", "qwen3-8b-awq@fake")
+    cell = resolution(
+        test_inventory, "challenge-coercion-prompted", "qwen3-8b-awq@fake"
+    )
 
     with pytest.raises(UnexpectedModelBehavior):
         _ = await run(Trial(cell, CASE, transport=httpx2.MockTransport(handler)))
@@ -329,12 +330,14 @@ async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(
 
 
 @pytest.mark.asyncio
-async def test_a_seed_is_the_trial_s_and_goes_out_with_it(inventory: ParsedInventory):
+async def test_a_seed_is_the_trial_s_and_goes_out_with_it(
+    test_inventory: ParsedInventory,
+):
     fake = FakeTransport()
 
     _ = await run(
         Trial(
-            resolution(inventory, "free-text", "qwen3-8b-awq@fake"),
+            resolution(test_inventory, "free-text", "qwen3-8b-awq@fake"),
             CASE,
             transport=fake,
             seed=42,
@@ -363,13 +366,13 @@ def returned(request: dict[str, Any]) -> list[str]:
 
 @pytest.mark.asyncio
 async def test_a_trial_offers_the_tools_as_resolution_wrote_them(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
-    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
     fake = FakeTransport()
 
     _ = await run(
-        Trial(cell, CASE, transport=fake, implementations=entry_points(inventory))
+        Trial(cell, CASE, transport=fake, implementations=entry_points(test_inventory))
     )
 
     offered: list[dict[str, Any]] = fake.requests[0]["tools"]
@@ -392,11 +395,13 @@ async def test_a_trial_offers_the_tools_as_resolution_wrote_them(
 
 @pytest.mark.asyncio
 async def test_each_call_is_run_and_what_it_returned_goes_back(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
-    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
     fake = FakeTransport()
-    trial = Trial(cell, CASE, transport=fake, implementations=entry_points(inventory))
+    trial = Trial(
+        cell, CASE, transport=fake, implementations=entry_points(test_inventory)
+    )
 
     events = await run(trial)
 
@@ -413,9 +418,9 @@ def broken() -> str:
 
 
 @pytest.mark.asyncio
-async def test_a_tool_that_fails_tells_the_model_why(inventory: ParsedInventory):
-    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
-    implementations = entry_points(inventory) | {
+async def test_a_tool_that_fails_tells_the_model_why(test_inventory: ParsedInventory):
+    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
+    implementations = entry_points(test_inventory) | {
         "sentinel_string": f"{__name__}:broken"
     }
     fake = FakeTransport()
@@ -431,7 +436,7 @@ async def test_a_tool_that_fails_tells_the_model_why(inventory: ParsedInventory)
 
 @pytest.mark.asyncio
 async def test_a_model_still_calling_after_its_rounds_is_stopped(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
     bodies: list[Any] = []
 
@@ -444,12 +449,12 @@ async def test_a_model_still_calling_after_its_rounds_is_stopped(
             200, headers={"content-type": "text/event-stream"}, content=text.encode()
         )
 
-    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
     trial = Trial(
         cell,
         CASE,
         transport=httpx2.MockTransport(handler),
-        implementations=entry_points(inventory),
+        implementations=entry_points(test_inventory),
     )
 
     with pytest.raises(UsageLimitExceeded):
@@ -463,9 +468,9 @@ async def test_a_model_still_calling_after_its_rounds_is_stopped(
 
 
 def test_a_tool_with_nothing_to_run_is_refused_before_anything_is_sent(
-    inventory: ParsedInventory,
+    test_inventory: ParsedInventory,
 ):
-    cell = resolution(inventory, "test-tools", "qwen3-8b-awq@fake")
+    cell = resolution(test_inventory, "test-tools", "qwen3-8b-awq@fake")
 
     with pytest.raises(ValueError, match="'sentinel_op' has nothing to run"):
         _ = Trial(

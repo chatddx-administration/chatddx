@@ -1,7 +1,23 @@
 # pyright: basic
+"""
+Fixtures the tests of every package share, around one test inventory:
+`data/test-inventory.toml`, the live inventory without its case corpus, and
+two cases of its own.
+
+- A test that needs no database reads it parsed: `test_inventory`.
+- repo, below every command, commits it through its own inventory functions:
+  `parsed_inventory`, and the `inventory_fixture_*` built on it.
+- Everywhere else, a test that needs it in the database seeds it as a user
+  would, through init-data: `provision`.
+- A test of the live data itself reads the live inventory.
+"""
+
+from collections.abc import Callable
+
 import pytest
 import pytest_asyncio
 from django.contrib.contenttypes.models import ContentType
+from typer.testing import CliRunner
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
@@ -17,6 +33,8 @@ from chatddx.repo.inventories import (
 from chatddx.repo.parsers.inventory import parse
 from chatddx.repo.shufflers import inventory
 from chatddx.utils import make_async
+
+TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
 
 
 @pytest.fixture(scope="session")
@@ -39,6 +57,25 @@ def clear_content_type_cache():
     yield
 
 
+@pytest.fixture(scope="session")
+def test_inventory() -> ParsedInventory:
+    return parse(TEST_INVENTORY)
+
+
+@pytest.fixture
+def provision() -> Callable[..., None]:
+    """init-data, run as the command line runs it, on the test inventory."""
+    from chatddx.manage import app
+
+    def provision(*options: str, user: str = "alex") -> None:
+        result = CliRunner().invoke(
+            app, ["init-data", user, "--inventory", str(TEST_INVENTORY), *options]
+        )
+        assert result.exit_code == 0, result.output
+
+    return provision
+
+
 @pytest_asyncio.fixture
 async def owner() -> IdentityModel:
     return await ensure_identity_async("alex")
@@ -50,12 +87,8 @@ async def other_owner() -> IdentityModel:
 
 
 @pytest_asyncio.fixture
-async def parsed_inventory(
-    request: pytest.FixtureRequest, owner: IdentityModel
-) -> ParsedInventory:
-    path = request.path.parent / settings.TEST_INVENTORY_PATH
-    branch_details = BranchDetailsPatch(owner=owner.name)
-    return parse(path, branch_details)
+async def parsed_inventory(owner: IdentityModel) -> ParsedInventory:
+    return parse(TEST_INVENTORY, BranchDetailsPatch(owner=owner.name))
 
 
 @pytest_asyncio.fixture

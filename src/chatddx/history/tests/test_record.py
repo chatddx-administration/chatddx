@@ -6,19 +6,17 @@ and the session its messages were exchanged in.
 import asyncio
 import json
 import uuid
-from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 import httpx2
 import pytest
 from django.utils import timezone
 from pydantic_ai import AgentRunResultEvent, UsageLimitExceeded
-from typer.testing import CliRunner
 
 from chatddx.dx.fake_vllm import ANSWER, FakeTransport, stream
 from chatddx.history.models import RunModel, RunStatus, TrialModel
 from chatddx.history.record import Branches, Outcome, record
-from chatddx.manage import app
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchSpec,
@@ -35,20 +33,14 @@ from chatddx.runtime.trial import TOOL_ROUNDS, Trial
 
 pytestmark = pytest.mark.django_db
 
-# the inventory without its case corpus, and two cases: case-1 and case-2
-INVENTORY = Path(__file__).parents[2] / "repo/tests/data/test-inventory.toml"
-
 STACK = "qwen3-8b-awq@fake"
 
 SLICES = ("instruction", "output", "coercion", "reasoning", "sampling", "toolset")
 
 
 @pytest.fixture(autouse=True)
-def provisioned() -> None:
-    result = CliRunner().invoke(
-        app, ["init-data", "alex", "--inventory", str(INVENTORY)]
-    )
-    assert result.exit_code == 0, result.output
+def provisioned(provision: Callable[..., None]) -> None:
+    provision()
 
 
 def branch(

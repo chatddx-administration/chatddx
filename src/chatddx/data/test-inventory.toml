@@ -1,0 +1,16 @@
+extends = [
+  "inventory/pelle.toml",
+  "inventory/malborg.toml",
+  "inventory/fake.toml",
+  "inventory/models.toml",
+  "inventory/clients.toml",
+  "inventory/slices.toml",
+  "inventory/configurations.toml",
+]
+
+[case.case-1]
+payload = "case payload 1"
+tags = ["tag-1", "tag-2"]
+
+[case.case-2]
+payload = "case payload 2"

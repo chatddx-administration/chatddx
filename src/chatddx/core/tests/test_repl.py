@@ -20,17 +20,8 @@ from chatddx.repo.entities.tool.django import ToolBranchModel
 
 pytestmark = pytest.mark.django_db
 
-# the inventory without its case corpus, and two cases: case-1 and case-2
-INVENTORY = Path(__file__).parents[2] / "repo/tests/data/test-inventory.toml"
-
 type Say = Callable[..., str]
-
-
-def provision(*options: str, user: str = "alex") -> None:
-    result = CliRunner().invoke(
-        app, ["init-data", user, "--inventory", str(INVENTORY), *options]
-    )
-    assert result.exit_code == 0, result.output
+type Provision = Callable[..., None]
 
 
 @pytest.fixture
@@ -39,7 +30,7 @@ def fake() -> FakeTransport:
 
 
 @pytest.fixture
-def repl(fake: FakeTransport) -> Repl:
+def repl(provision: Provision, fake: FakeTransport) -> Repl:
     provision()
     return Repl("alex", Console(record=True, width=200), transport=fake)
 
@@ -146,7 +137,7 @@ def test_each_run_is_recorded_as_a_run_of_its_trial(say: Say):
     assert trial.runs.filter(status="completed").count() == 2
 
 
-def test_a_run_whose_server_fails_is_recorded_as_errored():
+def test_a_run_whose_server_fails_is_recorded_as_errored(provision: Provision):
     provision()
 
     def handler(_request: httpx2.Request) -> httpx2.Response:
@@ -401,7 +392,7 @@ def test_replay_takes_a_run_by_the_start_of_its_id(say: Say):
     assert "more than one run starts with ''" in say("replay ''")
 
 
-def test_replay_of_a_run_whose_server_failed_says_why():
+def test_replay_of_a_run_whose_server_failed_says_why(provision: Provision):
     provision()
 
     def handler(_request: httpx2.Request) -> httpx2.Response:
@@ -498,7 +489,7 @@ def test_tool_mode_shows_the_call_the_answer_is_given_through(say: Say):
     assert "valid" in written
 
 
-def test_an_answer_that_doesn_t_hold_says_why():
+def test_an_answer_that_doesn_t_hold_says_why(provision: Provision):
     provision()
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -521,7 +512,7 @@ def test_an_answer_that_doesn_t_hold_says_why():
     assert "differential\n  nothing" in written
 
 
-def test_an_answer_that_doesn_t_parse_says_so():
+def test_an_answer_that_doesn_t_parse_says_so(provision: Provision):
     provision()
 
     def handler(_request: httpx2.Request) -> httpx2.Response:
@@ -540,7 +531,9 @@ def test_an_answer_that_doesn_t_parse_says_so():
     assert "invalid: the answer doesn't parse" in repl.console.export_text()
 
 
-def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for():
+def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for(
+    provision: Provision,
+):
     provision()
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -562,7 +555,7 @@ def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for():
     assert "valid" in written
 
 
-def test_thinking_no_reasoning_parser_took_out_is_labelled_so():
+def test_thinking_no_reasoning_parser_took_out_is_labelled_so(provision: Provision):
     provision()
     fake = FakeTransport(reasoning_parser=False)
 
@@ -621,7 +614,7 @@ def test_a_toolset_can_be_set_in_any_configuration(say: Say, fake: FakeTransport
     ]
 
 
-def test_a_model_still_calling_tools_is_stopped():
+def test_a_model_still_calling_tools_is_stopped(provision: Provision):
     provision()
 
     def handler(request: httpx2.Request) -> httpx2.Response:
@@ -670,7 +663,9 @@ def test_quit_leaves(repl: Repl):
     assert repl.handle("quit") is False
 
 
-def test_a_configuration_of_one_s_own_shadows_the_archive_s(fake: FakeTransport):
+def test_a_configuration_of_one_s_own_shadows_the_archive_s(
+    provision: Provision, fake: FakeTransport
+):
     provision("--with-giftbag")
     repl = Repl("alex", Console(record=True, width=200), transport=fake)
 
@@ -680,7 +675,7 @@ def test_a_configuration_of_one_s_own_shadows_the_archive_s(fake: FakeTransport)
 
 
 def test_only_the_archive_s_configurations_run_beside_one_s_own(
-    fake: FakeTransport,
+    provision: Provision, fake: FakeTransport
 ):
     provision()
     provision("--with-giftbag", user="bob")
@@ -740,7 +735,7 @@ def test_it_completes_a_command_and_then_its_names():
     assert complete(names, "set reasoning n") == []
 
 
-def test_a_session_can_be_piped_in(tmp_path: Path):
+def test_a_session_can_be_piped_in(provision: Provision, tmp_path: Path):
     provision()
 
     result = CliRunner().invoke(

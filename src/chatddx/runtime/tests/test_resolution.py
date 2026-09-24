@@ -3,7 +3,6 @@ from typing import Any
 
 import pytest
 
-from chatddx.core import settings
 from chatddx.repo.entities.coercion.pydantic import CoercionTrailSchema
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchema
 from chatddx.repo.entities.instruction.pydantic import InstructionTrailSchema
@@ -16,7 +15,6 @@ from chatddx.repo.entities.stack.pydantic import StackDetails
 from chatddx.repo.entities.tool.pydantic import ToolTrailSchema
 from chatddx.repo.entities.toolset.pydantic import ToolsetTrailSchema
 from chatddx.repo.inventories import ParsedInventory
-from chatddx.repo.parsers.inventory import parse
 from chatddx.runtime.resolution import (
     CellRefused,
     Coercion,
@@ -601,23 +599,18 @@ def test_a_refused_cell_keeps_what_its_other_slices_resolve_to():
     assert refused.value.slots == {"output_guidance": "List the diagnoses."}
 
 
-# ------------------------------------------------------------- the inventory
-
-
-@pytest.fixture(scope="module")
-def inventory() -> ParsedInventory:
-    return parse(settings.INVENTORY_PATH / "inventory.toml")
+# ------------------------------------------------------------- the test_inventory
 
 
 @pytest.mark.parametrize("configuration_name", ["diagnoses", "diagnoses-tool"])
 def test_on_pelle_a_grammar_leaves_qwen3_no_room_to_think(
-    inventory: ParsedInventory, configuration_name: str
+    test_inventory: ParsedInventory, configuration_name: str
 ):
     # pelle serves Qwen3 without a reasoning parser
-    configuration, _ = inventory.configuration[configuration_name]
-    stack, stack_details = inventory.stack["qwen3-8b-awq@pelle"]
-    _, model = inventory.model["qwen3-8b-awq"]
-    off, _ = inventory.reasoning["off"]
+    configuration, _ = test_inventory.configuration[configuration_name]
+    stack, stack_details = test_inventory.stack["qwen3-8b-awq@pelle"]
+    _, model = test_inventory.model["qwen3-8b-awq"]
+    off, _ = test_inventory.reasoning["off"]
 
     with pytest.raises(CellRefused) as refused:
         _ = resolve(configuration, stack_details, model.facts, stack.serving)
@@ -643,11 +636,11 @@ def test_on_pelle_a_grammar_leaves_qwen3_no_room_to_think(
     ],
 )
 def test_free_text_resolves_on_every_model_with_its_facts(
-    inventory: ParsedInventory, stack_name: str, model_name: str
+    test_inventory: ParsedInventory, stack_name: str, model_name: str
 ):
-    configuration, _ = inventory.configuration["free-text"]
-    stack, stack_details = inventory.stack[stack_name]
-    _, model_details = inventory.model[model_name]
+    configuration, _ = test_inventory.configuration["free-text"]
+    stack, stack_details = test_inventory.stack[stack_name]
+    _, model_details = test_inventory.model[model_name]
     facts = model_details.facts
 
     resolution = resolve(configuration, stack_details, facts, stack.serving)
