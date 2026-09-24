@@ -8,17 +8,22 @@ the entities, it covers:
   (§2);
 - why slices compose only as intents, and what makes them appear to
   compose (§3);
-- how an inspect-ai scorer reads an output that pydantic-ai produced (§4);
+- how an inspect-ai scorer reads an output that pydantic-ai produced, and
+  how chatddx scores runs until inspect does (§4);
 - where the combinatorial batch and the compatibility table of
   [PR #68](https://github.com/chatddx-administration/chatddx/pull/68) go
   (§5).
 
 It then maps every current field to its new home or scraps it, and marks
-each field as fingerprinted or not.
+each field as fingerprinted or not. It ends with a proposal for keeping
+scorers and targets in the registry (§11), and with where the code still
+differs from this note (§12).
 
 For inspect-ai, option C of `data-generation.md` §5 was chosen: chatddx
 generates and inspect scores. So the registry keeps what generation needs,
-and what only evaluation needs moves to inspect.
+and what only evaluation needs moves to inspect. §11 proposes one change to
+that: the scorers and the targets are registered too, since people are to
+keep them in the portal, and inspect's model shapes them.
 
 Terms used here:
 
@@ -34,11 +39,11 @@ Terms used here:
   that lives on the branch.
 - **Slice:** one dimension of the configuration surface that a batch can
   vary while it holds the others fixed. The slices are the model,
-  instruction, output, coercion, reasoning and sampling, and later the
-  toolset. A slice is vertical: it owns everything specific to it,
-  wherever that lands in the request, in the prompt text or in how the
-  output is read (§2). `data-generation.md` first called these bundles.
-  Bundle now keeps only the meaning above.
+  instruction, output, coercion, reasoning, sampling and toolset. A slice
+  is vertical: it owns everything specific to it, wherever that lands in
+  the request, in the prompt text or in how the output is read (§2).
+  `data-generation.md` first called these bundles. Bundle now keeps only
+  the meaning above.
 - **Variation:** one value of a slice, such as reasoning `off`, output
   `diagnoses` or the model `qwen3-8b-awq`. A variation of a request-time
   slice is a record of that slice's entity. A variation of the model slice
@@ -47,7 +52,12 @@ Terms used here:
 - **Configuration:** one variation of each request-time slice, that is, of
   every slice but the model.
 - **Cell:** a configuration and a stack, so one variation of every slice. A
-  trial runs one cell on one case, for one replicate.
+  trial runs one cell on one case, with one seed.
+- **Trial and run:** a trial is a cell on a case with a seed, or with none.
+  It is content, like a trail, and belongs to no one. A run is one go at a
+  trial, and it is the runner's (§6).
+- **Replicate:** one of a batch's seeds. Its position among them, from 1,
+  is inspect's epoch when the batch is written as a log (§4, §5).
 - **Intent and realization:** a variation states what is wanted. Its
   realization on a stack is what it writes into the request: its
   contribution (`data-generation.md` §3.1).
@@ -85,9 +95,10 @@ trail field that cannot take part in the fingerprint is not content", and
 
 - **The bundle already has a place for them.** Each entity names a details
   schema (`branch_details`, `branch_details_patch`), validated with
-  `extra="forbid"`. Today details hold the branch's name and owner and its
-  relations (collaborators, tags, and a case's expects). The redesign adds
-  descriptive values, such as a machine's specs or a stack's endpoint.
+  `extra="forbid"`. Details hold the branch's name and owner, its relations
+  (collaborators and tags), and descriptive values, such as a machine's
+  specs or a stack's endpoint. Most entities have no descriptive values:
+  only machine, os, model, serving, client, stack and tool do (§6).
 - **Details live on the branch.** That is the layer that already carries
   the owner, the name, collaborators and tags, so details are owned and
   named, per owner.
@@ -97,13 +108,16 @@ trail field that cannot take part in the fingerprint is not content", and
 
 ### Passthroughs are the router
 
-The inventory parser already treats one authored record as two:
+The inventory parser (`repo/parsers/inventory.py`) treats one authored
+record as two:
 
-- In `parse_entity`, the keys the details schema declares (passthroughs)
-  skip trail parsing.
-- The trail schema ignores them, and `parse` validates them into the
-  details.
-- A key that is neither trail content nor a declared detail is an error.
+- A key the trail schema declares is content. Content is looked at first,
+  so a tool's `name` is the name the model sees, not its branch's.
+- A key the details schema declares passes through to the details.
+- `name` and `owner` are refused: a record's name is its key, and its owner
+  is whoever parses the inventory.
+- Any other key is an error, which names the content and detail keys there
+  are.
 
 So an author still writes one record per entity, and the bundle decides
 which keys are content and which are description:
@@ -115,6 +129,33 @@ source = "Qwen/Qwen3-8B-AWQ@<commit>"    # details: passes through
 facts.reasoning.default = "on"           # details: passes through
 tags = ["local"]                         # details: passes through
 ```
+
+The rest of the inventory's rules:
+
+- **A file holds a table per entity, and each holds named records.** An
+  entity that isn't registered is an error.
+- **`extends` at the top of a file** names the files it builds on. Its own
+  records win over theirs, and the first file it names wins over the next.
+  A file that extends itself, however far round, is an error.
+- **`extends` in a record** names records of the same entity it builds on.
+  Its own keys win, and the first record it names wins over the next.
+  Records merge key by key and no deeper, so a table a record sets replaces
+  the one it would inherit.
+- **`partial = true`** makes a record a template to extend. It isn't
+  committed, and a relation can't name it.
+- **`<key>_path`** reads the key's value from a file next to the file that
+  names it: `.toml` and `.json` as data, `.txt` as text. Giving both `<key>`
+  and `<key>_path` is an error. Only a record's own keys read files, and
+  what they read is data.
+- **A relation names a record of the entity it points at:** one name, or a
+  list of names for a list. A record written inline would be committed
+  without a name, so it isn't accepted.
+- **A case with no `payload`** reads it from `cases/<name>.txt` next to its
+  file.
+- **`init-data` commits the inventory as the archive's** (the identity
+  `archive`). The user it is run for becomes a collaborator on every branch
+  it committed, and a giftbag inventory, if given, is committed as that
+  user's own.
 
 ### One change to commit
 
@@ -129,8 +170,34 @@ change while the canon stays put."
 - So a change to details makes a new branch row. That is the "fingerprint
   the commit, not only the tree" item already listed in
   `branch-identity-and-the-repo-registry.md`.
-- A trial then records the branch rows whose details it read, beside the
-  trails it ran.
+- A run then records the branch rows whose details it read, beside the
+  trails it ran (§6).
+
+As built, `commit()` works like this:
+
+- **A version is a trail and its plain details.** A commit whose trail or
+  details differ from the canon's makes a new branch row. A commit that
+  matches the canon makes no row and answers that nothing changed.
+- **Relations change in place.** A commit that names tags or collaborators
+  sets them on the row it lands on. One that names none keeps what the
+  version before had.
+- **The canon is the newest row** of an owner's branch of a name, by
+  timestamp and then id. The rows before it are its versions.
+- **A commit reaches everything its trail does.** Every trail it reaches,
+  such as a stack's machine or a toolset's tools, gets a branch of the
+  owner's if the owner has none. The branch is named after its entity and
+  short fingerprint (`machine 3f9a1c`), with no tags, no collaborators and
+  every detail at its default. Where the owner already has a branch of the
+  trail, it isn't touched.
+- **Saving someone else's composition copies their branches first.** Before
+  an owner commits a trail they got from another owner, each trail it
+  reaches that the owner has no branch of gets a copy of the other owner's
+  branch, under its name and with its details, so a tool keeps what it
+  runs. A name the owner already gives another trail is left to the rule
+  above.
+- **Visibility:** an identity can use its own branches and those it
+  collaborates on, by name. Its own shadows a shared one of the same name.
+  A lookup can be held to one other owner, such as the archive.
 
 ### The rule
 
@@ -150,8 +217,10 @@ and are never fingerprinted.
 The kinds of hash identify different things:
 
 - Trail fingerprints identify what was authored.
-- The request hashes on a trial (`data-generation.md` §3) identify what was
-  sent.
+- The request hashes (`data-generation.md` §3) identify what was sent. They
+  belong to each run, since a trial can be run on a later client, or after
+  a fact changed, and send something else. They aren't computed yet. Until
+  they are, a run keeps the exact bodies it sent and got back (§6).
 - A model's facts can change a request without moving any trail
   fingerprint. That is by design, since a model is its blob, and the
   request hash catches it.
@@ -173,9 +242,9 @@ The kinds of hash identify different things:
     differ in their schema. They also differ in what the model is told
     ("Fill in the management plan", "List the plausible diagnoses") and in
     where a scorer finds the differential.
-  - Today those sentences are agent instructions (the two partial agents in
-    `medical-assistant.toml`), and each is paired with its output type by
-    hand.
+  - Those sentences were agent instructions (the two partial agents in
+    `medical-assistant.toml`), each paired with its output type by hand.
+    They are the outputs' guidance now (`inventory/slices.toml`).
   - If the instruction kept the sentence, instruction and output could not
     be varied apart: half of any grid would ask for one output and enforce
     another.
@@ -185,7 +254,7 @@ The kinds of hash identify different things:
     the request goes;
   - every other slice is resolved against it.
 
-  So it stays out of the configuration. A trial joins a configuration to a
+  So it stays out of the configuration. A cell joins a configuration to a
   stack, and one configuration runs on every model.
 
 ### Where to cut
@@ -224,10 +293,10 @@ compound (§3). Two that pass it, and vary for different reasons, are two.
 | model | a stack | the request's `model` field, and where the request goes | nothing: the other slices are resolved against it |
 | instruction | system and user templates, with declared slots | the messages | the slots the other slices fill |
 | output | a schema (none for free text), its guidance and its views | the `output_guidance` slot, the schema that coercion delivers, and what scorers read | nothing |
-| coercion | a mode (native, tool, prompted or auto) and a schema prompt | `response_format` or a final-result tool, and the `schema_prompt` slot | the model's capabilities and the output's schema |
+| coercion | a mode (native, tool, prompted or auto), a schema prompt, and for tool mode a tool description | `response_format` or a final-result tool, and the `schema_prompt` slot | the model's facts (which modes work, and what `auto` stands for), the serving (a parser a mode needs) and the output's schema |
 | reasoning | an effort (default, off, on, minimal, low, medium, high or xhigh) and an optional budget | whatever the model's facts say: `chat_template_kwargs`, `reasoning_effort`, `thinking_token_budget` | the model's facts |
-| sampling | explicit values, and what a null means: the model's default, or its recommendation for the resolved reasoning mode | temperature, top-p, top-k, penalties, stop and max tokens | the model's facts and the resolved reasoning mode |
-| toolset (later) | tool definitions and their guidance | `tools`, and the `tool_guidance` slot | the model's capabilities |
+| sampling | explicit values, and what a null means: the model's generation config, or its recommendation for the resolved reasoning mode | temperature, top-p, top-k, penalties, stop and max tokens | the model's facts and the resolved reasoning mode |
+| toolset | tool definitions and their guidance | `tools`, and the `tool_guidance` slot | the serving: tools need a tool-call parser |
 
 ### Intent and realization
 
@@ -239,20 +308,28 @@ compound (§3). Two that pass it, and vary for different reasons, are two.
     skeleton hashes on the same stack show it (`data-generation.md` §3.1).
     For example, Qwen3 has no effort levels, so reasoning `low` and `high`
     both realize as thinking on. The two cells are one treatment, and a
-    batch runs it once.
+    batch runs it once. Resolution already names the intent a variation
+    collapses into where the facts declare it. The hashes, once computed,
+    will show every other collapse.
   - **Refused:** the stack can't honour the intent. For example, gpt-oss
     can't stop reasoning, because vLLM rejects `reasoning_effort = "none"`
     for harmony models. An intent the facts don't mention is refused too,
     for want of a fact: nothing is guessed. Either way the reason is kept.
+- **Resolution gathers every refusal in a cell,** each with its slice and
+  its reason, so one look shows all that stands in the way. What chatddx
+  can't do yet, such as sending to an API other than vLLM, is marked as
+  later rather than refused.
 - **A name says what was meant; the request says what ran.** Whether two
   cells are one treatment is decided by their requests, never by their
   variations' names.
 - **Facts are claims.** A realized cell rests on facts, and only an
   experiment shows whether the model honours them. For example, whether
   gpt-oss honours low, medium and high is still open (`data-generation.md`
-  §6). The batch's report and each trial record the facts a cell rested
-  on, as the branch rows read, so a doubtful fact can be traced to every
-  cell that used it.
+  §6). The batch's report and each run record the facts a cell rested on,
+  as the branch rows read, so a doubtful fact can be traced to every cell
+  that used it. A run in the repl says when the model didn't honour its
+  reasoning: no thinking came back though reasoning resolved to a mode that
+  thinks, or some came back though it resolved to `off`.
 
 ### Example: reasoning, per model
 
@@ -279,9 +356,12 @@ off = { temperature = 0.7, top_p = 0.8, top_k = 20 }
 default = "medium"
 off = { refused = "always reasons: vLLM rejects reasoning_effort = none for harmony" }
 on = "medium"
+minimal = { refused = "harmony has no minimal effort, only low, medium and high" }
 low = { reasoning_effort = "low" }
 medium = { reasoning_effort = "medium" }
 high = { reasoning_effort = "high" }
+xhigh = { refused = "harmony has no xhigh effort, only low, medium and high" }
+budget = { refused = "no thinking budget is documented for harmony" }
 ```
 
 A batch that varies reasoning over `off`, `low`, `medium` and `high` on
@@ -301,34 +381,49 @@ the collapse or the refusal until the runs come back.
 
 ### Example: output and coercion
 
+From `inventory/slices.toml`:
+
 ```toml
 [output.management-plan]
-schema_path = "./output_types/management_plan_v1.toml"
+schema_path = "schemas/management_plan_v1.json"
 guidance = "Fill in the management plan for the case."
 views.differential = "$.diagnoses[*].diagnosis"
+views.warning = "$.acute_warning"
+views.disposition = "$.management.disposition"
 
 [output.diagnoses]
-schema_path = "./output_types/diagnoses.json"
+schema_path = "schemas/diagnoses.json"
 guidance = "List the plausible diagnoses, most likely first."
 views.differential = "$.diagnoses[*]"
 
 [output.free-text]
 guidance = "List the plausible diagnoses, one per line, most likely first."
+views.text = "whole"
 views.differential = "lines"
+
+[output.raw]                    # no guidance: whatever the model makes of the case
+views.text = "whole"
 
 [coercion.native]
 mode = "native"                 # on vLLM, guided decoding only: the model never reads the schema
 
 [coercion.native-shown]
 mode = "native"
-schema_prompt = "…"             # chatddx's own text, placed through its slot
+schema_prompt = """
+Answer with a JSON object that matches this JSON Schema, and nothing else:
+
+{{schema}}"""                   # chatddx's own text, placed through its slot
 
 [coercion.tool]
 mode = "tool"
+tool_description = "Give your answer by calling this tool, with the answer as its arguments."
 
 [coercion.prompted]
+extends = "native-shown"        # the same text, so the two differ only in what enforces it
 mode = "prompted"
-schema_prompt = "…"
+
+[coercion.auto]
+mode = "auto"                   # whatever the model's facts name as its default
 ```
 
 - **The guidance and the view keep one promise.** The `differential` view
@@ -393,11 +488,11 @@ measures, not a defect of the data model.
 
 | Trick | What becomes composable | What it costs |
 |---|---|---|
-| **Slots.** The instruction declares holes (`output_guidance` and `schema_prompt`; later `tool_guidance` and `reasoning_guidance`), and each is filled by exactly one slice. | instruction with output and coercion, and later with toolset and reasoning: an instruction never names an output | The instruction must place every slot that is filled. Nothing checks that the joined text reads well. |
+| **Slots.** The instruction declares holes (`output_guidance`, `schema_prompt` and `tool_guidance`; later `reasoning_guidance`), and each is filled by exactly one slice. | instruction with output, coercion and toolset, and later with reasoning: an instruction never names an output | The instruction must place every slot that is filled. Nothing checks that the joined text reads well. |
 | **Intents plus facts.** A variation states an intent. The model's facts translate it, alias it or refuse it. | reasoning and coercion across models | Facts to write and keep: one row per model and intent, not one per pair of records. |
-| **Symbolic values.** Some values are defined by reference: sampling `recommended` (for the resolved reasoning mode), reasoning `default`, coercion `auto` (the profile's structured output mode), and a null sampling field (the model's generation config). | sampling with reasoning and model | The numbers differ per model. Only the request says what was sent. |
+| **Symbolic values.** Some values are defined by reference: sampling `recommended` (for the resolved reasoning mode), reasoning `default`, coercion `auto` (the mode the model's facts name as its default), and a sampling field left out under `defaults = "model"` (the model's generation config, as its facts give it). | sampling with reasoning and model | The numbers differ per model. Only the request says what was sent. |
 | **Disjoint writes.** Each slice declares the request paths and slots it may write. Write sets belong to slices, not to variations, and no two slices share one. | every slice with every other, with no merge rule | It is checked once, over the slices in code, not once per configuration. A concern that needs two slices' paths becomes a coupling. |
-| **Couplings.** The few requirements that cross slices are declared on the variation that has them, and resolution checks them. For example, a budget needs a reasoning parser and must fit in `max_tokens`. | the cells they allow | Each coupling is data someone has to write. Where a symbolic value dissolves a coupling, prefer it. |
+| **Couplings.** The few requirements that cross slices are declared in the model's facts, as what a fact needs of the serving (`needs`), and resolution checks them against the serving's arguments. For example, a budget needs a reasoning parser on Qwen3, and a structured mode needs one while the model reasons. Two are resolution's own: a budget must fit in `max_tokens`, and tools need a tool-call parser. | the cells they allow | Each coupling is data someone has to write. Where a symbolic value dissolves a coupling, prefer it. |
 | **Views.** Scorers read a named reading of an output, and each output declares its readings (§4). | scorer and output | One view per output and reading. Free text needs a parser. |
 | **Collapse detection.** Cells whose requests match on a stack are one treatment. | variations a model can't tell apart | None. This is what the hashes of `data-generation.md` §3 are for. |
 | **Compound slices.** Two concerns that can't be separated become one slice. For example, "thinking with its sampling", when a study wants the vendor's pairing rather than a fixed sampling. | an inseparable pair | Their separate effects can't be estimated. |
@@ -494,7 +589,8 @@ Read from pydantic-ai 2.41.0:
   - `result.output` is the same value whichever mode carried it.
 - **A value that isn't an object travels in an envelope.** pydantic-ai asks
   for `{"response": …}` and unwraps it (`outer_typed_dict_key`), since tool
-  arguments and most structured output APIs take only objects.
+  arguments and most structured output APIs take only objects. chatddx
+  holds every answer to an object instead (below).
 - **Whether the schema is shown belongs to the mode.**
   - `NativeOutput` and `PromptedOutput` take a `template`, and `False`
     shows nothing.
@@ -512,15 +608,21 @@ Read from pydantic-ai 2.41.0:
 It reads a **view**: a named, typed reading of the output, declared by the
 output variation.
 
-- **Views are a small vocabulary kept in code.** Each has a JSON Schema:
+- **Views are a small vocabulary kept in code** (`View` in
+  `repo/entities/output/pydantic.py`). A view yields items, and each view
+  names the JSON type of its items and whether a null may stand in for
+  one:
 
-  | View | Type | Read by |
+  | View | Items | Read by |
   |---|---|---|
   | `text` | a string: an answer as written | `first_mention`; later, a model-graded judge |
-  | `differential` | an array of strings, most likely first | `reciprocal_rank` |
-  | `warning` | a string, or none: a plan's red flags | `mentions` |
-  | `disposition` | a string: where a plan sends the patient | `mentions` |
+  | `differential` | strings, most likely first | `reciprocal_rank` |
+  | `warning` | a string, or null: a plan's red flags | `warning_mentions` |
+  | `disposition` | a string: where a plan sends the patient | `disposition_mentions` |
   | `plan` (later) | workup, treatment and disposition | rubric scoring of management plans |
+
+  The order of the vocabulary is fixed in code, since a `jsonb` column
+  doesn't keep the order an output's views were written in.
 
 - **An output variation declares the views it offers.**
   - A structured output gives each view as a path into its schema, in a
@@ -534,17 +636,35 @@ output variation.
   |---|---|
   | management plan | `differential` at `$.diagnoses[*].diagnosis`, `warning` at `$.acute_warning`, `disposition` at `$.management.disposition` |
   | diagnoses | `differential` at `$.diagnoses[*]` |
-  | free text | `text` by `whole`; `differential` by `lines`, one item per non-empty line, list markers stripped |
+  | free text | `text` by `whole`; `differential` by `lines` |
   | raw | `text` by `whole` |
+  | type check | none: it tests coercion, and has no clinical reading |
+
+- **Reading a view.**
+  - A path yields every value it reaches, in the document's order. A null
+    is nothing reached, so a plan whose `acute_warning` is null yields no
+    warning.
+  - `lines` yields an item per non-empty line, with a leading list marker
+    (`-`, `*`, `•`, `1.` or `1)`) stripped.
+  - `whole` yields the answer as written, or nothing if it is blank.
+  - A scorer gets each item as a string.
 
 - **A path is proved when the output is committed.**
   - Walking the schema along the path gives the type of what the path
-    yields, and that type must satisfy the view's schema.
-  - This is where PR #68's conservative subsumption check
-    (`core/json_schema.py`) belongs. It runs once per output and view,
+    yields, and that type must be the view's item type.
+  - A name steps into a property an object declares under `properties`,
+    and `[*]` steps into an array's `items`. A reference within the
+    document is followed.
+  - The check is conservative: a union, a nullable step or a reference
+    outside the document is refused. A string is `type: string`, or an
+    `enum` or `const` whose values are all strings. Only `warning` may end
+    in `["string", "null"]`.
+  - This is PR #68's conservative subsumption check (`core/json_schema.py`
+    there), cut down to what views need. It runs once per output and view,
     instead of once per scorer and output type. What PR #68 registered with
     each scorer as `accepts` is registered with each view instead.
-  - A path the check can't prove is refused at commit.
+  - A path the check can't prove is refused at commit, and so is a free
+    text view whose parser gives another view.
 - **A scorer names its view as an argument:**
   `reciprocal_rank(view="differential")`. inspect records the argument with
   every score.
@@ -566,18 +686,36 @@ the output spec:
 | Coercion mode | Output with a schema | Free text |
 |---|---|---|
 | native | `NativeOutput(T, template=False)` | `str` |
-| tool | `ToolOutput(T)` | `str` |
+| tool | `ToolOutput(T, name="final_result", description=…)`, the description being the coercion's `tool_description` | `str` |
 | prompted | `PromptedOutput(T, template=False)` | `str` |
 
-- `T` is `StructuredDict(schema)` for an object schema. For any other
-  schema it is a type that carries the schema (PR #68's
-  `structured_value`), which pydantic-ai wraps in the envelope.
+- **An answer is held to an object.** `T` is `StructuredDict` of the
+  schema. A schema whose top level isn't an object is refused at
+  resolution, so no answer travels in pydantic-ai's envelope, and a run's
+  output is the answer as the model gave it.
+- **The schema a request carries is chatddx's to say.** Resolution inlines
+  its references and drops `$defs`, so pydantic-ai is left with nothing to
+  make of it but a sort of its keywords; the properties keep the order they
+  were written in. A schema that refers to itself can't be sent, and is
+  refused.
 - `template` is always `False`. The schema prompt, when there is one,
   reaches the model through the `schema_prompt` slot, never through
-  pydantic-ai's default text.
+  pydantic-ai's default text. It shows the schema as written, not inlined.
 - `auto` is resolved to one of the three from the model's facts before the
   spec is built. Left to pydantic-ai, it would also bring the profile's
   default template along on vLLM.
+- **No words of pydantic-ai's own reach the model.** The profile is
+  pydantic-ai's default, then its vLLM provider's, then the model's facts,
+  then chatddx's own on top: no JSON schema transformer, no schema added to
+  the instructions, no JSON object mode, and no OpenAI reasoning field. The
+  model's facts give the profile instead of the served name.
+- **A trial asks once.** Nothing is retried: an answer that doesn't hold is
+  recorded, not asked for again. A model may call tools for five rounds,
+  and a run still calling them after that stops with no answer.
+- **What isn't an OpenAI field goes in `extra_body`:** `top_k`, and
+  whatever the reasoning facts write (`chat_template_kwargs`,
+  `reasoning_effort`, `thinking_token_budget`). The trial's seed goes out
+  as `seed`.
 
 On the inspect side, a scorer reads its view from the sample:
 
@@ -601,23 +739,20 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
 ### What a trial records, and what the log carries
 
 - **A trial's run records the value, not only the transcript.** `output`
-  is `result.output` with the envelope removed, the same whichever mode
-  carried it (PR #68's `RunModel.output`). `valid` says whether it
-  validates against the output's schema.
-- **Until inspect scores runs, chatddx does.** A scorer (`chatddx.scoring`)
-  is a function in one of chatddx's own scorer files, the view it reads,
-  and the target it expects: `targets.toml` holds each case's by what they
-  expect (`diagnosis`, `warning`, `disposition`). A scorer applies to a
-  completed run whose output offers its view and whose case has its
-  target. Each score keeps the view, the target and the git blob of the
-  scorer's file, so a changed file or target leaves the run to be scored
-  again, and the scores before stay.
+  is `result.output`, the same whichever mode carried it (PR #68's
+  `RunModel.output`): an object for a structured output, the text for free
+  text. `valid` says whether it holds to the output's schema. It is null
+  for free text. It is false where no answer that parses came, and then
+  there is no output, and where one parsed but doesn't hold, and then the
+  output is kept.
+- **Until inspect scores runs, chatddx does,** with scorers of its own and
+  rules of their own (below, How chatddx scores).
 - **chatddx writes one inspect sample per trial** (`data-generation.md` §5,
   option C):
 
   | Sample field | Holds |
   |---|---|
-  | `id`, `epoch` | the case, and the replicate |
+  | `id`, `epoch` | the case, and the replicate: the position of the trial's seed among the batch's seeds, from 1 |
   | `input` | the case, as the model received it |
   | `output.completion` | the answer as text: where inspect expects an answer, and where `react()` puts a submitted one. It is the `text` view where the output offers one, and a structured answer's JSON otherwise |
   | `messages`, and a `ModelEvent` | the exchange as it happened, tool call or `response_format` included, with the raw request and response |
@@ -638,6 +773,9 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
 
 ### When an output can't be read
 
+These are the rules for when inspect scores. chatddx's own scorers keep
+theirs until then (below).
+
 - **Refused before running.** A cell whose output lacks a view that a
   scorer reads is refused for that scorer when the batch is planned (§5).
   If no scorer is left, the cell isn't generated.
@@ -652,6 +790,66 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
     configuration that often fails. The reason keeps the rate countable.
 - **The instrument's fault.** A target the scorer can't parse is
   `unscored`, with `reason = "scoring_failed"`.
+
+### How chatddx scores, until inspect does
+
+`chatddx.scoring` holds runs to scorers of chatddx's own. It is a stand-in
+to establish a reference, and its rules differ from inspect's above.
+
+- **A scorer is a function, the view it reads, and the kind of target it
+  holds that to.** The four are a table in code (`SCORERS` in
+  `scoring/score.py`):
+
+  | Scorer | Function | View | Target | Value |
+  |---|---|---|---|---|
+  | `reciprocal_rank` | `reciprocal_rank` | `differential` | `diagnosis` | 1/rank of the first item the target is found in, and 0 where it isn't (`not listed`) |
+  | `first_mention` | `first_mention` | `text` | `diagnosis` | the characters before the target is first named, and none where it isn't (`never named`) |
+  | `warning_mentions` | `mentions` | `warning` | `warning` | 1 where the target is found, and 0 where it isn't (`not named`) |
+  | `disposition_mentions` | `mentions` | `disposition` | `disposition` | the same |
+
+  Each score says what in the answer it rests on: the ranked item, the
+  sentence or line the target was named in, or the item it was found in.
+- **The functions are chatddx's own code,** in
+  `chatddx.scoring.scorers.patterns`. They are loaded as tools are, from an
+  allowlisted package and afresh from the file's bytes, and the file's git
+  blob id names the version that scored. A scorer file imports nothing else
+  of chatddx's, so the file is all of chatddx that scored. A function takes
+  the view's items, or none where the run came to no answer, and the
+  target, and returns a value, an answer and a reason.
+- **A target is a pattern of words.** A word is found whole and in any
+  case: `pneumonia` isn't found in "pneumonias", nor `mi` in "anemia". A
+  trailing `*` takes any word that starts so (`meningit*`). Words side by
+  side are a phrase, found side by side. `&` needs both sides and `|`
+  either, `&` binds tighter than `|`, and parentheses group:
+  `(renal | kidney) & stone*`. A pattern is held to one item at a time, a
+  diagnosis, a sentence or a field, never to two at once. `first_mention`
+  splits text into sentences and lines, at line breaks and after `.`, `!`
+  or `?`.
+- **Targets are read from `targets.toml`,** keyed by the case's name and
+  then by the kind of target: `diagnosis`, `warning` and `disposition`. A
+  run's case is found by its trail among the archive's case branches, so a
+  case is known by its inventory name. Tests read `test-targets.toml`
+  instead.
+- **A scorer applies to a run** that completed, whose output offers its
+  view, and whose case has its kind of target.
+- **A run is outstanding for a scorer** until it has a score from that
+  scorer with the view, the target and the file's blob as they are now. An
+  edit to the file or to the target makes it outstanding again, and the
+  scores before stay. The latest score from each scorer is the one shown.
+- **Its rules for what can't be read:**
+  - A view reads whatever output the run kept, valid or not.
+  - A run with no output scores 0 with the reason `no answer`, or no value
+    for `first_mention`.
+  - A reply cut off at `max_tokens` isn't told apart, though the run keeps
+    its finish reason.
+  - A target that doesn't parse is an error, and nothing is scored. A test
+    holds every target in `targets.toml` to parse.
+  - An errored run is never scored.
+- **When:** a run in the repl is scored as soon as it is recorded. `score`
+  scores every outstanding run of the identity's, oldest first, and ends
+  with each scorer's mean. `score RUN` scores one. `scorers` lists the
+  scorers, and whether the cell's output offers each one's view.
+- **What is kept:** a score row per run and scorer (§6).
 
 ## 5. The batch and the compatibility table
 
@@ -677,8 +875,8 @@ between `plan` and `generate` stays.
 | `base` | a configuration and a stack: the variation every slice keeps unless it is varied |
 | `varied` | groups of slices, each slice with its variations, such as `[{model: [qwen3-8b, gpt-oss-20b], reasoning: [off, low, high]}, {output: [management-plan, diagnoses, free-text]}]` |
 | `case_tags` | as today; the cases are resolved when the batch generates |
-| `scorers` | inspect scorers with their arguments, which include the view each reads |
-| `replicates` | the number of epochs, each with its seed |
+| `scorers` | inspect scorers with their arguments, which include the view each reads; as §11 proposes, the registry's scorers, by their trails |
+| `replicates` | its seeds, one per replicate. A replicate's position among them, from 1, is its epoch in the cell's inspect log. Each seed makes a trial of every cell on every case. |
 
 - **Cells.** The slices within a group are crossed, and the groups are
   varied one at a time, with every other slice at the base.
@@ -709,7 +907,8 @@ resolves every cell against its stack, as a dry run (`data-generation.md`
   - model facts and serving settings, each declared once per model or
     serving, where it is true;
   - the scorers' views and the outputs' views;
-  - the cases' targets, which inspect keeps, keyed by the case (§7).
+  - the cases' targets, which inspect keeps, keyed by the case (§7); §11
+    proposes keeping them in the cases' details.
 - **Per cell,** the report gives realized, collapsed into another cell, or
   refused, with the reason and the facts it rested on (the branch rows it
   read).
@@ -757,18 +956,21 @@ has a home now:
 ## 6. The entities
 
 Every entity keeps the branch fields it has today: `name`, `owner`,
-`timestamp`, `target`, `collaborators` and `tags`. None of them is
-fingerprinted.
+`timestamp`, `target`, `collaborators` and `tags`, and gains `details`, the
+JSON column of its plain details (§1). None of them is fingerprinted.
+
+The notes say what each field holds, and the rules a record is held to when
+it is committed. A record that breaks one is refused, with the reason.
 
 ### Below the request
 
-**machine**: a thing.
+**machine**: a thing. Any change to its hardware makes a new machine.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
 | `machine_id` | trail | yes | a UUID assigned at registration, and the only identifying field |
-| `unreliable` | details | no | true for a cloud provider, where nothing below its requests can be checked |
-| `specs` | details | no | GPUs (model, memory, UUID), CPU, RAM, location. The GPU UUIDs back the check in `data-generation.md` §1. |
+| `unreliable` | details | no | true for a cloud provider, where nothing below its requests can be checked; false by default |
+| `specs` | details | no | GPUs (the model as `nvidia-smi` names it, memory in MiB, the UUID as `GPU-…`), CPU, RAM in GiB, location. The GPU UUIDs back the check in `data-generation.md` §1. |
 
 **os**: a thing.
 
@@ -776,18 +978,48 @@ fingerprinted.
 |---|---|---|---|
 | `toplevel` | trail | yes | the system's store path, the target of `/run/current-system` |
 | `flake_rev` | details | no | |
-| `specs` | details | no | hostname, kernel, NVIDIA driver, nixpkgs revision |
+| `specs` | details | no | hostname, kernel, NVIDIA driver, nixpkgs revision. A container has no kernel or driver of its own: they are its host's. |
+
+A store path is `/nix/store/<32 characters of Nix's base32>-<name>`,
+wherever one is asked for.
 
 **model**: a thing.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `blob` | trail | yes | a hash of the directory vLLM loads: the store path of a fixed-output derivation. For a cloud model, the provider's dated model name stands in, unverified. |
-| `source` | details | no | Hugging Face repository and commit |
-| `specs` | details | no | family, parameter count, quantization, context length, licence |
-| `facts` | details | no | read by resolution (§2): the translation of each reasoning intent, the recommended sampling per reasoning mode, the default coercion mode and which modes work, and pydantic-ai profile overrides |
+| `blob` | trail | yes | a hash of the directory vLLM loads: the store path of a fixed-output derivation. For a cloud model, the provider's dated model name stands in, unverified. A value that starts with `/` must be a store path. Any other value with a `/` in it is refused as a repository name, which vLLM would resolve to whatever revision it finds when it starts. |
+| `source` | details | no | the Hugging Face repository and commit, pinned: `<owner>/<repository>@<40 hex digits>` |
+| `specs` | details | no | family, parameter count, active parameter count for a mixture of experts, quantization, context length, licence |
+| `facts` | details | no | what resolution reads (§2), below |
 
-**serving**: the start-up settings.
+A model's facts have four parts:
+
+- **`reasoning`** translates each intent: `off`, `on`, `minimal`, `low`,
+  `medium`, `high` and `xhigh`. A fact is a request fragment, the name of
+  another intent it collapses into, or `{ refused = "why" }`, and an intent
+  with none is refused for want of one. `default` names the model's own
+  intent.
+  - A fragment writes only reasoning's fields: `chat_template_kwargs`,
+    `reasoning_effort` and `thinking_token_budget`.
+  - A collapse must end in a fragment or a refusal, and collapses can't go
+    round.
+  - `budget` says which field a token budget goes in and what it needs of
+    the serving (`{ field = …, needs = … }`), or refuses budgets.
+- **`sampling`** gives `recommended`, the vendor's values per reasoning
+  mode, and `generation_config`, what vLLM gives a field a request leaves
+  out. A mode is an intent with a fragment of its own, and only a mode can
+  have sampling recommended for it.
+- **`coercion`** says which modes work: each is `{ needs = …, note = … }`
+  or a refusal. `default` names the mode `auto` resolves to, and it must be
+  one that works. The note is what a report says about the mode on this
+  model.
+- **`profile`** overrides pydantic-ai's profile, so that nothing hangs on
+  the served name.
+
+What a fact can need of the serving is a reasoning parser or a tool-call
+parser.
+
+**serving**: the start-up settings. vLLM only.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
@@ -796,13 +1028,27 @@ fingerprinted.
 | `env` | trail | yes | environment variables that do the same, such as `VLLM_BATCH_INVARIANT` and `VLLM_SYSTEM_START_DATE` |
 | `performance` | details | no | arguments that only change speed, recorded for latency comparisons |
 
+- **Canonical form:** an argument is its long name without its dashes,
+  with `_` spelled `-`, so two spellings of one argument are one. An
+  argument given twice is an error, and the arguments are kept sorted.
+- **Each argument has one home.** Code lists the arguments that change the
+  output and those that only change speed, and one in the other's place is
+  refused. `--model` is refused as the model's blob, `--served-model-name`
+  as the stack's served name, and `--api-key` as a secret the stack names.
+- **What a serving provides:** a reasoning parser where `reasoning-parser`
+  is set, and a tool-call parser where `tool-call-parser` and
+  `enable-auto-tool-choice` both are.
+
 **client**: a thing.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
 | `build` | trail | yes | the store path of the chatddx build. A run from a dev shell has none, and is recorded as such. |
-| `rev` | details | no | |
-| `packages` | details | no | the pydantic-ai, openai and inspect-ai versions |
+| `rev` | details | no | for a dev shell, the checkout's commit, with `-dirty` where it has changes |
+| `packages` | details | no | the versions of `pydantic-ai-slim`, `openai` and `inspect-ai`, by distribution |
+
+A run records the client it ran on itself: the build's trail, and the
+revision and versions where it ran. It reads no client branch.
 
 **stack**: a composition, and a variation of the model slice. It replaces
 `connection`.
@@ -811,13 +1057,16 @@ fingerprinted.
 |---|---|---|---|
 | `machine` | trail | yes | |
 | `os` | trail | yes | null for cloud |
-| `host_os` | trail | yes | for a NixOS container, the host's OS, which holds the kernel and the NVIDIA driver; null otherwise |
+| `host_os` | trail | yes | for a NixOS container, the host's OS, which holds the kernel and the NVIDIA driver; null otherwise. It needs the container's OS beside it, and must differ from it. |
 | `model` | trail | yes | |
 | `serving` | trail | yes | null for cloud |
-| `endpoint` | details | no | where requests go |
+| `endpoint` | details | no | where requests go: a URL |
 | `served_name` | details | no | the `model` field of the request |
-| `api` | details | no | `vllm`; a cloud stack names its API |
+| `api` | details | no | `vllm`, or the cloud API a cloud stack names: `openai-chat`, `openai-responses`, `anthropic` or `google` |
 | `credential` | details | no | the name of a secret, never the secret |
+
+Resolution needs a stack's API, endpoint and served name. It sends to vLLM
+only, for now: another API is refused as later.
 
 `data-generation.md` counted the client as part of the stack. As an entity
 it stands apart: it changes with every chatddx deploy while the server
@@ -831,16 +1080,26 @@ Each entity below is one slice, and each of its records is a variation.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `system` | trail | yes | the template for the system message (Handlebars, via `TemplateStr`) |
+| `system` | trail | yes | the template for the system message (Handlebars, via `TemplateStr`); empty for none |
 | `user` | trail | yes | the template for the user message; `{{case}}` reproduces today's behaviour |
-| `variables` | trail | yes | the declared variable schema (`deps_schema`): `case`, plus the slots other slices fill |
+| `variables` | trail | yes | the variables the templates place, from a fixed list: `case`, and the slots other slices fill, `output_guidance`, `schema_prompt` and `tool_guidance` |
+
+- Every declared variable is placed as a value, and every variable placed
+  is declared. `case` is always declared.
+- The case is a value, never a condition: a template places it and never
+  branches on it, so equal request skeletons mean equal requests for every
+  case (`data-generation.md` §3.1). A slot may be a condition as well, so a
+  template can leave out the text around a slot no slice fills.
+- A declared slot no slice fills renders as nothing.
+- A variable declared twice is an error. Declarations are kept in the fixed
+  list's order, so the same set is the same content.
 
 **output**
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `schema` | trail | yes | JSON Schema, with key order kept; null for free text |
-| `guidance` | trail | yes | the text for the `output_guidance` slot: what to produce, and in what order |
+| `schema` | trail | yes | a valid JSON Schema (draft 2020-12 unless it names its own), kept as written, key order included; null for free text |
+| `guidance` | trail | yes | the text for the `output_guidance` slot: what to produce, and in what order; null for none |
 | `views` | trail | yes | the readings it offers scorers (§4). Each maps a view name to a path into the schema or, for free text, to a parser. Views are not part of the contribution. |
 
 **coercion**: new, split from output.
@@ -848,37 +1107,55 @@ Each entity below is one slice, and each of its records is a variation.
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
 | `mode` | trail | yes | native, tool, prompted or auto (resolved from the model's facts) |
-| `schema_prompt` | trail | yes | the template that shows the schema to the model, for the `schema_prompt` slot; null means the schema isn't shown. Prompted mode requires one. |
+| `schema_prompt` | trail | yes | the template that shows the schema to the model, for the `schema_prompt` slot. It places `{{schema}}`, the output's schema as indented JSON, and nothing else. Null means the schema isn't shown. Prompted mode requires one. |
+| `tool_description` | trail | yes | what the tool the answer is given through is said to be, in tool mode: text the model reads, placing nothing. Tool mode requires one, and so does `auto` where it resolves to tool. Native and prompted modes refuse one. |
 
 **reasoning**: new.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
 | `effort` | trail | yes | default, off, on, minimal, low, medium, high or xhigh: pydantic-ai's `ThinkingLevel`, plus `default` for the model's own, which resolution looks up and writes out |
-| `budget` | trail | yes | a token budget, or null |
+| `budget` | trail | yes | a positive number of tokens, or null. `off` refuses one. |
 
 **sampling**
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `defaults` | trail | yes | what a null field means: `model` for the model's generation config, or `recommended` for what the model's facts recommend in the resolved reasoning mode |
-| `temperature`, `top_p`, `top_k`, `max_tokens`, `presence_penalty`, `frequency_penalty`, `stop` | trail | yes | an explicit value overrides the defaults; resolution writes every value it used into the request |
+| `defaults` | trail | yes | what a field left out means: `model` for the model's generation config, or `recommended` for what the model's facts recommend in the resolved reasoning mode. A cell whose model's facts don't give the one asked for is refused. |
+| `temperature`, `top_p`, `top_k`, `max_tokens`, `presence_penalty`, `frequency_penalty`, `stop` | trail | yes | an explicit value overrides the defaults; resolution writes every value it used into the request. Temperature is 0 to 2, top-p above 0 and up to 1, top-k −1 (off) or more, the penalties −2 to 2, and max tokens positive. |
 
-**toolset**: deferred. It replaces `tool_group`.
-
-| Field | In | Fingerprinted | Notes |
-|---|---|---|---|
-| `tools` | trail | yes | ordered |
-| `guidance` | trail | yes | the text for the `tool_guidance` slot |
-
-**tool**: deferred. It is part of a toolset, not a slice.
+**toolset**: it replaces `tool_group`.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `name` | trail | yes | the name the model sees |
-| `description` | trail | yes | |
-| `parameters` | trail | yes | |
-| `implementation` | details | no | an entry point into one of chatddx's own tool files, `chatddx.runtime.tools.<file>`; each run records the git blob of the file that ran |
+| `tools` | trail | yes | ordered; at least one, and no two of one name, which would be one tool to the model |
+| `guidance` | trail | yes | the text for the `tool_guidance` slot; null for none |
+
+Tools need a tool-call parser on the serving: resolution refuses a toolset
+on a serving without one.
+
+**tool**: part of a toolset, not a slice.
+
+| Field | In | Fingerprinted | Notes |
+|---|---|---|---|
+| `name` | trail | yes | the name the model sees, as the OpenAI API takes it: letters, digits, `_` and `-`, at most 64 |
+| `description` | trail | yes | empty by default |
+| `parameters` | trail | yes | a JSON Schema, kept as written, key order included; an object with no properties by default |
+| `implementation` | details | no | an entry point into one of chatddx's own tool files, `chatddx.runtime.tools.<file>:<function>`; each run records the git blob of the file that ran |
+
+- **Only chatddx's own tool files run,** whoever's branch names them: an
+  entry point outside `chatddx.runtime.tools` is refused. A file is loaded
+  afresh from its bytes each time, and the run records those bytes' git
+  blob id: `git cat-file blob <id>` gets them back. A tool file imports
+  nothing else of chatddx's, so the file is all of chatddx that ran.
+- **A call's arguments are held to the parameters first.** What doesn't
+  hold goes back to the model as the tool's answer, and so does an error
+  the function raises.
+- **A request carries a tool's parameters inlined,** as it does an
+  answer's schema (§4).
+- A test holds each tool file's function to its parameters: the same
+  names in the same order, required exactly where there is no default, and
+  the same defaults and types.
 
 ### The configuration and the case
 
@@ -893,19 +1170,39 @@ Each entity below is one slice, and each of its records is a variation.
 
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
-| `payload` | trail | yes | unchanged |
+| `payload` | trail | yes | unchanged: the case as the model receives it, through the instruction's `case` variable |
 
-A trial is history, not part of the registry. It points at trails: the
-configuration, the case and the stack, and it has its seed and replicate.
-It can be run more than once, to see its seed hold, to retry one that
-errored, or on the client of a later deploy, and each run records:
+### Trials and runs
 
+A trial is history, not part of the registry. It is content, like a trail:
+the configuration, the stack and the case it points at, by their trails,
+and its seed, or none. Runs of the same four are runs of one trial,
+whoever made them: a trial belongs to no one, and each run to whoever made
+it. (The code still keys a trial by its owner too, §12.) A trial can be run
+more than once, to see its seed hold, to retry one that errored, or on the
+client of a later deploy. A trial with no seed is a trial too, and its runs
+are draws that can't be repeated.
+
+Each run records:
+
+- who ran it, when it started and finished, and whether it completed or
+  errored. It completes when the model answered, even with an answer that
+  doesn't parse or hold, or with none after five rounds of tools. It errors
+  when the model or the server failed, or when it was stopped;
 - the client it ran on: its build's trail, and the revision and package
   versions it ran with;
-- the branch rows whose details resolution read, and the git blob of each
-  tool file that ran;
-- the requests and responses themselves (`data-generation.md` §4);
-- the output value, and whether it is valid (§4).
+- the branch rows whose details resolution read, the stack's and the
+  model's, and each tool's, with the git blob of the file that ran for it;
+- the requests and responses themselves, byte for byte
+  (`data-generation.md` §4);
+- the output value, whether it is valid, the last response's finish
+  reason, and the error, if any (§4);
+- its session: the exchange as pydantic-ai's messages, with a message for
+  the error where there was one. A later run could continue a session, as
+  a chat would, though no run does yet;
+- its scores (§4): per scorer, the value, what in the answer it rests on or
+  why there is none, and what it was made with: the view, the target, and
+  the git blob of the scorer's file. A run scored again keeps every score.
 
 A batch is history too (§5).
 
@@ -948,7 +1245,7 @@ A batch is history too (§5).
 | `temperature`, `top_p`, `max_tokens`, `presence_penalty`, `frequency_penalty` | `sampling`, same names | yes |
 | `top_k` | `sampling.top_k`, and now actually sent (via `extra_body`) | yes |
 | `stop_sequences` | `sampling.stop` | yes |
-| `seed` | scrapped from the registry; it becomes a per-replicate value on the trial | no |
+| `seed` | scrapped from the registry; it becomes the trial's, one per replicate of a batch | no |
 | `n` | scrapped | no |
 | `logit_bias` | scrapped: its keys are token ids, so a variation carrying them would fit only one tokenizer | no |
 | `provider_params` | dissolved. The reasoning switches it carried (`chat_template_kwargs.enable_thinking`, `openai_reasoning_effort`) become `reasoning.effort`, which the model's facts translate. Anything else needed later becomes a typed field of the slice it belongs to. | yes, as those fields |
@@ -993,20 +1290,20 @@ A batch is history too (§5).
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
 | `payload` | `case.payload` | yes |
-| `expects` (details) | removed: targets move to inspect | no |
+| `expects` (details) | removed: targets move to inspect. §11 proposes bringing them back as the case's `targets`, by kind. | no |
 
 **expect** (removed)
 
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
-| `payload` | inspect: a sample's `target`, keyed by the case | no |
+| `payload` | inspect: a sample's `target`, keyed by the case; for now `targets.toml`, and as proposed in §11, the case's `targets` | no |
 | `scorer` | inspect: one of the batch's scorers | no |
 
 **scorer** (removed)
 
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
-| `command` | inspect scorers that read views: `regex_match` becomes `reciprocal_rank` over `differential` (as in PR #68), and `exact_match` reads `text` | no |
+| `command` | inspect scorers that read views: `regex_match` becomes `reciprocal_rank` over `differential` (as in PR #68), and `exact_match` reads `text`. §11 proposes a new `scorer` entity: a function, the view it reads and the kind of target it holds that to. | no |
 
 **Views.** `super_agent`'s flat form becomes the configuration's, and every
 other view follows its entity. Form data isn't identity.
@@ -1017,7 +1314,7 @@ other view follows its entity. Form data isn't identity.
 |---|---|
 | `agent` | `base`: a configuration and a stack |
 | `case_tags` | kept |
-| `scorers` | inspect scorers, each with the view it reads |
+| `scorers` | inspect scorers, each with the view it reads; as §11 proposes, the registry's scorers |
 | (new) | `varied`, `replicates` |
 
 An experiment becomes a trial, which `data-generation.md` §4 describes,
@@ -1038,8 +1335,9 @@ Only the fields the redesign cannot work without were added:
   model, structured as in §2.
 - **`instruction.user`, `instruction.variables`:** templating instead of a
   text blob, with its slots declared.
-- **`output.guidance`, `coercion.schema_prompt`, `toolset.guidance`:** the
-  text a slice brings with it, and whether the model sees the schema.
+- **`output.guidance`, `coercion.schema_prompt`, `coercion.tool_description`,
+  `toolset.guidance`:** the text a slice brings with it, and whether the
+  model sees the schema.
 - **`output.views`:** where scorers read an output.
 - **`coercion.mode`:** the mode, as a slice of its own.
 - **`reasoning.effort`, `reasoning.budget`:** reasoning as a slice of its
@@ -1074,27 +1372,33 @@ Left out for good: an authored table of compatible pairs (§3).
   - checks couplings.
 
   Write sets are disjoint by construction, so no two slices ever write one
-  field. Resolution is a task of its own, and this note doesn't specify its
-  algorithm.
+  field. Resolution is `runtime/resolution.py`.
+- **A cell is resolved once, without its case.** Each trial renders the
+  messages with a case of its own.
 - **Its order follows what each slice is resolved against:**
   1. the model;
   2. reasoning, translated by the facts;
   3. sampling, whose defaults need the resolved reasoning mode;
-  4. output and coercion, the mode checked against the model's
-     capabilities;
-  5. the instruction, with every filled slot placed;
-  6. the toolset.
-- **Its outcomes** are realized, collapsed and refused (§2).
+  4. output and coercion, the mode checked against the model's facts and
+     the serving;
+  5. the toolset, which fills the `tool_guidance` slot;
+  6. the instruction, with every filled slot placed.
+
+  Reasoning and sampling are resolved together, since a budget has to fit
+  in the `max_tokens` sampling resolves to.
+- **Its outcomes** are realized, collapsed and refused (§2). Every refusal
+  in a cell is gathered, each with its slice and reason.
 - **What the data model owes it:**
-  - slot names, fixed by convention for each slice: `output_guidance` and
-    `schema_prompt`, and later `tool_guidance` and `reasoning_guidance`;
+  - slot names, fixed by convention for each slice: `output_guidance`,
+    `schema_prompt` and `tool_guidance`, and later `reasoning_guidance`;
   - the instruction's declared variables;
   - the model's facts, structured as in §2;
   - the serving's arguments, for couplings such as a reasoning parser;
   - each slice's write set, declared in code, once per slice;
-  - couplings, on the variations that have them.
-- **Where its result goes:** onto the trial, with its hashes, and for a
-  batch into its report (§5).
+  - couplings, as what the model's facts need of the serving.
+- **Where its result goes:** into the requests a run sends, which the run
+  keeps with the branch rows resolution read (§6), and for a batch into its
+  report (§5).
 
 ## 10. Order and storage
 
@@ -1102,21 +1406,195 @@ Left out for good: an authored table of compatible pairs (§3).
   references is committed first. The order becomes: machine, os, model,
   serving, client, stack, tool, toolset, instruction, output, coercion,
   reasoning, sampling, configuration, case.
-- **Schema storage.** `output.schema` is stored as `json` or text, not
-  `jsonb`, because `jsonb` re-sorts keys.
+- **Schema storage.** `output.schema` is stored as text, not `jsonb`,
+  because `jsonb` re-sorts keys. So are a tool's `parameters` and a run's
+  `output`.
 - **Fingerprint column.** A versioned fingerprint no longer fits
   `TrailModel.fingerprint` (`max_length=64`), so the column grows. Short
   forms such as `short_fingerprint` read the hex part.
 
+## 11. Scorers and targets in the registry (proposed)
+
+Today the targets are read from `targets.toml` when a run is scored, and
+the scorers are a table in code (§4). The inventory is the source of truth
+for now, but everything in it is to be kept in the portal. Once people work
+there, the database is the source of truth, and the TOML files only seed
+it. So scoring has to read scorers and targets from the registry, and
+nothing but a scorer's function stays in code. This section proposes how.
+
+### What inspect does
+
+Read from inspect-ai 0.3.263:
+
+- **A scorer is a registered function made with arguments.** `@scorer`
+  registers a factory by name, and a log records each scorer a task used
+  as `EvalScorer`: its name, its arguments (`options`) and its metrics.
+  `ScorerSpec` is the same triple, and is what re-creates a scorer.
+- **Metrics belong to the scorer.** A scorer declares how its values are
+  summed up over samples (`mean`, `stderr`, `accuracy` and the like). A
+  task can override them. Reducers (`mean`, `median`, `mode`, `max`,
+  `at_least`, `pass_at`) fold a sample's epochs into one score first.
+- **The target belongs to the sample.** A sample is its input and its
+  target, one or more strings (`Target`), and every scorer of the task
+  reads the same one. A scorer that needs more reads the sample's metadata.
+- **A score is its value, answer, explanation, reason and metadata.** The
+  reason is for an abnormal score, from a short list or any string.
+  `Score.unscored()` is a NaN that metrics and reducers skip.
+- **People can edit a score.** Each edit (`ScoreEdit`) keeps who made it,
+  when and why (`ProvenanceData`), and `Score.history` keeps the states
+  before it.
+- **A scorer's code is versioned with everything else.** The log's header
+  names the packages, and the git commit the eval ran from, with whether
+  the tree was dirty. Nothing names a scorer's own code.
+
+### The proposal
+
+- **A scorer is an entity:**
+
+  | Field | In | Fingerprinted | Notes |
+  |---|---|---|---|
+  | `function` | trail | yes | an entry point into one of chatddx's own scorer files, `chatddx.scoring.scorers.<file>:<function>` |
+  | `view` | trail | yes | the view it reads (§4) |
+  | `target` | trail | yes | the kind of target it holds the view to, or null for a scorer that needs none |
+  | `args` | trail | yes | further keyword arguments to the function; empty by default |
+  | `metrics` | details | no | how its values are summed up, by name: `mean`, `stderr`, `accuracy` and the like, computed with inspect's own metrics |
+
+  - It is inspect's `ScorerSpec`: the function is the name, the view, the
+    target and the arguments are the options, and the metrics are the
+    metrics.
+  - What can change a score is content, so a score can cite exactly what
+    made it. Metrics change no score, so they are details, and a change to
+    them leaves every run scored.
+  - Unlike inspect, the view and the kind of target are fields of their
+    own rather than arguments, because pairing a scorer with a run reads
+    them: set membership, as in §4.
+  - The function runs as a tool does: from an allowlisted package, loaded
+    afresh, with its file's git blob recorded on each score. Where inspect
+    names a commit, and can only say that the tree was dirty, the blob
+    names the code that scored.
+  - A scorer is named per owner, like every entity. The archive's four are
+    seeded from `inventory/scorers.toml`:
+
+    ```toml
+    [scorer.reciprocal_rank]
+    function = "chatddx.scoring.scorers.patterns:reciprocal_rank"
+    view = "differential"
+    target = "diagnosis"
+    metrics = ["mean", "stderr"]
+    ```
+
+- **A case's targets are its details:**
+
+  | Field | In | Fingerprinted | Notes |
+  |---|---|---|---|
+  | `targets` | details | no | what the case is expected to yield, by kind: `diagnosis`, `warning` and `disposition`. Each is text its scorers read: for the pattern scorers, a pattern (§4). |
+
+  - inspect keeps the target with the sample, and a case is chatddx's
+    sample. The kinds are chatddx's own: inspect has one target per sample,
+    and each of chatddx's scorers reads the kind it names.
+  - Details, not content: a target changes nothing the model reads, and a
+    case's fingerprint names what it reads. Like a model's facts, targets
+    are versioned by branch row: a changed target makes a new row, and a
+    score records the row it read.
+  - The kinds are a vocabulary kept in code, as the views are.
+  - The archive's targets are seeded from `cases.toml`, as `targets.*` in
+    each case's record, and `targets.toml` goes. It can't stay a file of
+    its own: an inventory that extends another replaces its records whole,
+    and doesn't merge them.
+  - A run is held to the targets of the scoring identity's own branch of
+    the run's case, or else the archive's: the newest row that holds the
+    run's case trail. So a fixed target reaches earlier runs of the same
+    payload, and a new payload comes with targets of its own.
+  - This brings back what `2bf6af7` made of a case's `expects`: details on
+    the case's branch.
+- **Which scorers apply to a run:** every scorer the scoring identity can
+  see, its own and those shared with it, whose view the run's output
+  offers, and whose kind of target the run's case has, if it needs one. A
+  batch will name its scorers instead (§5).
+- **A score** points at its scorer's trail instead of naming it, and at
+  the case branch row whose targets it read. It keeps the target it held
+  the view to, the blob, the value, the answer and the reason, and who
+  scored. The view is the scorer's.
+  - A run is outstanding for a scorer, for the identity that scores it,
+    until it has a score from that scorer's trail with the target and the
+    blob as they are now.
+  - The fields are inspect's `Score`: a null value is inspect's unscored.
+    `explanation` and `metadata` can join when a scorer needs them.
+- **Parsing needs nothing new.** `scorer` is one more entity, and a case's
+  `targets` pass through as details. At commit, a scorer's function must
+  have an entry point's shape, its view and kind must be in their
+  vocabularies, its arguments must be an object, and its metrics must be
+  known. The package is held at load, as a tool's is. Whether a target
+  parses is for the scorers that read it to say: a test checks the
+  archive's, and scoring checks the rest (§4).
+- **In the portal,** a scorer is shown like a tool, and a case's form gains
+  its targets. An edit there makes a new version, and that makes runs
+  outstanding again.
+- **Later, from inspect:** people's edits to scores, as rows beside a
+  score, each with its author, time and reason, when clinicians adjudicate
+  in the portal; reducers over a batch's replicates; and a log per cell,
+  each scorer as an `EvalScorer` and the case's targets in the sample's
+  metadata.
+
+### Steps
+
+1. **Registry:** the `scorer` entity (schemas, models and bundle; it
+   refers to nothing, so it can come last in commit order), the target
+   kinds, and the case's `targets` detail.
+2. **Inventory:** `inventory/scorers.toml` with the four scorers.
+   `cases.toml` takes the targets from `targets.toml`, their `# guessed`
+   marks kept, and the test inventory takes its own. `targets.toml`,
+   `test-targets.toml` and `settings.TARGETS_PATH` go.
+3. **History:** a score's `scorer` becomes a reference to the scorer's
+   trail, and it gains the case branch row it read and who scored. Its
+   `view` column goes. Migrations are reset, as this branch has done
+   before.
+4. **Scoring:** the scorers and targets come from the registry. The table
+   in code goes, and summaries use each scorer's metrics.
+5. **Repl:** `scorers` lists the scorers the identity can see, with their
+   owners and metrics. `score` stays as it is.
+6. **Tests:** the parser and `init-data` with scorers and targets. Scoring
+   with targets committed, so a changed target is a new version of the
+   case. The archive's scorers' arguments held to their functions'
+   signatures, as tools' parameters are, and the archive's targets held to
+   parse.
+7. **This note:** §11 and the passages that point to it lose
+   "proposed", and §4 describes scoring as it then is.
+
+### Open
+
+- **A case that should raise no warning.** A plan that rightly leaves
+  `acute_warning` null reads as no warning, and `warning_mentions` scores
+  it 0. A target could say that no warning is expected, and score such a
+  plan 1.
+
+## 12. Where the code lags
+
+Where this note and the code differ, the note is what was decided:
+
+- **Trials:** a trial is its configuration, stack, case and seed (§6), but
+  the code keys it by its owner as well. `TrialModel` is to lose its owner
+  and collaborators and gain a unique constraint over the four, with nulls
+  not distinct. `wipe-data` is to remove a user's runs, and then any trial
+  left without a run.
+- **Docstrings:** the toolset's still calls it deferred, and the output's
+  still says every output offers `text`.
+- **Run status:** the model keeps statuses from the worker before the
+  redesign: stored, queued, running and scored. Only completed and errored
+  are set.
+- **Request hashes** (`data-generation.md` §3) aren't computed yet.
+
 ## Sources
 
 - inspect-ai 0.3.263: `scorer/_scorer.py`, `scorer/_target.py`,
-  `scorer/_metric.py`, `scorer/_common.py`, `scorer/_choice.py`,
+  `scorer/_metric.py`, `scorer/_metrics/`, `scorer/_reducer/reducer.py`,
+  `scorer/_common.py`, `scorer/_choice.py`,
   `scorer/_classification.py`, `scorer/_pattern.py`, `scorer/_model.py`,
   `solver/_multiple_choice.py`, `solver/_task_state.py`,
   `model/_model_output.py`, `model/_generate_config.py`,
   `agent/_react.py`, `agent/_types.py`, `_eval/score.py`,
-  `_eval/task/log.py`, `log/_log.py`, `_util/metadata.py`,
+  `_eval/task/epochs.py`, `_eval/task/run.py`, `_eval/task/log.py`,
+  `log/_log.py`, `log/_edit.py`, `_util/metadata.py`,
   `util/_store_model.py`, `analysis/_dataframe/samples/columns.py`
 - pydantic-ai 2.41.0: `output.py`, `_output.py`, `profiles/__init__.py`,
   `providers/vllm.py`, `settings.py`
