@@ -31,7 +31,7 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 def branches_on(trail: TrailModel, owner_name: str):
     return entity_of(trail).branch_model.objects.filter(
-        target=trail,
+        trail=trail,
         owner__name=owner_name,
     )
 
@@ -45,7 +45,7 @@ def dangling_trails(owner_name: str) -> list[TrailModel]:
 
     for entity_name in ENTITY_NAMES:
         for branch_model in select_branch_models(entity_name, owner_name):
-            for trail in trail_closure(branch_model.target):
+            for trail in trail_closure(branch_model.trail):
                 if not branches_on(trail, owner_name).exists():
                     dangling.append(trail)
 
@@ -66,7 +66,7 @@ def a_configuration(guidance: str = "nobody named the parts of this"):
         output=OutputTrailIn(guidance=guidance),
         coercion=CoercionTrailIn(mode="native"),
         reasoning=ReasoningTrailIn(effort="default"),
-        sampling=SamplingTrailIn(defaults="model"),
+        sampling=SamplingTrailIn(defaults="generation_config"),
         toolset=ToolsetTrailIn(
             tools=[
                 ToolTrailIn(name="closure_tool_1"),
@@ -91,7 +91,7 @@ def test_a_commit_leaves_nothing_in_its_closure_branchless(owner: IdentityModel)
     configuration = get_branch_model(
         "configuration", owner.name, "closure-configuration"
     )
-    closure = trail_closure(configuration.target)
+    closure = trail_closure(configuration.trail)
 
     # instruction, output, coercion, reasoning, sampling, toolset, two tools
     assert len(closure) == 8
@@ -114,9 +114,9 @@ def test_a_stack_s_closure_is_its_things(
 
     stack = get_branch_model("stack", owner.name, "a stack")
 
-    assert sorted(entity_of(trail).name for trail in trail_closure(stack.target)) == [
+    assert sorted(entity_of(trail).name for trail in trail_closure(stack.trail)) == [
+        "llm",
         "machine",
-        "model",
         "os",
         "os",
         "serving",
@@ -132,7 +132,7 @@ def test_a_branch_made_for_the_closure_is_named_by_the_resolver(
     configuration = get_branch_model(
         "configuration", owner.name, "closure-configuration"
     )
-    output = configuration.target.output
+    output = configuration.trail.output
 
     made = branches_on(output, owner.name).get()
 
@@ -155,7 +155,7 @@ def test_a_trail_the_owner_already_has_a_branch_on_is_left_alone(
     )
 
     # the name they chose, and no second branch beside it
-    assert [b.name for b in branches_on(configuration.target.output, owner.name)] == [
+    assert [b.name for b in branches_on(configuration.trail.output, owner.name)] == [
         "my output"
     ]
 
@@ -170,7 +170,7 @@ def test_committing_the_same_configuration_again_makes_no_further_branches(
     )
     before = {
         trail.pk: branches_on(trail, owner.name).count()
-        for trail in trail_closure(configuration.target)
+        for trail in trail_closure(configuration.trail)
     }
 
     # same content, so the head does not move
@@ -178,7 +178,7 @@ def test_committing_the_same_configuration_again_makes_no_further_branches(
 
     after = {
         trail.pk: branches_on(trail, owner.name).count()
-        for trail in trail_closure(configuration.target)
+        for trail in trail_closure(configuration.trail)
     }
 
     assert after == before
@@ -197,7 +197,7 @@ def test_the_walk_goes_on_where_a_commit_stops(owner: IdentityModel):
     configuration = get_branch_model(
         "configuration", owner.name, "closure-configuration"
     )
-    toolset = configuration.target.toolset
+    toolset = configuration.trail.toolset
     tools = trail_closure(toolset)
 
     assert len(tools) == 2
@@ -239,7 +239,7 @@ def test_the_closure_of_a_shared_configuration_belongs_to_the_owner(
 
     assert dangling_trails(other_owner.name) == []
 
-    for trail in trail_closure(configuration.target):
+    for trail in trail_closure(configuration.trail):
         assert branches_on(trail, owner.name).count() == 0
 
 
@@ -254,14 +254,14 @@ def test_a_branch_made_for_the_closure_carries_nothing_beside_its_content(
 
     stack = get_branch_model("stack", owner.name, "a stack")
 
-    for trail in trail_closure(stack.target):
+    for trail in trail_closure(stack.trail):
         made = branches_on(trail, owner.name).get()
 
         assert list(made.collaborators.all()) == []
         assert list(made.tags.all()) == []
 
     # a machine's details, all at their defaults
-    machine = branches_on(stack.target.machine, owner.name).get()
+    machine = branches_on(stack.trail.machine, owner.name).get()
 
     assert machine.details == {"unreliable": False, "specs": None}
 
@@ -333,7 +333,7 @@ def test_the_closure_is_the_trails_and_only_the_trails(owner: IdentityModel):
     configuration = get_branch_model(
         "configuration", owner.name, "closure-configuration"
     )
-    closure = trail_closure(configuration.target)
+    closure = trail_closure(configuration.trail)
 
     assert all(isinstance(trail, TrailModel) for trail in closure)
-    assert configuration.target not in closure
+    assert configuration.trail not in closure

@@ -5,7 +5,7 @@
 #   inventory/malborg.toml         malborg, an RTX 5090 serving gpt-oss-20b
 #                                  and, from a container, Qwen3-8B-AWQ
 #   inventory/fake.toml            the fake vLLM, serving both without a GPU
-#   inventory/models.toml          the models, and the facts resolution reads
+#   inventory/llms.toml            the LLMs, and the facts resolution reads
 #   inventory/clients.toml         the chatddx builds that compose requests
 #   inventory/slices.toml          every request-time slice and its variations
 #   inventory/configurations.toml  one variation of each slice, named
@@ -18,7 +18,7 @@ extends = [
   "inventory/pelle.toml",
   "inventory/malborg.toml",
   "inventory/fake.toml",
-  "inventory/models.toml",
+  "inventory/llms.toml",
   "inventory/clients.toml",
   "inventory/slices.toml",
   "inventory/configurations.toml",

@@ -1,5 +1,5 @@
 """
-What runs when a model calls a tool, or a scorer scores a run: a function in
+What runs when an LLM calls a tool, or a scorer scores a run: a function in
 one of chatddx's own files, in `chatddx.runtime.tools` or
 `chatddx.scoring.scorers`, named by an entry point (`module.path:function`).
 Nothing else runs, whoever's branch names it.

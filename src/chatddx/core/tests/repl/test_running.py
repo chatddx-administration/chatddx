@@ -39,7 +39,7 @@ def test_run_streams_a_trial_of_the_cell(say: Say, fake: FakeTransport):
     assert "Fake diagnosis A\nFake diagnosis B\nFake diagnosis C" in written
 
     [request] = fake.requests
-    assert request["messages"][-1] == {"role": "user", "content": "case payload 1"}
+    assert request["messages"][-1] == {"role": "user", "content": "case vignette 1"}
 
 
 def test_each_run_is_recorded_as_a_run_of_its_trial(say: Say):
@@ -197,7 +197,7 @@ def test_a_toolset_can_be_set_in_any_configuration(say: Say, fake: FakeTransport
     ]
 
 
-def test_a_model_still_calling_tools_is_stopped(say_through: SayThrough):
+def test_an_llm_still_calling_tools_is_stopped(say_through: SayThrough):
     def handler(request: httpx2.Request) -> httpx2.Response:
         body = json.loads(request.content)
         return streaming(body | {"messages": body["messages"][:1]})
@@ -225,7 +225,7 @@ def test_a_tool_that_isn_t_chatddx_s_own_is_refused_before_anything_is_sent(
     say: Say, fake: FakeTransport
 ):
     _ = ToolBranchModel.objects.filter(name="sentinel_op").update(
-        details={"implementation": {"entry_point": "os:system"}}
+        details={"implementation": {"function": "os:system"}}
     )
 
     written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")

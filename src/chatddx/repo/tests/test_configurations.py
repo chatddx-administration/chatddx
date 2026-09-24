@@ -22,22 +22,22 @@ async def test_a_configuration_is_one_variation_of_each_slice(
 
     plan = await get_configuration_async(owner.name, "plan-web")
 
-    assert plan.target.instruction.variables == [
+    assert plan.trail.instruction.variables == [
         "case",
         "output_guidance",
         "schema_prompt",
         "tool_guidance",
     ]
-    assert plan.target.output.views == {
+    assert plan.trail.output.views == {
         "differential": "$.diagnoses[*].diagnosis",
         "warning": "$.acute_warning",
         "disposition": "$.management.disposition",
     }
-    assert plan.target.coercion.mode == "native"
-    assert plan.target.reasoning.effort == "default"
-    assert plan.target.sampling.defaults == "recommended"
-    assert plan.target.toolset is not None
-    assert [tool.name for tool in plan.target.toolset.tools] == ["web_search"]
+    assert plan.trail.coercion.mode == "native"
+    assert plan.trail.reasoning.effort == "default"
+    assert plan.trail.sampling.defaults == "recommended"
+    assert plan.trail.toolset is not None
+    assert [tool.name for tool in plan.trail.toolset.tools] == ["web_search"]
     assert plan.tags == ["ddx"]
 
 
@@ -51,11 +51,11 @@ async def test_configurations_are_selected_by_what_they_name(
 
     free_text = await select_configurations_async(
         owner_name=owner.name,
-        qs=qs.filter(target__output__schema__isnull=True),
+        qs=qs.filter(trail__output__json_schema__isnull=True),
     )
     with_tools = await select_configurations_async(
         owner_name=owner.name,
-        qs=qs.filter(target__toolset__isnull=False),
+        qs=qs.filter(trail__toolset__isnull=False),
     )
 
     assert sorted(c.name for c in free_text) == [

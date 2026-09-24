@@ -1,11 +1,11 @@
 """
-Serving: the start-up settings of the server a model runs in.
+Serving: the start-up settings of the server an LLM runs in.
 
 vLLM only. The OS identity already pins them, since NixOS declares them, but
 they are identified on their own too: the vLLM package, and the arguments
-and environment variables that change what the model reads or the numbers
+and environment variables that change what the LLM reads or the numbers
 it computes (data-generation.md §1). The `--model` path is left out, since
-that is the model's identity. What only changes speed is recorded as
+that is the LLM's identity. What only changes speed is recorded as
 description, for latency comparisons.
 
 Arguments are held in canonical form: long option names without their
@@ -33,12 +33,12 @@ from chatddx.repo.families import (
 )
 from chatddx.repo.families.fields import StorePath
 
-# What a variation can need of the serving it is realized on. A model's
+# What a variation can need of the serving it is realized on. An LLM's
 # facts name these as couplings, and resolution checks them against the
 # serving's arguments (see `ServingTrailBase.provides`).
 type Requirement = Literal["reasoning_parser", "tool_call_parser"]
 
-# Arguments that change what the model reads or the numbers it computes: the
+# Arguments that change what the LLM reads or the numbers it computes: the
 # first two kinds in data-generation.md §1. They belong to `args`.
 OUTPUT_ARGS = frozenset(
     {
@@ -78,7 +78,7 @@ PERFORMANCE_ARGS = frozenset(
 
 # Arguments held elsewhere, and where.
 ELSEWHERE = {
-    "model": "the --model path is the model's identity: it is model.blob",
+    "model": "the --model path is the LLM's identity: it is llm.snapshot",
     "served-model-name": "the served name is the stack's served_name",
     "api-key": "an API key is a secret: a stack names it as its credential",
 }

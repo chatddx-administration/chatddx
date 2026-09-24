@@ -14,7 +14,7 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class SamplingTrailModel(TrailModel):
-    defaults = CharField(max_length=16)
+    defaults = CharField(max_length=32)
 
     # doubles, like the numbers a request carries
     temperature = FloatField(null=True, blank=True)
@@ -27,7 +27,7 @@ class SamplingTrailModel(TrailModel):
 
 
 class SamplingBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         SamplingTrailModel,
         on_delete=PROTECT,
         related_name="branches",

@@ -2,7 +2,7 @@ extends = [
   "inventory/pelle.toml",
   "inventory/malborg.toml",
   "inventory/fake.toml",
-  "inventory/models.toml",
+  "inventory/llms.toml",
   "inventory/clients.toml",
   "inventory/slices.toml",
   "inventory/configurations.toml",
@@ -10,12 +10,12 @@ extends = [
 ]
 
 [case.case-1]
-payload = "case payload 1"
+vignette = "case vignette 1"
 tags = ["tag-1", "tag-2"]
 targets.diagnosis = "fake & diagnosis & (b | 2)"
 targets.warning = "acute & warning"
 targets.disposition = "admit*"
 
 [case.case-2]
-payload = "case payload 2"
+vignette = "case vignette 2"
 targets.diagnosis = "nothing & listed"

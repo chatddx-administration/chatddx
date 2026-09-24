@@ -33,7 +33,7 @@ def test_session(
     provision()
     configuration, _ = test_inventory.configuration["baseline"]
     stack = get_visible_branch_model("stack", "alex", STACK)
-    model = get_visible_branch_model("model", "alex", trail=stack.target.model_id)
+    llm = get_visible_branch_model("llm", "alex", trail=stack.trail.llm_id)
     fake = FakeTransport()
 
     def run(case_name: str, session: SessionModel | None = None) -> RunModel:
@@ -43,7 +43,7 @@ def test_session(
         )
         trial = Trial(
             cell("baseline", STACK),
-            case.target.payload,
+            case.trail.vignette,
             transport=fake,
             history=history,
             conversation_id=str(session.uuid) if session else None,
@@ -54,8 +54,8 @@ def test_session(
         return record(
             "alex",
             configuration,
-            Branches(stack.pk, model.pk),
-            case.target_id,
+            Branches(stack.pk, llm.pk),
+            case.trail_id,
             trial,
             Outcome(RunStatus.COMPLETED, output=result.output),
             started,
@@ -75,7 +75,7 @@ def test_session(
         "assistant",
         "user",
     ]
-    assert fake.requests[1]["messages"][-1]["content"] == "case payload 2"
+    assert fake.requests[1]["messages"][-1]["content"] == "case vignette 2"
     assert [m.run_id for m in first.session.messages.all()] == [
         first.uuid,
         first.uuid,

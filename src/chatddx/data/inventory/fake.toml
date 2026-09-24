@@ -1,6 +1,6 @@
 # fake: the fake vLLM, `chatddx fake-vllm`, on whichever machine runs it. It
 # thinks aloud about the request it was sent and answers every case alike,
-# so a cell can be tried end to end without a GPU. It serves both models
+# so a cell can be tried end to end without a GPU. It serves both LLMs
 # under their served names, with their servings' parsers, so a cell resolves
 # on it as it would on pelle or malborg.
 
@@ -36,7 +36,7 @@ port = 12099
 
 [stack."qwen3-8b-awq@fake"]
 machine = "fake"
-model = "qwen3-8b-awq"
+llm = "qwen3-8b-awq"
 serving = "qwen3-8b-awq@fake"
 endpoint = "http://localhost:12099/v1/"
 served_name = "Qwen/Qwen3-8B-AWQ"
@@ -45,7 +45,7 @@ tags = ["fake"]
 
 [stack."gpt-oss-20b@fake"]
 machine = "fake"
-model = "gpt-oss-20b"
+llm = "gpt-oss-20b"
 serving = "gpt-oss-20b@fake"
 endpoint = "http://localhost:12099/v1/"
 served_name = "openai/gpt-oss-20b"

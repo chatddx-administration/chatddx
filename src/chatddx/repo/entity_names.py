@@ -6,7 +6,7 @@ from typing import Literal, get_args
 type EntityName = Literal[
     "machine",
     "os",
-    "model",
+    "llm",
     "serving",
     "client",
     "stack",

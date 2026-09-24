@@ -2,9 +2,9 @@
 A trial: a resolved cell run on a case (new-datamodel.md §5).
 
 It is sent through pydantic-ai on vLLM (data-generation.md §2.4), with a
-profile taken from the model's facts instead of one matched on its served
+profile taken from the LLM's facts instead of one matched on its served
 name, and with every field resolution wrote. chatddx owns every string the
-model reads (data-generation.md §2.2): the schema goes out as it was written,
+LLM reads (data-generation.md §2.2): the schema goes out as it was written,
 pydantic-ai adds no words of its own, and an answer that doesn't hold is
 recorded, not repaired by asking again. The exact bodies are kept, each
 request as it went and each response as it came: the request, not the
@@ -237,7 +237,7 @@ def _runner(
 ) -> Callable[..., Any]:
     """
     A tool's function, called with arguments that hold to its parameters;
-    what doesn't hold, or fails, goes back to the model as what it returned.
+    what doesn't hold, or fails, goes back to the LLM as what it returned.
     """
 
     def run(**arguments: Any) -> Any:

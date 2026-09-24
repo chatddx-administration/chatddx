@@ -1,4 +1,4 @@
-# The case corpus. A case is its payload, read from cases/<name>.txt next
+# The case corpus. A case is its vignette, read from cases/<name>.txt next
 # to this file, tags that say which dataset it came from, and its targets:
 # what it is expected to yield, by kind (new-datamodel.md §11). `diagnosis`
 # is read by `reciprocal_rank` and `first_mention`, and `warning` and

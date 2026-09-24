@@ -1,5 +1,5 @@
 """
-The repl: run cases on a cell, and watch the model answer as it goes.
+The repl: run cases on a cell, and watch the LLM answer as it goes.
 
 A cell is a configuration joined to a stack (new-datamodel.md §5), and the
 repl holds one the way psql holds a database: `use` puts a configuration in

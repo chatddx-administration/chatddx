@@ -21,7 +21,7 @@ def configurations(repl: Repl) -> None:
     for model in select_visible_branch_models(
         "configuration", repl.identity, SHARED_BY["configuration"]
     ):
-        trail: Any = model.target
+        trail: Any = model.trail
         slices = [repl.name_of(entity, getattr(trail, entity)) for entity in SLICES]
         table.add_row(model.name, *slices, _owner(repl, model.owner.name))
 
@@ -31,14 +31,14 @@ def configurations(repl: Repl) -> None:
 def stacks(repl: Repl) -> None:
     table = Table(box=None, header_style="bold")
 
-    for column in ("stack", "model", "machine", "endpoint", "owner"):
+    for column in ("stack", "llm", "machine", "endpoint", "owner"):
         table.add_column(column)
 
     for spec in repl.stacks():
         table.add_row(
             spec.name,
-            repl.name_of("model", spec.target.model),
-            repl.name_of("machine", spec.target.machine),
+            repl.name_of("llm", spec.trail.llm),
+            repl.name_of("machine", spec.trail.machine),
             str(spec.details.endpoint or "—"),
             _owner(repl, spec.owner.name),
         )

@@ -12,7 +12,7 @@ class CoercionTrailModel(TrailModel):
 
 
 class CoercionBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         CoercionTrailModel,
         on_delete=PROTECT,
         related_name="branches",

@@ -27,7 +27,7 @@ def retarget() -> Callable[[], None]:
             owner__name="archive", name="case-1"
         ).latest("pk")
         _ = commit(
-            case.target,
+            case.trail,
             CaseBranchDetails(
                 name="case-1",
                 owner="archive",

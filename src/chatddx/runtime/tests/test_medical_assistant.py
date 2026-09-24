@@ -33,7 +33,7 @@ async def test_qwen3_management_plan(
     case, _ = live_inventory.case[case_name]
     assert resolution.coercion is not None
 
-    result = await ran(Trial(resolution, case.payload, seed=0))
+    result = await ran(Trial(resolution, case.vignette, seed=0))
 
     assert invalid(resolution.coercion.schema, result.output) is None
     assert resolution.output.view("differential", result.output)

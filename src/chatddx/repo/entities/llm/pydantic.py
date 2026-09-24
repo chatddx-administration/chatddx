@@ -1,11 +1,11 @@
 """
-A model: a thing, identified by one field.
+An LLM: a thing, identified by one field.
 
-The identity is the blob: a hash of the directory vLLM loads, taken as the
-store path of the fixed-output derivation that fetched it. That directory
-holds the weights, the tokenizer, the chat template and
+The identity is the snapshot: the directory vLLM loads, named by the store
+path of the fixed-output derivation that fetched it, which is a hash of it.
+That directory holds the weights, the tokenizer, the chat template and
 generation_config.json, and all of it changes behaviour. A quantized variant
-is a different blob, and so a different model. For a cloud model, the
+is a different snapshot, and so a different LLM. For a cloud LLM, the
 provider's dated model name stands in, unverified.
 
 Everything else is description, and `facts` is the part of it resolution
@@ -13,7 +13,7 @@ reads (new-datamodel.md §2). A fact translates an intent in one of three
 ways: a request fragment, the name of an intent it collapses into, or a
 refusal with its reason. An intent the facts don't mention is refused for
 want of a fact: nothing is guessed. Facts are claims, and only an experiment
-shows whether a model honours them.
+shows whether an LLM honours them.
 """
 
 from typing import Annotated, Any, ClassVar, cast
@@ -57,18 +57,18 @@ from chatddx.repo.families import (
 from chatddx.repo.families.fields import STORE_PATH, PinnedSource
 
 
-def _blob(value: str) -> str:
+def _snapshot(value: str) -> str:
     if value.startswith("/"):
         if not STORE_PATH.fullmatch(value):
             raise ValueError(
-                f"{value!r}: a local model is the store path of the derivation "
+                f"{value!r}: a local LLM is the store path of the derivation "
                 + "that fetched it (/nix/store/<hash>-<name>)"
             )
     elif "/" in value:
         # vLLM would resolve a repository name to whatever revision it has
         # when it starts (data-generation.md §1)
         raise ValueError(
-            f"{value!r} names a repository, not a blob: fetch it as a "
+            f"{value!r} names a repository, not a snapshot: fetch it as a "
             + "fixed-output derivation and give its store path, or give a "
             + "cloud provider's dated model name"
         )
@@ -77,7 +77,7 @@ def _blob(value: str) -> str:
 
 
 class Refusal(BaseModel):
-    """An intent the model can't honour, and why."""
+    """An intent the LLM can't honour, and why."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
@@ -115,7 +115,7 @@ def _fact_kind(value: Any) -> str:
             return _refusal_or("fragment")(value)
 
 
-# What an intent writes into the request on this model.
+# What an intent writes into the request on this LLM.
 ReasoningFragment = Annotated[dict[str, JsonValue], AfterValidator(_within_reasoning)]
 
 ReasoningFact = Annotated[
@@ -148,8 +148,8 @@ class BudgetFact(BaseModel):
 
 class ReasoningFacts(BaseModel):
     """
-    How each reasoning intent is realized on the model. `default` names the
-    intent that is the model's own.
+    How each reasoning intent is realized on the LLM. `default` names the
+    intent that is the LLM's own.
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
@@ -203,7 +203,7 @@ class ReasoningFacts(BaseModel):
         return None
 
     def realized(self) -> frozenset[Intent]:
-        """The intents with a fragment of their own: the model's modes."""
+        """The intents with a fragment of their own: the LLM's modes."""
         return frozenset(
             intent for intent in INTENTS if isinstance(getattr(self, intent), dict)
         )
@@ -231,12 +231,12 @@ class SamplingFacts(BaseModel):
 
 
 class ModeFact(BaseModel):
-    """A coercion mode that works on the model, with what it needs."""
+    """A coercion mode that works on the LLM, with what it needs."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     needs: Needs = Field(default_factory=list)
-    # what a batch's report says about the mode on this model
+    # what a batch's report says about the mode on this LLM
     note: str | None = None
 
 
@@ -270,7 +270,7 @@ class CoercionFacts(BaseModel):
         return self
 
 
-class ModelFacts(BaseModel):
+class LLMFacts(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     reasoning: ReasoningFacts = Field(default_factory=ReasoningFacts)
@@ -293,7 +293,7 @@ class ModelFacts(BaseModel):
         return self
 
 
-class ModelSpecs(BaseModel):
+class LLMSpecs(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     family: str | None = None
@@ -305,53 +305,53 @@ class ModelSpecs(BaseModel):
     licence: str | None = None
 
 
-class ModelDetails(Details):
+class LLMDetails(Details):
     source: PinnedSource | None = None
-    specs: ModelSpecs | None = None
-    facts: ModelFacts = Field(default_factory=ModelFacts)
+    specs: LLMSpecs | None = None
+    facts: LLMFacts = Field(default_factory=LLMFacts)
 
 
-class ModelTrailBase(BaseTrail):
-    blob: Annotated[str, AfterValidator(_blob)]
+class LLMTrailBase(BaseTrail):
+    snapshot: Annotated[str, AfterValidator(_snapshot)]
 
 
-class ModelTrailIn(ModelTrailBase, TrailIn):
+class LLMTrailIn(LLMTrailBase, TrailIn):
     pass
 
 
-class ModelTrailRef(TrailRef, ModelTrailBase):
+class LLMTrailRef(TrailRef, LLMTrailBase):
     pass
 
 
-class ModelTrailOut(ModelTrailBase, TrailOut):
+class LLMTrailOut(LLMTrailBase, TrailOut):
     pass
 
 
-class ModelBranchDetails(BranchDetails, ModelDetails):
+class LLMBranchDetails(BranchDetails, LLMDetails):
     pass
 
 
-class ModelBranchDetailsPatch(BranchDetailsPatch, ModelDetails):
+class LLMBranchDetailsPatch(BranchDetailsPatch, LLMDetails):
     pass
 
 
-class ModelBranchIn(BaseBranch[ModelTrailIn], ModelBranchDetails):
+class LLMBranchIn(BaseBranch[LLMTrailIn], LLMBranchDetails):
     pass
 
 
-class ModelBranchOut(BranchOut[ModelTrailOut, ModelDetails]):
+class LLMBranchOut(BranchOut[LLMTrailOut, LLMDetails]):
     pass
 
 
-class ModelFormDataIn(ModelTrailBase, BaseFormDataIn):
+class LLMFormDataIn(LLMTrailBase, BaseFormDataIn):
     source: PinnedSource | None = None
-    specs: ModelSpecs | None = None
-    facts: ModelFacts = Field(default_factory=ModelFacts)
+    specs: LLMSpecs | None = None
+    facts: LLMFacts = Field(default_factory=LLMFacts)
 
 
-class ModelFormDataOut(BaseFormDataOut):
+class LLMFormDataOut(BaseFormDataOut):
     id: CoercedStr = Field(serialization_alias="template")
-    blob: str
+    snapshot: str
     source: str | None
-    specs: ModelSpecs | None
-    facts: ModelFacts
+    specs: LLMSpecs | None
+    facts: LLMFacts

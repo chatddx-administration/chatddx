@@ -1,29 +1,29 @@
-# Models. A model is the directory vLLM loads: weights, config.json, the
+# LLMs. An LLM is the directory vLLM loads: weights, config.json, the
 # tokenizer, the chat template and generation_config.json, fetched as a Nix
-# fixed-output derivation. Its store path, the blob, is all that identifies
-# it. Everything else is description, and `facts` is the part of the
+# fixed-output derivation. Its store path, the snapshot, is all that
+# identifies it. Everything else is description, and `facts` is the part of the
 # description that resolution reads to realize each slice's intent on it
 # (new-datamodel.md §2).
 #
 # A fact translates an intent in one of three ways:
 #   - a request fragment, which is what the intent writes into the request;
 #   - the name of another intent, which it collapses into;
-#   - { refused = "why" }, when the model can't honour it.
+#   - { refused = "why" }, when the LLM can't honour it.
 # An intent with no fact is refused too, for want of a fact.
 
-[model.qwen3-8b-awq]
-blob = "/nix/store/vmm0f85gk4i6ymz1j8hlk9mfyjy5jq8a-Qwen3-8B-AWQ"  # guessed
+[llm.qwen3-8b-awq]
+snapshot = "/nix/store/vmm0f85gk4i6ymz1j8hlk9mfyjy5jq8a-Qwen3-8B-AWQ"  # guessed
 source = "Qwen/Qwen3-8B-AWQ@d8dfb663dd1029e5ca5cf984c2ed338bcba077d3"  # guessed
 tags = ["open-weights"]
 
-[model.qwen3-8b-awq.specs]
+[llm.qwen3-8b-awq.specs]
 family = "qwen3"
 parameters_b = 8.2
 quantization = "awq"
 context_length = 32768
 licence = "apache-2.0"
 
-[model.qwen3-8b-awq.facts.reasoning]
+[llm.qwen3-8b-awq.facts.reasoning]
 default = "on"
 off = { chat_template_kwargs = { enable_thinking = false } }
 on = { chat_template_kwargs = { enable_thinking = true } }
@@ -36,38 +36,38 @@ xhigh = "on"
 budget = { field = "thinking_token_budget", needs = "reasoning_parser" }
 
 # the model card, per mode
-[model.qwen3-8b-awq.facts.sampling.recommended]
+[llm.qwen3-8b-awq.facts.sampling.recommended]
 on = { temperature = 0.6, top_p = 0.95, top_k = 20, presence_penalty = 1.5 }  # guessed: presence_penalty, for quantized models
 off = { temperature = 0.7, top_p = 0.8, top_k = 20, presence_penalty = 1.5 }  # guessed: presence_penalty, for quantized models
 
 # what vLLM gives a field the request leaves out (--generation-config auto)
-[model.qwen3-8b-awq.facts.sampling.generation_config]
+[llm.qwen3-8b-awq.facts.sampling.generation_config]
 temperature = 0.6
 top_p = 0.95
 top_k = 20
 
-[model.qwen3-8b-awq.facts.coercion]
+[llm.qwen3-8b-awq.facts.coercion]
 default = "native"  # guessed: what `auto` resolves to
 # vLLM's grammar finds the end of the reasoning through the parser, and
 # constrains only what follows. Without one it holds from the first token,
-# and the model can't think: a mode that needs the parser needs it only
-# while the model reasons. Tool mode sends tool_choice = required, which
+# and the LLM can't think: a mode that needs the parser needs it only
+# while the LLM reasons. Tool mode sends tool_choice = required, which
 # vLLM holds with a grammar too.
 native = { needs = "reasoning_parser" }
 tool = { needs = "reasoning_parser" }
 prompted = {}
 
 # pydantic-ai profile overrides, so nothing hangs on the served name
-[model.qwen3-8b-awq.facts.profile]
+[llm.qwen3-8b-awq.facts.profile]
 supports_json_schema_output = true
 ignore_streamed_leading_whitespace = true
 
-[model.gpt-oss-20b]
-blob = "/nix/store/krk2n344vqniw1iqmidbwspa9dxs5qbv-gpt-oss-20b"  # guessed
+[llm.gpt-oss-20b]
+snapshot = "/nix/store/krk2n344vqniw1iqmidbwspa9dxs5qbv-gpt-oss-20b"  # guessed
 source = "openai/gpt-oss-20b@efff2b5d25c543d129490e2588a37558475ea333"  # guessed
 tags = ["open-weights"]
 
-[model.gpt-oss-20b.specs]
+[llm.gpt-oss-20b.specs]
 family = "gpt-oss"
 parameters_b = 21
 active_parameters_b = 3.6
@@ -75,7 +75,7 @@ quantization = "mxfp4"
 context_length = 131072
 licence = "apache-2.0"
 
-[model.gpt-oss-20b.facts.reasoning]
+[llm.gpt-oss-20b.facts.reasoning]
 default = "medium"
 off = { refused = "always reasons: vLLM rejects reasoning_effort = none for harmony" }
 on = "medium"
@@ -87,25 +87,25 @@ xhigh = { refused = "harmony has no xhigh effort, only low, medium and high" }
 budget = { refused = "no thinking budget is documented for harmony" }
 
 # OpenAI's guidance for gpt-oss, the same at every effort
-[model.gpt-oss-20b.facts.sampling.recommended]
+[llm.gpt-oss-20b.facts.sampling.recommended]
 low = { temperature = 1.0, top_p = 1.0 }
 medium = { temperature = 1.0, top_p = 1.0 }
 high = { temperature = 1.0, top_p = 1.0 }
 
 # its generation_config.json sets no sampling value, so vLLM's own defaults
 # apply
-[model.gpt-oss-20b.facts.sampling.generation_config]  # guessed
+[llm.gpt-oss-20b.facts.sampling.generation_config]  # guessed
 
-[model.gpt-oss-20b.facts.coercion]
+[llm.gpt-oss-20b.facts.coercion]
 default = "native"  # guessed: what `auto` resolves to
-native = { needs = "reasoning_parser", note = "harmony renders no response_format: the model reads the schema only through a schema prompt" }  # guessed: needs
+native = { needs = "reasoning_parser", note = "harmony renders no response_format: the LLM reads the schema only through a schema prompt" }  # guessed: needs
 tool = { needs = "tool_call_parser", note = "vLLM ignores tool_choice = required for gpt-oss: nothing forces the answer through the tool" }
 prompted = {}
 
-[model.gpt-oss-20b.facts.profile]
+[llm.gpt-oss-20b.facts.profile]
 supports_json_schema_output = true
 ignore_streamed_leading_whitespace = true
 # pydantic-ai's vLLM provider declares thinking for Qwen3 but not for gpt-oss,
-# and drops `thinking` from a model it doesn't declare it for
+# and drops `thinking` from an LLM it doesn't declare it for
 supports_thinking = true  # guessed
 thinking_always_enabled = true  # guessed

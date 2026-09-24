@@ -39,7 +39,7 @@ class ToolsetTrailBase(BaseTrail):
 
 
 class ToolsetTrailIn(ToolsetTrailBase, TrailIn):
-    # two tools of one name would be one tool to the model
+    # two tools of one name would be one tool to the LLM
     tools: Annotated[
         list[ToolTrailIn],
         Field(min_length=1),

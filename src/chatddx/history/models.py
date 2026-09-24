@@ -41,7 +41,7 @@ from chatddx.core.models import IdentityModel
 from chatddx.repo.entities.case.django import CaseBranchModel, CaseTrailModel
 from chatddx.repo.entities.client.django import ClientTrailModel
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
-from chatddx.repo.entities.model.django import ModelBranchModel
+from chatddx.repo.entities.llm.django import LLMBranchModel
 from chatddx.repo.entities.scorer.django import ScorerTrailModel
 from chatddx.repo.entities.stack.django import StackBranchModel, StackTrailModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
@@ -215,15 +215,15 @@ class RunModel(Model):
         related_name="runs",
     )
     stack_branch_id: int | None
-    model_branch = ForeignKey(
-        ModelBranchModel,
+    llm_branch = ForeignKey(
+        LLMBranchModel,
         default=None,
         null=True,
         blank=True,
         on_delete=PROTECT,
         related_name="runs",
     )
-    model_branch_id: int | None
+    llm_branch_id: int | None
     scores: QuerySet[ScoreModel]
     tool_branches: ManyToManyField[ToolBranchModel, Any] = ManyToManyField(
         ToolBranchModel,

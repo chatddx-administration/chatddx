@@ -19,7 +19,6 @@ emits keys in the order `properties` gives them.
 
 import json
 import re
-import warnings
 from typing import Any, Literal, cast, get_args
 
 from pydantic import Field, JsonValue, model_validator
@@ -198,62 +197,53 @@ def _describe(node: dict[str, Any]) -> str:
     return f"of type {declared}"
 
 
-with warnings.catch_warnings():
-    # `schema` is the field's name in the design. BaseModel.schema is pydantic
-    # v1's classmethod, deprecated, and nothing here calls it.
-    warnings.filterwarnings(
-        "ignore", message='Field name "schema"', category=UserWarning
+class OutputTrailBase(BaseTrail):
+    json_schema: JsonSchema | None = Field(
+        default=None, json_schema_extra={ORDERED: True}
     )
+    guidance: str | None = None
+    views: dict[View, str] = Field(default_factory=dict)
 
-    class OutputTrailBase(BaseTrail):
-        schema: JsonSchema | None = Field(  # pyright: ignore[reportIncompatibleMethodOverride]
-            default=None, json_schema_extra={ORDERED: True}
-        )
-        guidance: str | None = None
-        views: dict[View, str] = Field(default_factory=dict)
+    def view(self, name: View, answer: JsonValue) -> list[JsonValue]:
+        """
+        What the view `name` reads from `answer`: the values its path
+        reaches in a structured answer, or its parser's items from free
+        text.
+        """
+        reading = self.views[name]
 
-        def view(self, name: View, answer: JsonValue) -> list[JsonValue]:
-            """
-            What the view `name` reads from `answer`: the values its path
-            reaches in a structured answer, or its parser's items from free
-            text.
-            """
-            reading = self.views[name]
+        if self.json_schema is None:
+            text = answer if isinstance(answer, str) else json.dumps(answer)
+            return list(PARSE[reading](text))
 
-            if self.schema is None:
-                text = answer if isinstance(answer, str) else json.dumps(answer)
-                return list(PARSE[reading](text))
+        return read(answer, reading)
 
-            return read(answer, reading)
-
-        @model_validator(mode="after")
-        def _every_view_is_proved(self):
-            for view, reading in self.views.items():
-                if self.schema is None:
-                    if PARSERS.get(reading) != view:
-                        parsers = [
-                            name for name, gives in PARSERS.items() if gives == view
-                        ]
-                        raise ValueError(
-                            f"free text gives its '{view}' view through a parser "
-                            + f"({', '.join(parsers)}), not {reading!r}"
-                        )
-                    continue
-
-                if not _PATH.fullmatch(reading):
+    @model_validator(mode="after")
+    def _every_view_is_proved(self):
+        for view, reading in self.views.items():
+            if self.json_schema is None:
+                if PARSERS.get(reading) != view:
+                    parsers = [name for name, gives in PARSERS.items() if gives == view]
                     raise ValueError(
-                        f"'{view}' reads {reading!r}, which is not a path of names and "
-                        + "[*] from $"
+                        f"free text gives its '{view}' view through a parser "
+                        + f"({', '.join(parsers)}), not {reading!r}"
                     )
+                continue
 
-                try:
-                    prove(self.schema, reading, *VIEW_ITEMS[view])
-                except Unproved as e:
-                    raise ValueError(
-                        f"'{view}' reads {reading}, and the schema doesn't prove it: {e}"
-                    ) from None
+            if not _PATH.fullmatch(reading):
+                raise ValueError(
+                    f"'{view}' reads {reading!r}, which is not a path of names and "
+                    + "[*] from $"
+                )
 
-            return self
+            try:
+                prove(self.json_schema, reading, *VIEW_ITEMS[view])
+            except Unproved as e:
+                raise ValueError(
+                    f"'{view}' reads {reading}, and the schema doesn't prove it: {e}"
+                ) from None
+
+        return self
 
 
 class OutputTrailIn(OutputTrailBase, TrailIn):

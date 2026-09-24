@@ -17,7 +17,7 @@ pytestmark = [
 COUNTS = {
     "machine": 3,
     "os": 3,
-    "model": 2,
+    "llm": 2,
     "serving": 5,
     "client": 2,
     "stack": 5,
@@ -49,7 +49,7 @@ async def test_branch_specs(inventory_fixture_bo: InventoryBranchOut):
 
     # a spec holds the branch's details beside its content
     assert stack.details.served_name == "Qwen/Qwen3-8B-AWQ"
-    assert stack.target.host_os is not None
+    assert stack.trail.host_os is not None
     assert stack.tags == ["rtx-5090"]
 
 

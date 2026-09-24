@@ -1,6 +1,6 @@
 # malborg: one RTX 5090 (32 GB). It serves gpt-oss-20b at
 # http://malborg.km:12009/v1, the endpoint chatddx uses today, and Qwen3-8B-AWQ
-# from a NixOS container beside it, so the one model can be compared across
+# from a NixOS container beside it, so the one LLM can be compared across
 # pelle's card and this one.
 #
 # Everything marked "# guessed" waits for the script that collects it from
@@ -45,7 +45,7 @@ nixpkgs_rev = "c09727c23bd83e81248764ed6e2dd41aa3113972"  # guessed
 [serving."gpt-oss-20b@malborg"]
 engine = "/nix/store/5nxjf9n4gzgajv67rd4fb1kdssql7g51-python3.13-vllm-0.13.0"  # guessed
 
-# arguments that change what the model reads or the numbers: fingerprinted
+# arguments that change what the LLM reads or the numbers: fingerprinted
 [serving."gpt-oss-20b@malborg".args]
 max-model-len = 131072  # guessed
 reasoning-parser = "openai_gptoss"  # guessed
@@ -88,7 +88,7 @@ port = 12010  # guessed
 [stack."gpt-oss-20b@malborg"]
 machine = "malborg"
 os = "malborg"
-model = "gpt-oss-20b"
+llm = "gpt-oss-20b"
 serving = "gpt-oss-20b@malborg"
 endpoint = "http://malborg.km:12009/v1"
 served_name = "openai/gpt-oss-20b"
@@ -100,7 +100,7 @@ tags = ["rtx-5090"]
 machine = "malborg"
 os = "vllm-qwen3"  # guessed
 host_os = "malborg"  # guessed
-model = "qwen3-8b-awq"
+llm = "qwen3-8b-awq"
 serving = "qwen3-8b-awq@malborg"
 endpoint = "http://malborg.km:12010/v1/"  # guessed
 served_name = "Qwen/Qwen3-8B-AWQ"

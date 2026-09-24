@@ -65,6 +65,6 @@ class Cell:
 
         if entity in self.variations:
             variation = self.variations[entity]
-            return None if variation is None else variation.target
+            return None if variation is None else variation.trail
 
-        return getattr(self.configuration.target, entity)
+        return getattr(self.configuration.trail, entity)

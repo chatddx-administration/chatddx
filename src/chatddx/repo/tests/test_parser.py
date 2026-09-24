@@ -18,7 +18,7 @@ from uuid import UUID
 import pytest
 
 from chatddx.core import settings
-from chatddx.repo.entities.model.pydantic import Refusal
+from chatddx.repo.entities.llm.pydantic import Refusal
 from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.inventories import ParsedInventory
@@ -37,8 +37,8 @@ machine_id = "{MACHINE_ID}"
 [os.box]
 toplevel = "/nix/store/00000000000000000000000000000000-nixos-system-box"
 
-[model.m]
-blob = "/nix/store/11111111111111111111111111111111-m"
+[llm.m]
+snapshot = "/nix/store/11111111111111111111111111111111-m"
 
 [serving.vllm]
 engine = "/nix/store/22222222222222222222222222222222-vllm"
@@ -46,7 +46,7 @@ engine = "/nix/store/22222222222222222222222222222222-vllm"
 [stack.m-on-box]
 machine = "box"
 os = "box"
-model = "m"
+llm = "m"
 serving = "vllm"
 """
 
@@ -65,7 +65,7 @@ mode = "native"
 effort = "default"
 
 [sampling.s]
-defaults = "model"
+defaults = "generation_config"
 
 [configuration.k]
 instruction = "i"
@@ -102,7 +102,7 @@ def test_every_record_of_the_inventory_parses(inventory: ParsedInventory):
     assert {entity: len(getattr(inventory, entity)) for entity in ENTITY_NAMES} == {
         "machine": 3,
         "os": 3,
-        "model": 2,
+        "llm": 2,
         "serving": 5,
         "client": 2,
         "stack": 5,
@@ -133,7 +133,7 @@ def test_a_stack_is_the_things_it_names(inventory: ParsedInventory):
     assert stack.machine == inventory.machine["pelle"][0]
     assert stack.os == inventory.os["pelle"][0]
     assert stack.host_os is None
-    assert stack.model == inventory.model["qwen3-8b-awq"][0]
+    assert stack.llm == inventory.llm["qwen3-8b-awq"][0]
     assert stack.serving == inventory.serving["qwen3-8b-awq@pelle"][0]
 
     # where the request goes is the stack's description, not its content
@@ -151,11 +151,11 @@ def test_a_container_s_stack_names_its_host_s_system(inventory: ParsedInventory)
     assert stack.host_os == inventory.os["malborg"][0]
 
 
-def test_one_model_in_two_stacks_is_one_trail(inventory: ParsedInventory):
+def test_one_llm_in_two_stacks_is_one_trail(inventory: ParsedInventory):
     pelle, _ = inventory.stack["qwen3-8b-awq@pelle"]
     malborg, _ = inventory.stack["qwen3-8b-awq@malborg"]
 
-    assert pelle.model.fingerprint == malborg.model.fingerprint
+    assert pelle.llm.fingerprint == malborg.llm.fingerprint
     assert pelle.fingerprint != malborg.fingerprint
 
 
@@ -171,9 +171,9 @@ def test_a_thing_is_its_one_identifying_field(inventory: ParsedInventory):
     assert [gpu.model for gpu in details.specs.gpus] == ["NVIDIA GeForce RTX 5090"]
 
 
-def test_a_model_s_facts_reach_its_details_typed(inventory: ParsedInventory):
-    _, qwen3 = inventory.model["qwen3-8b-awq"]
-    _, gpt_oss = inventory.model["gpt-oss-20b"]
+def test_an_llm_s_facts_reach_its_details_typed(inventory: ParsedInventory):
+    _, qwen3 = inventory.llm["qwen3-8b-awq"]
+    _, gpt_oss = inventory.llm["gpt-oss-20b"]
 
     thinking = {"chat_template_kwargs": {"enable_thinking": True}}
 
@@ -210,9 +210,15 @@ def test_a_serving_s_arguments_are_content_and_its_speed_is_not(
 def test_a_schema_keeps_the_order_it_was_written_in(inventory: ParsedInventory):
     output, _ = inventory.output["management-plan"]
 
-    assert output.schema is not None
-    assert list(output.schema) == ["$defs", "properties", "required", "title", "type"]
-    assert list(output.schema["properties"]) == [  # pyright: ignore[reportArgumentType]
+    assert output.json_schema is not None
+    assert list(output.json_schema) == [
+        "$defs",
+        "properties",
+        "required",
+        "title",
+        "type",
+    ]
+    assert list(output.json_schema["properties"]) == [  # pyright: ignore[reportArgumentType]
         "acute_warning",
         "diagnoses",
         "management",
@@ -220,14 +226,14 @@ def test_a_schema_keeps_the_order_it_was_written_in(inventory: ParsedInventory):
     ]
 
 
-def test_a_case_s_payload_is_read_from_its_file(inventory: ParsedInventory):
+def test_a_case_s_vignette_is_read_from_its_file(inventory: ParsedInventory):
     case, details = inventory.case["DutchFall10w"]
 
-    payload = settings.INVENTORY_PATH / "cases/DutchFall10w.txt"
+    vignette = settings.INVENTORY_PATH / "cases/DutchFall10w.txt"
 
-    # as written, line endings and all: it is what the model is sent
-    assert case.payload == payload.read_bytes().decode().rstrip("\n")
-    assert "\r\n" in case.payload
+    # as written, line endings and all: it is what the LLM is sent
+    assert case.vignette == vignette.read_bytes().decode().rstrip("\n")
+    assert "\r\n" in case.vignette
     assert details.tags == ["dutch-fall"]
 
 
@@ -343,15 +349,15 @@ def test_a_record_names_neither_itself_nor_its_owner(tmp_path: Path, key: str):
             tmp_path,
             f"""
             [case.c]
-            payload = "a case"
+            vignette = "a case"
             {key} = "someone else"
             """,
         )
 
 
-def test_a_tool_s_name_is_the_one_the_model_sees(tmp_path: Path):
+def test_a_tool_s_name_is_the_one_the_llm_sees(tmp_path: Path):
     """
-    `name` is a tool's content: the name the model calls it by. The branch
+    `name` is a tool's content: the name the LLM calls it by. The branch
     is still named by the record's key.
     """
     parsed = parse_text(
@@ -388,7 +394,7 @@ def test_an_empty_record_is_one_with_every_field_at_its_default(tmp_path: Path):
 
     output, _ = parsed.output["raw"]
 
-    assert (output.schema, output.guidance, output.views) == (None, None, {})
+    assert (output.json_schema, output.guidance, output.views) == (None, None, {})
 
 
 def test_the_caller_s_details_reach_every_branch(tmp_path: Path):
@@ -397,7 +403,7 @@ def test_the_caller_s_details_reach_every_branch(tmp_path: Path):
         BranchDetailsPatch(owner="someone", collaborators=["someone else"]),
     )
 
-    for entity in ("machine", "os", "model", "serving", "stack"):
+    for entity in ("machine", "os", "llm", "serving", "stack"):
         for _, details in getattr(parsed, entity).values():
             assert details.owner == "someone"
             assert details.collaborators == ["someone else"]
@@ -413,7 +419,7 @@ def test_a_relation_names_a_record(tmp_path: Path):
 
     assert stack.machine == parsed.machine["box"][0]
     assert stack.os == parsed.os["box"][0]
-    assert stack.model == parsed.model["m"][0]
+    assert stack.llm == parsed.llm["m"][0]
     assert stack.serving == parsed.serving["vllm"][0]
 
 
@@ -434,7 +440,7 @@ def test_an_optional_relation_left_out_is_none(tmp_path: Path):
         + """
         [stack.cloud]
         machine = "box"
-        model = "m"
+        llm = "m"
         """,
     )
 
@@ -565,7 +571,7 @@ def test_what_a_record_extends_first_wins(tmp_path: Path):
         tmp_path,
         """
         [sampling.cold]
-        defaults = "model"
+        defaults = "generation_config"
         temperature = 0.1
 
         [sampling.hot]
@@ -582,7 +588,7 @@ def test_what_a_record_extends_first_wins(tmp_path: Path):
     mixed, _ = parsed.sampling["mixed"]
 
     assert (mixed.defaults, mixed.temperature, mixed.top_p, mixed.max_tokens) == (
-        "model",
+        "generation_config",
         0.1,
         0.9,
         100,
@@ -633,7 +639,7 @@ def test_extends_goes_down_a_chain(tmp_path: Path):
         tmp_path,
         """
         [sampling.a]
-        defaults = "model"
+        defaults = "generation_config"
         temperature = 0.2
 
         [sampling.b]
@@ -648,7 +654,12 @@ def test_extends_goes_down_a_chain(tmp_path: Path):
 
     c, _ = parsed.sampling["c"]
 
-    assert (c.defaults, c.temperature, c.top_k, c.max_tokens) == ("model", 0.2, 20, 64)
+    assert (c.defaults, c.temperature, c.top_k, c.max_tokens) == (
+        "generation_config",
+        0.2,
+        20,
+        64,
+    )
 
 
 def test_a_partial_record_is_a_template_and_nothing_more(tmp_path: Path):
@@ -680,11 +691,11 @@ def test_a_record_that_extends_itself_is_an_error(tmp_path: Path):
             """
             [sampling.a]
             extends = "b"
-            defaults = "model"
+            defaults = "generation_config"
 
             [sampling.b]
             extends = "a"
-            defaults = "model"
+            defaults = "generation_config"
             """,
         )
 
@@ -696,7 +707,7 @@ def test_extending_no_record_is_an_error(tmp_path: Path):
             """
             [sampling.a]
             extends = "nothing"
-            defaults = "model"
+            defaults = "generation_config"
             """,
         )
 
@@ -708,7 +719,7 @@ def test_extends_is_a_name_or_names_and_partial_is_a_flag(tmp_path: Path, value:
             tmp_path,
             f"""
             [sampling.a]
-            defaults = "model"
+            defaults = "generation_config"
             {"extends" if value == "true" else "partial"} = {value}
             """,
         )
@@ -741,21 +752,21 @@ def test_the_extending_file_wins(tmp_path: Path):
                 extends = "base.toml"
 
                 [case.c]
-                payload = "mine"
+                vignette = "mine"
                 """,
                 "base.toml": """
                 [case.c]
-                payload = "theirs"
+                vignette = "theirs"
 
                 [case.d]
-                payload = "only theirs"
+                vignette = "only theirs"
                 """,
             },
         )
     )
 
-    assert parsed.case["c"][0].payload == "mine"
-    assert parsed.case["d"][0].payload == "only theirs"
+    assert parsed.case["c"][0].vignette == "mine"
+    assert parsed.case["d"][0].vignette == "only theirs"
 
 
 def test_a_record_extends_one_in_another_file(tmp_path: Path):
@@ -809,7 +820,7 @@ def test_a_path_key_reads_a_file_next_to_the_file_that_names_it(tmp_path: Path):
                 variables = ["case", "output_guidance"]
 
                 [output.o]
-                schema_path = "schemas/o.json"
+                json_schema_path = "schemas/o.json"
                 views.differential = "$.diagnoses[*]"
                 """,
                 "parts/templates/system.txt": "{{output_guidance}}\n",
@@ -831,8 +842,8 @@ def test_a_path_key_reads_a_file_next_to_the_file_that_names_it(tmp_path: Path):
 
     # a text file's last newline is the file's, not the template's
     assert instruction.system == "{{output_guidance}}"
-    assert output.schema is not None
-    assert list(output.schema["properties"]) == ["diagnoses", "certainty"]  # pyright: ignore[reportArgumentType]
+    assert output.json_schema is not None
+    assert list(output.json_schema["properties"]) == ["diagnoses", "certainty"]  # pyright: ignore[reportArgumentType]
 
 
 def test_a_toml_file_loads_as_a_table(tmp_path: Path):
@@ -870,7 +881,7 @@ def test_only_a_record_s_own_keys_read_files(tmp_path: Path):
             {
                 "inventory.toml": """
                 [output.o]
-                schema_path = "o.json"
+                json_schema_path = "o.json"
                 """,
                 "o.json": """
                 {"type": "object", "properties": {"image_path": {"type": "string"}}}
@@ -881,7 +892,7 @@ def test_only_a_record_s_own_keys_read_files(tmp_path: Path):
 
     output, _ = parsed.output["o"]
 
-    assert output.schema == {
+    assert output.json_schema == {
         "type": "object",
         "properties": {"image_path": {"type": "string"}},
     }
@@ -889,7 +900,7 @@ def test_only_a_record_s_own_keys_read_files(tmp_path: Path):
 
 def test_a_value_and_its_path_together_are_an_error(tmp_path: Path):
     with pytest.raises(
-        ParseError, match=r"case 'c': both 'payload' and 'payload_path'"
+        ParseError, match=r"case 'c': both 'vignette' and 'vignette_path'"
     ):
         _ = parse(
             write(
@@ -897,8 +908,8 @@ def test_a_value_and_its_path_together_are_an_error(tmp_path: Path):
                 {
                     "inventory.toml": """
                     [case.c]
-                    payload = "here"
-                    payload_path = "c.txt"
+                    vignette = "here"
+                    vignette_path = "c.txt"
                     """,
                     "c.txt": "there",
                 },
@@ -912,7 +923,7 @@ def test_a_path_to_no_file_is_an_error(tmp_path: Path):
             tmp_path,
             """
             [output.o]
-            schema_path = "nowhere.json"
+            json_schema_path = "nowhere.json"
             """,
         )
 
@@ -925,7 +936,7 @@ def test_a_file_of_no_known_kind_is_an_error(tmp_path: Path):
                 {
                     "inventory.toml": """
                     [output.o]
-                    schema_path = "o.yaml"
+                    json_schema_path = "o.yaml"
                     """,
                     "o.yaml": "type: object",
                 },
@@ -933,14 +944,14 @@ def test_a_file_of_no_known_kind_is_an_error(tmp_path: Path):
         )
 
 
-def test_a_case_s_payload_is_its_file_unless_it_says_otherwise(tmp_path: Path):
+def test_a_case_s_vignette_is_its_file_unless_it_says_otherwise(tmp_path: Path):
     parsed = parse(
         write(
             tmp_path,
             {
                 "inventory.toml": """
                 [case.written]
-                payload = "written here"
+                vignette = "written here"
 
                 [case.filed]
                 tags = ["a dataset"]
@@ -950,8 +961,8 @@ def test_a_case_s_payload_is_its_file_unless_it_says_otherwise(tmp_path: Path):
         )
     )
 
-    assert parsed.case["written"][0].payload == "written here"
-    assert parsed.case["filed"][0].payload == "filed away"
+    assert parsed.case["written"][0].vignette == "written here"
+    assert parsed.case["filed"][0].vignette == "filed away"
 
 
 def test_an_entity_s_table_holds_tables(tmp_path: Path):
@@ -989,12 +1000,12 @@ def test_an_invalid_record_is_reported_as_itself_not_as_what_names_it(
 
 
 def test_invalid_details_say_which_record_they_are(tmp_path: Path):
-    with pytest.raises(ParseError, match=r"model 'm': .*source"):
+    with pytest.raises(ParseError, match=r"llm 'm': .*source"):
         _ = parse_text(
             tmp_path,
             """
-            [model.m]
-            blob = "/nix/store/11111111111111111111111111111111-m"
+            [llm.m]
+            snapshot = "/nix/store/11111111111111111111111111111111-m"
             source = "Qwen/Qwen3-8B-AWQ@main"
             """,
         )

@@ -3,8 +3,8 @@ The canonical form a trail's fingerprint is taken of (data-generation.md §3.2).
 
 It is the JSON Canonicalization Scheme (RFC 8785) with one exception: a value
 whose order carries meaning keeps it. A JSON Schema is the case in point. A
-constrained decoder emits keys in the order `properties` gives them, and a
-model shown the schema reads every key in the order it is written. So each
+constrained decoder emits keys in the order `properties` gives them, and an
+LLM shown the schema reads every key in the order it is written. So each
 object inside an order-carrying value is encoded as its ordered pairs before
 canonicalizing, where the sort can't reach them.
 

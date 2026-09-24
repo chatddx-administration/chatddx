@@ -29,7 +29,7 @@ from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
     ConfigurationTrailIn,
 )
-from chatddx.repo.entities.model.pydantic import ModelBranchOut
+from chatddx.repo.entities.llm.pydantic import LLMBranchOut
 from chatddx.repo.entities.reasoning.pydantic import ReasoningBranchOut
 from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.entities.tool.pydantic import ToolBranchOut
@@ -82,19 +82,19 @@ def written(
     written down as `user`'s.
     """
     own = ConfigurationBranchOut.model_validate(branch("configuration", configuration))
-    slices: dict[str, Any] = {entity: getattr(own.target, entity) for entity in SLICES}
+    slices: dict[str, Any] = {entity: getattr(own.trail, entity) for entity in SLICES}
 
     if reasoning is not None:
         slices["reasoning"] = ReasoningBranchOut.model_validate(
             branch("reasoning", reasoning)
-        ).target
+        ).trail
 
     cell = ConfigurationTrailIn.model_validate(slices, from_attributes=True)
 
     stack = StackBranchOut.model_validate(branch("stack", STACK))
-    model = branch("model", trail=stack.target.model.id)
-    facts = ModelBranchOut.model_validate(model).details.facts
-    toolset = own.target.toolset
+    llm = branch("llm", trail=stack.trail.llm.id)
+    facts = LLMBranchOut.model_validate(llm).details.facts
+    toolset = own.trail.toolset
     tools = [
         ToolBranchOut.model_validate(branch("tool", trail=tool.id))
         for tool in (toolset.tools if toolset else [])
@@ -102,12 +102,12 @@ def written(
     case = branch("case", "case-1")
 
     trial = Trial(
-        resolve(cell, stack.details, facts, stack.target.serving),
-        case.target.payload,
+        resolve(cell, stack.details, facts, stack.trail.serving),
+        case.trail.vignette,
         transport=transport or FakeTransport(),
         seed=seed,
         implementations={
-            tool.target.name: tool.details.implementation.entry_point
+            tool.trail.name: tool.details.implementation.function
             for tool in tools
             if tool.details.implementation
         },
@@ -120,10 +120,10 @@ def written(
         cell,
         Branches(
             stack.id,
-            model.pk,
-            {tool.id: trial.implementations[tool.target.name].blob for tool in tools},
+            llm.pk,
+            {tool.id: trial.implementations[tool.trail.name].blob for tool in tools},
         ),
-        case.target_id,
+        case.trail_id,
         trial,
         outcome,
         started,
@@ -152,15 +152,15 @@ def test_a_run_is_written_down_with_its_trial_session_and_messages():
     stack = branch("stack", STACK)
     trial = run.trial
     assert (trial.configuration_id, trial.stack_id, trial.case_id, trial.seed) == (
-        branch("configuration", "free-text").target_id,
-        stack.target_id,
-        branch("case", "case-1").target_id,
+        branch("configuration", "free-text").trail_id,
+        stack.trail_id,
+        branch("case", "case-1").trail_id,
         7,
     )
     assert run.stack_branch_id == stack.pk
-    assert run.model_branch == branch("model", "qwen3-8b-awq")
+    assert run.llm_branch == branch("llm", "qwen3-8b-awq")
 
-    assert run.client_id == branch("client", "chatddx-dev").target_id
+    assert run.client_id == branch("client", "chatddx-dev").trail_id
     assert run.client_rev is not None
     assert run.client_packages["pydantic-ai-slim"]
 
@@ -200,8 +200,8 @@ def test_a_variation_set_in_a_cell_runs_a_configuration_with_no_branch():
     run = written(reasoning="off")
 
     configuration = run.trial.configuration
-    assert configuration.reasoning_id == branch("reasoning", "off").target_id
-    assert not ConfigurationBranchModel.objects.filter(target=configuration).exists()
+    assert configuration.reasoning_id == branch("reasoning", "off").trail_id
+    assert not ConfigurationBranchModel.objects.filter(trail=configuration).exists()
 
 
 def test_a_run_keeps_its_tools_branches_and_every_round():

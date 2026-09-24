@@ -10,7 +10,7 @@ class OsTrailModel(TrailModel):
 
 
 class OsBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         OsTrailModel,
         on_delete=PROTECT,
         related_name="branches",

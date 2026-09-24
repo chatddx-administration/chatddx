@@ -23,7 +23,7 @@ its owner: its name is its key, and its owner is whoever parses it.
   of names for a list. A record written inline would be committed without a
   name, and several names would merge into one nobody named, so neither is
   accepted.
-- A case with no payload reads it from `cases/<name>.txt` next to its file.
+- A case with no vignette reads it from `cases/<name>.txt` next to its file.
 """
 
 from __future__ import annotations
@@ -194,8 +194,8 @@ class _Parser:
 
         values = self.merged(record)
 
-        if record.entity == "case" and "payload" not in values:
-            values["payload"] = _load(
+        if record.entity == "case" and "vignette" not in values:
+            values["vignette"] = _load(
                 record, record.file.parent / f"cases/{record.name}.txt"
             )
 
@@ -203,7 +203,7 @@ class _Parser:
         details: dict[str, Any] = {}
 
         for key, value in values.items():
-            # content first: a tool's `name` is the name the model sees
+            # content first: a tool's `name` is the name the LLM sees
             if key in content_keys:
                 relation = relations.get(key)
                 content[key] = (

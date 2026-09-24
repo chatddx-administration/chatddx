@@ -1,14 +1,14 @@
 """
-A stack: a composition, and a variation of the model slice. It replaces the
+A stack: a composition, and a variation of the stack slice. It replaces the
 connection.
 
 A stack is what answered a request: the machine, its operating system, the
-model and the serving settings. For a NixOS container the OS is the
+LLM and the serving settings. For a NixOS container the OS is the
 container's, and `host_os` is the host's, which holds the kernel and the
 NVIDIA driver. A cloud stack has no OS and no serving: nothing below its
 requests can be checked, and its machine says so.
 
-The model slice writes almost nothing into the request, only the `model`
+The stack slice writes almost nothing into the request, only the `model`
 field and where the request goes, and those are details: the endpoint and
 the served name, the API and the name of the credential. Every other slice
 is resolved against the stack (new-datamodel.md §2).
@@ -19,15 +19,15 @@ from typing import Literal
 from pydantic import Field, HttpUrl, model_validator
 
 from chatddx.core.fields import CoercedStr
+from chatddx.repo.entities.llm import (
+    LLMFormDataIn,
+    LLMTrailIn,
+    LLMTrailOut,
+)
 from chatddx.repo.entities.machine import (
     MachineFormDataIn,
     MachineTrailIn,
     MachineTrailOut,
-)
-from chatddx.repo.entities.model import (
-    ModelFormDataIn,
-    ModelTrailIn,
-    ModelTrailOut,
 )
 from chatddx.repo.entities.os import OsFormDataIn, OsTrailIn, OsTrailOut
 from chatddx.repo.entities.serving import (
@@ -72,7 +72,7 @@ class StackTrailIn(StackTrailBase, TrailIn):
     machine: MachineTrailIn
     os: OsTrailIn | None = None
     host_os: OsTrailIn | None = None
-    model: ModelTrailIn
+    llm: LLMTrailIn
     serving: ServingTrailIn | None = None
 
     @model_validator(mode="after")
@@ -93,7 +93,7 @@ class StackTrailRef(TrailRef, StackTrailBase):
     machine_id: int
     os_id: int | None
     host_os_id: int | None
-    model_id: int
+    llm_id: int
     serving_id: int | None
 
 
@@ -101,7 +101,7 @@ class StackTrailOut(StackTrailBase, TrailOut):
     machine: MachineTrailOut
     os: OsTrailOut | None
     host_os: OsTrailOut | None
-    model: ModelTrailOut
+    llm: LLMTrailOut
     serving: ServingTrailOut | None
 
 
@@ -125,7 +125,7 @@ class StackFormDataIn(StackTrailBase, BaseFormDataIn):
     machine: MachineFormDataIn
     os: OsFormDataIn | None = None
     host_os: OsFormDataIn | None = None
-    model: ModelFormDataIn
+    llm: LLMFormDataIn
     serving: ServingFormDataIn | None = None
 
     endpoint: HttpUrl | None = None
@@ -139,7 +139,7 @@ class StackFormDataOut(BaseFormDataOut):
     machine: CoercedStr
     os: CoercedStr | None
     host_os: CoercedStr | None
-    model: CoercedStr
+    llm: CoercedStr
     serving: CoercedStr | None
 
     endpoint: str | None

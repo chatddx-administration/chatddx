@@ -73,9 +73,10 @@ def show(repl: Repl) -> None:
     table.add_column("on the stack" if cell.stack else "")
 
     if cell.stack:
-        model = repl.name_of("model", cell.stack.target.model)
-        where = f"{cell.stack.details.served_name} at {cell.stack.details.endpoint}"
-        table.add_row("model", model, _outcome("model", refusals, where))
+        llm = repl.name_of("llm", cell.stack.trail.llm)
+        details = cell.stack.details
+        where = f"{llm}, served as {details.served_name} at {details.endpoint}"
+        table.add_row("stack", cell.stack.name, _outcome("stack", refusals, where))
 
     if cell.configuration:
         slices = cell.slices
@@ -111,8 +112,8 @@ def reasoning(repl: Repl) -> None:
             for model in select_visible_branch_models("reasoning", repl.identity)
         ),
         key=lambda v: (
-            EFFORTS.index(v.target.effort),
-            v.target.budget or 0,
+            EFFORTS.index(v.trail.effort),
+            v.trail.budget or 0,
             v.name,
         ),
     )
@@ -129,10 +130,10 @@ def reasoning(repl: Repl) -> None:
         efforts = [
             _effort(
                 *realize(
-                    variation.target,
+                    variation.trail,
                     slices.sampling if slices else None,
                     repl.facts_of(stack),
-                    stack.target.serving,
+                    stack.trail.serving,
                 )
             )
             for variation in variations
@@ -150,7 +151,7 @@ def reasoning(repl: Repl) -> None:
         table.add_column("\n".join(names), overflow="fold")
 
     for i, variation in enumerate(variations):
-        current = slices is not None and _same(slices.reasoning, variation.target)
+        current = slices is not None and _same(slices.reasoning, variation.trail)
         table.add_row(
             f"▸ {variation.name}" if current else variation.name,
             *(efforts[i] for _, efforts in columns.values()),
@@ -163,7 +164,7 @@ def _variation(repl: Repl, entity: EntityName) -> Text:
     cell = repl.cell
     assert cell.configuration
 
-    own = repl.name_of(entity, getattr(cell.configuration.target, entity))
+    own = repl.name_of(entity, getattr(cell.configuration.trail, entity))
 
     if entity not in cell.variations:
         return Text(own)
@@ -194,14 +195,14 @@ def _outcome(entity: str, refusals: list[SliceRefusal], realized: str) -> Text:
 
 def _realized(entity: str, slices: Slices, parts: Parts) -> str:
     reasoning, sampling, coercion, tools, slots = parts
-    free_text = slices.output.schema is None
+    free_text = slices.output.json_schema is None
     views = ", ".join(v for v in VIEWS if v in slices.output.views) or "none"
 
     match entity:
         case "reasoning" if reasoning:
             writes = _writes(reasoning.writes)
             if reasoning.effort == "default":
-                return f"the model's default, '{reasoning.intent}': {writes}"
+                return f"the LLM's default, '{reasoning.intent}': {writes}"
             if reasoning.effort != reasoning.intent:
                 return f"collapses into '{reasoning.intent}': {writes}"
             return writes
@@ -222,7 +223,7 @@ def _realized(entity: str, slices: Slices, parts: Parts) -> str:
 
 
 def _coerced(coercion: Coercion, shown: bool) -> str:
-    """How the answer is held to its schema, and how the model reads it."""
+    """How the answer is held to its schema, and how the LLM reads it."""
     match coercion.mode:
         case "native":
             held = "response_format: guided decoding holds the answer to the schema"
@@ -236,9 +237,9 @@ def _coerced(coercion: Coercion, shown: bool) -> str:
         *(["through schema_prompt"] if shown else []),
     ]
     how = (
-        f"the model reads it {' and '.join(reads)}"
+        f"the LLM reads it {' and '.join(reads)}"
         if reads
-        else "the model doesn't read it"
+        else "the LLM doesn't read it"
     )
     auto = f"auto → {coercion.mode}: " if coercion.requested == "auto" else ""
     note = f"\n{coercion.note}" if coercion.note else ""
@@ -253,7 +254,7 @@ def _effort(
 ) -> Text:
     """
     A reasoning variation on a stack, as the table shows it: the intent it
-    ends at, where that isn't its effort (the model's default, or a
+    ends at, where that isn't its effort (the LLM's default, or a
     collapse), and what it and the sampling write.
     """
     if refusals:

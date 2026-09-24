@@ -17,7 +17,7 @@ class ToolTrailModel(TrailModel):
 
 
 class ToolBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         ToolTrailModel,
         on_delete=PROTECT,
         related_name="branches",

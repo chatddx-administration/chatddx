@@ -98,7 +98,7 @@ def test_init_data_archives_the_inventory_and_shares_it():
         for name, (trail, _) in getattr(inventory, entity).items():
             branch_model = archived[entity][name]
 
-            assert branch_model.target.fingerprint == trail.fingerprint
+            assert branch_model.trail.fingerprint == trail.fingerprint
             assert [c.name for c in branch_model.collaborators.all()] == ["alex"]
 
     assert owned(ARCHIVE) == names(inventory)
@@ -142,7 +142,7 @@ def test_init_data_with_giftbag_gives_the_user_their_own():
 
     for entity in ENTITY_NAMES:
         for name, branch_model in mine[entity].items():
-            assert branch_model.target_id == archived[entity][name].target_id
+            assert branch_model.trail_id == archived[entity][name].trail_id
 
     plan = mine["configuration"]["plan"]
     tags = [(tag.owner.name, tag.entity, tag.name) for tag in plan.tags.all()]

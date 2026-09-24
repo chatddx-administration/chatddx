@@ -39,19 +39,19 @@ from chatddx.repo.entities.instruction.pydantic import (
     InstructionFormDataOut,
     InstructionTrailIn,
 )
+from chatddx.repo.entities.llm.django import LLMBranchModel
+from chatddx.repo.entities.llm.pydantic import (
+    LLMBranchDetailsPatch,
+    LLMBranchOut,
+    LLMFormDataOut,
+    LLMTrailIn,
+)
 from chatddx.repo.entities.machine.django import MachineBranchModel
 from chatddx.repo.entities.machine.pydantic import (
     MachineBranchDetailsPatch,
     MachineBranchOut,
     MachineFormDataOut,
     MachineTrailIn,
-)
-from chatddx.repo.entities.model.django import ModelBranchModel
-from chatddx.repo.entities.model.pydantic import (
-    ModelBranchDetailsPatch,
-    ModelBranchOut,
-    ModelFormDataOut,
-    ModelTrailIn,
 )
 from chatddx.repo.entities.os.django import OsBranchModel
 from chatddx.repo.entities.os.pydantic import (
@@ -119,7 +119,7 @@ class ParsedInventory(BaseModel):
     # a record's content, and what its branch says beside it
     machine: dict[str, tuple[MachineTrailIn, MachineBranchDetailsPatch]]
     os: dict[str, tuple[OsTrailIn, OsBranchDetailsPatch]]
-    model: dict[str, tuple[ModelTrailIn, ModelBranchDetailsPatch]]
+    llm: dict[str, tuple[LLMTrailIn, LLMBranchDetailsPatch]]
     serving: dict[str, tuple[ServingTrailIn, ServingBranchDetailsPatch]]
     client: dict[str, tuple[ClientTrailIn, ClientBranchDetailsPatch]]
     stack: dict[str, tuple[StackTrailIn, StackBranchDetailsPatch]]
@@ -138,7 +138,7 @@ class ParsedInventory(BaseModel):
 class InventoryTrailIn(BaseModel):
     machine: dict[str, MachineTrailIn]
     os: dict[str, OsTrailIn]
-    model: dict[str, ModelTrailIn]
+    llm: dict[str, LLMTrailIn]
     serving: dict[str, ServingTrailIn]
     client: dict[str, ClientTrailIn]
     stack: dict[str, StackTrailIn]
@@ -157,7 +157,7 @@ class InventoryTrailIn(BaseModel):
 class InventoryFormDataOut(BaseModel):
     machine: dict[str, MachineFormDataOut]
     os: dict[str, OsFormDataOut]
-    model: dict[str, ModelFormDataOut]
+    llm: dict[str, LLMFormDataOut]
     serving: dict[str, ServingFormDataOut]
     client: dict[str, ClientFormDataOut]
     stack: dict[str, StackFormDataOut]
@@ -176,7 +176,7 @@ class InventoryFormDataOut(BaseModel):
 class InventoryBranchOut(BaseModel):
     machine: dict[str, MachineBranchOut]
     os: dict[str, OsBranchOut]
-    model: dict[str, ModelBranchOut]
+    llm: dict[str, LLMBranchOut]
     serving: dict[str, ServingBranchOut]
     client: dict[str, ClientBranchOut]
     stack: dict[str, StackBranchOut]
@@ -195,7 +195,7 @@ class InventoryBranchOut(BaseModel):
 class InventoryBranchModel(TypedDict):
     machine: dict[str, MachineBranchModel]
     os: dict[str, OsBranchModel]
-    model: dict[str, ModelBranchModel]
+    llm: dict[str, LLMBranchModel]
     serving: dict[str, ServingBranchModel]
     client: dict[str, ClientBranchModel]
     stack: dict[str, StackBranchModel]

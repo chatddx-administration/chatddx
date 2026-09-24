@@ -1,9 +1,9 @@
 """
-A case: its payload, as the model receives it through the instruction's
+A case: its vignette, as the LLM receives it through the instruction's
 `case` variable, and what it is expected to yield.
 
-The targets are details, not content: they change nothing the model reads,
-and the payload is what the case's fingerprint names. Like a model's facts,
+The targets are details, not content: they change nothing the LLM reads,
+and the vignette is what the case's fingerprint names. Like an LLM's facts,
 they are versioned with the branch, and each score records the row whose
 targets it read (new-datamodel.md §11). inspect keeps a sample's target with
 the sample, and a case is chatddx's sample. Unlike inspect's one target per
@@ -67,7 +67,7 @@ class CaseDetails(Details):
 
 
 class CaseTrailBase(BaseTrail):
-    payload: str
+    vignette: str
 
 
 class CaseTrailIn(CaseTrailBase, TrailIn):

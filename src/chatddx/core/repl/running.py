@@ -30,7 +30,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     """
     Make a trial of the cell on a case, stream it, record the run, and hold
     it to the scorers that apply. An answer that doesn't come, or doesn't
-    parse, doesn't hold, where one is asked for; a model or server that
+    parse, doesn't hold, where one is asked for; an LLM or server that
     fails mid-run is said, and recorded.
     """
     cell = repl.cell
@@ -69,12 +69,12 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     try:
         trial = Trial(
             resolution,
-            case.target.payload,
+            case.trail.vignette,
             api_key=api_key,
             transport=repl.transport,
             seed=int(seed) if seed is not None else None,
             implementations={
-                tool: branch.details.implementation.entry_point
+                tool: branch.details.implementation.function
                 for tool, branch in tools.items()
                 if branch.details.implementation is not None
             },
@@ -118,13 +118,13 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
             ConfigurationTrailIn.model_validate(cell.slices, from_attributes=True),
             Branches(
                 stack=cell.stack.id,
-                model=repl.model_of(cell.stack)[1],
+                llm=repl.llm_of(cell.stack)[1],
                 tools={
                     tools[tool].id: ran.blob
                     for tool, ran in trial.implementations.items()
                 },
             ),
-            case.target_id,
+            case.trail_id,
             trial,
             outcome,
             started,
@@ -154,9 +154,9 @@ async def _stream(repl: Repl, trial: Trial) -> Streamed:
 
 def _judge(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | None:
     """
-    Whether the model reasoned as it was asked to, whether its answer holds
+    Whether the LLM reasoned as it was asked to, whether its answer holds
     to its schema, and what the output's views read from it: the facts are
-    claims, and a trial is what shows whether the model honours them
+    claims, and a trial is what shows whether the LLM honours them
     (new-datamodel.md §2). Answer with whether it holds, where there is a
     schema to hold to.
     """

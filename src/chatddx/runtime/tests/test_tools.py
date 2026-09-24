@@ -55,7 +55,7 @@ def test_each_tool_takes_what_it_declares(test_inventory: ParsedInventory):
         if details.implementation is None:
             continue
 
-        function = implementation(details.implementation.entry_point).function
+        function = implementation(details.implementation.function).function
         parameters = inspect.signature(function).parameters
         schema: dict[str, Any] = trail.parameters
         declared: dict[str, Any] = schema.get("properties", {})

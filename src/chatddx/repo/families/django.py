@@ -61,8 +61,8 @@ class TrailModel(Model):
 class BranchModel(Model):
     id: int
 
-    target: Field[Any, Any]
-    target_id: int
+    trail: Field[Any, Any]
+    trail_id: int
 
     version_count: int | None = None
 
@@ -113,7 +113,7 @@ class BranchModel(Model):
 class BranchProxy(Model):
     pk: int
     name: str
-    target: TrailModel
+    trail: TrailModel
     version_count: int | None = None
 
     class Meta:

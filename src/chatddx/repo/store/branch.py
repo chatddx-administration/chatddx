@@ -59,7 +59,7 @@ def get_branch_model(
         qs = model_cls.objects.all()
 
     if fingerprint:
-        qs = qs.filter(target__fingerprint=fingerprint)
+        qs = qs.filter(trail__fingerprint=fingerprint)
 
     if branch_name:
         qs = qs.filter(name=branch_name)
@@ -71,7 +71,7 @@ def get_branch_model(
             f"No branch '{entity_name}:{branch_name}' with owner {owner_name}"
         )
 
-    model.target = resolve_trail(model.target)
+    model.trail = resolve_trail(model.trail)
 
     return model
 
@@ -91,7 +91,7 @@ def select_branch_models(
 
     models = list(qs)
 
-    _ = resolve_trails([model.target for model in models])
+    _ = resolve_trails([model.trail for model in models])
 
     return models
 
@@ -114,7 +114,7 @@ def select_visible_branch_models(
     visible = _prefer_own(list(qs_head_visible(qs, identity_name)), identity_name)
     models = sorted(visible, key=lambda model: (model.name, model.owner.name))
 
-    _ = resolve_trails([model.target for model in models])
+    _ = resolve_trails([model.trail for model in models])
 
     return models
 
@@ -140,7 +140,7 @@ def get_visible_branch_model(
         qs = qs.filter(name=branch_name)
 
     if trail:
-        qs = qs.filter(target=trail)
+        qs = qs.filter(trail=trail)
 
     candidates = _prefer_own(list(qs_head_visible(qs, identity_name)), identity_name)
     what = f"{entity_name} '{branch_name}'" if branch_name else f"{entity_name} branch"
@@ -153,7 +153,7 @@ def get_visible_branch_model(
         raise AmbiguousBranchError(f"{what} is shared by more than one: {owners}")
 
     model = candidates[0]
-    model.target = resolve_trail(model.target)
+    model.trail = resolve_trail(model.trail)
 
     return model
 
@@ -178,7 +178,7 @@ def get_shared_branch_model(
             f"no {entity_name} '{owner_name}/{branch_name}' for {identity_name}"
         )
 
-    model.target = resolve_trail(model.target)
+    model.trail = resolve_trail(model.trail)
 
     return model
 
@@ -273,7 +273,7 @@ def commit(
     False: the head didn't, the trail was already the branch's head
 
     A version is its trail and its details: what the branch says about the
-    content without being part of it, such as a model's facts or a stack's
+    content without being part of it, such as an LLM's facts or a stack's
     endpoint. Resolution reads details, and a trial has to be able to say
     which version it resolved against, so a change to them makes a new
     version as a change to the trail does (new-datamodel.md §1). What the
@@ -294,30 +294,26 @@ def commit(
         branch_details.owner,
     ).first()
 
-    if (
-        head
-        and trail.fingerprint == head.target.fingerprint
-        and details == head.details
-    ):
+    if head and trail.fingerprint == head.trail.fingerprint and details == head.details:
         commit_relations(head, head, branch_details)
-        _ = commit_closure(head.target, branch_details.owner)
+        _ = commit_closure(head.trail, branch_details.owner)
         return False
 
     match trail:
         case TrailIn():
-            target = dump_trail(trail_model_cls, trail)
+            committed = dump_trail(trail_model_cls, trail)
         case TrailModel():
-            target = trail
+            committed = trail
 
     branch_model = branch_model_cls.objects.create(
         name=branch_details.name,
         owner=ensure_identity(branch_details.owner),
-        target=target,
+        trail=committed,
         details=details,
     )
 
     commit_relations(branch_model, head, branch_details)
-    _ = commit_closure(target, branch_details.owner)
+    _ = commit_closure(committed, branch_details.owner)
 
     return True
 
@@ -325,9 +321,9 @@ def commit(
 commit_async = make_async(commit)
 
 
-def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
+def commit_closure(root: TrailModel, owner_name: str) -> list[str]:
     """
-    Give every trail `target` reaches a branch of `owner_name`'s, and answer
+    Give every trail `root` reaches a branch of `owner_name`'s, and answer
     with the names of the ones that had to be made.
 
     A trail an owner holds only through another -- a stack's machine, a
@@ -350,11 +346,11 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
     """
     committed: list[str] = []
 
-    for trail in trail_closure(target):
+    for trail in trail_closure(root):
         entity = entity_of(trail)
 
         has_branch = entity.branch_model.objects.filter(
-            target=trail,
+            trail=trail,
             owner__name=owner_name,
         ).exists()
 
@@ -379,13 +375,13 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
 commit_closure_async = make_async(commit_closure)
 
 
-def commit_copies(target: TrailModel, owner_name: str, source_name: str) -> list[str]:
+def commit_copies(root: TrailModel, owner_name: str, source_name: str) -> list[str]:
     """
-    Give every trail `target` reaches that `owner_name` has no branch of a
+    Give every trail `root` reaches that `owner_name` has no branch of a
     copy of `source_name`'s branch of it, under its name and with its
     details, and answer with what was copied, as `entity name`.
 
-    It goes before a commit of `target`, whose closure would otherwise give
+    It goes before a commit of `root`, whose closure would otherwise give
     those trails branches under names of its own, with every detail at its
     default: a tool would lose what it runs. So a trail comes after what it
     reaches, which by then has a branch of the owner's. What `source_name`
@@ -394,14 +390,14 @@ def commit_copies(target: TrailModel, owner_name: str, source_name: str) -> list
     """
     copied: list[str] = []
 
-    for trail in _reached(target):
+    for trail in _reached(root):
         entity = entity_of(trail)
         branches = entity.branch_model.objects.all()
 
-        if branches.filter(target=trail, owner__name=owner_name).exists():
+        if branches.filter(trail=trail, owner__name=owner_name).exists():
             continue
 
-        source = qs_head(branches.filter(target=trail), source_name).first()
+        source = qs_head(branches.filter(trail=trail), source_name).first()
 
         if source is None or (
             branches.filter(owner__name=owner_name, name=source.name).exists()
@@ -419,8 +415,8 @@ def commit_copies(target: TrailModel, owner_name: str, source_name: str) -> list
     return copied
 
 
-def _reached(target: TrailModel) -> list[TrailModel]:
-    """What `target` reaches, each trail after what it reaches in turn."""
+def _reached(root: TrailModel) -> list[TrailModel]:
+    """What `root` reaches, each trail after what it reaches in turn."""
     seen: set[tuple[Any, Any]] = set()
     reached: list[TrailModel] = []
 
@@ -433,7 +429,7 @@ def _reached(target: TrailModel) -> list[TrailModel]:
                 visit(related)
                 reached.append(related)
 
-    visit(target)
+    visit(root)
     return reached
 
 

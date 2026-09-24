@@ -87,14 +87,14 @@ class Scoring:
         scorers: list[Scorer] = []
 
         for branch in select_visible_branch_models("scorer", self.identity, ARCHIVE):
-            if any(scorer.trail.pk == branch.target_id for scorer in scorers):
+            if any(scorer.trail.pk == branch.trail_id for scorer in scorers):
                 continue
 
             scorers.append(
                 Scorer(
                     name=branch.name,
                     owner=branch.owner.name,
-                    trail=cast(ScorerTrailModel, branch.target),
+                    trail=cast(ScorerTrailModel, branch.trail),
                     metrics=ScorerDetails.model_validate(branch.details).metrics,
                 )
             )
@@ -235,7 +235,7 @@ class Scoring:
         case_id = run.trial.case_id
 
         if case_id not in self._cases:
-            rows = CaseBranchModel.objects.filter(target_id=case_id).order_by(
+            rows = CaseBranchModel.objects.filter(trail_id=case_id).order_by(
                 "-timestamp", "-pk"
             )
             self._cases[case_id] = (

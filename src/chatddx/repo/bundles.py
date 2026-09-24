@@ -11,7 +11,7 @@ class RegistryCollisionError(Exception):
 ALL_ENTITIES: tuple[AnyEntity, ...] = (
     MACHINE,
     OS,
-    MODEL,
+    LLM,
     SERVING,
     CLIENT,
     STACK,
@@ -30,7 +30,7 @@ ALL_ENTITIES: tuple[AnyEntity, ...] = (
 ALL_PRESENTATIONS: tuple[AnyPresentation, ...] = (
     MACHINE_PRESENTATION,
     OS_PRESENTATION,
-    MODEL_PRESENTATION,
+    LLM_PRESENTATION,
     SERVING_PRESENTATION,
     CLIENT_PRESENTATION,
     STACK_PRESENTATION,
@@ -119,8 +119,8 @@ def entity_of(
 
 @overload
 def entity_of(
-    x: ModelMember | type[ModelMember] | Literal["model"],
-) -> ModelEntity: ...
+    x: LLMMember | type[LLMMember] | Literal["llm"],
+) -> LLMEntity: ...
 
 
 @overload

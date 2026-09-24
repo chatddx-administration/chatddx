@@ -36,8 +36,7 @@ def test_show_sets_each_variation_beside_what_it_resolves_to(say: Say):
 
     assert "cell: free-text × qwen3-8b-awq@fake" in written
     assert (
-        "the model's default, 'on': chat_template_kwargs.enable_thinking=true"
-        in written
+        "the LLM's default, 'on': chat_template_kwargs.enable_thinking=true" in written
     )
     assert "recommended for 'on'" in written
     assert "List the plausible diagnoses, one per line, most likely first." in written
@@ -64,7 +63,7 @@ def test_show_says_what_is_set_and_what_the_configuration_has(say: Say):
     assert "recommended for 'off'" in written
 
 
-def test_show_says_which_tools_the_model_is_offered(say: Say):
+def test_show_says_which_tools_the_llm_is_offered(say: Say):
     written = say("cell plan-web qwen3-8b-awq@fake", "show")
 
     assert "offered: web_search" in written
@@ -75,14 +74,14 @@ def test_show_says_how_the_answer_is_held_and_what_the_facts_note(say: Say):
     written = say("cell diagnoses-tool gpt-oss-20b@fake", "show")
 
     assert "a final_result tool holds the answer to the schema" in written
-    assert "the model reads it as the tool's parameters" in written
+    assert "the LLM reads it as the tool's parameters" in written
     assert "vLLM ignores tool_choice = required for gpt-oss" in written
 
 
 def test_show_shows_a_schema_prompt_and_clips_a_long_one(say: Say):
     written = say("cell plan-shown qwen3-8b-awq@fake", "show")
 
-    assert "the model reads it through schema_prompt" in written
+    assert "the LLM reads it through schema_prompt" in written
     assert "Answer with a JSON object that matches this JSON Schema" in written
     assert "more lines" in written
 

@@ -46,14 +46,14 @@ def _head[T: BranchModel](qs: QuerySet[T], owned: QuerySet[T]) -> QuerySet[T]:
 
     return (
         owned.filter(id__in=canonical_ids)
-        .select_related("owner", "target")
+        .select_related("owner", "trail")
         .annotate(version_count=Subquery(version_count))
         .order_by("-timestamp")
     )
 
 
 def qs_with_trail[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
-    paths = trail_paths(_trail_model(qs), "target__")
+    paths = trail_paths(_trail_model(qs), "trail__")
     return qs.select_related(*paths) if paths else qs
 
 
@@ -74,7 +74,7 @@ def qs_with_relations[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
 
 
 def _trail_model(qs: QuerySet[AnyBranch]) -> type[TrailModel]:
-    related = qs.model._meta.get_field("target").related_model
+    related = qs.model._meta.get_field("trail").related_model
 
     assert related is not None and issubclass(related, TrailModel)
 

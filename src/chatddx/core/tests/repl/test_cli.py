@@ -30,4 +30,4 @@ def test_a_session_can_be_piped_in(provision: Callable[..., None], tmp_path: Pat
     assert result.exit_code == 0, result.output
     assert "alex> cell free-text qwen3-8b-awq@fake\n" in result.output
     assert "alex free-text×qwen3-8b-awq@fake> show\n" in result.output
-    assert "the model's default, 'on'" in result.output
+    assert "the LLM's default, 'on'" in result.output

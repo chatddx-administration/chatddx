@@ -7,11 +7,11 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class CaseTrailModel(TrailModel):
-    payload = TextField()
+    vignette = TextField()
 
 
 class CaseBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         CaseTrailModel,
         on_delete=PROTECT,
         related_name="branches",

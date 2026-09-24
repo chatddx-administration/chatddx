@@ -67,7 +67,7 @@ def test_a_schema_keeps_its_order_in_the_database(trails: InventoryTrailIn):
 
     fetched = OutputTrailModel.objects.get(pk=stored.pk)
     # an OrderedJSONField reads back as the document, whatever TextField says
-    schema = cast(dict[str, Any], cast(object, fetched.schema))
+    schema = cast(dict[str, Any], cast(object, fetched.json_schema))
 
     assert list(schema["properties"]) == [
         "acute_warning",
@@ -94,7 +94,7 @@ def test_a_trail_s_parts_are_shared_by_whatever_reaches_them(
     pelle = dump_trail(StackTrailModel, trails.stack["qwen3-8b-awq@pelle"])
     malborg = dump_trail(StackTrailModel, trails.stack["qwen3-8b-awq@malborg"])
 
-    assert pelle.model_id == malborg.model_id
+    assert pelle.llm_id == malborg.llm_id
     assert pelle.host_os_id is None
     assert malborg.host_os_id is not None
 

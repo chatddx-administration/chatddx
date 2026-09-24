@@ -2,10 +2,10 @@
 Reasoning: a request-time slice (new-datamodel.md §2).
 
 A variation is an effort, and optionally a token budget. It states an intent,
-and a model's facts translate it: into a request fragment, into another
+and an LLM's facts translate it: into a request fragment, into another
 intent it collapses into, or into a refusal. Qwen3 has no effort levels, so
 every effort is "on" there; gpt-oss can't stop reasoning, so "off" is refused.
-`default` is the model's own effort, which resolution looks up and writes out.
+`default` is the LLM's own effort, which resolution looks up and writes out.
 """
 
 from typing import Literal, get_args
@@ -25,18 +25,18 @@ from chatddx.repo.families import (
     TrailRef,
 )
 
-# pydantic-ai's ThinkingLevel, plus `default` for the model's own
+# pydantic-ai's ThinkingLevel, plus `default` for the LLM's own
 type Effort = Literal[
     "default", "off", "on", "minimal", "low", "medium", "high", "xhigh"
 ]
 
-# every effort but `default`, which stands for one of them: what a model's
+# every effort but `default`, which stands for one of them: what an LLM's
 # facts translate
 type Intent = Literal["off", "on", "minimal", "low", "medium", "high", "xhigh"]
 
 INTENTS: tuple[Intent, ...] = get_args(Intent.__value__)
 
-# The request fields the reasoning slice writes, whatever a model's facts
+# The request fields the reasoning slice writes, whatever an LLM's facts
 # have it write. No other slice writes them (new-datamodel.md §3).
 REASONING_WRITES = frozenset(
     {

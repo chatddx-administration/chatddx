@@ -40,7 +40,7 @@ LATER = "yellow"
 
 @dataclass(frozen=True)
 class Streamed:
-    """A run's answer, and whether any of the model's thinking came back."""
+    """A run's answer, and whether any of the LLM's thinking came back."""
 
     answer: Any
     thought: bool
@@ -135,7 +135,7 @@ def show_messages(
     """
     Write out a recorded run's messages as its events came when it ran, and
     what it used, if it came to an answer. What the answer's own tool
-    returns, the model never reads.
+    returns, the LLM never reads.
     """
     out = Transcript(console)
     responses = [message for message in messages if isinstance(message, ModelResponse)]

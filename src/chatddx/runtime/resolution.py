@@ -2,9 +2,9 @@
 Resolution: a cell, a configuration joined to a stack, made into one request
 or refused with its reasons (new-datamodel.md §2, §9).
 
-Each slice's variation states an intent, and the facts of the stack's model
+Each slice's variation states an intent, and the facts of the stack's LLM
 realize it. The slices are resolved in the order each reads the ones before
-it: the model, reasoning, sampling, output and coercion, the instruction
+it: the stack, reasoning, sampling, output and coercion, the instruction
 with its slots filled, then the toolset. The case is left out: a cell is
 resolved once, and each trial renders it with a case of its own.
 """
@@ -24,10 +24,10 @@ from chatddx.repo.entities.coercion.pydantic import (
     Mode,
 )
 from chatddx.repo.entities.instruction.pydantic import InstructionTrailBase
-from chatddx.repo.entities.model.pydantic import (
+from chatddx.repo.entities.llm.pydantic import (
     BudgetFact,
+    LLMFacts,
     ModeFact,
-    ModelFacts,
     Refusal,
 )
 from chatddx.repo.entities.output.pydantic import (
@@ -42,7 +42,7 @@ from chatddx.repo.entities.tool.pydantic import ToolTrailBase
 from chatddx.repo.entities.toolset.pydantic import SLOT as TOOL_GUIDANCE
 
 type Slice = Literal[
-    "model", "reasoning", "sampling", "output", "coercion", "instruction", "toolset"
+    "stack", "reasoning", "sampling", "output", "coercion", "instruction", "toolset"
 ]
 
 
@@ -154,7 +154,7 @@ class Resolution:
 
     @property
     def fields(self) -> dict[str, JsonValue]:
-        """What the request states beside its messages and its model."""
+        """What the request states beside its messages and its `model`."""
         return self.reasoning.writes | self.sampling.writes
 
     def render(self, case: str) -> tuple[str, str]:
@@ -173,25 +173,25 @@ class Resolution:
 def resolve(
     configuration: Configuration,
     stack: StackDetails,
-    facts: ModelFacts,
+    facts: LLMFacts,
     serving: ServingTrailBase | None,
 ) -> Resolution:
     refusals: list[SliceRefusal] = []
 
     if stack.api is None:
-        refusals.append(SliceRefusal("model", "the stack names no API"))
+        refusals.append(SliceRefusal("stack", "the stack names no API"))
     elif stack.api != "vllm":
         refusals.append(
             SliceRefusal(
-                "model", f"the repl sends to vLLM only, not {stack.api}", "later"
+                "stack", f"the repl sends to vLLM only, not {stack.api}", "later"
             )
         )
 
     if stack.endpoint is None:
-        refusals.append(SliceRefusal("model", "the stack names no endpoint"))
+        refusals.append(SliceRefusal("stack", "the stack names no endpoint"))
 
     if stack.served_name is None:
-        refusals.append(SliceRefusal("model", "the stack names no served name"))
+        refusals.append(SliceRefusal("stack", "the stack names no served name"))
 
     reasoning, sampling, found = realize(
         configuration.reasoning, configuration.sampling, facts, serving
@@ -228,11 +228,11 @@ def resolve(
 def realize(
     reasoning: ReasoningTrailBase,
     sampling: SamplingTrailBase | None,
-    facts: ModelFacts,
+    facts: LLMFacts,
     serving: ServingTrailBase | None,
 ) -> tuple[Reasoning | None, Sampling | None, list[SliceRefusal]]:
     """
-    A reasoning variation on a model, and the sampling it pulls in. The two
+    A reasoning variation on an LLM, and the sampling it pulls in. The two
     are resolved together: sampling can default to what the facts recommend
     for the mode reasoning resolves to, and a budget spends max_tokens.
     """
@@ -250,7 +250,7 @@ def realize(
 
 def _reasoning(
     variation: ReasoningTrailBase,
-    facts: ModelFacts,
+    facts: LLMFacts,
     provided: frozenset[Requirement],
     refusals: list[SliceRefusal],
 ) -> Reasoning | None:
@@ -261,7 +261,7 @@ def _reasoning(
         missing = (
             "no default effort" if effort == "default" else f"nothing on '{effort}'"
         )
-        refusals.append(SliceRefusal("reasoning", f"the model's facts say {missing}"))
+        refusals.append(SliceRefusal("reasoning", f"the LLM's facts say {missing}"))
         return None
 
     intent, fact = resolved
@@ -279,9 +279,7 @@ def _reasoning(
         match budget:
             case None:
                 refusals.append(
-                    SliceRefusal(
-                        "reasoning", "the model's facts say nothing on a budget"
-                    )
+                    SliceRefusal("reasoning", "the LLM's facts say nothing on a budget")
                 )
             case Refusal():
                 refusals.append(SliceRefusal("reasoning", budget.refused))
@@ -304,20 +302,20 @@ def _reasoning(
 
 def _sampling(
     variation: SamplingTrailBase,
-    facts: ModelFacts,
+    facts: LLMFacts,
     reasoning: Reasoning | None,
     refusals: list[SliceRefusal],
 ) -> Sampling | None:
     match variation.defaults:
-        case "model":
+        case "generation_config":
             base = facts.sampling.generation_config
-            source = "the model's generation config"
+            source = "the LLM's generation config"
 
             if base is None:
                 refusals.append(
                     SliceRefusal(
                         "sampling",
-                        "the model's facts say nothing on its generation config",
+                        "the LLM's facts say nothing on its generation config",
                     )
                 )
                 return None
@@ -332,7 +330,7 @@ def _sampling(
                 refusals.append(
                     SliceRefusal(
                         "sampling",
-                        f"the model's facts recommend nothing for '{reasoning.intent}'",
+                        f"the LLM's facts recommend nothing for '{reasoning.intent}'",
                     )
                 )
                 return None
@@ -370,7 +368,7 @@ def _budget_fits(
 def _output(
     configuration: Configuration,
     reasoning: Reasoning | None,
-    facts: ModelFacts,
+    facts: LLMFacts,
     serving: ServingTrailBase | None,
     refusals: list[SliceRefusal],
 ) -> tuple[Coercion | None, dict[str, str]]:
@@ -383,13 +381,13 @@ def _output(
     if output.guidance is not None:
         slots[OUTPUT_GUIDANCE] = output.guidance
 
-    if output.schema is not None:
+    if output.json_schema is not None:
         coercion = _coercion(
-            variation, output.schema, reasoning, facts, serving, refusals
+            variation, output.json_schema, reasoning, facts, serving, refusals
         )
 
         if coercion and variation.schema_prompt is not None:
-            schema = json.dumps(output.schema, indent=2, ensure_ascii=False)
+            schema = json.dumps(output.json_schema, indent=2, ensure_ascii=False)
             slots[SCHEMA_PROMPT] = TemplateStr(variation.schema_prompt).render(
                 {"schema": schema}
             )
@@ -402,7 +400,7 @@ def _toolset(
     serving: ServingTrailBase | None,
     refusals: list[SliceRefusal],
 ) -> list[Tool]:
-    """The tools the model is offered, as the request carries them."""
+    """The tools the LLM is offered, as the request carries them."""
     if toolset is None:
         return []
 
@@ -458,7 +456,7 @@ def _coercion(
     variation: CoercionTrailBase,
     schema: dict[str, JsonValue],
     reasoning: Reasoning | None,
-    facts: ModelFacts,
+    facts: LLMFacts,
     serving: ServingTrailBase | None,
     refusals: list[SliceRefusal],
 ) -> Coercion | None:
@@ -466,7 +464,7 @@ def _coercion(
 
     if mode is None:
         refusals.append(
-            SliceRefusal("coercion", "the model's facts name no mode for 'auto'")
+            SliceRefusal("coercion", "the LLM's facts name no mode for 'auto'")
         )
         return None
 
@@ -477,7 +475,7 @@ def _coercion(
         case None:
             refusals.append(
                 SliceRefusal(
-                    "coercion", f"{through}the model's facts say nothing on '{mode}'"
+                    "coercion", f"{through}the LLM's facts say nothing on '{mode}'"
                 )
             )
         case Refusal():
@@ -493,7 +491,7 @@ def _coercion(
 
             if missing:
                 needed = " and ".join(
-                    "a reasoning parser while the model reasons"
+                    "a reasoning parser while the LLM reasons"
                     if need == "reasoning_parser"
                     else "a " + need.replace("_", " ")
                     for need in missing
@@ -551,7 +549,7 @@ def inlined(schema: dict[str, JsonValue]) -> dict[str, JsonValue]:
     """
     `schema` with each reference in it replaced by what it refers to, and its
     `$defs` dropped: the schema as a request carries it. Done here, it is
-    chatddx's to say what the model is held to, not a library's to make of
+    chatddx's to say what the LLM is held to, not a library's to make of
     the schema. A reference's siblings are kept beside what it refers to.
     """
 

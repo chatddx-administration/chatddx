@@ -26,9 +26,9 @@ def cell(test_inventory: ParsedInventory) -> Cell:
         )
         stack_trail, details = test_inventory.stack[stack]
         facts = next(
-            model.facts
-            for model_trail, model in test_inventory.model.values()
-            if model_trail.fingerprint == stack_trail.model.fingerprint
+            llm.facts
+            for llm_trail, llm in test_inventory.llm.values()
+            if llm_trail.fingerprint == stack_trail.llm.fingerprint
         )
 
         return resolve(trail, details, facts, stack_trail.serving)
@@ -40,7 +40,7 @@ def cell(test_inventory: ParsedInventory) -> Cell:
 def entry_points(test_inventory: ParsedInventory) -> dict[str, str]:
     """What each of the test inventory's tools runs, by the tool's name."""
     return {
-        trail.name: details.implementation.entry_point
+        trail.name: details.implementation.function
         for trail, details in test_inventory.tool.values()
         if details.implementation is not None
     }

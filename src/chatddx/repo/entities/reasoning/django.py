@@ -11,7 +11,7 @@ class ReasoningTrailModel(TrailModel):
 
 
 class ReasoningBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         ReasoningTrailModel,
         on_delete=PROTECT,
         related_name="branches",

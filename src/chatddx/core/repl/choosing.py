@@ -54,7 +54,7 @@ def set_(repl: Repl, entity: str, name: str) -> None:
         repl.error("the cell has no configuration to set it in: use CONFIGURATION")
         return
 
-    own = getattr(cell.configuration.target, entity)
+    own = getattr(cell.configuration.trail, entity)
 
     if name == NONE:
         if entity not in OPTIONAL:
@@ -74,7 +74,7 @@ def set_(repl: Repl, entity: str, name: str) -> None:
     model = get_visible_branch_model(entity, repl.identity, name)
     spec = entity_of(entity).branch_out.model_validate(model)
 
-    if own is not None and own.fingerprint == spec.target.fingerprint:
+    if own is not None and own.fingerprint == spec.trail.fingerprint:
         _ = cell.variations.pop(entity, None)
     else:
         cell.variations[entity] = spec

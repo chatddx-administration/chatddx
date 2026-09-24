@@ -10,15 +10,15 @@ from pydantic import JsonValue, ValidationError
 
 from chatddx.repo.entities.coercion.pydantic import CoercionTrailIn
 from chatddx.repo.entities.instruction.pydantic import InstructionTrailIn
-from chatddx.repo.entities.machine.pydantic import MachineTrailIn
-from chatddx.repo.entities.model.pydantic import (
+from chatddx.repo.entities.llm.pydantic import (
+    LLMDetails,
+    LLMFacts,
+    LLMTrailIn,
     ModeFact,
-    ModelDetails,
-    ModelFacts,
-    ModelTrailIn,
     ReasoningFacts,
     Refusal,
 )
+from chatddx.repo.entities.machine.pydantic import MachineTrailIn
 from chatddx.repo.entities.os.pydantic import OsTrailIn
 from chatddx.repo.entities.output.pydantic import OutputTrailIn
 from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailIn
@@ -31,7 +31,7 @@ from chatddx.repo.templates import TemplateError, placements
 
 ENGINE = "/nix/store/22222222222222222222222222222222-vllm"
 MACHINE = MachineTrailIn(machine_id="00000000-0000-4000-8000-000000000001")  # pyright: ignore[reportArgumentType]
-MODEL = ModelTrailIn(blob="/nix/store/11111111111111111111111111111111-m")
+LLM = LLMTrailIn(snapshot="/nix/store/11111111111111111111111111111111-m")
 
 
 def os(name: str) -> OsTrailIn:
@@ -42,19 +42,19 @@ def os(name: str) -> OsTrailIn:
 
 
 @pytest.mark.parametrize(
-    "blob",
+    "snapshot",
     [
         "/nix/store/0v4qhx8a2c5m7l1d9rbs6fzjkg3ywpin-Qwen3-8B-AWQ",
         # a cloud provider's dated model name stands in, unverified
         "gpt-5-mini-2025-08-07",
     ],
 )
-def test_a_model_is_its_blob(blob: str):
-    assert ModelTrailIn(blob=blob).blob == blob
+def test_an_llm_is_its_snapshot(snapshot: str):
+    assert LLMTrailIn(snapshot=snapshot).snapshot == snapshot
 
 
 @pytest.mark.parametrize(
-    "blob, problem",
+    "snapshot, problem",
     [
         # vLLM would resolve the revision when it starts
         ("Qwen/Qwen3-8B-AWQ", "names a repository"),
@@ -63,16 +63,16 @@ def test_a_model_is_its_blob(blob: str):
         ("/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-m", "store path"),
     ],
 )
-def test_a_blob_is_a_store_path_or_a_cloud_name(blob: str, problem: str):
+def test_a_snapshot_is_a_store_path_or_a_cloud_name(snapshot: str, problem: str):
     with pytest.raises(ValidationError, match=problem):
-        _ = ModelTrailIn(blob=blob)
+        _ = LLMTrailIn(snapshot=snapshot)
 
 
 def test_a_source_pins_a_commit():
-    assert ModelDetails(source=f"Qwen/Qwen3-8B-AWQ@{'a' * 40}").source
+    assert LLMDetails(source=f"Qwen/Qwen3-8B-AWQ@{'a' * 40}").source
 
     with pytest.raises(ValidationError, match="not a pinned source"):
-        _ = ModelDetails(source="Qwen/Qwen3-8B-AWQ@main")
+        _ = LLMDetails(source="Qwen/Qwen3-8B-AWQ@main")
 
 
 def test_an_os_is_its_system_s_store_path():
@@ -96,7 +96,7 @@ def test_serving_arguments_are_held_in_one_spelling():
     "args, problem",
     [
         ({"max-model-len": 1, "max_model_len": 2}, "given twice"),
-        ({"model": "/nix/store/x"}, "model's identity"),
+        ({"model": "/nix/store/x"}, "LLM's identity"),
         ({"served-model-name": "qwen3"}, "served_name"),
         ({"api-key": "secret"}, "credential"),
         ({"gpu-memory-utilization": 0.9}, "belongs to performance"),
@@ -141,7 +141,7 @@ def test_a_container_s_stack_names_both_systems():
         machine=MACHINE,
         os=os("container"),
         host_os=os("host"),
-        model=MODEL,
+        llm=LLM,
     )
 
     assert stack.host_os == os("host")
@@ -149,10 +149,10 @@ def test_a_container_s_stack_names_both_systems():
 
 def test_a_host_os_is_for_a_container():
     with pytest.raises(ValidationError, match="name the container's OS too"):
-        _ = StackTrailIn(machine=MACHINE, host_os=os("host"), model=MODEL)
+        _ = StackTrailIn(machine=MACHINE, host_os=os("host"), llm=LLM)
 
     with pytest.raises(ValidationError, match="not its host's"):
-        _ = StackTrailIn(machine=MACHINE, os=os("a"), host_os=os("a"), model=MODEL)
+        _ = StackTrailIn(machine=MACHINE, os=os("a"), host_os=os("a"), llm=LLM)
 
 
 # ------------------------------------------------------------------- facts
@@ -202,7 +202,7 @@ def test_facts_that_don_t_resolve_are_refused(facts: dict[str, Any], problem: st
 def test_sampling_is_recommended_for_a_mode_the_facts_resolve_to():
     reasoning = {"on": {"chat_template_kwargs": {"enable_thinking": True}}, "low": "on"}
 
-    assert ModelFacts.model_validate(
+    assert LLMFacts.model_validate(
         {
             "reasoning": reasoning,
             "sampling": {"recommended": {"on": {"temperature": 0.6}}},
@@ -210,7 +210,7 @@ def test_sampling_is_recommended_for_a_mode_the_facts_resolve_to():
     )
 
     with pytest.raises(ValidationError, match=r"recommended for \['low'\]"):
-        _ = ModelFacts.model_validate(
+        _ = LLMFacts.model_validate(
             {
                 "reasoning": reasoning,
                 "sampling": {"recommended": {"low": {"temperature": 0.6}}},
@@ -219,18 +219,18 @@ def test_sampling_is_recommended_for_a_mode_the_facts_resolve_to():
 
 
 def test_auto_resolves_to_a_mode_the_facts_say_works():
-    assert ModelFacts.model_validate({"coercion": {"default": "native", "native": {}}})
+    assert LLMFacts.model_validate({"coercion": {"default": "native", "native": {}}})
 
     for coercion in (
         {"default": "tool"},
         {"default": "tool", "tool": {"refused": "vLLM ignores it"}},
     ):
         with pytest.raises(ValidationError, match="`auto` resolves to 'tool'"):
-            _ = ModelFacts.model_validate({"coercion": coercion})
+            _ = LLMFacts.model_validate({"coercion": coercion})
 
 
 def test_a_mode_names_what_it_needs_one_or_several():
-    facts = ModelFacts.model_validate(
+    facts = LLMFacts.model_validate(
         {"coercion": {"native": {"needs": "reasoning_parser"}, "tool": {"needs": []}}}
     )
 
@@ -240,7 +240,7 @@ def test_a_mode_names_what_it_needs_one_or_several():
     assert native.needs == ["reasoning_parser"]
 
     with pytest.raises(ValidationError, match="reasoning_parser"):
-        _ = ModelFacts.model_validate({"coercion": {"native": {"needs": "a_parser"}}})
+        _ = LLMFacts.model_validate({"coercion": {"native": {"needs": "a_parser"}}})
 
 
 # -------------------------------------------------------------- templates
@@ -366,7 +366,7 @@ PLAN: dict[str, JsonValue] = {
     ],
 )
 def test_a_view_is_a_path_the_schema_proves(path: str):
-    output = OutputTrailIn(schema=PLAN, views={"differential": path})
+    output = OutputTrailIn(json_schema=PLAN, views={"differential": path})
 
     assert output.views == {"differential": path}
 
@@ -388,19 +388,19 @@ def test_a_view_is_a_path_the_schema_proves(path: str):
 )
 def test_a_path_the_schema_doesn_t_prove_is_refused(path: str, problem: str):
     with pytest.raises(ValidationError, match=problem):
-        _ = OutputTrailIn(schema=PLAN, views={"differential": path})
+        _ = OutputTrailIn(json_schema=PLAN, views={"differential": path})
 
 
 def test_free_text_gives_its_views_through_parsers():
     output = OutputTrailIn(guidance="One per line.", views={"differential": "lines"})
 
-    assert output.schema is None
+    assert output.json_schema is None
 
     with pytest.raises(ValidationError, match="through a parser"):
         _ = OutputTrailIn(views={"differential": "$.names[*]"})
 
     with pytest.raises(ValidationError, match="not a path"):
-        _ = OutputTrailIn(schema=PLAN, views={"differential": "lines"})
+        _ = OutputTrailIn(json_schema=PLAN, views={"differential": "lines"})
 
 
 def test_free_text_offers_its_text_whole():
@@ -416,32 +416,34 @@ def test_free_text_offers_its_text_whole():
 
 
 def test_a_structured_output_offers_text_only_where_a_path_proves_a_string():
-    output = OutputTrailIn(schema=PLAN, views={"text": "$.summary"})
+    output = OutputTrailIn(json_schema=PLAN, views={"text": "$.summary"})
 
     assert output.view("text", {"summary": "pneumonia"}) == ["pneumonia"]
 
     with pytest.raises(ValidationError, match="not a string"):
-        _ = OutputTrailIn(schema=PLAN, views={"text": "$"})
+        _ = OutputTrailIn(json_schema=PLAN, views={"text": "$"})
 
 
 def test_a_warning_may_be_null_and_reads_as_nothing():
-    output = OutputTrailIn(schema=PLAN, views={"warning": "$.diagnoses[*].maybe"})
+    output = OutputTrailIn(json_schema=PLAN, views={"warning": "$.diagnoses[*].maybe"})
     answer: JsonValue = {"diagnoses": [{"maybe": "sepsis"}, {"maybe": None}]}
 
     assert output.view("warning", answer) == ["sepsis"]
 
     with pytest.raises(ValidationError, match=r"of type \['string', 'null'\]"):
-        _ = OutputTrailIn(schema=PLAN, views={"disposition": "$.diagnoses[*].maybe"})
+        _ = OutputTrailIn(
+            json_schema=PLAN, views={"disposition": "$.diagnoses[*].maybe"}
+        )
 
 
 def test_a_view_the_code_doesn_t_know_is_refused():
     with pytest.raises(ValidationError, match="views.plan"):
-        _ = OutputTrailIn(schema=PLAN, views={"plan": "$"})  # pyright: ignore[reportArgumentType]
+        _ = OutputTrailIn(json_schema=PLAN, views={"plan": "$"})  # pyright: ignore[reportArgumentType]
 
 
 def test_a_view_reads_what_its_path_reaches_in_an_answer():
     output = OutputTrailIn(
-        schema=PLAN, views={"differential": "$.diagnoses[*].diagnosis"}
+        json_schema=PLAN, views={"differential": "$.diagnoses[*].diagnosis"}
     )
     answer: JsonValue = {
         "diagnoses": [
@@ -456,7 +458,7 @@ def test_a_view_reads_what_its_path_reaches_in_an_answer():
 
 
 def test_a_view_of_one_string_reads_a_list_of_one():
-    output = OutputTrailIn(schema=PLAN, views={"differential": "$.summary"})
+    output = OutputTrailIn(json_schema=PLAN, views={"differential": "$.summary"})
 
     assert output.view("differential", {"summary": "pneumonia"}) == ["pneumonia"]
     assert output.view("differential", {}) == []
@@ -479,7 +481,7 @@ def test_free_text_is_read_a_line_at_a_time_its_list_markers_stripped():
 
 def test_a_schema_is_a_json_schema():
     with pytest.raises(ValidationError, match="not a valid JSON Schema"):
-        _ = OutputTrailIn(schema={"type": "objet"})
+        _ = OutputTrailIn(json_schema={"type": "objet"})
 
 
 # ---------------------------------------------------- reasoning, sampling
@@ -507,7 +509,7 @@ def test_a_budget_is_for_reasoning_that_is_on():
 )
 def test_sampling_holds_its_values_to_their_ranges(values: dict[str, Any]):
     with pytest.raises(ValidationError):
-        _ = SamplingTrailIn(defaults="model", **values)
+        _ = SamplingTrailIn(defaults="generation_config", **values)
 
 
 def test_sampling_says_what_a_value_left_out_means():

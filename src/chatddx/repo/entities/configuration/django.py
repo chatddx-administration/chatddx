@@ -56,22 +56,22 @@ class ConfigurationTrailModel(TrailModel):
 
 
 class ConfigurationBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         ConfigurationTrailModel,
         on_delete=PROTECT,
         related_name="branches",
     )
 
-    instruction_branch = BranchRef("target__instruction", "instruction", Instruction)
-    output_branch = BranchRef("target__output", "output", Output)
-    coercion_branch = BranchRef("target__coercion", "coercion", Coercion)
-    reasoning_branch = BranchRef("target__reasoning", "reasoning", Reasoning)
-    sampling_branch = BranchRef("target__sampling", "sampling", Sampling)
-    toolset_branch = BranchRef("target__toolset", "toolset", Toolset)
+    instruction_branch = BranchRef("trail__instruction", "instruction", Instruction)
+    output_branch = BranchRef("trail__output", "output", Output)
+    coercion_branch = BranchRef("trail__coercion", "coercion", Coercion)
+    reasoning_branch = BranchRef("trail__reasoning", "reasoning", Reasoning)
+    sampling_branch = BranchRef("trail__sampling", "sampling", Sampling)
+    toolset_branch = BranchRef("trail__toolset", "toolset", Toolset)
 
 
 class Configuration(BranchProxy, ConfigurationBranchModel, Sharable):
-    target: ConfigurationTrailModel
+    trail: ConfigurationTrailModel
 
     class Meta(BranchProxy.Meta):
         proxy = True
@@ -80,7 +80,7 @@ class Configuration(BranchProxy, ConfigurationBranchModel, Sharable):
 
 
 class SharedConfiguration(BranchProxy, ConfigurationBranchModel, Sharable):
-    target: ConfigurationTrailModel
+    trail: ConfigurationTrailModel
 
     class Meta(BranchProxy.Meta):
         proxy = True

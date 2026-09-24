@@ -26,7 +26,7 @@ def _store_path(value: str) -> str:
 
 def _pinned_source(value: str) -> str:
     # a floating revision would be resolved when vLLM starts, not when the
-    # model was registered (data-generation.md §1)
+    # LLM was registered (data-generation.md §1)
     if not _PINNED_SOURCE.fullmatch(value):
         raise ValueError(
             f"{value!r} is not a pinned source: write the repository and the "

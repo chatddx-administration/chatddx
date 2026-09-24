@@ -2,7 +2,7 @@
 # configuration names one variation of each (new-datamodel.md §2, §6).
 #
 # A variation states an intent. Resolution realizes it on a stack with the
-# model's facts (models.toml): it writes a fragment of the request, collapses
+# LLM's facts (llms.toml): it writes a fragment of the request, collapses
 # into another variation, or is refused with a reason.
 
 # -------------------------------------------------------------- instruction
@@ -31,7 +31,7 @@ system = ""
 user = "{{case}}"
 variables = ["case"]
 
-# Tries to talk the model out of the answer's format, to see which coercion
+# Tries to talk the LLM out of the answer's format, to see which coercion
 # holds (chatddx/test-inventory.toml).
 [instruction.challenge-coercion]
 system = """
@@ -51,14 +51,14 @@ variables = ["case", "schema_prompt"]
 
 # key order as authored: the DDXManagement model's own
 [output.management-plan]
-schema_path = "schemas/management_plan_v1.json"
+json_schema_path = "schemas/management_plan_v1.json"
 guidance = "Fill in the management plan for the case."
 views.differential = "$.diagnoses[*].diagnosis"
 views.warning = "$.acute_warning"
 views.disposition = "$.management.disposition"
 
 [output.diagnoses]
-schema_path = "schemas/diagnoses.json"
+json_schema_path = "schemas/diagnoses.json"
 guidance = "List the plausible diagnoses, most likely first."
 views.differential = "$.diagnoses[*]"
 
@@ -67,20 +67,20 @@ guidance = "List the plausible diagnoses, one per line, most likely first."
 views.text = "whole"
 views.differential = "lines"
 
-# Free text with no guidance: whatever the model makes of the case alone.
+# Free text with no guidance: whatever the LLM makes of the case alone.
 [output.raw]
 views.text = "whole"
 
 # One field of each JSON type, to test coercion; it has no clinical reading.
 [output.type-check]
-schema_path = "schemas/type_check.json"
+json_schema_path = "schemas/type_check.json"
 
 # ----------------------------------------------------------------- coercion
 #
-# How the model is held to the output's schema, and whether it is shown the
+# How the LLM is held to the output's schema, and whether it is shown the
 # schema. With free text every coercion contributes nothing.
 
-# on vLLM, guided decoding only: the model never reads the schema
+# on vLLM, guided decoding only: the LLM never reads the schema
 [coercion.native]
 mode = "native"
 
@@ -91,7 +91,7 @@ Answer with a JSON object that matches this JSON Schema, and nothing else:
 
 {{schema}}"""  # guessed: the wording
 
-# the schema reaches the model anyway, as the final-result tool's parameters
+# the schema reaches the LLM anyway, as the final-result tool's parameters
 [coercion.tool]
 mode = "tool"
 tool_description = "Give your answer by calling this tool, with the answer as its arguments."  # guessed: the wording
@@ -101,13 +101,13 @@ tool_description = "Give your answer by calling this tool, with the answer as it
 extends = "native-shown"
 mode = "prompted"
 
-# whatever the model's facts name as its default
+# whatever the LLM's facts name as its default
 [coercion.auto]
 mode = "auto"
 
 # ---------------------------------------------------------------- reasoning
 #
-# An effort, and optionally a token budget. The model's facts translate it:
+# An effort, and optionally a token budget. The LLM's facts translate it:
 # on Qwen3 every effort is "on"; gpt-oss can't turn reasoning off.
 
 [reasoning.default]
@@ -140,12 +140,12 @@ budget = 2048  # guessed: a budget worth comparing against plain "on"
 
 # ----------------------------------------------------------------- sampling
 #
-# Explicit values, and what a value left out means: the model's own
-# (`model`, its generation_config.json) or what its facts recommend for the
+# Explicit values, and what a value left out means: the LLM's own
+# (`generation_config`, its generation_config.json) or what its facts recommend for the
 # reasoning mode it resolves to (`recommended`). The seed is the trial's.
 
-[sampling.model]
-defaults = "model"
+[sampling.generation-config]
+defaults = "generation_config"
 
 [sampling.recommended]
 defaults = "recommended"
@@ -155,12 +155,12 @@ extends = "recommended"
 max_tokens = 4096
 
 [sampling.greedy]
-defaults = "model"
+defaults = "generation_config"
 temperature = 0
 
-# the same numbers on every model and in every mode (data-generation.md §2.5)
+# the same numbers on every LLM and in every mode (data-generation.md §2.5)
 [sampling.fixed]
-defaults = "model"
+defaults = "generation_config"
 temperature = 0.7
 top_p = 0.8
 top_k = 20
@@ -171,8 +171,8 @@ frequency_penalty = 0
 # ------------------------------------------------------------ toolset, tool
 #
 # A toolset is ordered tools and the guidance that fills `tool_guidance`. A
-# tool is what the model sees of it; its implementation is description, a
-# function in one of chatddx's own tool files, and each run records the git
+# tool is what the LLM sees of it; its implementation is description, the
+# function, an entry point into one of chatddx's own tool files, and each run records the git
 # blob of the file that ran.
 
 [toolset.web]
@@ -185,7 +185,7 @@ tools = ["sentinel_string", "sentinel_op"]
 [tool.web_search]
 name = "web_search"
 description = "Search the web for up-to-date information"
-implementation.entry_point = "chatddx.runtime.tools.web_search:web_search"
+implementation.function = "chatddx.runtime.tools.web_search:web_search"
 
 [tool.web_search.parameters]
 type = "object"
@@ -197,13 +197,13 @@ additionalProperties = false
 [tool.sentinel_string]
 name = "sentinel_string"
 description = "This is tool returns a string that is hard to know in advance"
-implementation.entry_point = "chatddx.runtime.tools.sentinel_string:sentinel_string"
+implementation.function = "chatddx.runtime.tools.sentinel_string:sentinel_string"
 parameters = { type = "object", properties = {}, additionalProperties = false }
 
 [tool.sentinel_op]
 name = "sentinel_op"
 description = "This tool takes two arguments and performs an operation on them"
-implementation.entry_point = "chatddx.runtime.tools.sentinel_op:sentinel_op"
+implementation.function = "chatddx.runtime.tools.sentinel_op:sentinel_op"
 
 [tool.sentinel_op.parameters]
 type = "object"

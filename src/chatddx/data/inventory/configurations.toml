@@ -1,11 +1,11 @@
 # Configurations: one variation of each request-time slice, and optionally a
-# toolset. A configuration holds no model. The stack is chosen per trial, so
-# one configuration runs on every model; where a model can't honour a
+# toolset. A configuration holds no LLM. The stack is chosen per trial, so
+# one configuration runs on every LLM; where an LLM can't honour a
 # variation, the cell is refused with the reason (new-datamodel.md §2, §5).
 #
-# Today's agents paired a model with a reasoning switch written for it
+# Today's agents paired an LLM with a reasoning switch written for it
 # (`disable-thinking` for Qwen3, `low-reasoning` for gpt-oss). Here reasoning
-# is `default`, the model's own, and a batch varies it across models.
+# is `default`, the LLM's own, and a batch varies it across LLMs.
 
 # ------------------------------------------------------------------ clinical
 
@@ -18,7 +18,7 @@ reasoning = "default"
 sampling = "recommended"
 tags = ["ddx"]
 
-# the same, with the schema shown to the model through its slot
+# the same, with the schema shown to the LLM through its slot
 [configuration.plan-shown]
 extends = "plan"
 coercion = "native-shown"
@@ -66,7 +66,7 @@ instruction = "bare"
 output = "raw"
 coercion = "native"
 reasoning = "default"
-sampling = "model"
+sampling = "generation-config"
 tags = ["test"]
 
 [configuration.test-tools]
@@ -78,7 +78,7 @@ instruction = "challenge-coercion"
 output = "type-check"
 coercion = "native"
 reasoning = "default"
-sampling = "model"
+sampling = "generation-config"
 tags = ["test"]
 
 [configuration.challenge-coercion-prompted]

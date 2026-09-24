@@ -25,7 +25,7 @@ from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
     ConfigurationTrailIn,
 )
-from chatddx.repo.entities.model.pydantic import ModelBranchOut
+from chatddx.repo.entities.llm.pydantic import LLMBranchOut
 from chatddx.repo.entities.scorer.pydantic import (
     ScorerBranchDetails,
     ScorerTrailIn,
@@ -75,18 +75,18 @@ def ran(
     own = ConfigurationBranchOut.model_validate(
         get_visible_branch_model("configuration", "alex", configuration)
     )
-    slices: dict[str, Any] = {entity: getattr(own.target, entity) for entity in SLICES}
+    slices: dict[str, Any] = {entity: getattr(own.trail, entity) for entity in SLICES}
     cell = ConfigurationTrailIn.model_validate(slices, from_attributes=True)
     stack = StackBranchOut.model_validate(
         get_visible_branch_model("stack", "alex", STACK)
     )
-    model = get_visible_branch_model("model", "alex", trail=stack.target.model.id)
-    facts = ModelBranchOut.model_validate(model).details.facts
+    llm = get_visible_branch_model("llm", "alex", trail=stack.trail.llm.id)
+    facts = LLMBranchOut.model_validate(llm).details.facts
     case_model = get_visible_branch_model("case", "alex", case)
 
     trial = Trial(
-        resolve(cell, stack.details, facts, stack.target.serving),
-        case_model.target.payload,
+        resolve(cell, stack.details, facts, stack.trail.serving),
+        case_model.trail.vignette,
         transport=transport or FakeTransport(),
     )
     started = timezone.now()
@@ -95,8 +95,8 @@ def ran(
     return record(
         user,
         cell,
-        Branches(stack.id, model.pk),
-        case_model.target_id,
+        Branches(stack.id, llm.pk),
+        case_model.trail_id,
         trial,
         outcome,
         started,
@@ -118,7 +118,7 @@ def retarget(case: str, owner: str = "archive", **targets: Target) -> None:
     """Commit a version of `owner`'s branch of `case` that expects `targets`."""
     branch = CaseBranchModel.objects.filter(owner__name=owner, name=case).latest("pk")
     _ = commit(
-        branch.target,
+        branch.trail,
         CaseBranchDetails.model_validate(
             {"name": case, "owner": owner, "targets": targets}
         ),
@@ -234,7 +234,7 @@ def test_one_s_own_case_s_targets_shadow_the_archive_s():
     run = ran("free-text")
     archive = CaseBranchModel.objects.get(owner__name="archive", name="case-1")
     _ = commit(
-        archive.target,
+        archive.trail,
         CaseBranchDetails(
             name="my-case", owner="alex", targets={"diagnosis": "fake & diagnosis & a"}
         ),

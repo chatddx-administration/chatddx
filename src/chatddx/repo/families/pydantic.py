@@ -19,7 +19,7 @@ from chatddx.core.schemas import IdentitySchemaOut
 from chatddx.repo.families.canonical import fingerprint, ordered
 
 # Marks a field of a trail schema whose value keeps its order in the
-# fingerprint: a JSON Schema, which a model reads, and a constrained decoder
+# fingerprint: a JSON Schema, which an LLM reads, and a constrained decoder
 # emits, in the order it is written. See `chatddx.repo.families.canonical`.
 ORDERED = "ordered"
 
@@ -93,8 +93,8 @@ class TrailOut(BaseTrail, NinjaSchema):
     timestamp: datetime
 
 
-class BaseBranchTarget[T: BaseTrail](BaseModel):
-    target: T
+class BaseBranchTrail[T: BaseTrail](BaseModel):
+    trail: T
 
 
 def relation_fields(details: type[BaseModel]) -> list[tuple[str, str]]:
@@ -139,7 +139,7 @@ def dump_details(details: BaseModel) -> dict[str, JsonValue]:
 class Details(BaseModel):
     """
     What an entity's branch says about its content without being part of it:
-    a machine's specs, a model's facts, a stack's endpoint. Details are never
+    a machine's specs, an LLM's facts, a stack's endpoint. Details are never
     fingerprinted. They are the owner's, per branch, and a change to them
     makes a new version of the branch (new-datamodel.md §1).
 
@@ -186,7 +186,7 @@ class BranchDetailsPatch(BaseModel):
     )
 
 
-class BaseBranch[T: BaseTrail](BaseBranchTarget[T]):
+class BaseBranch[T: BaseTrail](BaseBranchTrail[T]):
     pass
 
 

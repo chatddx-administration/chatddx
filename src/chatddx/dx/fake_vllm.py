@@ -4,15 +4,15 @@ can be tried end to end without a GPU. `chatddx fake-vllm` serves it, and
 the inventory's `@fake` stacks send to it.
 
 It streams as vLLM does, the reasoning parser's output in `reasoning` and the
-answer in `content`, and it takes the request as the model's chat template
+answer in `content`, and it takes the request as the LLM's chat template
 would: Qwen3 thinks unless `enable_thinking` is false, and gpt-oss always
 does. What it thinks about is the request it was sent, field by field, and
-it answers every case alike, since nothing in it reads the case. Like a
-model, it spends `max_tokens` on thinking first. A word is a token.
+it answers every case alike, since nothing in it reads the case. Like an
+LLM, it spends `max_tokens` on thinking first. A word is a token.
 
 Asked for a structured answer, it gives a document that holds to the
 schema: one `response_format` names, as guided decoding would force, or one
-a system message shows, as a model that follows it would. Offered tools, it
+a system message shows, as an LLM that follows it would. Offered tools, it
 calls each of them once, then answers: through the final-result tool, when
 it is offered one.
 
@@ -48,7 +48,7 @@ _WORD = re.compile(r"</?think>|(?:(?!</?think>)\S)+\s*|\s+")
 
 
 def thinking(body: dict[str, Any]) -> str | None:
-    """What the model thinks, if it thinks: the request it was sent."""
+    """What the LLM thinks, if it thinks: the request it was sent."""
     model = str(body.get("model", "")).lower()
     kwargs: dict[str, Any] = body.get("chat_template_kwargs") or {}
 
@@ -82,7 +82,7 @@ class Reply:
 
 
 def respond(body: dict[str, Any], reasoning_parser: bool = True) -> Reply:
-    """What the model gives back, within `max_tokens`."""
+    """What the LLM gives back, within `max_tokens`."""
     thought_text = None if _held(body, reasoning_parser) else thinking(body)
     thought = _words(thought_text or "")
     tool = _next_tool(body)

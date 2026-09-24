@@ -23,7 +23,7 @@ from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationTrailIn,
     ConfigurationTrailOut,
 )
-from chatddx.repo.entities.model.django import LanguageModel
+from chatddx.repo.entities.llm.django import LLM as LLMProxy
 from chatddx.repo.entity_names import ENTITY_NAMES, EntityName, PresentationName
 from chatddx.repo.families.pydantic import (
     BRANCH_FIELDS,
@@ -42,7 +42,7 @@ from chatddx.repo.inventories import (
 from chatddx.repo.parsers.inventory import (
     _relations,  # pyright: ignore[reportPrivateUsage]
 )
-from chatddx.repo.registry import CASE, CONFIGURATION, MODEL
+from chatddx.repo.registry import CASE, CONFIGURATION, LLM
 
 
 def test_the_registry_is_the_new_datamodel_s():
@@ -50,7 +50,7 @@ def test_the_registry_is_the_new_datamodel_s():
     assert ENTITY_NAMES == (
         "machine",
         "os",
-        "model",
+        "llm",
         "serving",
         "client",
         "stack",
@@ -92,12 +92,8 @@ def test_a_case_proxy_answers_case():
         assert entity_of(proxy) is CASE
 
 
-def test_the_model_s_proxy_is_not_called_model():
-    """
-    Every module that star-imports the registry's models would take a proxy
-    called `Model` for Django's.
-    """
-    assert entity_of(LanguageModel) is MODEL
+def test_an_llm_proxy_answers_llm():
+    assert entity_of(LLMProxy) is LLM
 
 
 def test_two_entities_may_not_claim_one_class():
@@ -105,7 +101,7 @@ def test_two_entities_may_not_claim_one_class():
         _ = _index_by_class((CONFIGURATION, CONFIGURATION), "members", "entity")
 
 
-def test_every_entity_has_a_view_of_its_name():
+def test_every_entity_has_a_presentation_of_its_name():
     assert [view.name for view in ALL_PRESENTATIONS] == list(ENTITY_NAMES)
 
     for entity in ALL_ENTITIES:
@@ -147,7 +143,7 @@ def test_the_request_time_slices_have_no_details():
     assert described == {
         "machine": ["unreliable", "specs"],
         "os": ["flake_rev", "specs"],
-        "model": ["source", "specs", "facts"],
+        "llm": ["source", "specs", "facts"],
         "serving": ["performance"],
         "client": ["rev", "packages"],
         "stack": ["endpoint", "served_name", "api", "credential"],
@@ -177,7 +173,7 @@ def test_content_and_details_share_no_key_but_a_tool_s_name():
     """
     A key is routed to one or the other. `name` is the one both have: a
     branch's name is its record's key, so a tool's `name` can only be the
-    name the model sees.
+    name the LLM sees.
     """
     for entity in ALL_ENTITIES:
         shared = set(entity.trail_in.model_fields) & set(

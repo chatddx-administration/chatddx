@@ -375,7 +375,7 @@ def calling(tool: str, arguments: dict[str, Any]) -> httpx2.MockTransport:
 
 
 @pytest.mark.asyncio
-async def test_a_tool_that_fails_tells_the_model_why(
+async def test_a_tool_that_fails_tells_the_llm_why(
     cell: Cell, entry_points: dict[str, str]
 ):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
@@ -396,7 +396,7 @@ async def test_a_tool_that_fails_tells_the_model_why(
 
 
 @pytest.mark.asyncio
-async def test_arguments_that_don_t_hold_go_back_to_the_model_uncalled(
+async def test_arguments_that_don_t_hold_go_back_to_the_llm_uncalled(
     cell: Cell, entry_points: dict[str, str]
 ):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
@@ -458,7 +458,7 @@ def test_a_trial_keeps_the_blob_of_each_tool_file_it_runs(
 
 
 @pytest.mark.asyncio
-async def test_a_model_still_calling_after_its_rounds_is_stopped(
+async def test_an_llm_still_calling_after_its_rounds_is_stopped(
     cell: Cell, entry_points: dict[str, str]
 ):
     bodies: list[Any] = []

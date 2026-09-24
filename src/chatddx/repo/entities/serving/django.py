@@ -13,7 +13,7 @@ class ServingTrailModel(TrailModel):
 
 
 class ServingBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         ServingTrailModel,
         on_delete=PROTECT,
         related_name="branches",

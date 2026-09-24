@@ -10,7 +10,7 @@ from chatddx.core.models import IdentityModel
 from chatddx.core.repl.cell import SLICES, Cell
 from chatddx.core.repl.render import LATER, REFUSED
 from chatddx.history.models import RunModel
-from chatddx.repo.entities.model.pydantic import ModelBranchOut, ModelFacts
+from chatddx.repo.entities.llm.pydantic import LLMBranchOut, LLMFacts
 from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.entities.tool.pydantic import ToolBranchOut
 from chatddx.repo.entity_names import EntityName
@@ -53,7 +53,7 @@ class Repl:
         self.cell: Cell = Cell()
 
         self._names: dict[tuple[EntityName, int], str] = {}
-        self._models: dict[int, tuple[ModelFacts, int | None]] = {}
+        self._llms: dict[int, tuple[LLMFacts, int | None]] = {}
         self._completions: dict[str, list[str]] | None = None
 
     @property
@@ -156,27 +156,27 @@ class Repl:
             for model in select_visible_branch_models("stack", self.identity)
         ]
 
-    def facts_of(self, stack: StackBranchOut) -> ModelFacts:
-        """The facts of the stack's model, as the identity's branch has them."""
-        return self.model_of(stack)[0]
+    def facts_of(self, stack: StackBranchOut) -> LLMFacts:
+        """The facts of the stack's LLM, as the identity's branch has them."""
+        return self.llm_of(stack)[0]
 
-    def model_of(self, stack: StackBranchOut) -> tuple[ModelFacts, int | None]:
+    def llm_of(self, stack: StackBranchOut) -> tuple[LLMFacts, int | None]:
         """
-        The facts of the stack's model, and the branch row they are read
+        The facts of the stack's LLM, and the branch row they are read
         from: none where the identity has no branch of it, and resolution
         refuses for want of them.
         """
-        model_id = stack.target.model.id
+        llm_id = stack.trail.llm.id
 
-        if model_id not in self._models:
+        if llm_id not in self._llms:
             try:
-                model = get_visible_branch_model("model", self.identity, trail=model_id)
-                facts = ModelBranchOut.model_validate(model).details.facts
-                self._models[model_id] = (facts, model.pk)
+                llm = get_visible_branch_model("llm", self.identity, trail=llm_id)
+                facts = LLMBranchOut.model_validate(llm).details.facts
+                self._llms[llm_id] = (facts, llm.pk)
             except (BranchNotFoundError, AmbiguousBranchError):
-                self._models[model_id] = (ModelFacts(), None)
+                self._llms[llm_id] = (LLMFacts(), None)
 
-        return self._models[model_id]
+        return self._llms[llm_id]
 
     def tools(self) -> dict[str, ToolBranchOut]:
         """The branch of each of the cell's tools, which says what it runs."""
@@ -201,7 +201,7 @@ class Repl:
             cell.slices,
             cell.stack.details,
             self.facts_of(cell.stack),
-            cell.stack.target.serving,
+            cell.stack.trail.serving,
         )
 
     def secret(self, name: str | None) -> str | None:

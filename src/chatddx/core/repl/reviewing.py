@@ -94,8 +94,8 @@ def replay(repl: Repl, prefix: str | None = None) -> None:
             ),
         )
 
-        if run.valid is not None and output.schema is not None:
-            show_validity(repl.console, invalid(output.schema, run.output))
+        if run.valid is not None and output.json_schema is not None:
+            show_validity(repl.console, invalid(output.json_schema, run.output))
 
         show_views(repl.console, output, run.output)
 

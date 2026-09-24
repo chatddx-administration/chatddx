@@ -6,7 +6,7 @@ import pytest
 from chatddx.repo.entities.coercion.pydantic import CoercionTrailIn
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.entities.instruction.pydantic import InstructionTrailIn
-from chatddx.repo.entities.model.pydantic import ModelFacts
+from chatddx.repo.entities.llm.pydantic import LLMFacts
 from chatddx.repo.entities.output.pydantic import OutputTrailIn
 from chatddx.repo.entities.reasoning.pydantic import ReasoningTrailIn
 from chatddx.repo.entities.sampling.pydantic import SamplingTrailIn
@@ -27,7 +27,7 @@ from chatddx.runtime.resolution import (
 
 ENGINE = "/nix/store/5nxjf9n4gzgajv67rd4fb1kdssql7g51-python3.13-vllm-0.13.0"
 
-FACTS = ModelFacts.model_validate(
+FACTS = LLMFacts.model_validate(
     {
         "reasoning": {
             "default": "on",
@@ -141,11 +141,13 @@ def test_recommended_sampling_follows_the_mode_reasoning_resolves_to():
     assert resolution.sampling.writes == {"temperature": 0.7, "top_p": 0.8, "top_k": 20}
 
 
-def test_the_model_s_sampling_is_its_generation_config_and_explicit_values_win():
-    sampling = SamplingTrailIn(defaults="model", temperature=0, max_tokens=512)
+def test_the_llm_s_sampling_is_its_generation_config_and_explicit_values_win():
+    sampling = SamplingTrailIn(
+        defaults="generation_config", temperature=0, max_tokens=512
+    )
     resolution = resolve(cell(sampling=sampling), STACK, FACTS, SERVING)
 
-    assert resolution.sampling.source == "the model's generation config"
+    assert resolution.sampling.source == "the LLM's generation config"
     assert resolution.sampling.writes == {
         "temperature": 0,
         "top_p": 0.95,
@@ -213,7 +215,7 @@ def test_an_effort_that_collapses_into_a_refused_one_says_where_it_ended():
 
 def test_an_effort_the_facts_say_nothing_on_is_refused():
     assert refusals(cell(reasoning=ReasoningTrailIn(effort="minimal"))) == [
-        SliceRefusal("reasoning", "the model's facts say nothing on 'minimal'")
+        SliceRefusal("reasoning", "the LLM's facts say nothing on 'minimal'")
     ]
 
 
@@ -223,7 +225,7 @@ def test_without_a_default_in_the_facts_the_default_is_refused():
     )
 
     assert refusals(cell(), facts=facts) == [
-        SliceRefusal("reasoning", "the model's facts say no default effort")
+        SliceRefusal("reasoning", "the LLM's facts say no default effort")
     ]
 
 
@@ -233,7 +235,7 @@ def test_a_mode_with_no_recommendation_is_refused():
     )
 
     assert refusals(cell(), facts=facts) == [
-        SliceRefusal("sampling", "the model's facts recommend nothing for 'on'")
+        SliceRefusal("sampling", "the LLM's facts recommend nothing for 'on'")
     ]
 
 
@@ -273,9 +275,9 @@ def test_a_stack_the_repl_can_t_send_to_is_refused():
     stack = StackDetails(api="anthropic")
 
     assert refusals(cell(), stack=stack) == [
-        SliceRefusal("model", "the repl sends to vLLM only, not anthropic", "later"),
-        SliceRefusal("model", "the stack names no endpoint"),
-        SliceRefusal("model", "the stack names no served name"),
+        SliceRefusal("stack", "the repl sends to vLLM only, not anthropic", "later"),
+        SliceRefusal("stack", "the stack names no endpoint"),
+        SliceRefusal("stack", "the stack names no served name"),
     ]
 
 
@@ -286,7 +288,7 @@ SCHEMA: dict[str, Any] = {
 }
 
 STRUCTURED = OutputTrailIn.model_validate(
-    {"schema": SCHEMA, "guidance": "List the diagnoses."}
+    {"json_schema": SCHEMA, "guidance": "List the diagnoses."}
 )
 
 
@@ -347,14 +349,14 @@ def test_a_mode_needs_what_the_facts_say_it_needs():
     )
 
 
-def test_a_reasoning_parser_is_needed_only_while_the_model_reasons():
+def test_a_reasoning_parser_is_needed_only_while_the_llm_reasons():
     bare = ServingTrailIn(engine=ENGINE)
     native = CoercionTrailIn(mode="native")
 
     assert refusals(cell(output=STRUCTURED, coercion=native), serving=bare) == [
         SliceRefusal(
             "coercion",
-            "'native' needs a reasoning parser while the model reasons, which the "
+            "'native' needs a reasoning parser while the LLM reasons, which the "
             + "serving doesn't provide",
         )
     ]
@@ -395,7 +397,7 @@ def test_references_are_inlined_as_the_request_carries_the_schema():
             "all": {"type": "array", "items": {"$ref": "#/$defs/Item"}},
         },
     }
-    output = OutputTrailIn.model_validate({"schema": schema})
+    output = OutputTrailIn.model_validate({"json_schema": schema})
 
     resolution = resolve(cell(output=output), STACK, FACTS, SERVING)
 
@@ -424,7 +426,7 @@ def test_a_schema_that_refers_to_itself_can_t_be_sent():
         },
         "$ref": "#/$defs/Node",
     }
-    output = OutputTrailIn.model_validate({"schema": schema})
+    output = OutputTrailIn.model_validate({"json_schema": schema})
 
     assert refusals(cell(output=output)) == [
         SliceRefusal(
@@ -435,7 +437,7 @@ def test_a_schema_that_refers_to_itself_can_t_be_sent():
 
 def test_a_schema_whose_root_isn_t_an_object_can_t_be_sent():
     output = OutputTrailIn.model_validate(
-        {"schema": {"type": "array", "items": {"type": "string"}}}
+        {"json_schema": {"type": "array", "items": {"type": "string"}}}
     )
 
     assert refusals(cell(output=output)) == [
@@ -456,7 +458,7 @@ def test_a_mode_the_facts_refuse_or_say_nothing_on_is_refused():
         SliceRefusal("coercion", "never tried")
     ]
     assert refusals(cell(output=STRUCTURED), facts=silent) == [
-        SliceRefusal("coercion", "the model's facts name no mode for 'auto'")
+        SliceRefusal("coercion", "the LLM's facts name no mode for 'auto'")
     ]
 
 
@@ -594,17 +596,17 @@ def test_on_pelle_a_grammar_leaves_qwen3_no_room_to_think(
 ):
     configuration, _ = test_inventory.configuration[configuration_name]
     stack, stack_details = test_inventory.stack["qwen3-8b-awq@pelle"]
-    _, model = test_inventory.model["qwen3-8b-awq"]
+    _, llm = test_inventory.llm["qwen3-8b-awq"]
     off, _ = test_inventory.reasoning["off"]
 
     with pytest.raises(CellRefused) as refused:
-        _ = resolve(configuration, stack_details, model.facts, stack.serving)
+        _ = resolve(configuration, stack_details, llm.facts, stack.serving)
 
     assert [refusal.slice for refusal in refused.value.refusals] == ["coercion"]
-    assert "needs a reasoning parser while the model reasons" in str(refused.value)
+    assert "needs a reasoning parser while the LLM reasons" in str(refused.value)
 
     thoughtless = configuration.model_copy(update={"reasoning": off})
-    resolution = resolve(thoughtless, stack_details, model.facts, stack.serving)
+    resolution = resolve(thoughtless, stack_details, llm.facts, stack.serving)
 
     assert resolution.reasoning.writes == {
         "chat_template_kwargs": {"enable_thinking": False}
@@ -612,20 +614,20 @@ def test_on_pelle_a_grammar_leaves_qwen3_no_room_to_think(
 
 
 @pytest.mark.parametrize(
-    ("stack_name", "model_name"),
+    ("stack_name", "llm_name"),
     [
         ("qwen3-8b-awq@pelle", "qwen3-8b-awq"),
         ("gpt-oss-20b@malborg", "gpt-oss-20b"),
         ("qwen3-8b-awq@fake", "qwen3-8b-awq"),
     ],
 )
-def test_free_text_resolves_on_every_model_with_its_facts(
-    test_inventory: ParsedInventory, stack_name: str, model_name: str
+def test_free_text_resolves_on_every_llm_with_its_facts(
+    test_inventory: ParsedInventory, stack_name: str, llm_name: str
 ):
     configuration, _ = test_inventory.configuration["free-text"]
     stack, stack_details = test_inventory.stack[stack_name]
-    _, model_details = test_inventory.model[model_name]
-    facts = model_details.facts
+    _, llm_details = test_inventory.llm[llm_name]
+    facts = llm_details.facts
 
     resolution = resolve(configuration, stack_details, facts, stack.serving)
 

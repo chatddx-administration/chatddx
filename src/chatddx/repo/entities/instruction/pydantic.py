@@ -5,7 +5,7 @@ A variation is the templates of the system and user messages (Handlebars,
 through pydantic-ai's `TemplateStr`) and the variables they declare: `case`,
 and the slots other slices fill. An instruction never names an output: text
 that asks for one output lives in that output's guidance, and reaches the
-model through the `output_guidance` slot. So instruction and output can be
+LLM through the `output_guidance` slot. So instruction and output can be
 varied apart.
 
 The case is a value, never a condition: a template places it and never

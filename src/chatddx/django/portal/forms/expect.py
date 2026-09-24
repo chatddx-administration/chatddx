@@ -68,7 +68,9 @@ class ExpectInlineForm(ModelForm):
 
     def validate(self, data: dict[str, Any]):
         try:
-            validated_data = presentation_of(self.entity_name).form_data_in.model_validate(data)
+            validated_data = presentation_of(
+                self.entity_name
+            ).form_data_in.model_validate(data)
             return validated_data
         except PydanticValidationError as e:
             if settings.MODE == "dev":

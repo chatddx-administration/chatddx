@@ -35,11 +35,11 @@ nixpkgs_rev = "c09727c23bd83e81248764ed6e2dd41aa3113972"  # guessed: the nixpkgs
 [serving."qwen3-8b-awq@pelle"]
 engine = "/nix/store/6dc8l2c3l0w982yxr6mvnyd64adq6riv-python3.13-vllm-0.24.0"
 
-# arguments that change what the model reads or the numbers: fingerprinted
+# arguments that change what the LLM reads or the numbers: fingerprinted
 #
 # No reasoning parser: it was dropped for memory. vLLM then leaves Qwen3's
 # thinking in the content, and a grammar holds the answer from its first
-# token, so under one (native mode, or tool_choice = required) the model
+# token, so under one (native mode, or tool_choice = required) the LLM
 # can't think.
 [serving."qwen3-8b-awq@pelle".args]
 max-model-len = 8192
@@ -58,7 +58,7 @@ port = 12009
 [stack."qwen3-8b-awq@pelle"]
 machine = "pelle"
 os = "pelle"
-model = "qwen3-8b-awq"
+llm = "qwen3-8b-awq"
 serving = "qwen3-8b-awq@pelle"
 endpoint = "http://pelle.km:12009/v1/"
 served_name = "Qwen/Qwen3-8B-AWQ"

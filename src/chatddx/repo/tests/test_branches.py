@@ -2,7 +2,7 @@
 A branch is an owner's named version of a trail, and the details beside it.
 
 What a version is: its trail and its details. Resolution reads details, a
-model's facts and a stack's endpoint, and a trial must be able to say which
+LLM's facts and a stack's endpoint, and a trial must be able to say which
 version it resolved against, so a change to them is a new version
 (new-datamodel.md §1). What a branch is related to, tags and collaborators,
 changes in place.
@@ -17,12 +17,12 @@ from chatddx.core.models import IdentityModel, TagModel
 from chatddx.core.utils import ensure_tag
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.case.pydantic import CaseTrailIn
+from chatddx.repo.entities.llm.pydantic import LLMBranchDetails, LLMBranchOut
 from chatddx.repo.entities.machine.pydantic import (
     MachineBranchDetails,
     MachineBranchOut,
     MachineTrailIn,
 )
-from chatddx.repo.entities.model.pydantic import ModelBranchDetails, ModelBranchOut
 from chatddx.repo.entities.stack.pydantic import StackBranchDetails
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.entities.tool.pydantic import ToolBranchDetails
@@ -66,7 +66,7 @@ def test_a_commit_makes_a_version_the_head(owner: IdentityModel):
 
     spec = cast(MachineBranchOut, get_branch_out("machine", owner.name, "box"))
 
-    assert spec.target.fingerprint == MACHINE.fingerprint
+    assert spec.trail.fingerprint == MACHINE.fingerprint
     assert spec.details.unreliable is True
 
 
@@ -99,13 +99,13 @@ def test_a_change_to_details_is_a_new_version(
     The trail stays put, since details aren't content; the branch gets a
     version whose facts a trial can name.
     """
-    model = trails.model["gpt-oss-20b"]
+    llm = trails.llm["gpt-oss-20b"]
 
-    assert commit(model, ModelBranchDetails(name="gpt-oss-20b", owner=owner.name))
+    assert commit(llm, LLMBranchDetails(name="gpt-oss-20b", owner=owner.name))
 
     assert commit(
-        model,
-        ModelBranchDetails.model_validate(
+        llm,
+        LLMBranchDetails.model_validate(
             {
                 "name": "gpt-oss-20b",
                 "owner": owner.name,
@@ -114,13 +114,13 @@ def test_a_change_to_details_is_a_new_version(
         ),
     )
 
-    first, second = versions("model", owner, "gpt-oss-20b")
+    first, second = versions("llm", owner, "gpt-oss-20b")
 
-    assert first.target_id == second.target_id
+    assert first.trail_id == second.trail_id
     assert first.details["facts"]["reasoning"]["off"] is None
     assert second.details["facts"]["reasoning"]["off"] == {"refused": "always reasons"}
 
-    head = cast(ModelBranchOut, get_branch_out("model", owner.name, "gpt-oss-20b"))
+    head = cast(LLMBranchOut, get_branch_out("llm", owner.name, "gpt-oss-20b"))
 
     assert head.details.facts.reasoning.resolve("off") == (
         "off",
@@ -185,7 +185,7 @@ def test_details_are_the_owner_s(
     mine = get_branch_model("machine", owner.name, "box")
     theirs = get_branch_model("machine", other_owner.name, "box")
 
-    assert mine.target_id == theirs.target_id
+    assert mine.trail_id == theirs.trail_id
     assert mine.details["specs"]["location"] == "here"
     assert theirs.details["specs"]["location"] == "there"
 
@@ -222,7 +222,7 @@ def test_a_tag_belongs_to_one_owner_and_one_entity(
 
     for identity in (owner, other_owner):
         assert commit(
-            CaseTrailIn(payload="case payload"),
+            CaseTrailIn(vignette="case vignette"),
             BranchDetails(name="case-1", owner=identity.name, tags=["clinical"]),
         )
 
@@ -242,20 +242,20 @@ def test_two_owners_of_one_case_share_its_trail(
 ):
     for identity in (owner, other_owner):
         assert commit(
-            CaseTrailIn(payload="case payload"),
+            CaseTrailIn(vignette="case vignette"),
             BranchDetails(name="case-1", owner=identity.name),
         )
 
     mine = get_branch_model("case", owner.name, "case-1")
     theirs = get_branch_model("case", other_owner.name, "case-1")
 
-    assert mine.target_id == theirs.target_id
+    assert mine.trail_id == theirs.trail_id
     assert mine.pk != theirs.pk
 
 
-def case(name: str, owner: str, *collaborators: str, payload: str = "") -> None:
+def case(name: str, owner: str, *collaborators: str, vignette: str = "") -> None:
     assert commit(
-        CaseTrailIn(payload=payload or f"{owner}'s {name}"),
+        CaseTrailIn(vignette=vignette or f"{owner}'s {name}"),
         BranchDetails(name=name, owner=owner, collaborators=list(collaborators)),
     )
 
@@ -297,7 +297,7 @@ def test_a_shared_branch_is_found_by_its_name_or_by_its_trail(
     case("case-1", other_owner.name, owner.name)
 
     by_name = get_visible_branch_model("case", owner.name, "case-1")
-    by_trail = get_visible_branch_model("case", owner.name, trail=by_name.target_id)
+    by_trail = get_visible_branch_model("case", owner.name, trail=by_name.trail_id)
 
     assert by_name.owner.name == "other"
     assert by_trail.pk == by_name.pk
@@ -393,7 +393,7 @@ def sentinel_tools(owner: str, trails: InventoryTrailIn) -> None:
                 {
                     "name": name,
                     "owner": owner,
-                    "implementation": {"entry_point": entry_point},
+                    "implementation": {"function": entry_point},
                 }
             ),
         )
@@ -417,7 +417,7 @@ def test_a_copy_is_the_source_s_branch_under_its_name_with_its_details(
 
     for name, entry_point in SENTINEL.items():
         mine = get_branch_model("tool", owner.name, name)
-        assert mine.details["implementation"]["entry_point"] == entry_point
+        assert mine.details["implementation"]["function"] == entry_point
 
     assert commit(toolset, BranchDetails(name="mine", owner=owner.name))
     assert tool_names(owner) == ["sentinel_op", "sentinel_string"]

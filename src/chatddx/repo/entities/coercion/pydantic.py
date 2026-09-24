@@ -1,18 +1,18 @@
 """
 Coercion: a request-time slice, split from the output (new-datamodel.md §2).
 
-The output's schema says what is asked for; the mode says how the model is
-held to it, and it goes with the model's capabilities rather than with the
+The output's schema says what is asked for; the mode says how the LLM is
+held to it, and it goes with the LLM's capabilities rather than with the
 schema. Split, a batch crosses the two instead of copying a schema once per
 mode.
 
-Whether the model is shown the schema goes with the mode too. Tool mode shows
+Whether the LLM is shown the schema goes with the mode too. Tool mode shows
 it anyway, as the final-result tool's parameters, and prompted mode is
 nothing but showing it. `schema_prompt` is chatddx's own text for showing
 it, placed through the instruction's `schema_prompt` slot; null means the
 schema isn't shown. `tool_description` is chatddx's own text for the tool
 the answer is given through, in tool mode. `auto` is resolved from the
-model's facts before anything is built from it.
+LLM's facts before anything is built from it.
 """
 
 from typing import Literal
@@ -35,7 +35,7 @@ from chatddx.repo.templates import placements
 
 type CoercionMode = Literal["native", "tool", "prompted", "auto"]
 
-# every mode but `auto`, which stands for one of them: what a model's facts
+# every mode but `auto`, which stands for one of them: what an LLM's facts
 # say works
 type Mode = Literal["native", "tool", "prompted"]
 
@@ -48,7 +48,7 @@ class CoercionTrailBase(BaseTrail):
     # a template that places `{{schema}}`, the output's schema as JSON
     schema_prompt: str | None = None
     # what the tool the answer is given through is said to be, in tool mode:
-    # text the model reads
+    # text the LLM reads
     tool_description: str | None = None
 
     @model_validator(mode="after")
@@ -73,7 +73,7 @@ class CoercionTrailBase(BaseTrail):
     def _a_tool_is_said_to_be_something(self):
         if self.mode == "tool" and self.tool_description is None:
             raise ValueError(
-                "tool mode gives the answer through a tool the model reads a "
+                "tool mode gives the answer through a tool the LLM reads a "
                 + "description of: it needs a tool_description"
             )
 

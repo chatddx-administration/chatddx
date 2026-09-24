@@ -2,8 +2,8 @@
 A configuration: a composition of one variation of each request-time slice,
 and optionally a toolset. It replaces the agent (new-datamodel.md §6).
 
-It holds no model. The stack is chosen per trial, so one configuration runs
-on every model, and a cell joins a configuration to a stack. Resolution
+It holds no LLM. The stack is chosen per trial, so one configuration runs
+on every LLM, and a cell joins a configuration to a stack. Resolution
 turns the cell into a request, or says why it can't (§9).
 
 The flat form the super agent had is the configuration's: its relations are

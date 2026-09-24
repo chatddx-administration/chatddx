@@ -42,7 +42,7 @@ def test_gpt_oss_always_thinks():
     assert thinking(body(GPT_OSS, chat_template_kwargs={"enable_thinking": False}))
 
 
-def test_a_model_of_no_family_it_knows_doesn_t_think():
+def test_an_llm_of_no_family_it_knows_doesn_t_think():
     assert thinking(body("meta-llama/Llama-3.1-8B")) is None
 
 
@@ -182,7 +182,7 @@ def function(name: str) -> dict[str, Any]:
 
 
 def called(*names: str) -> list[dict[str, Any]]:
-    """A conversation in which the model called `names`, one a round."""
+    """A conversation in which the LLM called `names`, one a round."""
     messages: list[dict[str, Any]] = [{"role": "user", "content": "a cough"}]
 
     for n, name in enumerate(names):

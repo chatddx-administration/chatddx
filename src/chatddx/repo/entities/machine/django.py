@@ -10,7 +10,7 @@ class MachineTrailModel(TrailModel):
 
 
 class MachineBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         MachineTrailModel,
         on_delete=PROTECT,
         related_name="branches",

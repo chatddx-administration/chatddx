@@ -104,7 +104,7 @@ def test_save_keeps_the_cell_as_a_configuration_of_one_s_own(repl: Repl, say: Sa
 
     saved = ConfigurationBranchModel.objects.get(owner__name="alex", name="quiet")
     off = ReasoningBranchModel.objects.get(owner__name="archive", name="off")
-    assert saved.target.reasoning_id == off.target_id
+    assert saved.trail.reasoning_id == off.trail_id
 
     assert "quiet" in repl.completions()["configuration"]
     assert "cell: quiet × qwen3-8b-awq@fake" in say("use quiet")

@@ -54,7 +54,7 @@ class Branches:
     """
 
     stack: int
-    model: int | None
+    llm: int | None
     tools: dict[int, str] = field(default_factory=dict[int, str])
 
 
@@ -84,7 +84,7 @@ def record(
 ) -> RunModel:
     """
     Write down a run of `trial`, a cell run on the case trail `case`: the
-    configuration it ran, as content, and the branches of the stack, model
+    configuration it ran, as content, and the branches of the stack, LLM
     and tools it read, and the client it ran on: the one running, unless
     another is given. A run that continued `session` adds to it.
     """
@@ -93,7 +93,7 @@ def record(
     with transaction.atomic():
         identity = IdentityModel.objects.get(name=owner)
         stack = StackBranchModel.objects.get(pk=branches.stack)
-        trial_model = _trial(configuration, stack.target_id, case, trial.seed)
+        trial_model = _trial(configuration, stack.trail_id, case, trial.seed)
 
         session = session or SessionModel.objects.create(
             uuid=UUID(trial.conversation_id),
@@ -112,7 +112,7 @@ def record(
             session=session,
             status=outcome.status,
             stack_branch=stack,
-            model_branch_id=branches.model,
+            llm_branch_id=branches.llm,
             client=dump_trail(ClientTrailModel, client.trail),
             client_rev=client.rev,
             client_packages=client.packages,

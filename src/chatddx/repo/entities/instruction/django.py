@@ -13,7 +13,7 @@ class InstructionTrailModel(TrailModel):
 
 
 class InstructionBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         InstructionTrailModel,
         on_delete=PROTECT,
         related_name="branches",

@@ -67,6 +67,20 @@ from chatddx.repo.entities.instruction import (
     InstructionTrailOut,
     InstructionTrailRef,
 )
+from chatddx.repo.entities.llm import (
+    LLM as LLMProxy,
+    LLMBranchDetails,
+    LLMBranchDetailsPatch,
+    LLMBranchIn,
+    LLMBranchModel,
+    LLMBranchOut,
+    LLMFormDataIn,
+    LLMFormDataOut,
+    LLMTrailIn,
+    LLMTrailModel,
+    LLMTrailOut,
+    LLMTrailRef,
+)
 from chatddx.repo.entities.machine import (
     Machine as MachineProxy,
     MachineBranchDetails,
@@ -80,20 +94,6 @@ from chatddx.repo.entities.machine import (
     MachineTrailModel,
     MachineTrailOut,
     MachineTrailRef,
-)
-from chatddx.repo.entities.model import (
-    LanguageModel as LanguageModelProxy,
-    ModelBranchDetails,
-    ModelBranchDetailsPatch,
-    ModelBranchIn,
-    ModelBranchModel,
-    ModelBranchOut,
-    ModelFormDataIn,
-    ModelFormDataOut,
-    ModelTrailIn,
-    ModelTrailModel,
-    ModelTrailOut,
-    ModelTrailRef,
 )
 from chatddx.repo.entities.os import (
     Os as OsProxy,
@@ -339,25 +339,25 @@ type OsMember = (
 )
 
 
-type ModelEntity = Entity[
-    ModelBranchIn,
-    ModelBranchOut,
-    ModelTrailIn,
-    ModelTrailOut,
-    ModelTrailRef,
-    ModelBranchDetails,
-    ModelBranchDetailsPatch,
-    ModelTrailModel,
-    ModelBranchModel,
+type LLMEntity = Entity[
+    LLMBranchIn,
+    LLMBranchOut,
+    LLMTrailIn,
+    LLMTrailOut,
+    LLMTrailRef,
+    LLMBranchDetails,
+    LLMBranchDetailsPatch,
+    LLMTrailModel,
+    LLMBranchModel,
 ]
-type ModelMember = (
-    ModelBranchIn
-    | ModelBranchOut
-    | ModelTrailIn
-    | ModelTrailOut
-    | ModelTrailRef
-    | ModelTrailModel
-    | ModelBranchModel
+type LLMMember = (
+    LLMBranchIn
+    | LLMBranchOut
+    | LLMTrailIn
+    | LLMTrailOut
+    | LLMTrailRef
+    | LLMTrailModel
+    | LLMBranchModel
 )
 
 
@@ -698,17 +698,17 @@ OS: OsEntity = Entity(
     branch_model=OsBranchModel,
 )
 
-MODEL: ModelEntity = Entity(
-    name="model",
-    branch_in=ModelBranchIn,
-    branch_out=ModelBranchOut,
-    trail_in=ModelTrailIn,
-    trail_out=ModelTrailOut,
-    trail_ref=ModelTrailRef,
-    branch_details=ModelBranchDetails,
-    branch_details_patch=ModelBranchDetailsPatch,
-    trail_model=ModelTrailModel,
-    branch_model=ModelBranchModel,
+LLM: LLMEntity = Entity(
+    name="llm",
+    branch_in=LLMBranchIn,
+    branch_out=LLMBranchOut,
+    trail_in=LLMTrailIn,
+    trail_out=LLMTrailOut,
+    trail_ref=LLMTrailRef,
+    branch_details=LLMBranchDetails,
+    branch_details_patch=LLMBranchDetailsPatch,
+    trail_model=LLMTrailModel,
+    branch_model=LLMBranchModel,
 )
 
 SERVING: ServingEntity = Entity(
@@ -901,15 +901,13 @@ OS_PRESENTATION: Presentation[OsProxy, OsFormDataIn, OsFormDataOut] = Presentati
     form_data_out=OsFormDataOut,
 )
 
-MODEL_PRESENTATION: Presentation[
-    LanguageModelProxy, ModelFormDataIn, ModelFormDataOut
-] = Presentation(
-    name="model",
-    entity=MODEL,
-    proxy=LanguageModelProxy,
+LLM_PRESENTATION: Presentation[LLMProxy, LLMFormDataIn, LLMFormDataOut] = Presentation(
+    name="llm",
+    entity=LLM,
+    proxy=LLMProxy,
     shared_proxy=None,
-    form_data_in=ModelFormDataIn,
-    form_data_out=ModelFormDataOut,
+    form_data_in=LLMFormDataIn,
+    form_data_out=LLMFormDataOut,
 )
 
 SERVING_PRESENTATION: Presentation[

@@ -130,10 +130,10 @@ def test_every_trail_of_the_inventory_has_a_fingerprint_of_the_scheme(
 def test_a_schema_s_order_is_content():
     """
     A constrained decoder emits keys in the order `properties` gives them, so
-    the model commits to its answer before or after its reasons by it.
+    the LLM commits to its answer before or after its reasons by it.
     """
     reasons_first = OutputTrailIn(
-        schema={
+        json_schema={
             "type": "object",
             "properties": {
                 "rationale": {"type": "string"},
@@ -142,7 +142,7 @@ def test_a_schema_s_order_is_content():
         }
     )
     answer_first = OutputTrailIn(
-        schema={
+        json_schema={
             "type": "object",
             "properties": {
                 "diagnosis": {"type": "string"},

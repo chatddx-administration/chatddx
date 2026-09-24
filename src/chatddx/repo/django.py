@@ -3,8 +3,8 @@ from chatddx.repo.entities.client.django import *
 from chatddx.repo.entities.coercion.django import *
 from chatddx.repo.entities.configuration.django import *
 from chatddx.repo.entities.instruction.django import *
+from chatddx.repo.entities.llm.django import *
 from chatddx.repo.entities.machine.django import *
-from chatddx.repo.entities.model.django import *
 from chatddx.repo.entities.os.django import *
 from chatddx.repo.entities.output.django import *
 from chatddx.repo.entities.reasoning.django import *

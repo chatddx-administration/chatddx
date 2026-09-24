@@ -13,7 +13,7 @@ class ScorerTrailModel(TrailModel):
 
 
 class ScorerBranchModel(BranchModel):
-    target = ForeignKey(
+    trail = ForeignKey(
         ScorerTrailModel,
         on_delete=PROTECT,
         related_name="branches",

@@ -35,7 +35,7 @@ def owned_inventory(
         for branch_model in branch_models:
             index = {
                 "branch_name": branch_model.name,
-                "trail_id": str(branch_model.target.pk),
+                "trail_id": str(branch_model.trail.pk),
             }[index_key]
 
             inventory[entity_name][index] = branch_model
@@ -102,25 +102,23 @@ def trails_in(parsed_inventory: ParsedInventory) -> InventoryTrailIn:
 
 def form_data_out(branches: InventoryBranchOut) -> InventoryFormDataOut:
     """
-    Validate a spec model inventory into a form_data_out inventory.
+    Validate a branch-out inventory into a form-data-out inventory.
 
     A form shows a branch flat: its trail's fields and its details beside its
     name, with the trail's id as the template it was made from. The trail is
-    kept whole under `target` too, for a field a form renames: a tool's own
+    kept whole under `trail` too, for a field a form renames: a tool's own
     name, which a form can't call `name`.
     """
     inventory = {}
 
     for entity_name in ENTITY_NAMES:
         inventory[entity_name] = {}
-        for branch_name, branch_out in getattr(
-            branches, entity_name
-        ).items():
+        for branch_name, branch_out in getattr(branches, entity_name).items():
             branch = branch_out.model_dump(mode="json")
             inventory[entity_name][branch_name] = (
-                branch["target"]
+                branch["trail"]
                 | branch["details"]
-                | {"name": branch["name"], "target": branch["target"]}
+                | {"name": branch["name"], "trail": branch["trail"]}
             )
 
     return InventoryFormDataOut.model_validate(inventory)
