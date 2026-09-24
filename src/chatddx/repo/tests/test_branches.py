@@ -24,18 +24,24 @@ from chatddx.repo.entities.machine.pydantic import (
 )
 from chatddx.repo.entities.model.pydantic import ModelBranchDetails, ModelBranchSpec
 from chatddx.repo.entities.stack.pydantic import StackBranchDetails
+from chatddx.repo.entities.tool.django import ToolBranchModel
+from chatddx.repo.entities.tool.pydantic import ToolBranchDetails
+from chatddx.repo.entities.toolset.django import ToolsetTrailModel
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.pydantic import BranchSchemaDetails
 from chatddx.repo.inventories import InventoryTrailSchema
+from chatddx.repo.names import short_fingerprint
 from chatddx.repo.shufflers.branch import (
     AmbiguousBranchError,
     BranchNotFoundError,
     commit,
+    commit_copies,
     get_branch_model,
     get_branch_spec,
     get_visible_branch_model,
     select_visible_branch_models,
 )
+from chatddx.repo.shufflers.trail import dump_trail
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -349,3 +355,78 @@ def test_shared_by_one_owner_its_own_still_shadows(
     found = get_visible_branch_model("case", owner.name, "case-1", shared_by="other")
 
     assert found.owner.name == "alex"
+
+
+# ------------------------------------------------------------------- copies
+
+SENTINEL = {
+    "sentinel_string": "chatddx.runtime.tools:sentinel_string",
+    "sentinel_op": "chatddx.runtime.tools:sentinel_op",
+}
+
+
+def sentinel_tools(owner: str, trails: InventoryTrailSchema) -> None:
+    """The sentinel toolset's tools as `owner`'s, each with what it runs."""
+    for name, entry_point in SENTINEL.items():
+        assert commit(
+            trails.tool[name],
+            ToolBranchDetails.model_validate(
+                {
+                    "name": name,
+                    "owner": owner,
+                    "implementation": {"entry_point": entry_point},
+                }
+            ),
+        )
+
+
+def tool_names(owner: IdentityModel) -> list[str]:
+    return sorted(branch.name for branch in ToolBranchModel.objects.filter(owner=owner))
+
+
+def test_a_copy_is_the_source_s_branch_under_its_name_with_its_details(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+    trails: InventoryTrailSchema,
+):
+    sentinel_tools(other_owner.name, trails)
+    toolset = dump_trail(ToolsetTrailModel, trails.toolset["sentinel"])
+
+    copied = commit_copies(toolset, owner.name, other_owner.name)
+
+    assert sorted(copied) == ["tool sentinel_op", "tool sentinel_string"]
+
+    for name, entry_point in SENTINEL.items():
+        mine = get_branch_model("tool", owner.name, name)
+        assert mine.details["implementation"]["entry_point"] == entry_point
+
+    # and a commit of the toolset leaves its closure nothing to name
+    assert commit(toolset, BranchSchemaDetails(name="mine", owner=owner.name))
+    assert tool_names(owner) == ["sentinel_op", "sentinel_string"]
+
+
+def test_what_the_owner_has_or_has_named_otherwise_is_not_copied(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+    trails: InventoryTrailSchema,
+):
+    sentinel_tools(other_owner.name, trails)
+    # the owner has sentinel_op already, under a name of their own, and
+    # calls another tool sentinel_string
+    assert commit(
+        trails.tool["sentinel_op"], BranchSchemaDetails(name="my-op", owner=owner.name)
+    )
+    assert commit(
+        trails.tool["web_search"],
+        BranchSchemaDetails(name="sentinel_string", owner=owner.name),
+    )
+    toolset = dump_trail(ToolsetTrailModel, trails.toolset["sentinel"])
+
+    assert commit_copies(toolset, owner.name, other_owner.name) == []
+
+    # which leaves sentinel_string to the closure, named for its content
+    assert commit(toolset, BranchSchemaDetails(name="mine", owner=owner.name))
+    fingerprint = trails.tool["sentinel_string"].fingerprint
+    assert tool_names(owner) == sorted(
+        ["my-op", "sentinel_string", f"tool {short_fingerprint(fingerprint)}"]
+    )

@@ -20,7 +20,12 @@ from chatddx.repo.families.pydantic import (
 from chatddx.repo.names import resolve_branch_name
 from chatddx.repo.queries import qs_canon, qs_canon_col, qs_with_details
 from chatddx.repo.shufflers.trail import dump_trail
-from chatddx.repo.utils import resolve_trail, resolve_trails, trail_closure
+from chatddx.repo.utils import (
+    resolve_trail,
+    resolve_trails,
+    trail_closure,
+    trail_relations,
+)
 from chatddx.utils import make_async
 
 
@@ -360,6 +365,64 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
 
 
 commit_closure_async = make_async(commit_closure)
+
+
+def commit_copies(target: TrailModel, owner_name: str, source_name: str) -> list[str]:
+    """
+    Give every trail `target` reaches that `owner_name` has no branch of a
+    copy of `source_name`'s branch of it, under its name and with its
+    details, and answer with what was copied, as `entity name`.
+
+    It goes before a commit of `target`, whose closure would otherwise give
+    those trails branches under names of its own, with every detail at its
+    default: a tool would lose what it runs. So a trail comes after what it
+    reaches, which by then has a branch of the owner's. What `source_name`
+    has no branch of, or holds under a name the owner already gives another
+    trail, is left to that closure.
+    """
+    copied: list[str] = []
+
+    for trail in _reached(target):
+        entity = entity_of(trail)
+        branches = entity.branch_model.objects.all()
+
+        if branches.filter(target=trail, owner__name=owner_name).exists():
+            continue
+
+        source = qs_canon(branches.filter(target=trail), source_name).first()
+
+        if source is None or (
+            branches.filter(owner__name=owner_name, name=source.name).exists()
+        ):
+            continue
+
+        _ = commit(
+            trail=trail,
+            branch_details=entity.branch_details.model_validate(
+                {**source.details, "name": source.name, "owner": owner_name}
+            ),
+        )
+        copied.append(f"{entity.name} {source.name}")
+
+    return copied
+
+
+def _reached(target: TrailModel) -> list[TrailModel]:
+    """What `target` reaches, each trail after what it reaches in turn."""
+    seen: set[tuple[Any, Any]] = set()
+    reached: list[TrailModel] = []
+
+    def visit(trail: TrailModel) -> None:
+        for related in trail_relations(trail):
+            key = (related._meta.concrete_model, related.pk)
+
+            if key not in seen:
+                seen.add(key)
+                visit(related)
+                reached.append(related)
+
+    visit(target)
+    return reached
 
 
 # How a branch-details field turns each name it holds into the row that name
