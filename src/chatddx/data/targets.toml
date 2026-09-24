@@ -1,303 +1,302 @@
 # What each case is expected to yield, keyed by the case and then by the
 # scorer the target was written for. These were the cases' `expects` in
 # cases.toml; targets are inspect's, not the registry's, so the inventory
-# no longer carries them (new-datamodel.md §7). `regex_match` becomes
-# `reciprocal_rank` over the `differential` view, and each pattern stays its
-# target.
+# no longer carries them (new-datamodel.md §7). `reciprocal_rank` reads the
+# `differential` view, and its target is a pattern a diagnosis matches.
 
 [DutchFall10w]
-regex_match = "biliary & (colic | stone)"
+reciprocal_rank = "biliary & (colic | stone)"
 
 [Dutchfall11w]
-regex_match = "aaa | (abdominal | aortic) & aneurysm | dissection"
+reciprocal_rank = "aaa | (abdominal | aortic) & aneurysm | dissection"
 
 [Dutchfall12w]
-regex_match = "pancreatitis"
+reciprocal_rank = "pancreatitis"
 
 [Dutchfall13w]
-regex_match = "torsion | ovarian & torsion"
+reciprocal_rank = "torsion | ovarian & torsion"
 
 [Dutchfall14w]
-regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall15w]
-regex_match = "gastroenteritis"
+reciprocal_rank = "gastroenteritis"
 
 [Dutchfall16w]
-regex_match = "chf | (congestive | failure) & heart"
+reciprocal_rank = "chf | (congestive | failure) & heart"
 
 [Dutchfall17w]
-regex_match = "liver & failure | cirrosis | cirrhosis"
+reciprocal_rank = "liver & failure | cirrosis | cirrhosis"
 
 [Dutchfall18w]
-regex_match = "pneumonia"
+reciprocal_rank = "pneumonia"
 
 [Dutchfall19w]
-regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall1w]
-regex_match = "pneumonia"
+reciprocal_rank = "pneumonia"
 
 [Dutchfall20w]
-regex_match = "vasculitis"
+reciprocal_rank = "vasculitis"
 
 [Dutchfall21w]
-regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall22w]
-regex_match = "uti | urinary & infection | cystitis | urosepsis"
+reciprocal_rank = "uti | urinary & infection | cystitis | urosepsis"
 
 [Dutchfall23w]
-regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall24w]
-regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall25w]
-regex_match = "pancreatitis"
+reciprocal_rank = "pancreatitis"
 
 [Dutchfall26w]
-regex_match = "pneumonia"
+reciprocal_rank = "pneumonia"
 
 [Dutchfall27w]
-regex_match = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+reciprocal_rank = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
 
 [Dutchfall28w]
-regex_match = "pneumonia"
+reciprocal_rank = "pneumonia"
 
 [Dutchfall29w]
-regex_match = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+reciprocal_rank = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
 
 [Dutchfall2w]
-regex_match = "(diverticular | (gastro & intestinal) | gi) & bleed"
+reciprocal_rank = "(diverticular | (gastro & intestinal) | gi) & bleed"
 
 [Dutchfall30w]
-regex_match = "pneumonia"
+reciprocal_rank = "pneumonia"
 
 [Dutchfall3w]
-regex_match = "diverticulitis | (gastro & intestinal | gi) & inflammation"
+reciprocal_rank = "diverticulitis | (gastro & intestinal | gi) & inflammation"
 
 [Dutchfall4w]
-regex_match = "pancreatitis"
+reciprocal_rank = "pancreatitis"
 
 [Dutchfall5w]
-regex_match = "uti | urinary & infection | cystitis | urosepsis"
+reciprocal_rank = "uti | urinary & infection | cystitis | urosepsis"
 
 [Dutchfall6w]
-regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall7w]
-regex_match = "hernia"
+reciprocal_rank = "hernia"
 
 [Dutchfall8w]
-regex_match = "chf | (congestive | failure) & heart"
+reciprocal_rank = "chf | (congestive | failure) & heart"
 
 [Dutchfall9w]
-regex_match = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
+reciprocal_rank = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
 
 [casesfromedn1]
-regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
 
 [casesfromedn10]
-regex_match = "scad | dissection | dissektion"
+reciprocal_rank = "scad | dissection | dissektion"
 
 [casesfromedn11]
-regex_match = "delirium | abstinens"
+reciprocal_rank = "delirium | abstinens"
 
 [casesfromedn12]
-regex_match = "depression"
+reciprocal_rank = "depression"
 
 [casesfromedn13]
-regex_match = "leptospirosis"
+reciprocal_rank = "leptospirosis"
 
 [casesfromedn14]
-regex_match = "ektopisk & graviditet | ektopisk"
+reciprocal_rank = "ektopisk & graviditet | ektopisk"
 
 [casesfromedn15]
-regex_match = "hematom | hematoma"
+reciprocal_rank = "hematom | hematoma"
 
 [casesfromedn16]
-regex_match = "tarmperforation | perforation"
+reciprocal_rank = "tarmperforation | perforation"
 
 [casesfromedn17]
-regex_match = "porfyri"
+reciprocal_rank = "porfyri"
 
 [casesfromedn18]
-regex_match = "malaria"
+reciprocal_rank = "malaria"
 
 [casesfromedn19]
-regex_match = "meningit"
+reciprocal_rank = "meningit"
 
 [casesfromedn2]
-regex_match = "psychosis | psychotic | psykos | psykotisk"
+reciprocal_rank = "psychosis | psychotic | psykos | psykotisk"
 
 [casesfromedn20]
-regex_match = "viral & meningit | meningit"
+reciprocal_rank = "viral & meningit | meningit"
 
 [casesfromedn3]
-regex_match = "psychosis | psychotic | psykos | psykotisk"
+reciprocal_rank = "psychosis | psychotic | psykos | psykotisk"
 
 [casesfromedn4]
-regex_match = "sepsis | septic"
+reciprocal_rank = "sepsis | septic"
 
 [casesfromedn5]
-regex_match = "acl | (cruciate | ligament) & (tear | injury)"
+reciprocal_rank = "acl | (cruciate | ligament) & (tear | injury)"
 
 [casesfromedn6]
-regex_match = "lungbleeding | bleeding | lungblödning | blödning"
+reciprocal_rank = "lungbleeding | bleeding | lungblödning | blödning"
 
 [casesfromedn7]
-regex_match = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
+reciprocal_rank = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
 
 [casesfromedn8]
-regex_match = "hjärntumör | tumör| brain & (tumour | tumor)"
+reciprocal_rank = "hjärntumör | tumör| brain & (tumour | tumor)"
 
 [casesfromedn9]
-regex_match = "ileus | tarmvred | obstruction | obstruktion"
+reciprocal_rank = "ileus | tarmvred | obstruction | obstruktion"
 
 [openxddx-case_1]
-regex_match = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
+reciprocal_rank = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
 
 [openxddx-case_10]
-regex_match = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
+reciprocal_rank = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
 
 [openxddx-case_11]
-regex_match = "osteoarthritis | arthritis"
+reciprocal_rank = "osteoarthritis | arthritis"
 
 [openxddx-case_12]
-regex_match = "endometriosis"
+reciprocal_rank = "endometriosis"
 
 [openxddx-case_13]
-regex_match = "tension & pneumothorax"
+reciprocal_rank = "tension & pneumothorax"
 
 [openxddx-case_14]
-regex_match = "physiological & jaundice | neonatal & jaundice"
+reciprocal_rank = "physiological & jaundice | neonatal & jaundice"
 
 [openxddx-case_15]
-regex_match = "aortic & stenosis | valve & dysfunction"
+reciprocal_rank = "aortic & stenosis | valve & dysfunction"
 
 [openxddx-case_16]
-regex_match = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
+reciprocal_rank = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
 
 [openxddx-case_17]
-regex_match = "(liver & failure) | cirrosis | cirrhosis"
+reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
 
 [openxddx-case_18]
-regex_match = "toxoplasma & gondi | toxoplasmosis"
+reciprocal_rank = "toxoplasma & gondi | toxoplasmosis"
 
 [openxddx-case_19]
-regex_match = "stroke | cvl"
+reciprocal_rank = "stroke | cvl"
 
 [openxddx-case_2]
-regex_match = "pneumonia"
+reciprocal_rank = "pneumonia"
 
 [openxddx-case_20]
-regex_match = "physiological & jaundice | neonatal & jaundice"
+reciprocal_rank = "physiological & jaundice | neonatal & jaundice"
 
 [openxddx-case_21]
-regex_match = "vascular & insufficency | vascular & disease"
+reciprocal_rank = "vascular & insufficency | vascular & disease"
 
 [openxddx-case_22]
-regex_match = "dementia | alzheimer"
+reciprocal_rank = "dementia | alzheimer"
 
 [openxddx-case_23]
-regex_match = "measles | rubeola"
+reciprocal_rank = "measles | rubeola"
 
 [openxddx-case_24]
-regex_match = "takutsubo | cardiomyopathy"
+reciprocal_rank = "takutsubo | cardiomyopathy"
 
 [openxddx-case_25]
-regex_match = "osteoarthritis | arthritis"
+reciprocal_rank = "osteoarthritis | arthritis"
 
 [openxddx-case_26]
-regex_match = "testicular & torsion"
+reciprocal_rank = "testicular & torsion"
 
 [openxddx-case_27]
-regex_match = "gynecomastia | hormonal & imbalance"
+reciprocal_rank = "gynecomastia | hormonal & imbalance"
 
 [openxddx-case_28]
-regex_match = "cholecystitis"
+reciprocal_rank = "cholecystitis"
 
 [openxddx-case_29]
-regex_match = "insulinoma"
+reciprocal_rank = "insulinoma"
 
 [openxddx-case_3]
-regex_match = "osteoarthritis | arthritis"
+reciprocal_rank = "osteoarthritis | arthritis"
 
 [openxddx-case_30]
-regex_match = "dysmenorrhea"
+reciprocal_rank = "dysmenorrhea"
 
 [openxddx-case_31]
-regex_match = "hiv"
+reciprocal_rank = "hiv"
 
 [openxddx-case_32]
-regex_match = "hernia"
+reciprocal_rank = "hernia"
 
 [openxddx-case_33]
-regex_match = "gastroenteritis"
+reciprocal_rank = "gastroenteritis"
 
 [openxddx-case_34]
-regex_match = "basal & cell & carcinoma | bcc"
+reciprocal_rank = "basal & cell & carcinoma | bcc"
 
 [openxddx-case_35]
-regex_match = "pneumonia"
+reciprocal_rank = "pneumonia"
 
 [openxddx-case_36]
-regex_match = "precocious & puberty"
+reciprocal_rank = "precocious & puberty"
 
 [openxddx-case_37]
-regex_match = "(liver & failure) | cirrosis | cirrhosis"
+reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
 
 [openxddx-case_38]
-regex_match = "bleeding | hypovolemic & shock | postpartum & bleeding"
+reciprocal_rank = "bleeding | hypovolemic & shock | postpartum & bleeding"
 
 [openxddx-case_39]
-regex_match = "parkinson | parkinson's & disease"
+reciprocal_rank = "parkinson | parkinson's & disease"
 
 [openxddx-case_4]
-regex_match = "hirschsprung & disease | intestinal & disease"
+reciprocal_rank = "hirschsprung & disease | intestinal & disease"
 
 [openxddx-case_40]
-regex_match = "overdose | drug & use | intoxication"
+reciprocal_rank = "overdose | drug & use | intoxication"
 
 [openxddx-case_41]
-regex_match = "myopathy"
+reciprocal_rank = "myopathy"
 
 [openxddx-case_42]
-regex_match = "thyroid & cyst | benign & thyroid & nodules"
+reciprocal_rank = "thyroid & cyst | benign & thyroid & nodules"
 
 [openxddx-case_44]
-regex_match = "(liver & failure) | cirrosis | cirrhosis"
+reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
 
 [openxddx-case_45]
-regex_match = "copd | ((exacerbation | obstructive) & pulmonary)"
+reciprocal_rank = "copd | ((exacerbation | obstructive) & pulmonary)"
 
 [openxddx-case_46]
-regex_match = "dermatitis"
+reciprocal_rank = "dermatitis"
 
 [openxddx-case_47]
-regex_match = "gastroenteritis"
+reciprocal_rank = "gastroenteritis"
 
 [openxddx-case_48]
-regex_match = "hypocalcemia"
+reciprocal_rank = "hypocalcemia"
 
 [openxddx-case_49]
-regex_match = "gynecomastia | hormonal & imbalance"
+reciprocal_rank = "gynecomastia | hormonal & imbalance"
 
 [openxddx-case_5]
-regex_match = "peripheral & artery & disease | arterial & insufficency | peripheral & arterial & disease"
+reciprocal_rank = "peripheral & artery & disease | arterial & insufficency | peripheral & arterial & disease"
 
 [openxddx-case_50]
-regex_match = "spontaneous & abortion | miscarriage"
+reciprocal_rank = "spontaneous & abortion | miscarriage"
 
 [openxddx-case_6]
-regex_match = "hypertension"
+reciprocal_rank = "hypertension"
 
 [openxddx-case_7]
-regex_match = "tardive & dyskinesia | dyskinesia"
+reciprocal_rank = "tardive & dyskinesia | dyskinesia"
 
 [openxddx-case_8]
-regex_match = "hemolytic & uremic & syndrome | hus"
+reciprocal_rank = "hemolytic & uremic & syndrome | hus"
 
 [openxddx-case_9]
-regex_match = "hyperthyroidism | graves & disease"
+reciprocal_rank = "hyperthyroidism | graves & disease"
