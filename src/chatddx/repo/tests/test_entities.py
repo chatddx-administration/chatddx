@@ -405,9 +405,37 @@ def test_free_text_gives_its_views_through_parsers():
         _ = OutputTrailSchema(schema=PLAN, views={"differential": "lines"})
 
 
-def test_every_output_offers_text_without_declaring_it():
-    with pytest.raises(ValidationError, match="every output offers the text view"):
-        _ = OutputTrailSchema(views={"text": "$"})
+def test_free_text_offers_its_text_whole():
+    output = OutputTrailSchema(views={"text": "whole", "differential": "lines"})
+
+    assert output.view("text", "Pneumonia, most likely.\nCOPD") == [
+        "Pneumonia, most likely.\nCOPD"
+    ]
+    assert output.view("text", "  \n") == []
+
+    with pytest.raises(ValidationError, match="through a parser"):
+        _ = OutputTrailSchema(views={"text": "lines"})
+
+
+def test_a_structured_output_offers_text_only_where_a_path_proves_a_string():
+    output = OutputTrailSchema(schema=PLAN, views={"text": "$.summary"})
+
+    assert output.view("text", {"summary": "pneumonia"}) == ["pneumonia"]
+
+    with pytest.raises(ValidationError, match="not a string"):
+        _ = OutputTrailSchema(schema=PLAN, views={"text": "$"})
+
+
+def test_a_warning_may_be_null_and_reads_as_nothing():
+    output = OutputTrailSchema(schema=PLAN, views={"warning": "$.diagnoses[*].maybe"})
+    answer: JsonValue = {"diagnoses": [{"maybe": "sepsis"}, {"maybe": None}]}
+
+    assert output.view("warning", answer) == ["sepsis"]
+
+    with pytest.raises(ValidationError, match=r"of type \['string', 'null'\]"):
+        _ = OutputTrailSchema(
+            schema=PLAN, views={"disposition": "$.diagnoses[*].maybe"}
+        )
 
 
 def test_a_view_the_code_doesn_t_know_is_refused():

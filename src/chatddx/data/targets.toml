@@ -1,302 +1,304 @@
-# What each case is expected to yield, keyed by the case and then by the
-# scorer the target was written for. These were the cases' `expects` in
-# cases.toml; targets are inspect's, not the registry's, so the inventory
-# no longer carries them (new-datamodel.md §7). `reciprocal_rank` reads the
-# `differential` view, and its target is a pattern a diagnosis matches.
+# What each case is expected to yield, keyed by the case and then by what
+# is expected: `diagnosis`, read by `reciprocal_rank` and `first_mention`;
+# `warning` and `disposition`, read by their `mentions` scorers. These were
+# the cases' `expects` in cases.toml; targets are inspect's, not the
+# registry's, so the inventory no longer carries them (new-datamodel.md §7).
+# A target is a pattern of whole words, `*` ending a stem
+# (`chatddx.scoring.scorers.patterns`).
 
 [DutchFall10w]
-reciprocal_rank = "biliary & (colic | stone)"
+diagnosis = "biliary & (colic | stone*)"
 
 [Dutchfall11w]
-reciprocal_rank = "aaa | (abdominal | aortic) & aneurysm | dissection"
+diagnosis = "aaa | (abdominal | aortic) & aneurysm | dissection"
 
 [Dutchfall12w]
-reciprocal_rank = "pancreatitis"
+diagnosis = "pancreatitis"
 
 [Dutchfall13w]
-reciprocal_rank = "torsion | ovarian & torsion"
+diagnosis = "torsion | ovarian & torsion"
 
 [Dutchfall14w]
-reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
+diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall15w]
-reciprocal_rank = "gastroenteritis"
+diagnosis = "gastroenteritis"
 
 [Dutchfall16w]
-reciprocal_rank = "chf | (congestive | failure) & heart"
+diagnosis = "chf | (congestive | failure) & heart"
 
 [Dutchfall17w]
-reciprocal_rank = "liver & failure | cirrosis | cirrhosis"
+diagnosis = "liver & failure | cirrosis | cirrhosis"
 
 [Dutchfall18w]
-reciprocal_rank = "pneumonia"
+diagnosis = "pneumonia"
 
 [Dutchfall19w]
-reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
+diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall1w]
-reciprocal_rank = "pneumonia"
+diagnosis = "pneumonia"
 
 [Dutchfall20w]
-reciprocal_rank = "vasculitis"
+diagnosis = "vasculitis"
 
 [Dutchfall21w]
-reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
+diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall22w]
-reciprocal_rank = "uti | urinary & infection | cystitis | urosepsis"
+diagnosis = "uti | urinary & infection* | cystitis | urosepsis"
 
 [Dutchfall23w]
-reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
+diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall24w]
-reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
+diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall25w]
-reciprocal_rank = "pancreatitis"
+diagnosis = "pancreatitis"
 
 [Dutchfall26w]
-reciprocal_rank = "pneumonia"
+diagnosis = "pneumonia"
 
 [Dutchfall27w]
-reciprocal_rank = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+diagnosis = "(renal | kidney) & (colic | stone*) | nephrolithiasis | urolithiasis"
 
 [Dutchfall28w]
-reciprocal_rank = "pneumonia"
+diagnosis = "pneumonia"
 
 [Dutchfall29w]
-reciprocal_rank = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+diagnosis = "(renal | kidney) & (colic | stone*) | nephrolithiasis | urolithiasis"
 
 [Dutchfall2w]
-reciprocal_rank = "(diverticular | (gastro & intestinal) | gi) & bleed"
+diagnosis = "(diverticular | gastrointestinal | (gastro & intestinal) | gi) & bleed*"
 
 [Dutchfall30w]
-reciprocal_rank = "pneumonia"
+diagnosis = "pneumonia"
 
 [Dutchfall3w]
-reciprocal_rank = "diverticulitis | (gastro & intestinal | gi) & inflammation"
+diagnosis = "diverticulitis | (gastro & intestinal | gi) & inflammation"
 
 [Dutchfall4w]
-reciprocal_rank = "pancreatitis"
+diagnosis = "pancreatitis"
 
 [Dutchfall5w]
-reciprocal_rank = "uti | urinary & infection | cystitis | urosepsis"
+diagnosis = "uti | urinary & infection* | cystitis | urosepsis"
 
 [Dutchfall6w]
-reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
+diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 
 [Dutchfall7w]
-reciprocal_rank = "hernia"
+diagnosis = "hernia"
 
 [Dutchfall8w]
-reciprocal_rank = "chf | (congestive | failure) & heart"
+diagnosis = "chf | (congestive | failure) & heart"
 
 [Dutchfall9w]
-reciprocal_rank = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
+diagnosis = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
 
 [casesfromedn1]
-reciprocal_rank = "copd | (exacerbation | obstructive) & pulmonary"
+diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 
 [casesfromedn10]
-reciprocal_rank = "scad | dissection | dissektion"
+diagnosis = "scad | dissection | dissektion"
 
 [casesfromedn11]
-reciprocal_rank = "delirium | abstinens"
+diagnosis = "delirium | abstinens"
 
 [casesfromedn12]
-reciprocal_rank = "depression"
+diagnosis = "depression"
 
 [casesfromedn13]
-reciprocal_rank = "leptospirosis"
+diagnosis = "leptospirosis"
 
 [casesfromedn14]
-reciprocal_rank = "ektopisk & graviditet | ektopisk"
+diagnosis = "ektopisk & graviditet | ektopisk"
 
 [casesfromedn15]
-reciprocal_rank = "hematom | hematoma"
+diagnosis = "hematom | hematoma"
 
 [casesfromedn16]
-reciprocal_rank = "tarmperforation | perforation"
+diagnosis = "tarmperforation | perforation"
 
 [casesfromedn17]
-reciprocal_rank = "porfyri"
+diagnosis = "porfyri"
 
 [casesfromedn18]
-reciprocal_rank = "malaria"
+diagnosis = "malaria"
 
 [casesfromedn19]
-reciprocal_rank = "meningit"
+diagnosis = "meningit*"
 
 [casesfromedn2]
-reciprocal_rank = "psychosis | psychotic | psykos | psykotisk"
+diagnosis = "psychosis | psychotic | psykos | psykotisk"
 
 [casesfromedn20]
-reciprocal_rank = "viral & meningit | meningit"
+diagnosis = "viral & meningit* | meningit*"
 
 [casesfromedn3]
-reciprocal_rank = "psychosis | psychotic | psykos | psykotisk"
+diagnosis = "psychosis | psychotic | psykos | psykotisk"
 
 [casesfromedn4]
-reciprocal_rank = "sepsis | septic"
+diagnosis = "sepsis | septic"
 
 [casesfromedn5]
-reciprocal_rank = "acl | (cruciate | ligament) & (tear | injury)"
+diagnosis = "acl | (cruciate | ligament) & (tear* | injur*)"
 
 [casesfromedn6]
-reciprocal_rank = "lungbleeding | bleeding | lungblödning | blödning"
+diagnosis = "lungbleeding | bleeding | lungblödning | blödning"
 
 [casesfromedn7]
-reciprocal_rank = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
+diagnosis = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
 
 [casesfromedn8]
-reciprocal_rank = "hjärntumör | tumör| brain & (tumour | tumor)"
+diagnosis = "hjärntumör | tumör| brain & (tumour | tumor)"
 
 [casesfromedn9]
-reciprocal_rank = "ileus | tarmvred | obstruction | obstruktion"
+diagnosis = "ileus | tarmvred | obstruction | obstruktion"
 
 [openxddx-case_1]
-reciprocal_rank = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
+diagnosis = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
 
 [openxddx-case_10]
-reciprocal_rank = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
+diagnosis = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
 
 [openxddx-case_11]
-reciprocal_rank = "osteoarthritis | arthritis"
+diagnosis = "osteoarthritis | arthritis"
 
 [openxddx-case_12]
-reciprocal_rank = "endometriosis"
+diagnosis = "endometriosis"
 
 [openxddx-case_13]
-reciprocal_rank = "tension & pneumothorax"
+diagnosis = "tension & pneumothorax"
 
 [openxddx-case_14]
-reciprocal_rank = "physiological & jaundice | neonatal & jaundice"
+diagnosis = "physiological & jaundice | neonatal & jaundice"
 
 [openxddx-case_15]
-reciprocal_rank = "aortic & stenosis | valve & dysfunction"
+diagnosis = "aortic & stenosis | valve & dysfunction"
 
 [openxddx-case_16]
-reciprocal_rank = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
+diagnosis = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
 
 [openxddx-case_17]
-reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
+diagnosis = "(liver & failure) | cirrosis | cirrhosis"
 
 [openxddx-case_18]
-reciprocal_rank = "toxoplasma & gondi | toxoplasmosis"
+diagnosis = "toxoplasma & gondi* | toxoplasmosis"
 
 [openxddx-case_19]
-reciprocal_rank = "stroke | cvl"
+diagnosis = "stroke | cvl"
 
 [openxddx-case_2]
-reciprocal_rank = "pneumonia"
+diagnosis = "pneumonia"
 
 [openxddx-case_20]
-reciprocal_rank = "physiological & jaundice | neonatal & jaundice"
+diagnosis = "physiological & jaundice | neonatal & jaundice"
 
 [openxddx-case_21]
-reciprocal_rank = "vascular & insufficency | vascular & disease"
+diagnosis = "vascular & insufficiency | vascular & disease"
 
 [openxddx-case_22]
-reciprocal_rank = "dementia | alzheimer"
+diagnosis = "dementia | alzheimer"
 
 [openxddx-case_23]
-reciprocal_rank = "measles | rubeola"
+diagnosis = "measles | rubeola"
 
 [openxddx-case_24]
-reciprocal_rank = "takutsubo | cardiomyopathy"
+diagnosis = "takotsubo | cardiomyopathy"
 
 [openxddx-case_25]
-reciprocal_rank = "osteoarthritis | arthritis"
+diagnosis = "osteoarthritis | arthritis"
 
 [openxddx-case_26]
-reciprocal_rank = "testicular & torsion"
+diagnosis = "testicular & torsion"
 
 [openxddx-case_27]
-reciprocal_rank = "gynecomastia | hormonal & imbalance"
+diagnosis = "gynecomastia | hormonal & imbalance"
 
 [openxddx-case_28]
-reciprocal_rank = "cholecystitis"
+diagnosis = "cholecystitis"
 
 [openxddx-case_29]
-reciprocal_rank = "insulinoma"
+diagnosis = "insulinoma"
 
 [openxddx-case_3]
-reciprocal_rank = "osteoarthritis | arthritis"
+diagnosis = "osteoarthritis | arthritis"
 
 [openxddx-case_30]
-reciprocal_rank = "dysmenorrhea"
+diagnosis = "dysmenorrhea"
 
 [openxddx-case_31]
-reciprocal_rank = "hiv"
+diagnosis = "hiv"
 
 [openxddx-case_32]
-reciprocal_rank = "hernia"
+diagnosis = "hernia"
 
 [openxddx-case_33]
-reciprocal_rank = "gastroenteritis"
+diagnosis = "gastroenteritis"
 
 [openxddx-case_34]
-reciprocal_rank = "basal & cell & carcinoma | bcc"
+diagnosis = "basal & cell & carcinoma | bcc"
 
 [openxddx-case_35]
-reciprocal_rank = "pneumonia"
+diagnosis = "pneumonia"
 
 [openxddx-case_36]
-reciprocal_rank = "precocious & puberty"
+diagnosis = "precocious & puberty"
 
 [openxddx-case_37]
-reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
+diagnosis = "(liver & failure) | cirrosis | cirrhosis"
 
 [openxddx-case_38]
-reciprocal_rank = "bleeding | hypovolemic & shock | postpartum & bleeding"
+diagnosis = "bleeding | hypovolemic & shock | postpartum & bleeding"
 
 [openxddx-case_39]
-reciprocal_rank = "parkinson | parkinson's & disease"
+diagnosis = "parkinson | parkinson's & disease"
 
 [openxddx-case_4]
-reciprocal_rank = "hirschsprung & disease | intestinal & disease"
+diagnosis = "hirschsprung & disease | intestinal & disease"
 
 [openxddx-case_40]
-reciprocal_rank = "overdose | drug & use | intoxication"
+diagnosis = "overdose | drug & use | intoxication"
 
 [openxddx-case_41]
-reciprocal_rank = "myopathy"
+diagnosis = "myopathy"
 
 [openxddx-case_42]
-reciprocal_rank = "thyroid & cyst | benign & thyroid & nodules"
+diagnosis = "thyroid & cyst* | benign & thyroid & nodule*"
 
 [openxddx-case_44]
-reciprocal_rank = "(liver & failure) | cirrosis | cirrhosis"
+diagnosis = "(liver & failure) | cirrosis | cirrhosis"
 
 [openxddx-case_45]
-reciprocal_rank = "copd | ((exacerbation | obstructive) & pulmonary)"
+diagnosis = "copd | ((exacerbation | obstructive) & pulmonary)"
 
 [openxddx-case_46]
-reciprocal_rank = "dermatitis"
+diagnosis = "dermatitis"
 
 [openxddx-case_47]
-reciprocal_rank = "gastroenteritis"
+diagnosis = "gastroenteritis"
 
 [openxddx-case_48]
-reciprocal_rank = "hypocalcemia"
+diagnosis = "hypocalcemia"
 
 [openxddx-case_49]
-reciprocal_rank = "gynecomastia | hormonal & imbalance"
+diagnosis = "gynecomastia | hormonal & imbalance"
 
 [openxddx-case_5]
-reciprocal_rank = "peripheral & artery & disease | arterial & insufficency | peripheral & arterial & disease"
+diagnosis = "peripheral & artery & disease | arterial & insufficiency | peripheral & arterial & disease"
 
 [openxddx-case_50]
-reciprocal_rank = "spontaneous & abortion | miscarriage"
+diagnosis = "spontaneous & abortion | miscarriage"
 
 [openxddx-case_6]
-reciprocal_rank = "hypertension"
+diagnosis = "hypertension"
 
 [openxddx-case_7]
-reciprocal_rank = "tardive & dyskinesia | dyskinesia"
+diagnosis = "tardive & dyskinesia | dyskinesia"
 
 [openxddx-case_8]
-reciprocal_rank = "hemolytic & uremic & syndrome | hus"
+diagnosis = "hemolytic & uremic & syndrome | hus"
 
 [openxddx-case_9]
-reciprocal_rank = "hyperthyroidism | graves & disease"
+diagnosis = "hyperthyroidism | graves & disease"

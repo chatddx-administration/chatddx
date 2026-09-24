@@ -19,7 +19,7 @@ emits keys in the order `properties` gives them.
 import json
 import re
 import warnings
-from typing import Any, Literal, cast
+from typing import Any, Literal, cast, get_args
 
 from pydantic import Field, JsonValue, model_validator
 
@@ -38,17 +38,25 @@ from chatddx.repo.families import (
 )
 from chatddx.repo.families.fields import JsonSchema
 
-# The readings of an output a scorer can ask for. `text` is every output's:
-# free text as written, or a structured output as JSON. `differential` is
-# the diagnoses, most likely first. A `plan` view comes with rubric scoring.
-type View = Literal["text", "differential"]
+# The readings of an output a scorer can ask for, each offered by the
+# outputs that declare it. `text` is an answer as written, `differential`
+# the diagnoses, most likely first, and `warning` and `disposition` a
+# management plan's red flags and where the patient goes.
+type View = Literal["text", "differential", "warning", "disposition"]
+VIEWS: tuple[View, ...] = get_args(View.__value__)
 
-# What each declared view yields one of: its items' JSON type.
-VIEW_ITEMS: dict[View, str] = {"differential": "string"}
+# What each view yields one of: its items' JSON type, and whether a null
+# may stand in for one, and reads as nothing: a plan with no red flags.
+VIEW_ITEMS: dict[View, tuple[str, bool]] = {
+    "text": ("string", False),
+    "differential": ("string", False),
+    "warning": ("string", True),
+    "disposition": ("string", False),
+}
 
 # Free text's parsers, by the view each gives. `lines`: one item per
-# non-empty line, list markers stripped.
-PARSERS: dict[str, View] = {"lines": "differential"}
+# non-empty line, list markers stripped. `whole`: the answer as written.
+PARSERS: dict[str, View] = {"lines": "differential", "whole": "text"}
 
 # the instruction's variable the guidance fills
 SLOT = "output_guidance"
@@ -66,7 +74,10 @@ class Unproved(ValueError):
 
 
 def read(document: JsonValue, path: str) -> list[JsonValue]:
-    """Every value `path` reaches in `document`, in the document's order."""
+    """
+    Every value `path` reaches in `document`, in the document's order; a
+    null is nothing reached.
+    """
     values: list[JsonValue] = [document]
 
     for step in _STEP.finditer(path, 1):
@@ -81,7 +92,7 @@ def read(document: JsonValue, path: str) -> list[JsonValue]:
 
         values = reached
 
-    return values
+    return [value for value in values if value is not None]
 
 
 def lines(text: str) -> list[str]:
@@ -90,12 +101,22 @@ def lines(text: str) -> list[str]:
     return [item for item in items if item]
 
 
-def prove(schema: dict[str, JsonValue], path: str, items: str) -> None:
+def whole(text: str) -> list[str]:
+    """The `whole` parser: the answer as written, unless it is blank."""
+    return [text] if text.strip() else []
+
+
+PARSE = {"lines": lines, "whole": whole}
+
+
+def prove(
+    schema: dict[str, JsonValue], path: str, items: str, nullable: bool = False
+) -> None:
     """
     Raise `Unproved` unless every value `path` yields, from any document
-    `schema` accepts, is of JSON type `items`. Conservative: whatever it
-    can't follow (a union, a nullable step, a reference outside the
-    document) it refuses.
+    `schema` accepts, is of JSON type `items`, or null where `nullable`.
+    Conservative: whatever it can't follow (a union, a nullable step, a
+    reference outside the document) it refuses.
     """
     node = _resolve(schema, schema)
     here = "$"
@@ -117,13 +138,16 @@ def prove(schema: dict[str, JsonValue], path: str, items: str) -> None:
             node = _resolve(schema, node.get("items"))
             here = f"{here}[*]"
 
-    _expect(node, items, here)
+    _expect(node, items, here, nullable)
 
 
-def _expect(node: dict[str, Any], kind: str, here: str) -> None:
+def _expect(node: dict[str, Any], kind: str, here: str, nullable: bool = False) -> None:
     declared = node.get("type")
 
     if declared == kind:
+        return
+
+    if nullable and declared in ([kind, "null"], ["null", kind]):
         return
 
     if kind == "string" and declared is None:
@@ -196,20 +220,14 @@ with warnings.catch_warnings():
             reading = self.views[name]
 
             if self.schema is None:
-                return list(
-                    lines(answer if isinstance(answer, str) else json.dumps(answer))
-                )
+                text = answer if isinstance(answer, str) else json.dumps(answer)
+                return list(PARSE[reading](text))
 
             return read(answer, reading)
 
         @model_validator(mode="after")
         def _every_view_is_proved(self):
             for view, reading in self.views.items():
-                if view == "text":
-                    raise ValueError(
-                        "every output offers the text view: it isn't declared"
-                    )
-
                 if self.schema is None:
                     if PARSERS.get(reading) != view:
                         parsers = [
@@ -228,7 +246,7 @@ with warnings.catch_warnings():
                     )
 
                 try:
-                    prove(self.schema, reading, VIEW_ITEMS[view])
+                    prove(self.schema, reading, *VIEW_ITEMS[view])
                 except Unproved as e:
                     raise ValueError(
                         f"'{view}' reads {reading}, and the schema doesn't prove it: {e}"

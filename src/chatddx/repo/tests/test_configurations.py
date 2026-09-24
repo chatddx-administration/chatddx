@@ -28,7 +28,11 @@ async def test_a_configuration_is_one_variation_of_each_slice(
         "schema_prompt",
         "tool_guidance",
     ]
-    assert plan.target.output.views == {"differential": "$.diagnoses[*].diagnosis"}
+    assert plan.target.output.views == {
+        "differential": "$.diagnoses[*].diagnosis",
+        "warning": "$.acute_warning",
+        "disposition": "$.management.disposition",
+    }
     assert plan.target.coercion.mode == "native"
     assert plan.target.reasoning.effort == "default"
     assert plan.target.sampling.defaults == "recommended"

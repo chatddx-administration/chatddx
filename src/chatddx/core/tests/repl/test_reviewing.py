@@ -25,9 +25,15 @@ def test_runs_lists_the_latest_first(say: Say):
 
     assert len(rows) == 2
     assert "plan × qwen3-8b-awq@fake × case-2" in rows[0]
-    assert rows[0].rstrip().endswith("valid")
+    assert rows[0].split()[-3:] == ["valid", "reciprocal_rank", "0"]
     assert "free-text × qwen3-8b-awq@fake × case-1" in rows[1]
-    assert rows[1].rstrip().endswith("completed")
+    assert rows[1].split()[-5:] == [
+        "completed",
+        "reciprocal_rank",
+        "0.5",
+        "first_mention",
+        "17",
+    ]
 
     [latest] = [line for line in say("runs 1").splitlines() if "×" in line]
     assert "plan" in latest

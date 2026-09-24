@@ -179,7 +179,7 @@ def test_another_s_configuration_is_put_in_by_its_owner_and_saved_to_run(
     written = say("cell bob/bobs-plan qwen3-8b-awq@fake", "show")
 
     assert repl.prompt == "alex bob/bobs-plan×qwen3-8b-awq@fake> "
-    assert "a schema; views: differential" in written
+    assert "a schema; views: differential, warning, disposition" in written
 
     written = say("run case-1")
 

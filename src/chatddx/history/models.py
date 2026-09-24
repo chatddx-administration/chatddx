@@ -25,6 +25,7 @@ from django.db.models import (
     BooleanField,
     CharField,
     DateTimeField,
+    FloatField,
     ForeignKey,
     JSONField,
     ManyToManyField,
@@ -47,6 +48,7 @@ __all__ = [
     "MessageModel",
     "RunModel",
     "RunToolBranchModel",
+    "ScoreModel",
     "SessionModel",
     "TrialModel",
 ]
@@ -222,6 +224,7 @@ class RunModel(Model):
         related_name="runs",
     )
     model_branch_id: int | None
+    scores: QuerySet[ScoreModel]
     tool_branches: ManyToManyField[ToolBranchModel, Any] = ManyToManyField(
         ToolBranchModel,
         through="RunToolBranchModel",
@@ -312,6 +315,47 @@ class RunToolBranchModel(Model):
         on_delete=PROTECT,
     )
     blob = CharField(max_length=64)
+
+
+class ScoreModel(Model):
+    """
+    What a scorer made of a run: its value, what in the answer it rests on,
+    or why there is none; and what it was made with: the view it read, the
+    target it held that to, and the git blob id of the scorer's file. A run
+    scored again, after either changed, keeps each score.
+    """
+
+    class Meta:
+        app_label = "orm"
+        ordering = ("pk",)
+
+    run = ForeignKey(
+        RunModel,
+        related_name="scores",
+        on_delete=CASCADE,
+    )
+    run_id: int
+    scorer = CharField(max_length=64)
+    view = CharField(max_length=32)
+    target = TextField()
+    blob = CharField(max_length=64)
+    value = FloatField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    answer = TextField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    reason = CharField(
+        max_length=64,
+        default=None,
+        null=True,
+        blank=True,
+    )
+    timestamp = DateTimeField(auto_now_add=True)
 
 
 class MessageModel(Model):

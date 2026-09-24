@@ -42,9 +42,15 @@ def repl(
 
     shell = Repl(identity_name, Console())
 
+    matches: list[str] = []
+
     def completer(_word: str, state: int) -> str | None:
-        line = readline.get_line_buffer()[: readline.get_endidx()]
-        matches = complete(shell.completions(), line)
+        nonlocal matches
+
+        if state == 0:
+            line = readline.get_line_buffer()[: readline.get_endidx()]
+            matches = complete(shell.completions(), line)
+
         return f"{matches[state]} " if state < len(matches) else None
 
     readline.set_completer(completer)

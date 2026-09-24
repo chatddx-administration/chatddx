@@ -6,9 +6,16 @@ from dataclasses import dataclass
 
 from rich.table import Table
 
-from chatddx.core.repl import choosing, inspecting, listing, reviewing, running
+from chatddx.core.repl import (
+    choosing,
+    inspecting,
+    listing,
+    reviewing,
+    running,
+    scoring,
+)
 from chatddx.core.repl.cell import NONE, OPTIONAL, SLICES
-from chatddx.core.repl.shell import Repl
+from chatddx.core.repl.shell import NotFound, Repl
 from chatddx.repo.shufflers.branch import AmbiguousBranchError, BranchNotFoundError
 
 
@@ -77,6 +84,16 @@ COMMANDS: dict[str, Command] = {
         "show a run again as it streamed: the latest, or RUN",
         reviewing.replay,
     ),
+    "score": Command(
+        ("[RUN]",),
+        "hold your outstanding runs, or RUN, to the scorers that apply",
+        scoring.score,
+    ),
+    "scorers": Command(
+        (),
+        "list the scorers, what each reads, and which the cell's output offers",
+        scoring.scorers,
+    ),
     "help": Command((), "list the commands", help_),
     "quit": Command((), "leave (or Ctrl-D)", None),
 }
@@ -111,7 +128,7 @@ def handle(repl: Repl, line: str) -> bool:
 
     try:
         command.run(repl, *args)
-    except (BranchNotFoundError, AmbiguousBranchError) as e:
+    except (BranchNotFoundError, AmbiguousBranchError, NotFound) as e:
         repl.error(str(e))
 
     return True
@@ -138,6 +155,7 @@ def complete(names: dict[str, list[str]], line: str) -> list[str]:
             entity = words[position - 1]
             candidates = names.get(entity, []) + ([NONE] if entity in OPTIONAL else [])
         case param:
-            candidates = names.get(param.lower(), [])
+            key = param.strip("[]").lower()
+            candidates = names.get(f"{verb}:{key}", names.get(key, []))
 
     return [name for name in candidates if name.startswith(words[-1])]

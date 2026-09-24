@@ -13,15 +13,19 @@ from chatddx.core.repl.render import (
     LABEL,
     REFUSED,
     VALID,
+    clipped_line,
     show_messages,
+    show_scores,
     show_validity,
     show_views,
+    value_of,
 )
 from chatddx.core.repl.shell import Repl
 from chatddx.history.models import MessageKind, RunModel, RunStatus
 from chatddx.repo.entities.output.pydantic import OutputTrailSpec
 from chatddx.repo.shufflers.trail import load_trail
 from chatddx.runtime.trial import invalid
+from chatddx.scoring.score import latest
 
 
 def runs(repl: Repl, count: str = "20") -> None:
@@ -29,56 +33,39 @@ def runs(repl: Repl, count: str = "20") -> None:
         repl.error(f"a count is a whole number, not '{count}'")
         return
 
-    latest = list(
+    found = list(
         RunModel.objects.filter(owner__name=repl.identity)
         .select_related("trial", "session")
+        .prefetch_related("scores")
         .order_by("-timestamp", "-pk")[: int(count)]
     )
 
-    if not latest:
+    if not found:
         repl.console.print(f"{repl.identity} has no runs", style=LABEL)
         return
 
     table = Table(box=None, header_style="bold")
 
-    for column in ("run", "when", "trial", "what ran", "outcome"):
+    for column in ("run", "when", "trial", "what ran", "outcome", "scores"):
         table.add_column(column)
 
-    for run in latest:
+    for run in found:
         table.add_row(
-            _short(run.uuid),
+            short(run.uuid),
             _when(run.timestamp),
-            _short(run.trial.uuid),
-            run.session.description if run.session else "—",
+            short(run.trial.uuid),
+            what_ran(run),
             _outcome(run),
+            "  ".join(f"{s.scorer} {value_of(s.value)}" for s in latest(run)),
         )
 
     repl.console.print(table)
 
 
 def replay(repl: Repl, prefix: str | None = None) -> None:
-    found = RunModel.objects.filter(owner__name=repl.identity).select_related(
-        "trial__configuration__output", "session", "client"
-    )
-
-    if prefix is not None:
-        found = found.filter(uuid__startswith=prefix)
-
-    candidates = list(found.order_by("-timestamp", "-pk")[:2])
-
-    if not candidates:
-        which = f"no run '{prefix}'" if prefix else "no runs"
-        repl.error(f"{repl.identity} has {which}")
-        return
-
-    if prefix is not None and len(candidates) > 1:
-        repl.error(f"more than one run starts with '{prefix}'")
-        return
-
-    run = candidates[0]
-    what = run.session.description if run.session else "—"
+    run = repl.run_named(prefix)
     repl.console.print(
-        f"run {_short(run.uuid)} of trial {_short(run.trial.uuid)}: {what}",
+        f"run {short(run.uuid)} of trial {short(run.trial.uuid)}: {what_ran(run)}",
         style="bold",
     )
     repl.console.print(
@@ -111,10 +98,16 @@ def replay(repl: Repl, prefix: str | None = None) -> None:
 
         show_views(repl.console, output, run.output)
 
+    show_scores(repl.console, latest(run))
 
-def _short(value: Any) -> str:
+
+def short(value: Any) -> str:
     """An id as the repl shows it: the first digits of a uuid."""
     return str(value)[:8]
+
+
+def what_ran(run: RunModel) -> str:
+    return run.session.description if run.session and run.session.description else "—"
 
 
 def _when(moment: datetime) -> str:
@@ -141,10 +134,10 @@ def _outcome(run: RunModel) -> Text:
     to no answer that holds.
     """
     if run.status == RunStatus.ERRORED:
-        return Text(f"errored: {_clipped_line(run.error or '')}", style=REFUSED)
+        return Text(f"errored: {clipped_line(run.error or '')}", style=REFUSED)
 
     if run.error is not None:
-        return Text(_clipped_line(run.error), style=REFUSED)
+        return Text(clipped_line(run.error), style=REFUSED)
 
     match run.valid:
         case True:
@@ -153,8 +146,3 @@ def _outcome(run: RunModel) -> Text:
             return Text("invalid", style=REFUSED)
         case None:
             return Text(run.status)
-
-
-def _clipped_line(text: str, width: int = 60) -> str:
-    line = text.splitlines()[0] if text else ""
-    return line if len(line) <= width else line[: width - 1] + "…"

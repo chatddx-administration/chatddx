@@ -1,6 +1,8 @@
+# pyright: basic
 """How a run is written out: as it streams, and again from its record."""
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -25,7 +27,8 @@ from pydantic_ai import (
 from rich.console import Console
 from rich.text import Text
 
-from chatddx.repo.entities.output.pydantic import OutputTrailBase
+from chatddx.history.models import ScoreModel
+from chatddx.repo.entities.output.pydantic import VIEWS, OutputTrailBase
 from chatddx.runtime.trial import FINAL_RESULT
 
 THINKING = "#5f87af"
@@ -181,8 +184,11 @@ def show_validity(console: Console, problem: str | None) -> None:
 
 
 def show_views(console: Console, output: OutputTrailBase, answer: Any) -> None:
-    """What each of the output's views reads from the answer."""
-    for view in output.views:
+    """What each of the output's views reads from the answer, but its text."""
+    for view in VIEWS:
+        if view == "text" or view not in output.views:
+            continue
+
         items = output.view(view, answer)
         console.print(view, style="bold")
 
@@ -192,6 +198,39 @@ def show_views(console: Console, output: OutputTrailBase, answer: Any) -> None:
 
         if not items:
             console.print("  nothing", style=LABEL)
+
+
+def show_scores(console: Console, scores: Iterable[ScoreModel]) -> None:
+    """What each scorer made of a run, and what that rests on, or why it has none."""
+    rows = list(scores)
+
+    if not rows:
+        return
+
+    console.print("scores", style="bold")
+    width = max(len(score.scorer) for score in rows)
+
+    for score in rows:
+        text = Text(f"  {score.scorer:<{width}}  {value_of(score.value):<5}")
+
+        if score.answer is not None:
+            text.append(f"  {clipped_line(score.answer)}")
+        elif score.reason is not None:
+            text.append(f"  {score.reason}", style=LABEL)
+
+        console.print(text)
+
+
+def value_of(value: float | None) -> str:
+    if value is None:
+        return "—"
+
+    return str(int(value)) if value.is_integer() else f"{value:.3g}"
+
+
+def clipped_line(text: str, width: int = 60) -> str:
+    line = text.splitlines()[0] if text else ""
+    return line if len(line) <= width else line[: width - 1] + "…"
 
 
 def _thinking(origin: str | None) -> str:

@@ -12,6 +12,7 @@ from chatddx.core.repl.render import (
     LATER,
     Streamed,
     show_events,
+    show_scores,
     show_validity,
     show_views,
 )
@@ -22,13 +23,15 @@ from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailSchem
 from chatddx.repo.shufflers.branch import get_visible_branch_model
 from chatddx.runtime.resolution import CellRefused, Resolution
 from chatddx.runtime.trial import TOOL_ROUNDS, Trial, cause_of, invalid
+from chatddx.scoring.score import Scoring
 
 
 def run(repl: Repl, name: str, seed: str | None = None) -> None:
     """
-    Make a trial of the cell on a case, stream it, and record the run. An
-    answer that doesn't come, or doesn't parse, doesn't hold, where one is
-    asked for; a model or server that fails mid-run is said, and recorded.
+    Make a trial of the cell on a case, stream it, record the run, and hold
+    it to the scorers that apply. An answer that doesn't come, or doesn't
+    parse, doesn't hold, where one is asked for; a model or server that
+    fails mid-run is said, and recorded.
     """
     cell = repl.cell
 
@@ -131,6 +134,11 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     except Exception as e:  # noqa: BLE001
         repl.error(f"not recorded: {type(e).__name__}: {e}")
         return
+
+    try:
+        show_scores(repl.console, Scoring().score(recorded))
+    except Exception as e:  # noqa: BLE001
+        repl.error(f"not scored: {type(e).__name__}: {e}")
 
     repl.console.print(
         f"recorded as run {recorded.trial.runs.count()} of trial "

@@ -231,7 +231,7 @@ def test_a_tool_that_isn_t_chatddx_s_own_is_refused_before_anything_is_sent(
     written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
 
     assert (
-        "the tool 'sentinel_op' can't run: os:system isn't one of chatddx's tools"
+        "the tool 'sentinel_op' can't run: os:system isn't one of chatddx's own"
         in written
     )
     assert fake.requests == []

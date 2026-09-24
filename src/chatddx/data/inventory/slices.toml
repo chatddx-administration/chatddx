@@ -44,15 +44,18 @@ variables = ["case", "schema_prompt"]
 # ------------------------------------------------------------------- output
 #
 # What is asked for: a schema (none for free text), the guidance that fills
-# `output_guidance`, and the views scorers read. Every output offers the
-# `text` view; `differential` is a ranked list of diagnoses, given as a path
-# into the schema or, for free text, as a parser.
+# `output_guidance`, and the views scorers read, each given as a path into
+# the schema or, for free text, as a parser: `text` is the answer as
+# written, `differential` a ranked list of diagnoses, and `warning` and
+# `disposition` a plan's red flags and where the patient goes.
 
 # key order as authored: the DDXManagement model's own
 [output.management-plan]
 schema_path = "schemas/management_plan_v1.json"
 guidance = "Fill in the management plan for the case."
 views.differential = "$.diagnoses[*].diagnosis"
+views.warning = "$.acute_warning"
+views.disposition = "$.management.disposition"
 
 [output.diagnoses]
 schema_path = "schemas/diagnoses.json"
@@ -61,10 +64,12 @@ views.differential = "$.diagnoses[*]"
 
 [output.free-text]
 guidance = "List the plausible diagnoses, one per line, most likely first."
+views.text = "whole"
 views.differential = "lines"
 
 # Free text with no guidance: whatever the model makes of the case alone.
 [output.raw]
+views.text = "whole"
 
 # One field of each JSON type, to test coercion; it has no clinical reading.
 [output.type-check]

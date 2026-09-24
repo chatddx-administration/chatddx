@@ -1,10 +1,11 @@
 """
-What runs when a model calls a tool: a function in one of chatddx's own tool
-files, `chatddx.runtime.tools.<file>`, named by an entry point
-(`module.path:function`). Nothing else runs, whoever's branch names it.
+What runs when a model calls a tool, or a scorer scores a run: a function in
+one of chatddx's own files, in `chatddx.runtime.tools` or
+`chatddx.scoring.scorers`, named by an entry point (`module.path:function`).
+Nothing else runs, whoever's branch names it.
 
-A tool file is loaded afresh from its bytes each time, and those bytes' git
-blob id is kept beside what they define: what ran is what the id names, even
+A file is loaded afresh from its bytes each time, and those bytes' git blob
+id is kept beside what they define: what ran is what the id names, even
 after an edit in a long-running process, and `git cat-file blob <id>` gets
 it back.
 """
@@ -20,6 +21,7 @@ from types import ModuleType
 from typing import Any, override
 
 TOOLS = "chatddx.runtime.tools"
+SCORERS = "chatddx.scoring.scorers"
 
 
 @dataclass(frozen=True)
@@ -29,12 +31,12 @@ class Implementation:
     blob: str
 
 
-def implementation(entry_point: str) -> Implementation:
-    """The function `entry_point` names, and the blob id of its file."""
+def implementation(entry_point: str, package: str = TOOLS) -> Implementation:
+    """The function `entry_point` names in `package`, and its file's blob id."""
     module_name, _, name = entry_point.partition(":")
 
-    if not module_name.startswith(f"{TOOLS}."):
-        raise ValueError(f"{entry_point} isn't one of chatddx's tools, in {TOOLS}")
+    if not module_name.startswith(f"{package}."):
+        raise ValueError(f"{entry_point} isn't one of chatddx's own, in {package}")
 
     try:
         spec = importlib.util.find_spec(module_name)

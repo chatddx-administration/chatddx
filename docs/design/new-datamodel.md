@@ -516,21 +516,26 @@ output variation.
 
   | View | Type | Read by |
   |---|---|---|
-  | `text` | a string: free text as written, or a structured output as JSON | `exact_match`; later, a model-graded judge |
+  | `text` | a string: an answer as written | `first_mention`; later, a model-graded judge |
   | `differential` | an array of strings, most likely first | `reciprocal_rank` |
+  | `warning` | a string, or none: a plan's red flags | `mentions` |
+  | `disposition` | a string: where a plan sends the patient | `mentions` |
   | `plan` (later) | workup, treatment and disposition | rubric scoring of management plans |
 
 - **An output variation declares the views it offers.**
   - A structured output gives each view as a path into its schema, in a
     subset of JSONPath: names and `[*]`.
-  - Free text gives a named parser instead.
-  - Every output offers `text`.
+  - Free text gives a named parser instead: `lines` for its
+    `differential`, `whole` for its `text`.
+  - An output offers only what it declares, `text` included: a structured
+    output offers `text` only where a path proves a string.
 
-  | Output | Its `differential` |
+  | Output | Its views |
   |---|---|
-  | management plan | `$.diagnoses[*].diagnosis` |
-  | diagnoses | `$.diagnoses[*]` |
-  | free text | `lines`: one item per non-empty line, list markers stripped |
+  | management plan | `differential` at `$.diagnoses[*].diagnosis`, `warning` at `$.acute_warning`, `disposition` at `$.management.disposition` |
+  | diagnoses | `differential` at `$.diagnoses[*]` |
+  | free text | `text` by `whole`; `differential` by `lines`, one item per non-empty line, list markers stripped |
+  | raw | `text` by `whole` |
 
 - **A path is proved when the output is committed.**
   - Walking the schema along the path gives the type of what the path
@@ -599,6 +604,14 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
   is `result.output` with the envelope removed, the same whichever mode
   carried it (PR #68's `RunModel.output`). `valid` says whether it
   validates against the output's schema.
+- **Until inspect scores runs, chatddx does.** A scorer (`chatddx.scoring`)
+  is a function in one of chatddx's own scorer files, the view it reads,
+  and the target it expects: `targets.toml` holds each case's by what they
+  expect (`diagnosis`, `warning`, `disposition`). A scorer applies to a
+  completed run whose output offers its view and whose case has its
+  target. Each score keeps the view, the target and the git blob of the
+  scorer's file, so a changed file or target leaves the run to be scored
+  again, and the scores before stay.
 - **chatddx writes one inspect sample per trial** (`data-generation.md` §5,
   option C):
 
@@ -606,9 +619,9 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
   |---|---|
   | `id`, `epoch` | the case, and the replicate |
   | `input` | the case, as the model received it |
-  | `output.completion` | the `text` view: where inspect expects an answer, and where `react()` puts a submitted one |
+  | `output.completion` | the answer as text: where inspect expects an answer, and where `react()` puts a submitted one. It is the `text` view where the output offers one, and a structured answer's JSON otherwise |
   | `messages`, and a `ModelEvent` | the exchange as it happened, tool call or `response_format` included, with the raw request and response |
-  | `target` | the case's reference for the batch's scorer; for `reciprocal_rank`, one pattern |
+  | `target` | the case's target for what the batch's scorers expect; for `diagnosis`, read by `reciprocal_rank` and `first_mention`, one pattern |
   | `metadata` | one key per slice, naming the cell's variation; the identities and hashes; the output's fingerprint and its views |
 
 - **A batch writes one log per cell.**

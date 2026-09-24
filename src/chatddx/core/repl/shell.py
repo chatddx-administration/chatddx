@@ -9,6 +9,7 @@ from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.core.repl.cell import SLICES, Cell
 from chatddx.core.repl.render import LATER, REFUSED
+from chatddx.history.models import RunModel
 from chatddx.repo.entities.model.pydantic import ModelBranchSpec, ModelFacts
 from chatddx.repo.entities.stack.pydantic import StackBranchSpec
 from chatddx.repo.entities.tool.pydantic import ToolBranchSpec
@@ -23,8 +24,13 @@ from chatddx.repo.shufflers.branch import (
     select_visible_branch_models,
 )
 from chatddx.runtime.resolution import Resolution, SliceRefusal, resolve
+from chatddx.scoring.score import Scoring
 
 SHARED_BY: dict[str, str] = {"configuration": settings.ARCHIVE_IDENTITY_NAME}
+
+
+class NotFound(Exception):
+    pass
 
 
 class Repl:
@@ -58,14 +64,27 @@ class Repl:
         return f"{self.identity}{held}> "
 
     def completions(self) -> dict[str, list[str]]:
-        """The names a command's words complete from, looked up once."""
+        """
+        The names a command's words complete from: those of the registry,
+        looked up once, and the runs as they are now, the latest first.
+        """
         if self._completions is None:
             self._completions = {
                 entity: self.names(entity)
                 for entity in ("configuration", "stack", "case", *SLICES)
             }
 
-        return self._completions
+        latest = RunModel.objects.filter(owner__name=self.identity).order_by(
+            "-timestamp", "-pk"
+        )
+        outstanding = Scoring().outstanding_runs(self.identity)
+
+        return self._completions | {
+            "replay:run": [
+                str(uuid)[:8] for uuid in latest.values_list("uuid", flat=True)[:20]
+            ],
+            "score:run": [str(run.uuid)[:8] for run in reversed(outstanding)],
+        }
 
     def forget(self) -> None:
         """Look names up anew: what the identity calls things has changed."""
@@ -96,6 +115,26 @@ class Repl:
             self._names[key] = name
 
         return self._names[key]
+
+    def run_named(self, prefix: str | None) -> RunModel:
+        """The identity's run whose id starts with `prefix`, or its latest."""
+        runs = RunModel.objects.filter(owner__name=self.identity).select_related(
+            "trial__configuration__output", "session", "client"
+        )
+
+        if prefix is not None:
+            runs = runs.filter(uuid__startswith=prefix)
+
+        found = list(runs.order_by("-timestamp", "-pk")[:2])
+
+        if not found:
+            which = f"no run '{prefix}'" if prefix else "no runs"
+            raise NotFound(f"{self.identity} has {which}")
+
+        if prefix is not None and len(found) > 1:
+            raise NotFound(f"more than one run starts with '{prefix}'")
+
+        return found[0]
 
     def configuration_named(self, name: str) -> BranchModel:
         """The configuration the identity means by NAME, or by OWNER/NAME."""

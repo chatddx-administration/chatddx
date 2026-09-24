@@ -12,6 +12,7 @@ from chatddx.core.repl.cell import SLICES
 from chatddx.core.repl.render import LABEL, LATER, REFUSED
 from chatddx.core.repl.shell import Repl
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
+from chatddx.repo.entities.output.pydantic import VIEWS
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchSpec
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.shufflers.branch import select_visible_branch_models
@@ -194,7 +195,7 @@ def _outcome(entity: str, refusals: list[SliceRefusal], realized: str) -> Text:
 def _realized(entity: str, slices: Slices, parts: Parts) -> str:
     reasoning, sampling, coercion, tools, slots = parts
     free_text = slices.output.schema is None
-    views = ", ".join(slices.output.views) or "none"
+    views = ", ".join(v for v in VIEWS if v in slices.output.views) or "none"
 
     match entity:
         case "reasoning" if reasoning:
