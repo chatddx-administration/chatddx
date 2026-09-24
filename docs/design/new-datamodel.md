@@ -15,13 +15,13 @@ the entities, it covers:
   (§5).
 
 It then maps every current field to its new home or scraps it, and marks
-each field as fingerprinted or not. It ends with a proposal for keeping
-scorers and targets in the registry (§11), and with where the code still
-differs from this note (§12).
+each field as fingerprinted or not. It ends with the scorers and targets
+kept in the registry (§11), and with where the code still differs from
+this note (§12).
 
 For inspect-ai, option C of `data-generation.md` §5 was chosen: chatddx
 generates and inspect scores. So the registry keeps what generation needs,
-and what only evaluation needs moves to inspect. §11 proposes one change to
+and what only evaluation needs moves to inspect. §11 makes one change to
 that: the scorers and the targets are registered too, since people are to
 keep them in the portal, and inspect's model shapes them.
 
@@ -98,7 +98,8 @@ trail field that cannot take part in the fingerprint is not content", and
   `extra="forbid"`. Details hold the branch's name and owner, its relations
   (collaborators and tags), and descriptive values, such as a machine's
   specs or a stack's endpoint. Most entities have no descriptive values:
-  only machine, os, model, serving, client, stack and tool do (§6).
+  only machine, os, model, serving, client, stack, tool, case and scorer do
+  (§6, §11).
 - **Details live on the branch.** That is the layer that already carries
   the owner, the name, collaborators and tags, so details are owned and
   named, per owner.
@@ -757,8 +758,8 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
   | `input` | the case, as the model received it |
   | `output.completion` | the answer as text: where inspect expects an answer, and where `react()` puts a submitted one. It is the `text` view where the output offers one, and a structured answer's JSON otherwise |
   | `messages`, and a `ModelEvent` | the exchange as it happened, tool call or `response_format` included, with the raw request and response |
-  | `target` | the case's target for what the batch's scorers expect; for `diagnosis`, read by `reciprocal_rank` and `first_mention`, one pattern |
-  | `metadata` | one key per slice, naming the cell's variation; the identities and hashes; the output's fingerprint and its views |
+  | `target` | the case's target of the kind the batch's scorers read, where they read one kind; for `diagnosis`, read by `reciprocal_rank` and `first_mention`, one pattern |
+  | `metadata` | one key per slice, naming the cell's variation; the identities and hashes; the output's fingerprint and its views; the case's targets, by kind, for scorers that read another (§11) |
 
 - **A batch writes one log per cell.**
   - An inspect log is one task on one model, and a sample id appears once
@@ -794,14 +795,15 @@ theirs until then (below).
 
 ### How chatddx scores, until inspect does
 
-`chatddx.scoring` holds runs to scorers of chatddx's own. It is a stand-in
-to establish a reference, and its rules differ from inspect's above.
+`chatddx.scoring` holds runs to scorers of chatddx's own, kept in the
+registry (§11). It is a stand-in to establish a reference, and its rules
+differ from inspect's above.
 
 - **A scorer is a function, the view it reads, and the kind of target it
-  holds that to.** The four are a table in code (`SCORERS` in
-  `scoring/score.py`):
+  holds that to.** The archive's four are seeded from
+  `inventory/scorers.toml`:
 
-  | Scorer | Function | View | Target | Value |
+  | Scorer | Function | View | Target kind | Value |
   |---|---|---|---|---|
   | `reciprocal_rank` | `reciprocal_rank` | `differential` | `diagnosis` | 1/rank of the first item the target is found in, and 0 where it isn't (`not listed`) |
   | `first_mention` | `first_mention` | `text` | `diagnosis` | the characters before the target is first named, and none where it isn't (`never named`) |
@@ -815,8 +817,8 @@ to establish a reference, and its rules differ from inspect's above.
   allowlisted package and afresh from the file's bytes, and the file's git
   blob id names the version that scored. A scorer file imports nothing else
   of chatddx's, so the file is all of chatddx that scored. A function takes
-  the view's items, or none where the run came to no answer, and the
-  target, and returns a value, an answer and a reason.
+  the view's items, or none where the run came to no answer, the target,
+  and the scorer's arguments, and returns a value, an answer and a reason.
 - **A target is a pattern of words.** A word is found whole and in any
   case: `pneumonia` isn't found in "pneumonias", nor `mi` in "anemia". A
   trailing `*` takes any word that starts so (`meningit*`). Words side by
@@ -826,17 +828,21 @@ to establish a reference, and its rules differ from inspect's above.
   diagnosis, a sentence or a field, never to two at once. `first_mention`
   splits text into sentences and lines, at line breaks and after `.`, `!`
   or `?`.
-- **Targets are read from `targets.toml`,** keyed by the case's name and
-  then by the kind of target: `diagnosis`, `warning` and `disposition`. A
-  run's case is found by its trail among the archive's case branches, so a
-  case is known by its inventory name. Tests read `test-targets.toml`
-  instead.
+- **A case that expects no warning** has `warning = false`. `mentions` is
+  then given no target: 1 where the view read nothing (`none named, as
+  expected`), and 0 where it read something (`none expected`, resting on
+  what was named).
+- **Who scores decides what with.** Whoever scores holds runs to their own
+  scorers and the archive's, and to the targets of the case branch that
+  holds the run's case: the newest row of their own, or else of the
+  archive's that they can see (§11).
 - **A scorer applies to a run** that completed, whose output offers its
-  view, and whose case has its kind of target.
-- **A run is outstanding for a scorer** until it has a score from that
-  scorer with the view, the target and the file's blob as they are now. An
-  edit to the file or to the target makes it outstanding again, and the
-  scores before stay. The latest score from each scorer is the one shown.
+  view, and whose case has its kind of target, if it needs one.
+- **A run is outstanding for a scorer,** for whoever scores, until it has a
+  score of theirs from that scorer's trail with the target and the file's
+  blob as they are now. An edit to the scorer, to the target or to the file
+  makes it outstanding again, and the scores before stay. The latest score
+  from each scorer, by its name, is the one shown.
 - **Its rules for what can't be read:**
   - A view reads whatever output the run kept, valid or not.
   - A run with no output scores 0 with the reason `no answer`, or no value
@@ -844,12 +850,13 @@ to establish a reference, and its rules differ from inspect's above.
   - A reply cut off at `max_tokens` isn't told apart, though the run keeps
     its finish reason.
   - A target that doesn't parse is an error, and nothing is scored. A test
-    holds every target in `targets.toml` to parse.
+    holds every target of the inventories to parse.
   - An errored run is never scored.
 - **When:** a run in the repl is scored as soon as it is recorded. `score`
   scores every outstanding run of the identity's, oldest first, and ends
-  with each scorer's mean. `score RUN` scores one. `scorers` lists the
-  scorers, and whether the cell's output offers each one's view.
+  with each scorer's metrics. `score RUN` scores one. `scorers` lists the
+  scorers the identity can see, their metrics and owners, and whether the
+  cell's output offers each one's view.
 - **What is kept:** a score row per run and scorer (§6).
 
 ## 5. The batch and the compatibility table
@@ -876,7 +883,7 @@ between `plan` and `generate` stays.
 | `base` | a configuration and a stack: the variation every slice keeps unless it is varied |
 | `varied` | groups of slices, each slice with its variations, such as `[{model: [qwen3-8b, gpt-oss-20b], reasoning: [off, low, high]}, {output: [management-plan, diagnoses, free-text]}]` |
 | `case_tags` | as today; the cases are resolved when the batch generates |
-| `scorers` | inspect scorers with their arguments, which include the view each reads; as §11 proposes, the registry's scorers, by their trails |
+| `scorers` | inspect scorers with their arguments, which include the view each reads: the registry's scorers, by their trails (§11) |
 | `replicates` | its seeds, one per replicate. A replicate's position among them, from 1, is its epoch in the cell's inspect log. Each seed makes a trial of every cell on every case. |
 
 - **Cells.** The slices within a group are crossed, and the groups are
@@ -908,8 +915,7 @@ resolves every cell against its stack, as a dry run (`data-generation.md`
   - model facts and serving settings, each declared once per model or
     serving, where it is true;
   - the scorers' views and the outputs' views;
-  - the cases' targets, which inspect keeps, keyed by the case (§7); §11
-    proposes keeping them in the cases' details.
+  - the cases' targets, in their details (§11).
 - **Per cell,** the report gives realized, collapsed into another cell, or
   refused, with the reason and the facts it rested on (the branch rows it
   read).
@@ -1172,6 +1178,10 @@ on a serving without one.
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
 | `payload` | trail | yes | unchanged: the case as the model receives it, through the instruction's `case` variable |
+| `targets` | details | no | what the case is expected to yield, by kind (§11) |
+
+**scorer**: what a run's answer comes to, by a function of chatddx's own,
+the view it reads and the kind of target it holds that to (§11).
 
 ### Trials and runs
 
@@ -1179,7 +1189,7 @@ A trial is history, not part of the registry. It is content, like a trail:
 the configuration, the stack and the case it points at, by their trails,
 and its seed, or none. Runs of the same four are runs of one trial,
 whoever made them: a trial belongs to no one, and each run to whoever made
-it. (The code still keys a trial by its owner too, §12.) A trial can be run
+it. A trial can be run
 more than once, to see its seed hold, to retry one that errored, or on the
 client of a later deploy. A trial with no seed is a trial too, and its runs
 are draws that can't be repeated.
@@ -1201,9 +1211,10 @@ Each run records:
 - its session: the exchange as pydantic-ai's messages, with a message for
   the error where there was one. A run can continue a session, as a chat
   would; the repl doesn't yet;
-- its scores (§4): per scorer, the value, what in the answer it rests on or
-  why there is none, and what it was made with: the view, the target, and
-  the git blob of the scorer's file. A run scored again keeps every score.
+- its scores (§4, §11): per scorer and whoever scored, the value, what in
+  the answer it rests on or why there is none, and what it was made with:
+  the scorer, the case branch whose targets were read, the target, and the
+  git blob of the scorer's file. A run scored again keeps every score.
 
 A batch is history too (§5).
 
@@ -1291,20 +1302,20 @@ A batch is history too (§5).
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
 | `payload` | `case.payload` | yes |
-| `expects` (details) | removed: targets move to inspect. §11 proposes bringing them back as the case's `targets`, by kind. | no |
+| `expects` (details) | `targets` (details), by kind (§11) | no |
 
 **expect** (removed)
 
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
-| `payload` | inspect: a sample's `target`, keyed by the case; for now `targets.toml`, and as proposed in §11, the case's `targets` | no |
+| `payload` | the case's `targets`, by kind (§11); inspect's sample `target` when a log is written | no |
 | `scorer` | inspect: one of the batch's scorers | no |
 
-**scorer** (removed)
+**scorer** (remade)
 
 | Current field | Becomes | Fingerprinted |
 |---|---|---|
-| `command` | inspect scorers that read views: `regex_match` becomes `reciprocal_rank` over `differential` (as in PR #68), and `exact_match` reads `text`. §11 proposes a new `scorer` entity: a function, the view it reads and the kind of target it holds that to. | no |
+| `command` | a new `scorer` entity (§11): a function, the view it reads and the kind of target it holds that to. `regex_match` becomes `reciprocal_rank` over `differential` (as in PR #68), and `exact_match` would read `text`. | no |
 
 **Views.** `super_agent`'s flat form becomes the configuration's, and every
 other view follows its entity. Form data isn't identity.
@@ -1315,7 +1326,7 @@ other view follows its entity. Form data isn't identity.
 |---|---|
 | `agent` | `base`: a configuration and a stack |
 | `case_tags` | kept |
-| `scorers` | inspect scorers, each with the view it reads; as §11 proposes, the registry's scorers |
+| `scorers` | the registry's scorers, each with the view it reads (§11) |
 | (new) | `varied`, `replicates` |
 
 An experiment becomes a trial, which `data-generation.md` §4 describes,
@@ -1340,6 +1351,8 @@ Only the fields the redesign cannot work without were added:
   `toolset.guidance`:** the text a slice brings with it, and whether the
   model sees the schema.
 - **`output.views`:** where scorers read an output.
+- **`case.targets`, and the `scorer` entity:** what a case is expected to
+  yield, and what reads a run's answer against it (§11).
 - **`coercion.mode`:** the mode, as a slice of its own.
 - **`reasoning.effort`, `reasoning.budget`:** reasoning as a slice of its
   own, with `default` as a variation.
@@ -1406,7 +1419,7 @@ Left out for good: an authored table of compatible pairs (§3).
 - **Commit order.** `EntityName` keeps its rule that anything an entity
   references is committed first. The order becomes: machine, os, model,
   serving, client, stack, tool, toolset, instruction, output, coercion,
-  reasoning, sampling, configuration, case.
+  reasoning, sampling, configuration, case, scorer.
 - **Schema storage.** `output.schema` is stored as text, not `jsonb`,
   because `jsonb` re-sorts keys. So are a tool's `parameters` and a run's
   `output`.
@@ -1414,14 +1427,13 @@ Left out for good: an authored table of compatible pairs (§3).
   `TrailModel.fingerprint` (`max_length=64`), so the column grows. Short
   forms such as `short_fingerprint` read the hex part.
 
-## 11. Scorers and targets in the registry (proposed)
+## 11. Scorers and targets in the registry
 
-Today the targets are read from `targets.toml` when a run is scored, and
-the scorers are a table in code (§4). The inventory is the source of truth
-for now, but everything in it is to be kept in the portal. Once people work
-there, the database is the source of truth, and the TOML files only seed
-it. So scoring has to read scorers and targets from the registry, and
-nothing but a scorer's function stays in code. This section proposes how.
+The inventory is the source of truth for now, but everything in it is to be
+kept in the portal. Once people work there, the database is the source of
+truth, and the TOML files only seed it. So scoring reads its scorers and
+targets from the registry, and nothing but a scorer's function stays in
+code.
 
 ### What inspect does
 
@@ -1448,138 +1460,155 @@ Read from inspect-ai 0.3.263:
   names the packages, and the git commit the eval ran from, with whether
   the tree was dirty. Nothing names a scorer's own code.
 
-### The proposal
+### Scorers
 
-- **A scorer is an entity:**
+A scorer is an entity:
 
-  | Field | In | Fingerprinted | Notes |
-  |---|---|---|---|
-  | `function` | trail | yes | an entry point into one of chatddx's own scorer files, `chatddx.scoring.scorers.<file>:<function>` |
-  | `view` | trail | yes | the view it reads (§4) |
-  | `target` | trail | yes | the kind of target it holds the view to, or null for a scorer that needs none |
-  | `args` | trail | yes | further keyword arguments to the function; empty by default |
-  | `metrics` | details | no | how its values are summed up, by name: `mean`, `stderr`, `accuracy` and the like, computed with inspect's own metrics |
+| Field | In | Fingerprinted | Notes |
+|---|---|---|---|
+| `function` | trail | yes | an entry point into one of chatddx's own scorer files, `chatddx.scoring.scorers.<file>:<function>` |
+| `view` | trail | yes | the view it reads (§4) |
+| `target_kind` | trail | yes | the kind of target it holds the view to, or null for a scorer that needs none |
+| `args` | trail | yes | keyword arguments the function takes beside the view's items and the target; empty by default |
+| `metrics` | details | no | how its values are summed up: `mean`, `stderr`, `std` or `var`; `mean` and `stderr` by default |
 
-  - It is inspect's `ScorerSpec`: the function is the name, the view, the
-    target and the arguments are the options, and the metrics are the
-    metrics.
-  - What can change a score is content, so a score can cite exactly what
-    made it. Metrics change no score, so they are details, and a change to
-    them leaves every run scored.
-  - Unlike inspect, the view and the kind of target are fields of their
-    own rather than arguments, because pairing a scorer with a run reads
-    them: set membership, as in §4.
-  - The function runs as a tool does: from an allowlisted package, loaded
-    afresh, with its file's git blob recorded on each score. Where inspect
-    names a commit, and can only say that the tree was dirty, the blob
-    names the code that scored.
-  - A scorer is named per owner, like every entity. The archive's four are
-    seeded from `inventory/scorers.toml`:
+- **It is inspect's `ScorerSpec`.** The function is the name, the view, the
+  target kind and the arguments are the options, and the metrics are the
+  metrics.
+- **What can change a score is content,** so a score can cite exactly what
+  made it. Metrics change no score, so they are details, and a change to
+  them leaves every run scored.
+- **The view and the target kind are fields of their own,** unlike
+  inspect's options, because pairing a scorer with a run reads them: set
+  membership, as in §4. The field is `target_kind` rather than `target`,
+  which a form holds for the branch's trail.
+- **The function runs as a tool's does:** from an allowlisted package,
+  loaded afresh, with its file's git blob recorded on each score. Where
+  inspect names a commit, and can only say that the tree was dirty, the
+  blob names the code that scored.
+- **The metrics are inspect's, by name and formula,** and chatddx computes
+  them itself (`scoring/metrics.py`) rather than load inspect, which takes
+  seconds. A deviation is a sample's (`ddof=1`), and a formula with too few
+  values gives 0, as inspect's do. A score without a value is left out, as
+  inspect leaves out an unscored one.
+- **A scorer is named per owner,** like every entity. It comes last in
+  commit order, since it refers to nothing. The archive's four are seeded
+  from `inventory/scorers.toml`:
 
-    ```toml
-    [scorer.reciprocal_rank]
-    function = "chatddx.scoring.scorers.patterns:reciprocal_rank"
-    view = "differential"
-    target = "diagnosis"
-    metrics = ["mean", "stderr"]
-    ```
+  ```toml
+  [scorer.reciprocal_rank]
+  function = "chatddx.scoring.scorers.patterns:reciprocal_rank"
+  view = "differential"
+  target_kind = "diagnosis"
+  metrics = ["mean", "stderr"]
+  ```
 
-- **A case's targets are its details:**
+### Targets
 
-  | Field | In | Fingerprinted | Notes |
-  |---|---|---|---|
-  | `targets` | details | no | what the case is expected to yield, by kind: `diagnosis`, `warning` and `disposition`. Each is text its scorers read: for the pattern scorers, a pattern (§4). |
+A case's targets are its details:
 
-  - inspect keeps the target with the sample, and a case is chatddx's
-    sample. The kinds are chatddx's own: inspect has one target per sample,
-    and each of chatddx's scorers reads the kind it names.
-  - Details, not content: a target changes nothing the model reads, and a
-    case's fingerprint names what it reads. Like a model's facts, targets
-    are versioned by branch row: a changed target makes a new row, and a
-    score records the row it read.
-  - The kinds are a vocabulary kept in code, as the views are.
-  - The archive's targets are seeded from `cases.toml`, as `targets.*` in
-    each case's record, and `targets.toml` goes. It can't stay a file of
-    its own: an inventory that extends another replaces its records whole,
-    and doesn't merge them.
-  - A run is held to the targets of the scoring identity's own branch of
-    the run's case, or else the archive's: the newest row that holds the
-    run's case trail. So a fixed target reaches earlier runs of the same
-    payload, and a new payload comes with targets of its own.
-  - This brings back what `2bf6af7` made of a case's `expects`: details on
-    the case's branch.
-- **Which scorers apply to a run:** every scorer the scoring identity can
-  see, its own and those shared with it, whose view the run's output
-  offers, and whose kind of target the run's case has, if it needs one. A
-  batch will name its scorers instead (§5).
-- **A score** points at its scorer's trail instead of naming it, and at
-  the case branch row whose targets it read. It keeps the target it held
-  the view to, the blob, the value, the answer and the reason, and who
-  scored. The view is the scorer's.
-  - A run is outstanding for a scorer, for the identity that scores it,
-    until it has a score from that scorer's trail with the target and the
-    blob as they are now.
-  - The fields are inspect's `Score`: a null value is inspect's unscored.
-    `explanation` and `metadata` can join when a scorer needs them.
+| Field | In | Fingerprinted | Notes |
+|---|---|---|---|
+| `targets` | details | no | what the case is expected to yield, by kind: `diagnosis`, `warning` and `disposition`. Each is text its scorers read, for the pattern scorers a pattern (§4), or `false` where the case expects none. |
+
+- **inspect keeps the target with the sample, and a case is chatddx's
+  sample.** The kinds are chatddx's own: inspect has one target per sample,
+  and each of chatddx's scorers reads the kind it names.
+- **Details, not content:** a target changes nothing the model reads, and a
+  case's fingerprint names what it reads. Like a model's facts, targets are
+  versioned by branch row: a changed target makes a new row, and a score
+  records the row it read.
+- **The kinds are a vocabulary kept in code,** as the views are. Only
+  `warning` can be `false`: a plan that rightly raises no warning is held
+  to none (§4). A kind that must be named can't be `false`.
+- **This brings back what `2bf6af7` made of a case's `expects`:** they hang
+  off the case's branch, per owner and per version, not off its shared
+  trail. They are plain details now rather than a relation to an `expect`
+  entity, since a target is a pattern, not a record of its own.
+- **The archive's targets are seeded from `cases.toml`,** as `targets.*` in
+  each case's record. They can't be a file of their own: an inventory that
+  extends another replaces its records whole, and doesn't merge them.
+- **Which targets a run is held to:** those of the scoring identity's own
+  branch of the run's case, or else the archive's, where the identity can
+  see it: the newest row that holds the run's case trail. So a fixed target
+  reaches earlier runs of the same payload, and a new payload comes with
+  targets of its own.
+
+### Scores
+
+- **Whoever scores holds runs to their own scorers and the archive's,** and
+  to their own targets or the archive's. Their own shadows the archive's of
+  a name, as everywhere in the registry. A batch will name its scorers
+  instead (§5).
+- **A score points at its scorer's trail,** and keeps the name the scorer
+  had for whoever scored, the case branch row whose targets it read (none
+  for a scorer that needs no target), the target it held the view to (none
+  where the case expects none, or the scorer needs none), the blob, the
+  value, the answer and the reason, and who scored.
+- **A run is outstanding for a scorer, for the identity that scores it,**
+  until it has a score of theirs from that scorer's trail with the target
+  and the blob as they are now. The latest score from each scorer, by name,
+  is the one shown.
+- **The fields are inspect's `Score`:** a null value is inspect's unscored.
+  `explanation` and `metadata` can join when a scorer needs them.
+
+### Parsing and committing
+
 - **Parsing needs nothing new.** `scorer` is one more entity, and a case's
-  `targets` pass through as details. At commit, a scorer's function must
-  have an entry point's shape, its view and kind must be in their
-  vocabularies, its arguments must be an object, and its metrics must be
-  known. The package is held at load, as a tool's is. Whether a target
-  parses is for the scorers that read it to say: a test checks the
-  archive's, and scoring checks the rest (§4).
-- **In the portal,** a scorer is shown like a tool, and a case's form gains
-  its targets. An edit there makes a new version, and that makes runs
-  outstanding again.
-- **Later, from inspect:** people's edits to scores, as rows beside a
-  score, each with its author, time and reason, when clinicians adjudicate
-  in the portal; reducers over a batch's replicates; and a log per cell,
-  each scorer as an `EvalScorer` and the case's targets in the sample's
-  metadata.
+  `targets` pass through as details.
+- **At commit,** a scorer's function must have an entry point's shape, its
+  view and target kind must be in their vocabularies, its arguments must be
+  an object, and its metrics must be known, and named once. A target must
+  be text, or `false` where its kind allows it.
+- **The package is held at load,** as a tool's is. Whether a target parses
+  is for the scorers that read it to say: a test holds the inventories'
+  targets to parse, and scoring checks the rest (§4).
+- **A test holds each scorer to its function,** as tools are held to their
+  parameters: the function takes the view's items, a target, and the
+  scorer's arguments.
 
-### Steps
+### In the portal
 
-1. **Registry:** the `scorer` entity (schemas, models and bundle; it
-   refers to nothing, so it can come last in commit order), the target
-   kinds, and the case's `targets` detail.
-2. **Inventory:** `inventory/scorers.toml` with the four scorers.
-   `cases.toml` takes the targets from `targets.toml`, their `# guessed`
-   marks kept, and the test inventory takes its own. `targets.toml`,
-   `test-targets.toml` and `settings.TARGETS_PATH` go.
-3. **History:** a score's `scorer` becomes a reference to the scorer's
-   trail, and it gains the case branch row it read and who scored. Its
-   `view` column goes. Migrations are reset, as this branch has done
-   before.
-4. **Scoring:** the scorers and targets come from the registry. The table
-   in code goes, and summaries use each scorer's metrics.
-5. **Repl:** `scorers` lists the scorers the identity can see, with their
-   owners and metrics. `score` stays as it is.
-6. **Tests:** the parser and `init-data` with scorers and targets. Scoring
-   with targets committed, so a changed target is a new version of the
-   case. The archive's scorers' arguments held to their functions'
-   signatures, as tools' parameters are, and the archive's targets held to
-   parse.
-7. **This note:** §11 and the passages that point to it lose
-   "proposed", and §4 describes scoring as it then is.
+The portal's case page predates this note, and its registration is off. It
+ports with little change:
 
-### Open
+- **What carries over as is:** `CaseAdmin` and `SharedCaseAdmin` list a
+  case's name, versions, payload, tags and collaborators, step through its
+  versions, and offer templates to start from. `CaseForm` edits the name,
+  the payload and the tags. A case is still its payload, and its branch
+  still carries its tags and collaborators.
+- **Expects become three fields.** `ExpectInline` was a formset whose rows
+  each paired an expected payload with a scorer, committed as an `expect`
+  entity named `<case>|<scorer>` and linked to the case's branch. Targets
+  make that simpler: one field per kind on the case's form, the warning's
+  with a way to say that none is expected, and no entity, formset or link.
+  A changed target is a new version of the case, as a changed payload is.
+- **Two changes are generic, and needed by every entity with details.**
+  `BranchModelAdmin.save_model` commits the name and the owner alone, so it
+  would commit every detail at its default: a saved case would lose its
+  targets, and a tool what it runs. It has to commit the entity's details
+  from the form (`entity.branch_details`). And `load_form_data` leaves the
+  details out of a form's data, where the registry's own `form_data_out`
+  puts them beside the trail's fields.
+- **A form can check a target as it is written,** since the file of the
+  pattern language imports nothing else of chatddx's.
+- **A scorer's page is a tool's:** its function, view, target kind,
+  arguments and metrics.
 
-- **A case that should raise no warning.** A plan that rightly leaves
-  `acute_warning` null reads as no warning, and `warning_mentions` scores
-  it 0. A target could say that no warning is expected, and score such a
-  plan 1.
+### Later, from inspect
+
+- people's edits to scores, as rows beside a score, each with its author,
+  time and reason, when clinicians adjudicate in the portal (inspect's
+  `ScoreEdit` and `ProvenanceData`);
+- reducers over a batch's replicates;
+- a log per cell, each scorer as an `EvalScorer` and the case's targets in
+  the sample's metadata;
+- inspect's reasons for what can't be read, when inspect scores (§4).
 
 ## 12. Where the code lags
 
 Where this note and the code differ, the note is what was decided:
 
-- **Trials:** a trial is its configuration, stack, case and seed (§6), but
-  the code keys it by its owner as well. `TrialModel` is to lose its owner
-  and collaborators and gain a unique constraint over the four, with nulls
-  not distinct. `wipe-data` is to remove a user's runs, and then any trial
-  left without a run.
-- **Docstrings:** the toolset's still calls it deferred, and the output's
-  still says every output offers `text`.
 - **Run status:** the model keeps statuses from the worker before the
   redesign: stored, queued, running and scored. Only completed and errored
   are set.
