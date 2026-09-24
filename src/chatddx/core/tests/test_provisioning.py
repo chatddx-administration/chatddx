@@ -30,7 +30,6 @@ GIFTBAG = settings.INVENTORY_PATH / "giftbag-inventory.toml"
 
 NOTHING: dict[str, set[str]] = {entity: set() for entity in all_entities}
 
-# what wipe-data says of a user with no history
 NO_HISTORY = [
     "[run]: removed 0, unshared 0",
     "[message]: removed 0",
@@ -86,9 +85,6 @@ def versions() -> dict[str, int]:
     }
 
 
-# ------------------------------------------------------------------ init-data
-
-
 def test_init_data_archives_the_inventory_and_shares_it():
     inventory = parse(INVENTORY)
 
@@ -103,8 +99,6 @@ def test_init_data_archives_the_inventory_and_shares_it():
             assert branch_model.target.fingerprint == trail.fingerprint
             assert [c.name for c in branch_model.collaborators.all()] == ["alex"]
 
-    # the archive holds the inventory and nothing beside it, and the user
-    # holds nothing of their own
     assert owned(ARCHIVE) == names(inventory)
     assert owned("alex") == NOTHING
 
@@ -138,12 +132,9 @@ def test_init_data_with_giftbag_gives_the_user_their_own():
         + receipts(giftbag, "giftbag", "created")
     )
 
-    # the configurations, what they name, and the cases; machines, models and
-    # stacks stay the archive's
     assert owned("alex") == names(giftbag)
     assert owned("alex")["stack"] == set()
 
-    # the user's own branches of the archive's content: the same trails
     mine = owned_inventory("alex")
     archived = owned_inventory(ARCHIVE)
 
@@ -151,7 +142,6 @@ def test_init_data_with_giftbag_gives_the_user_their_own():
         for name, branch_model in mine[entity].items():
             assert branch_model.target_id == archived[entity][name].target_id
 
-    # and what the giftbag says beside the content, as the user's
     plan = mine["configuration"]["plan"]
     tags = [(tag.owner.name, tag.entity, tag.name) for tag in plan.tags.all()]
     assert tags == [("alex", "configuration", "ddx")]
@@ -176,7 +166,6 @@ def test_init_data_keeps_the_archive_shared_as_it_changes(tmp_path: Path):
         changed, "archive", "created"
     )
 
-    # the new version is shared with whoever the one it supersedes was
     lookup = owned_inventory(ARCHIVE)["tool"]["lookup"]
     assert lookup.version_count == 2
     assert [c.name for c in lookup.collaborators.all()] == ["alex", "other"]
@@ -194,12 +183,8 @@ def test_init_data_reads_both_inventories_before_writing(tmp_path: Path):
     assert result.exit_code == 1
     assert result.stderr.startswith(f"{giftbag}: tool 'lookup': unknown key 'colour'")
 
-    # the archive's inventory is sound, and still nothing of it is committed
     assert owned(ARCHIVE) == NOTHING
     assert not IdentityModel.objects.filter(name="alex").exists()
-
-
-# ------------------------------------------------------------------ wipe-data
 
 
 def test_wipe_data_takes_back_what_init_data_gave():
@@ -217,8 +202,6 @@ def test_wipe_data_takes_back_what_init_data_gave():
     assert owned("alex") == NOTHING
     assert shared_with("alex") == NOTHING
 
-    # what isn't the user's stays: the archive, and another user's own and
-    # their share of it
     assert owned(ARCHIVE) == names(inventory)
     assert owned("other") == names(giftbag)
     assert shared_with("other") == names(inventory)
@@ -230,7 +213,6 @@ def test_init_data_after_wipe_data_provisions_again():
     _ = run("init-data", "alex", "--with-giftbag")
     _ = run("wipe-data", "alex")
 
-    # the archive is as it was, and the user's own is made anew
     assert run("init-data", "alex", "--with-giftbag") == (
         receipts(inventory, "archive", "validated")
         + receipts(giftbag, "giftbag", "created")
@@ -260,10 +242,8 @@ def test_wipe_data_takes_back_the_user_s_history_too():
     _ = run("init-data", "alex", "--with-giftbag")
     ran_test_tools("alex")
 
-    # the run read alex's own tools, and goes before them
     assert run("wipe-data", "alex")[:4] == [
         "[run]: removed 1, unshared 0",
-        # a round for each tool, then the answer
         "[message]: removed 6",
         "[session]: removed 1, unshared 0",
         "[trial]: removed 1, unshared 0",
@@ -279,7 +259,6 @@ def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read():
     _ = run("init-data", "bob")
     ran_test_tools("alex")
 
-    # as if bob had run on alex's tools
     bob = IdentityModel.objects.get(name="bob")
     for model in (RunModel, SessionModel, TrialModel):
         _ = model.objects.update(owner=bob)
@@ -288,6 +267,5 @@ def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read():
 
     assert result.exit_code == 1
     assert "alex is kept: runs of others read its branches" in result.output
-    # and nothing is taken
     assert owned("alex") == names(giftbag)
     assert RunModel.objects.count() == 1

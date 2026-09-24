@@ -91,8 +91,6 @@ def select_branch_models(
 
     models = list(qs)
 
-    # One walk for the whole selection: the trails come back a table at a
-    # time rather than a row at a time (see `chatddx.repo.utils`).
     _ = resolve_trails([model.target for model in models])
 
     return models
@@ -261,12 +259,6 @@ def commit(
     branch_model_cls = entity.branch_model
     trail_model_cls = entity.trail_model
 
-    # A caller that says nothing about what this kind of branch carries hands
-    # over the base details; widening it to the entity's own leaves every
-    # relation at None, which still means "inherit from the superseded
-    # version", and every detail at its default. A caller that names
-    # something the entity does not carry is rejected here rather than
-    # ignored.
     branch_details = entity.branch_details.model_validate(branch_details.model_dump())
     details = dump_details(branch_details)
 
@@ -282,8 +274,6 @@ def commit(
         and trail.fingerprint == canon.target.fingerprint
         and details == canon.details
     ):
-        # What a branch is related to is not part of its version, so it can
-        # change while the canon stays put.
         commit_relations(canon, canon, branch_details)
         _ = commit_closure(canon.target, branch_details.owner)
         return False
@@ -344,9 +334,6 @@ def commit_closure(target: TrailModel, owner_name: str) -> list[str]:
         ).exists()
 
         if has_branch:
-            # Skipped, not stepped over: what this trail reaches is still
-            # walked, so an owner left holding a toolset whose tools have no
-            # branches is repaired rather than kept out of reach.
             continue
 
         branch_name = resolve_branch_name(entity.name, trail.fingerprint)
@@ -425,9 +412,6 @@ def _reached(target: TrailModel) -> list[TrailModel]:
     return reached
 
 
-# How a branch-details field turns each name it holds into the row that name
-# stands for, keyed by the `relation` the field is tagged with; see
-# `chatddx.repo.families.pydantic.RELATION`.
 RELATION_RESOLVERS: dict[
     str,
     Callable[[IdentityModel, EntityName], Callable[[str], Model]],

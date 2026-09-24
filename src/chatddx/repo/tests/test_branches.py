@@ -148,7 +148,6 @@ def test_a_new_version_carries_over_the_relations_it_doesn_t_name(
     first, second = versions("machine", owner, "box")
 
     assert [tag.name for tag in second.tags.all()] == ["a"]
-    # and the version it supersedes keeps what it was saved with
     assert [tag.name for tag in first.tags.all()] == ["a"]
 
 
@@ -253,9 +252,6 @@ def test_two_owners_of_one_case_share_its_trail(
     assert mine.pk != theirs.pk
 
 
-# ---------------------------------------------------- what an identity sees
-
-
 def case(name: str, owner: str, *collaborators: str, payload: str = "") -> None:
     assert commit(
         CaseTrailSchema(payload=payload or f"{owner}'s {name}"),
@@ -357,8 +353,6 @@ def test_shared_by_one_owner_its_own_still_shadows(
     assert found.owner.name == "alex"
 
 
-# ------------------------------------------------------------------- copies
-
 SENTINEL = {
     "sentinel_string": "chatddx.runtime.tools:sentinel_string",
     "sentinel_op": "chatddx.runtime.tools:sentinel_op",
@@ -400,7 +394,6 @@ def test_a_copy_is_the_source_s_branch_under_its_name_with_its_details(
         mine = get_branch_model("tool", owner.name, name)
         assert mine.details["implementation"]["entry_point"] == entry_point
 
-    # and a commit of the toolset leaves its closure nothing to name
     assert commit(toolset, BranchSchemaDetails(name="mine", owner=owner.name))
     assert tool_names(owner) == ["sentinel_op", "sentinel_string"]
 
@@ -411,8 +404,6 @@ def test_what_the_owner_has_or_has_named_otherwise_is_not_copied(
     trails: InventoryTrailSchema,
 ):
     sentinel_tools(other_owner.name, trails)
-    # the owner has sentinel_op already, under a name of their own, and
-    # calls another tool sentinel_string
     assert commit(
         trails.tool["sentinel_op"], BranchSchemaDetails(name="my-op", owner=owner.name)
     )
@@ -424,7 +415,6 @@ def test_what_the_owner_has_or_has_named_otherwise_is_not_copied(
 
     assert commit_copies(toolset, owner.name, other_owner.name) == []
 
-    # which leaves sentinel_string to the closure, named for its content
     assert commit(toolset, BranchSchemaDetails(name="mine", owner=owner.name))
     fingerprint = trails.tool["sentinel_string"].fingerprint
     assert tool_names(owner) == sorted(

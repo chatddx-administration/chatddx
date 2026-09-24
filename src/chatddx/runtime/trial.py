@@ -3,7 +3,10 @@ A trial: a resolved cell run on a case (new-datamodel.md §5).
 
 It is sent through pydantic-ai on vLLM (data-generation.md §2.4), with a
 profile taken from the model's facts instead of one matched on its served
-name, and with every field resolution wrote. The exact bodies are kept, each
+name, and with every field resolution wrote. chatddx owns every string the
+model reads (data-generation.md §2.2): the schema goes out as it was written,
+pydantic-ai adds no words of its own, and an answer that doesn't hold is
+recorded, not repaired by asking again. The exact bodies are kept, each
 request as it went and each response as it came: the request, not the
 variations' names, says what ran. So are pydantic-ai's messages, as far as
 the run got.
@@ -38,9 +41,6 @@ from pydantic_ai.providers.vllm import VLLMProvider
 
 from chatddx.runtime.resolution import Resolution
 
-# The request fields pydantic-ai's settings type, by the setting's name. The
-# rest go in `extra_body`, which the openai SDK merges into the top of the
-# request body.
 SETTINGS = {
     "temperature": "temperature",
     "top_p": "top_p",
@@ -50,24 +50,15 @@ SETTINGS = {
     "stop": "stop_sequences",
 }
 
-# What pydantic-ai would otherwise do to a request on its own account, and
-# chatddx doesn't. The schema goes out as it was written, and it reaches the
-# model only through the coercion's schema prompt or the final-result tool
-# (data-generation.md §2.2): chatddx owns every string the model reads.
 OWN: OpenAIModelProfile = {
     "json_schema_transformer": None,
     "native_output_requires_schema_in_instructions": False,
-    # prompted is the schema shown and nothing more: no JSON mode
     "supports_json_object_output": False,
-    # a model taken for a reasoning one would have its sampling dropped
     "openai_supports_reasoning": False,
 }
 
-# the tool a structured answer is given through, in tool mode
 FINAL_RESULT = "final_result"
 
-# the rounds of tool calls a model is let make before it answers: a trial
-# that is still calling after them is stopped
 TOOL_ROUNDS = 5
 
 
@@ -88,21 +79,12 @@ class Trial:
         self.case: str = case
         self.api_key: str | None = api_key
         self.transport: httpx2.AsyncBaseTransport | None = transport
-        # the trial's own, not the configuration's (new-datamodel.md §6)
         self.seed: int | None = seed
-        # what each tool runs, by its name: the entry point its branch says
-        # it has; it changes the tool's results, not the request
         self.implementations: dict[str, str] = implementations or {}
-        # pydantic-ai's ids for the run and the conversation it is held in:
-        # every message carries them
         self.run_id: str = run_id or str(uuid.uuid4())
         self.conversation_id: str = conversation_id or str(uuid.uuid4())
-        # the bodies as they went and came, one of each per round; a
-        # response's fills as it streams
         self.requests: list[bytes] = []
         self.responses: list[bytearray] = []
-        # the run's messages, as pydantic-ai keeps them: as far as it got,
-        # whether or not it got to an answer
         self.messages: list[ModelMessage] = []
         self.history: list[ModelMessage] = list(history)
 
@@ -128,9 +110,6 @@ class Trial:
                 provider=provider,
                 profile=self._profile,
             )
-            # An answer, or a call, that doesn't hold is recorded, not
-            # repaired by asking again in pydantic-ai's words
-            # (data-generation.md §2.2).
             agent = Agent(
                 model,
                 instructions=system or None,
@@ -192,9 +171,6 @@ class Trial:
         if coercion is None:
             return str
 
-        # Its references inlined already, pydantic-ai has nothing to make of
-        # it but a sort of its keywords; its properties stay in the order
-        # they were written, the order a constrained decoder emits them in.
         structured = StructuredDict(coercion.sent)
 
         match coercion.mode:
@@ -210,8 +186,6 @@ class Trial:
                 return PromptedOutput(structured, template=False)
 
     def _profile(self, _matched: ModelProfile) -> ModelProfile:
-        # vLLM's profile for no model family in particular, and the facts'
-        # overrides: nothing hangs on the served name
         return merge_profile(
             DEFAULT_PROFILE,
             VLLMProvider.model_profile(""),
@@ -227,11 +201,8 @@ class Trial:
         self.responses.append(body)
 
         try:
-            # one made in memory, as a transport of the tests' makes it, is
-            # read already
             body.extend(response.content)
         except httpx2.ResponseNotRead:
-            # before its body is read: it is copied as it is
             stream = cast(httpx2.AsyncByteStream, response.stream)
             response.stream = _Copied(stream, body)
 
@@ -264,7 +235,6 @@ def _runner(entry_point: str) -> Callable[..., Any]:
     implementation = load(entry_point)
 
     def run(**arguments: Any) -> Any:
-        # a tool that fails says so to the model, in chatddx's words
         try:
             return implementation(**arguments)
         except Exception as e:  # noqa: BLE001

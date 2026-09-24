@@ -99,9 +99,6 @@ def refusals(
     return refused.value.refusals
 
 
-# ------------------------------------------------------------------ realized
-
-
 def test_a_cell_resolves_to_what_the_facts_write():
     resolution = resolve(cell(), STACK, FACTS, SERVING)
 
@@ -109,7 +106,6 @@ def test_a_cell_resolves_to_what_the_facts_write():
     assert resolution.served_name == "Qwen/Qwen3-8B-AWQ"
     assert resolution.profile == {"supports_json_schema_output": True}
 
-    # the model's own effort, and its recommendation for the mode it is
     assert resolution.reasoning.effort == "default"
     assert resolution.reasoning.intent == "on"
     assert resolution.sampling.source == "recommended for 'on'"
@@ -124,7 +120,6 @@ def test_a_cell_resolves_to_what_the_facts_write():
 def test_the_case_is_placed_when_a_trial_renders_the_cell():
     resolution = resolve(cell(), STACK, FACTS, SERVING)
 
-    # an unfilled slot the instruction branches on is left out
     assert resolution.render("a cough") == ("List the diagnoses.", "a cough")
 
 
@@ -204,9 +199,6 @@ def test_reasoning_realizes_without_a_sampling_to_pull_in():
 
     assert reasoning is not None
     assert (reasoning.intent, sampling, refusals) == ("on", None, [])
-
-
-# ------------------------------------------------------------------- refused
 
 
 def test_an_effort_the_facts_refuse_is_refused_with_their_reason():
@@ -289,9 +281,6 @@ def test_a_stack_the_repl_can_t_send_to_is_refused():
     ]
 
 
-# ------------------------------------------------------------------ coercion
-
-# key order as written: a constrained decoder emits keys in this order
 SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {"urgent": {"type": "boolean"}, "diagnoses": {"type": "array"}},
@@ -314,7 +303,6 @@ def test_a_schema_is_held_by_the_mode_the_coercion_asks_for():
     assert resolution.coercion == Coercion(
         "native", "native", SCHEMA, SCHEMA, None, None
     )
-    # shown to the model by nothing: no schema prompt
     assert resolution.slots == {"output_guidance": "List the diagnoses."}
 
 
@@ -356,7 +344,6 @@ def test_a_mode_needs_what_the_facts_say_it_needs():
         cell(output=STRUCTURED, coercion=coercion), STACK, FACTS, serving
     )
 
-    # what the facts say of the mode goes with it
     assert resolution.coercion == Coercion(
         "tool", "tool", SCHEMA, SCHEMA, "Answer here.", "tool_choice is ignored"
     )
@@ -374,7 +361,6 @@ def test_a_reasoning_parser_is_needed_only_while_the_model_reasons():
         )
     ]
 
-    # with nothing to think, the grammar may hold from the first token
     off = ReasoningTrailSchema(effort="off")
     resolution = resolve(
         cell(output=STRUCTURED, coercion=native, reasoning=off), STACK, FACTS, bare
@@ -420,7 +406,6 @@ def test_references_are_inlined_as_the_request_carries_the_schema():
     assert resolution.coercion.sent == {
         "type": "object",
         "properties": {
-            # a reference's siblings stay beside what it refers to
             "first": {
                 "type": "object",
                 "properties": {"z": {}, "a": {}},
@@ -494,8 +479,6 @@ def test_a_schema_prompt_the_instruction_doesn_t_place_is_refused():
     ]
 
 
-# ------------------------------------------------------------------- toolset
-
 TOOLED = ServingTrailSchema(
     engine=ENGINE,
     args={
@@ -533,7 +516,6 @@ def test_a_toolset_offers_its_tools_in_order_as_the_request_carries_them():
     )
 
     assert resolution.tools == [
-        # with its references inlined, as a schema is
         Tool(
             "lookup",
             "Look a term up.",
@@ -541,7 +523,6 @@ def test_a_toolset_offers_its_tools_in_order_as_the_request_carries_them():
         ),
         Tool("now", "", {"type": "object", "properties": {}}),
     ]
-    # and the guidance fills its slot
     assert resolution.slots["tool_guidance"] == "Look it up."
     assert resolution.render("a cough")[0] == "List the diagnoses.\nLook it up."
 
@@ -601,7 +582,6 @@ def test_tool_guidance_the_instruction_doesn_t_place_is_refused():
 def test_a_refused_cell_keeps_what_its_other_slices_resolve_to():
     toolset = ToolsetTrailSchema(tools=[ToolTrailSchema(name="lookup")])
 
-    # the serving has no tool call parser
     with pytest.raises(CellRefused) as refused:
         _ = resolve(cell(toolset=toolset), STACK, FACTS, SERVING)
 
@@ -612,14 +592,10 @@ def test_a_refused_cell_keeps_what_its_other_slices_resolve_to():
     assert refused.value.slots == {"output_guidance": "List the diagnoses."}
 
 
-# ------------------------------------------------------------- the test_inventory
-
-
 @pytest.mark.parametrize("configuration_name", ["diagnoses", "diagnoses-tool"])
 def test_on_pelle_a_grammar_leaves_qwen3_no_room_to_think(
     test_inventory: ParsedInventory, configuration_name: str
 ):
-    # pelle serves Qwen3 without a reasoning parser
     configuration, _ = test_inventory.configuration[configuration_name]
     stack, stack_details = test_inventory.stack["qwen3-8b-awq@pelle"]
     _, model = test_inventory.model["qwen3-8b-awq"]
@@ -631,7 +607,6 @@ def test_on_pelle_a_grammar_leaves_qwen3_no_room_to_think(
     assert [refusal.slice for refusal in refused.value.refusals] == ["coercion"]
     assert "needs a reasoning parser while the model reasons" in str(refused.value)
 
-    # and with reasoning off, the cell runs
     thoughtless = configuration.model_copy(update={"reasoning": off})
     resolution = resolve(thoughtless, stack_details, model.facts, stack.serving)
 

@@ -54,7 +54,6 @@ async def test_a_trial_sends_what_resolution_wrote(cell: Cell):
         | resolved.fields
     ]
 
-    # and keeps the body as it was sent
     assert [json.loads(body) for body in trial.requests] == fake.requests
 
 
@@ -141,8 +140,6 @@ async def test_the_fields_pydantic_ai_types_go_out_as_the_request_names_them(
 
     _ = await run(Trial(resolved, CASE, transport=fake))
 
-    # pydantic-ai sends `max_tokens` by OpenAI's newer name, which vLLM takes
-    # as well
     sent = fake.requests[0]
     assert (sent["stop"], sent["max_completion_tokens"], sent["top_k"]) == (
         ["\n\n"],
@@ -196,13 +193,9 @@ async def test_a_trial_runs_against_the_fake_over_http(cell: Cell, fake_endpoint
     result = events[-1]
     assert isinstance(result, AgentRunResultEvent)
     assert result.result.output == ANSWER
-    # and what streamed back is kept whole
     [response] = trial.responses
     assert response.startswith(b"data: {")
     assert response.endswith(b"data: [DONE]\n\n")
-
-
-# ------------------------------------------------------------------ coercion
 
 
 def answer(events: list[AgentStreamEvent | AgentRunResultEvent[Any]]) -> Any:
@@ -223,20 +216,15 @@ async def test_native_asks_for_the_schema_as_written_and_says_nothing_of_it(cell
     written: dict[str, Any] = resolved.coercion.schema
     sent: dict[str, Any] = request["response_format"]["json_schema"]["schema"]
     assert request["response_format"]["type"] == "json_schema"
-    # the schema with its references inlined, as resolution made it: nothing
-    # of pydantic-ai's but a sort of its keywords, and its properties in the
-    # order written, the order a constrained decoder emits them in
     assert sent == resolved.coercion.sent
     assert "$defs" in written
     assert list(sent["properties"]) == list(written["properties"])
-    # and no text of pydantic-ai's reaches the model
     system, user = resolved.render(CASE)
     assert request["messages"] == [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
 
-    # and the two hold a document to the same
     document = answer(events)
     assert invalid(written, document) is None
     assert invalid(sent, document) is None
@@ -255,7 +243,6 @@ async def test_tool_mode_offers_the_schema_as_a_tool_the_answer_is_given_through
     [request] = fake.requests
     [tool] = request["tools"]
     assert tool["function"]["name"] == "final_result"
-    # said to be what the coercion says it is, not in pydantic-ai's words
     assert tool["function"]["description"] == resolved.coercion.tool_description
     assert tool["function"]["parameters"] == resolved.coercion.sent
     assert "response_format" not in request
@@ -272,7 +259,6 @@ async def test_prompted_shows_the_schema_and_holds_the_answer_to_nothing(cell: C
     events = await run(Trial(resolved, CASE, transport=fake))
 
     [request] = fake.requests
-    # no JSON mode either: prompted is the schema shown and nothing more
     assert "response_format" not in request
     assert "tools" not in request
     assert resolved.slots["schema_prompt"] in request["messages"][0]["content"]
@@ -286,7 +272,6 @@ async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(cell: Cell):
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         bodies.append(json.loads(request.content))
-        # prose where the schema wants a document
         text = "".join(stream({"model": "Qwen/Qwen3-8B-AWQ", "messages": []}))
         return httpx2.Response(
             200, headers={"content-type": "text/event-stream"}, content=text.encode()
@@ -317,9 +302,6 @@ async def test_a_seed_is_the_trial_s_and_goes_out_with_it(cell: Cell):
     assert fake.requests[0]["seed"] == 42
 
 
-# ------------------------------------------------------------------- toolset
-
-
 def returned(request: dict[str, Any]) -> list[str]:
     """What the tools returned, as a request sends it back."""
     return [m["content"] for m in request["messages"] if m["role"] == "tool"]
@@ -346,7 +328,6 @@ async def test_a_trial_offers_the_tools_as_resolution_wrote_them(
         }
         for tool in resolved.tools
     ]
-    # in the order written, keywords and all
     assert [json.dumps(o["function"]["parameters"]) for o in offered] == [
         json.dumps(tool.parameters) for tool in resolved.tools
     ]
@@ -362,11 +343,9 @@ async def test_each_call_is_run_and_what_it_returned_goes_back(
 
     events = await run(trial)
 
-    # a round for each tool, then the answer
     assert len(fake.requests) == 3
     assert returned(fake.requests[-1]) == ["asdf", "0"]
     assert answer(events) == ANSWER
-    # and every body is kept as it was sent
     assert [json.loads(body) for body in trial.requests] == fake.requests
 
 
@@ -387,7 +366,6 @@ async def test_a_tool_that_fails_tells_the_model_why(
     )
 
     assert returned(fake.requests[-1]) == ["RuntimeError: the index is down", "0"]
-    # and the trial carries on
     assert answer(events) == ANSWER
 
 
@@ -400,7 +378,6 @@ async def test_a_model_still_calling_after_its_rounds_is_stopped(
     def handler(request: httpx2.Request) -> httpx2.Response:
         body = json.loads(request.content)
         bodies.append(body)
-        # as if nothing had been called yet: the fake calls on and on
         text = "".join(stream(body | {"messages": body["messages"][:1]}))
         return httpx2.Response(
             200, headers={"content-type": "text/event-stream"}, content=text.encode()
@@ -417,9 +394,7 @@ async def test_a_model_still_calling_after_its_rounds_is_stopped(
     with pytest.raises(UsageLimitExceeded):
         _ = await run(trial)
 
-    # its rounds, and the one it was to answer in
     assert len(bodies) == TOOL_ROUNDS + 1
-    # and the messages as far as it got: the last round's results, unsent
     assert len(trial.messages) == 2 * (TOOL_ROUNDS + 1) + 1
     assert trial.messages[-1].kind == "request"
 

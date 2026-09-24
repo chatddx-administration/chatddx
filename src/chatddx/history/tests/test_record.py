@@ -125,7 +125,6 @@ def test_a_run_is_written_down_with_its_trial_session_and_messages():
         "stop",
         None,
     )
-    # the bytes as they went and came
     [request] = run.requests
     [response] = run.responses
     assert json.loads(request)["seed"] == 7
@@ -133,7 +132,6 @@ def test_a_run_is_written_down_with_its_trial_session_and_messages():
     assert run.started is not None and run.finished is not None
     assert run.started <= run.finished
 
-    # the trial: the cell's trails, the case's, and the seed
     stack = branch("stack", STACK)
     trial = run.trial
     assert (trial.configuration_id, trial.stack_id, trial.case_id, trial.seed) == (
@@ -142,16 +140,13 @@ def test_a_run_is_written_down_with_its_trial_session_and_messages():
         branch("case", "case-1").target_id,
         7,
     )
-    # and the branches whose details resolution read
     assert run.stack_branch_id == stack.pk
     assert run.model_branch == branch("model", "qwen3-8b-awq")
 
-    # and the client it ran on: a dev shell's, as the registry has it
     assert run.client_id == branch("client", "chatddx-dev").target_id
     assert run.client_rev is not None
     assert run.client_packages["pydantic-ai-slim"]
 
-    # the session: pydantic-ai's messages, carrying the run's id
     assert run.session is not None
     messages = list(run.session.messages.all())
     assert [(m.kind, m.role) for m in messages] == [
@@ -188,7 +183,6 @@ def test_a_run_keeps_its_tools_branches_and_every_round():
         "sentinel_op",
         "sentinel_string",
     ]
-    # a round for each tool, then the answer
     assert len(run.requests) == len(run.responses) == 3
     assert [m.role for m in run.session.messages.all()] == [  # pyright: ignore[reportOptionalMemberAccess]
         "user",
@@ -203,7 +197,6 @@ def test_a_run_keeps_its_tools_branches_and_every_round():
 def test_a_run_that_came_to_no_answer_keeps_its_exchange_as_far_as_it_got():
     def handler(request: httpx2.Request) -> httpx2.Response:
         body = json.loads(request.content)
-        # as if nothing had been called yet: the fake calls on and on
         text = "".join(stream(body | {"messages": body["messages"][:1]}))
         return httpx2.Response(
             200, headers={"content-type": "text/event-stream"}, content=text.encode()
@@ -217,7 +210,6 @@ def test_a_run_that_came_to_no_answer_keeps_its_exchange_as_far_as_it_got():
 
     assert run.session is not None
     messages = list(run.session.messages.all())
-    # every round, the last one's results that went unsent, and the error
     assert len(messages) == 2 * (TOOL_ROUNDS + 1) + 2
     assert [m.kind for m in messages[-2:]] == ["request", "error"]
     assert messages[-1].payload == {"error": run.error}

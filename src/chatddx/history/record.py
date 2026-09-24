@@ -51,9 +51,7 @@ class Branches:
     """The branch rows whose details resolution read, by their ids."""
 
     stack: int
-    # the model's, for its facts: none where no branch of it was found
     model: int | None
-    # each tool's, for what it runs
     tools: list[int] = field(default_factory=list[int])
 
 
@@ -64,7 +62,6 @@ class Outcome:
     status: RunStatus
     output: JsonValue = None
     valid: bool | None = None
-    # why it came to no output, or errored
     error: str | None = None
 
 
@@ -140,8 +137,6 @@ def _trial(
     seed: int | None,
 ) -> TrialModel:
     """The owner's trial of the cell on the case: the one run before, or a new one."""
-    # a cell is content, not a name: a configuration with a variation set in
-    # it is committed as a trail, with no branch (new-datamodel.md §5)
     fields = {
         "owner": owner,
         "configuration": dump_trail(ConfigurationTrailModel, configuration),
@@ -174,7 +169,6 @@ def _messages(
     ]
 
     if error is not None:
-        # where the exchange broke off, or came to nothing
         messages.append(
             MessageModel(
                 session=session,

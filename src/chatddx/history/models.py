@@ -122,7 +122,6 @@ class TrialModel(Model):
         related_name="trials",
     )
     case_id: int
-    # the trial's, not the configuration's (new-datamodel.md §6)
     seed = BigIntegerField(
         null=True,
         blank=True,
@@ -136,7 +135,6 @@ class SessionModel(Model):
     class Meta:
         app_label = "orm"
 
-    # pydantic-ai's conversation id for the runs held in it
     uuid = UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -169,7 +167,6 @@ class RunModel(Model):
     class Meta:
         app_label = "orm"
 
-    # pydantic-ai's id for the agent run, which its messages carry
     uuid = UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -207,9 +204,6 @@ class RunModel(Model):
     )
     session_id: int | None
 
-    # The branch rows whose details resolution read (new-datamodel.md §1):
-    # the stack's endpoint and served name, the model's facts, and what each
-    # tool runs.
     stack_branch = ForeignKey(
         StackBranchModel,
         default=None,
@@ -266,8 +260,6 @@ class RunModel(Model):
         blank=True,
     )
 
-    # the bodies as they went and came, one of each per request
-    # (data-generation.md §3.3)
     requests = ArrayField(
         TextField(),
         default=list,
@@ -279,27 +271,22 @@ class RunModel(Model):
         blank=True,
     )
 
-    # The answer with its envelope removed, the same whichever mode carried
-    # it (new-datamodel.md §4), in the order the model wrote it.
     output = OrderedJSONField(
         default=None,
         null=True,
         blank=True,
     )
-    # whether the output holds to the output's schema; None for free text
     valid = BooleanField(
         default=None,
         null=True,
         blank=True,
     )
-    # the last response's: a truncated answer is not a wrong one
     finish_reason = CharField(
         max_length=32,
         default=None,
         null=True,
         blank=True,
     )
-    # why the run came to no output, or errored
     error = TextField(
         default=None,
         null=True,
@@ -334,10 +321,8 @@ class MessageModel(Model):
         on_delete=PROTECT,
     )
     session_id: int
-    # the agent run that made it: a run's uuid
     run_id = UUIDField(db_index=True)
     role = CharField(max_length=16)
     kind = CharField(max_length=16)
-    # pydantic-ai's message, as it serializes it; an error's type and text
     payload: JSONField[dict[str, Any]] = JSONField()
     timestamp = DateTimeField()

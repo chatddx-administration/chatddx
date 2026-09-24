@@ -84,49 +84,36 @@ class Slices:
 class SliceRefusal:
     slice: Slice
     reason: str
-    # `refused`: the stack can't honour the intent; `later`: the repl can't
-    # resolve it yet
     kind: Literal["refused", "later"] = "refused"
 
 
 @dataclass(frozen=True)
 class Reasoning:
     effort: Effort
-    # what the effort ends at on this model, through the collapses its facts
-    # declare
     intent: Intent
     writes: dict[str, JsonValue]
 
 
 @dataclass(frozen=True)
 class Sampling:
-    # where the values the variation leaves out come from
     source: str
     writes: dict[str, JsonValue]
 
 
 @dataclass(frozen=True)
 class Coercion:
-    # the mode the variation asks for, and the one it realizes on the model:
-    # `auto` is whichever the facts name
     requested: CoercionMode
     mode: Mode
-    # the output's, as it was written
     schema: dict[str, JsonValue]
-    # as the request carries it, with its references inlined
     sent: dict[str, JsonValue]
-    # what the tool the answer is given through is said to be, in tool mode
     tool_description: str | None
-    # what the facts say of the mode on this model
     note: str | None
 
 
 @dataclass(frozen=True)
 class Tool:
-    # what the model sees of it: its implementation is the trial's
     name: str
     description: str
-    # as the request carries them, with their references inlined
     parameters: dict[str, JsonValue]
 
 
@@ -160,12 +147,9 @@ class Resolution:
     reasoning: Reasoning
     sampling: Sampling
     output: OutputTrailBase
-    # None for free text: whatever the coercion, it contributes nothing
     coercion: Coercion | None
-    # the toolset's, in its order
     tools: list[Tool]
     instruction: InstructionTrailBase
-    # the instruction's slots, as the other slices fill them
     slots: dict[str, str]
 
     @property
@@ -339,7 +323,6 @@ def _sampling(
                 return None
         case "recommended":
             if reasoning is None:
-                # nothing to recommend for: the reasoning is refused already
                 return None
 
             base = facts.sampling.recommended.get(reasoning.intent)
@@ -400,7 +383,6 @@ def _output(
     if output.guidance is not None:
         slots[OUTPUT_GUIDANCE] = output.guidance
 
-    # free text: whatever the coercion, it contributes nothing
     if output.schema is not None:
         coercion = _coercion(
             variation, output.schema, reasoning, facts, serving, refusals
@@ -450,7 +432,6 @@ def _toolset(
     return tools
 
 
-# the slice that fills each slot
 FILLERS = {
     OUTPUT_GUIDANCE: "output",
     SCHEMA_PROMPT: "coercion",
@@ -503,8 +484,6 @@ def _coercion(
             refusals.append(SliceRefusal("coercion", f"{through}{fact.refused}"))
         case ModeFact():
             provided = serving.provides() if serving else frozenset[Requirement]()
-            # a reasoning parser finds where the thinking ends, for a grammar
-            # to hold what follows: a model that doesn't reason needs none
             reasons = reasoning is None or reasoning.intent != "off"
             missing = [
                 need
