@@ -15,6 +15,7 @@ from chatddx.dx.fake_vllm import FakeTransport, stream
 from chatddx.history.models import RunModel, TrialModel
 from chatddx.manage import app
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
+from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
 
 pytestmark = pytest.mark.django_db
@@ -276,6 +277,148 @@ def test_set_says_what_it_can_t_set(say: Say):
     assert "a configuration always has a reasoning: only a toolset can be none" in say(
         "set reasoning none"
     )
+
+
+# ---------------------------------------------------------------------- save
+
+
+def test_save_keeps_the_cell_as_a_configuration_of_one_s_own(repl: Repl, say: Say):
+    written = say("cell free-text qwen3-8b-awq@fake", "set reasoning off", "save quiet")
+
+    assert "saved as quiet: created" in written
+    assert repl.prompt == "alex quiet×qwen3-8b-awq@fake> "
+
+    saved = ConfigurationBranchModel.objects.get(owner__name="alex", name="quiet")
+    off = ReasoningBranchModel.objects.get(owner__name="archive", name="off")
+    assert saved.target.reasoning_id == off.target_id
+
+    # and it completes, and is used like any other
+    assert "quiet" in repl.completions()["configuration"]
+    assert "cell: quiet × qwen3-8b-awq@fake" in say("use quiet")
+
+
+def test_saving_again_is_a_new_version_or_nothing(say: Say):
+    written = say(
+        "cell free-text qwen3-8b-awq@fake",
+        "save mine",
+        "save mine",
+        "set reasoning high",
+        "save mine",
+    )
+
+    assert "saved as mine: created" in written
+    assert "saved as mine: unchanged" in written
+    assert "saved as mine: a new version" in written
+    assert ConfigurationBranchModel.objects.filter(owner__name="alex").count() == 2
+
+
+def test_a_saved_configuration_s_tools_still_run(say: Say, fake: FakeTransport):
+    # alex has none of the archive's slices of their own
+    written = say("cell test-tools qwen3-8b-awq@fake", "save my-tools")
+
+    assert "yours now too:" in written
+    assert "tool sentinel_op" in written
+
+    written = say("show", "run case-1")
+    rows = {
+        cells[0]: cells[1]
+        for cells in (line.split() for line in written.splitlines())
+        if len(cells) > 1
+    }
+
+    # its slices go by the archive's names, and each tool runs what it did
+    assert (rows["instruction"], rows["toolset"]) == ("bare", "sentinel")
+    assert "[result] asdf" in written
+    assert len(fake.requests) == 3
+
+
+def test_save_needs_a_configuration(say: Say):
+    assert "the cell has no configuration to save" in say("save nothing")
+
+
+# ------------------------------------------------------------ runs, replay
+
+
+def test_runs_lists_the_latest_first(say: Say):
+    _ = say(
+        "cell free-text qwen3-8b-awq@fake",
+        "run case-1",
+        "cell plan qwen3-8b-awq@fake",
+        "run case-2",
+    )
+
+    rows = [line for line in say("runs").splitlines() if "×" in line]
+
+    assert len(rows) == 2
+    assert "plan × qwen3-8b-awq@fake × case-2" in rows[0]
+    assert rows[0].rstrip().endswith("valid")
+    assert "free-text × qwen3-8b-awq@fake × case-1" in rows[1]
+    assert rows[1].rstrip().endswith("completed")
+
+    [latest] = [line for line in say("runs 1").splitlines() if "×" in line]
+    assert "plan" in latest
+
+
+def test_runs_says_when_there_are_none(say: Say):
+    assert "alex has no runs" in say("runs")
+    assert "a count is a whole number, not 'x'" in say("runs x")
+
+
+def test_replay_shows_a_run_again_as_it_streamed(say: Say):
+    live = say("cell test-tools qwen3-8b-awq@fake", "run case-1").splitlines()
+    replayed = say("replay").splitlines()
+
+    start = next(i for i, line in enumerate(live) if line.startswith("trial:"))
+    end = next(i for i, line in enumerate(live) if line.startswith("recorded as"))
+
+    assert replayed[0].startswith("run ")
+    assert replayed[0].endswith(": test-tools × qwen3-8b-awq@fake × case-1")
+    assert replayed[1].endswith(", completed")
+    # thinking, calls, results, the answer and what it used, line for line
+    assert replayed[2:] == live[start + 1 : end]
+    assert "[result] asdf" in replayed
+
+
+def test_replay_reads_a_structured_answer_again(say: Say):
+    _ = say("cell plan qwen3-8b-awq@fake", "run case-1")
+
+    replayed = say("replay")
+
+    assert "valid" in replayed
+    assert "differential\n  1. fake diagnosis 1" in replayed
+
+
+def test_replay_takes_a_run_by_the_start_of_its_id(say: Say):
+    _ = say("cell free-text qwen3-8b-awq@fake", "run case-1", "run case-2")
+    first = RunModel.objects.order_by("pk").first()
+    assert first is not None
+
+    assert ": free-text × qwen3-8b-awq@fake × case-1" in say(
+        f"replay {str(first.uuid)[:8]}"
+    )
+    assert "alex has no run 'zzzz'" in say("replay zzzz")
+    # every id starts with nothing
+    assert "more than one run starts with ''" in say("replay ''")
+
+
+def test_replay_of_a_run_whose_server_failed_says_why():
+    provision()
+
+    def handler(_request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(400, json={"error": {"message": "no such model"}})
+
+    repl = Repl("alex", Console(record=True, width=200), httpx2.MockTransport(handler))
+    _ = repl.handle("cell free-text qwen3-8b-awq@fake")
+    _ = repl.handle("run case-1")
+    _ = repl.console.export_text()
+
+    _ = repl.handle("replay")
+    replayed = repl.console.export_text()
+
+    assert ", errored" in replayed
+    assert "no such model" in replayed
+    # no answer, so nothing it used to come to one
+    assert " in, " not in replayed
 
 
 # ----------------------------------------------------------------- reasoning

@@ -7,6 +7,9 @@ repl holds one the way psql holds a database: `use` puts a configuration in
 it, `on` a stack, `set` another variation of one of its slices, and `run`
 makes a trial of it on a case. Names are looked up as the identity the repl
 runs as sees them: its own branches first, then those shared with it.
+
+Every run is recorded: `runs` lists them, and `replay` shows one again as it
+streamed. `save` keeps the cell as a configuration of the identity's own.
 """
 
 import asyncio
@@ -17,16 +20,22 @@ import shlex
 import sys
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Annotated, Any, get_args
+from typing import Annotated, Any, cast, get_args
 
 import typer
+from django.db import transaction
 from django.utils import timezone
 from pydantic import JsonValue
 from pydantic_ai import (
     AgentRunEvents,
     AgentRunResultEvent,
     FunctionToolResultEvent,
+    ModelMessage,
+    ModelMessagesTypeAdapter,
+    ModelRequest,
+    ModelResponse,
     PartDeltaEvent,
     PartEndEvent,
     PartStartEvent,
@@ -46,15 +55,17 @@ from rich.text import Text
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
-from chatddx.history.models import RunStatus
+from chatddx.history.models import MessageKind, RunModel, RunStatus
 from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
+from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchSpec,
     ConfigurationTrailSchema,
 )
 from chatddx.repo.entities.model.pydantic import ModelBranchSpec, ModelFacts
+from chatddx.repo.entities.output.pydantic import OutputTrailBase, OutputTrailSpec
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchSpec
 from chatddx.repo.entities.stack.pydantic import StackBranchSpec
 from chatddx.repo.entities.tool.pydantic import ToolBranchSpec
@@ -63,9 +74,13 @@ from chatddx.repo.names import short_fingerprint
 from chatddx.repo.shufflers.branch import (
     AmbiguousBranchError,
     BranchNotFoundError,
+    commit,
+    commit_copies,
+    get_branch_model,
     get_visible_branch_model,
     select_visible_branch_models,
 )
+from chatddx.repo.shufflers.trail import dump_trail, load_trail
 from chatddx.runtime.resolution import (
     CellRefused,
     Coercion,
@@ -103,6 +118,9 @@ COMMANDS: dict[str, tuple[tuple[str, ...], str]] = {
     "show": ((), "show the cell, and how it resolves on its stack"),
     "reasoning": ((), "show what each reasoning variation does on each stack"),
     "run": (("CASE", "[SEED]"), "run a case on the cell, with a seed if given"),
+    "save": (("NAME",), "save the cell's configuration as your own, as NAME"),
+    "runs": (("[COUNT]",), "list your latest runs, the last 20 unless COUNT says"),
+    "replay": (("[RUN]",), "show a run again as it streamed: the latest, or RUN"),
     "help": ((), "list the commands"),
     "quit": ((), "leave (or Ctrl-D)"),
 }
@@ -156,6 +174,8 @@ class Repl:
         self._names: dict[tuple[EntityName, int], str] = {}
         # a model's facts, by its trail, and the branch row they were read from
         self._models: dict[int, tuple[ModelFacts, int | None]] = {}
+        # the names a command's words complete from, until one is saved
+        self._completions: dict[str, list[str]] | None = None
 
     @property
     def label(self) -> str:
@@ -228,6 +248,16 @@ class Repl:
             self.error(str(e))
 
         return True
+
+    def completions(self) -> dict[str, list[str]]:
+        """The names a command's words complete from, looked up once."""
+        if self._completions is None:
+            self._completions = {
+                entity: self.names(entity)
+                for entity in ("configuration", "stack", "case", *SLICES)
+            }
+
+        return self._completions
 
     def names(self, entity: EntityName) -> list[str]:
         models = select_visible_branch_models(
@@ -566,6 +596,134 @@ class Repl:
             style=LABEL,
         )
 
+    def do_save(self, name: str) -> None:
+        if not self.configuration:
+            self.error("the cell has no configuration to save: use CONFIGURATION")
+            return
+
+        entity = entity_of("configuration")
+        # the cell's configuration as content, what is set in it included
+        schema = ConfigurationTrailSchema.model_validate(
+            self.slices, from_attributes=True
+        )
+        had = entity.branch_model.objects.filter(
+            owner__name=self.identity, name=name
+        ).exists()
+
+        with transaction.atomic():
+            trail = dump_trail(ConfigurationTrailModel, schema)
+            # what it reaches becomes the identity's too, as the archive has
+            # it: a tool keeps what it runs
+            copied = commit_copies(trail, self.identity, settings.ARCHIVE_IDENTITY_NAME)
+            changed = commit(
+                trail,
+                entity.branch_details.model_validate(
+                    {
+                        "name": name,
+                        "owner": self.identity,
+                        "tags": self.configuration.tags,
+                    }
+                ),
+            )
+
+        what = "a new version" if had and changed else "unchanged" if had else "created"
+        self.console.print(
+            f"saved as {name}: {what} {short_fingerprint(trail.fingerprint)}"
+        )
+
+        if copied:
+            self.console.print(Text(f"yours now too: {', '.join(copied)}", style=LABEL))
+
+        # what the identity calls things, and can complete, may have changed
+        self._names.clear()
+        self._completions = None
+        self.put_configuration(get_branch_model("configuration", self.identity, name))
+        self.say_cell()
+
+    def do_runs(self, count: str = "20") -> None:
+        if not count.isdigit():
+            self.error(f"a count is a whole number, not '{count}'")
+            return
+
+        runs = list(
+            RunModel.objects.filter(owner__name=self.identity)
+            .select_related("trial", "session")
+            .order_by("-timestamp", "-pk")[: int(count)]
+        )
+
+        if not runs:
+            self.console.print(f"{self.identity} has no runs", style=LABEL)
+            return
+
+        table = Table(box=None, header_style="bold")
+
+        for column in ("run", "when", "trial", "what ran", "outcome"):
+            table.add_column(column)
+
+        for run in runs:
+            table.add_row(
+                _short(run.uuid),
+                _when(run.timestamp),
+                _short(run.trial.uuid),
+                run.session.description if run.session else "—",
+                _outcome(run),
+            )
+
+        self.console.print(table)
+
+    def do_replay(self, prefix: str | None = None) -> None:
+        runs = RunModel.objects.filter(owner__name=self.identity).select_related(
+            "trial__configuration__output", "session"
+        )
+
+        if prefix is not None:
+            runs = runs.filter(uuid__startswith=prefix)
+
+        found = list(runs.order_by("-timestamp", "-pk")[:2])
+
+        if not found:
+            which = f"no run '{prefix}'" if prefix else "no runs"
+            self.error(f"{self.identity} has {which}")
+            return
+
+        if prefix is not None and len(found) > 1:
+            self.error(f"more than one run starts with '{prefix}'")
+            return
+
+        run = found[0]
+        what = run.session.description if run.session else "—"
+        self.console.print(
+            f"run {_short(run.uuid)} of trial {_short(run.trial.uuid)}: {what}",
+            style="bold",
+        )
+        self.console.print(f"{_when(run.timestamp)}, {run.status}", style=LABEL)
+
+        stored = list(run.session.messages.all()) if run.session else []
+        messages = ModelMessagesTypeAdapter.validate_python(
+            [message.payload for message in stored if message.kind != MessageKind.ERROR]
+        )
+        answered = run.output is not None
+        show_messages(self.console, messages, answered)
+
+        for message in stored:
+            if message.kind == MessageKind.ERROR:
+                self.error(str(message.payload["error"]))
+
+        if answered:
+            output = cast(
+                OutputTrailSpec,
+                load_trail(
+                    "output",
+                    run.trial.configuration.output.fingerprint,
+                    OutputTrailSpec,
+                ),
+            )
+
+            if run.valid is not None and output.schema is not None:
+                show_validity(self.console, invalid(output.schema, run.output))
+
+            show_views(self.console, output, run.output)
+
     # -------------------------------------------------------------- helpers
 
     def tools(self) -> dict[str, ToolBranchSpec]:
@@ -658,22 +816,9 @@ class Repl:
         if resolution.coercion is not None:
             problem = invalid(resolution.coercion.schema, answer)
             valid = problem is None
+            show_validity(self.console, problem)
 
-            if problem is None:
-                self.console.print("valid", style=VALID)
-            else:
-                self.error(f"invalid: {problem}")
-
-        for view in resolution.output.views:
-            items = resolution.output.view(view, answer)
-            self.console.print(view, style="bold")
-
-            for i, item in enumerate(items, 1):
-                text = item if isinstance(item, str) else json.dumps(item)
-                self.console.print(Text(f"  {i}. {text}"))
-
-            if not items:
-                self.console.print("  nothing", style=LABEL)
+        show_views(self.console, resolution.output, answer)
 
         return valid
 
@@ -872,79 +1017,195 @@ def _writes(writes: dict[str, JsonValue], prefix: str = "") -> str:
     return " ".join(field for field in fields if field)
 
 
+def _short(value: Any) -> str:
+    """An id as the repl shows it: the first digits of a uuid."""
+    return str(value)[:8]
+
+
+def _when(moment: datetime) -> str:
+    return timezone.localtime(moment).strftime("%Y-%m-%d %H:%M")
+
+
+def _outcome(run: RunModel) -> Text:
+    """What came of a run, as the list of runs says it."""
+    if run.status == RunStatus.ERRORED:
+        return Text(f"errored: {_clipped_line(run.error or '')}", style=REFUSED)
+
+    if run.error is not None:
+        # it came to no answer that holds
+        return Text(_clipped_line(run.error), style=REFUSED)
+
+    match run.valid:
+        case True:
+            return Text("valid", style=VALID)
+        case False:
+            return Text("invalid", style=REFUSED)
+        case None:
+            return Text(run.status)
+
+
+def _clipped_line(text: str, width: int = 60) -> str:
+    line = text.splitlines()[0] if text else ""
+    return line if len(line) <= width else line[: width - 1] + "…"
+
+
+class Transcript:
+    """A run written out as it comes: each part on a line of its own, labelled."""
+
+    def __init__(self, console: Console):
+        self.console: Console = console
+        self.at_start: bool = True
+        # just after a label: what follows it starts on its line
+        self.labelled: bool = False
+
+    def write(self, text: str, style: str = "") -> None:
+        if self.labelled:
+            text = text.lstrip()
+
+        if text:
+            self.console.out(text, style=style or None, end="", highlight=False)
+            self.at_start = text.endswith("\n")
+            self.labelled = False
+
+    def begin(self, label: str | None) -> None:
+        if not self.at_start:
+            self.console.out("")
+            self.at_start = True
+
+        self.labelled = False
+
+        if label:
+            self.console.out(f"[{label}] ", style=LABEL, end="", highlight=False)
+            self.at_start = False
+            self.labelled = True
+
+    def usage(self, input_tokens: int, output_tokens: int, requests: int) -> None:
+        self.begin(None)
+        rounds = f", {requests} requests" if requests > 1 else ""
+        self.console.out(
+            f"({input_tokens} in, {output_tokens} out{rounds})",
+            style=LABEL,
+            highlight=False,
+        )
+
+
+def _thinking(origin: str | None) -> str:
+    # pydantic-ai marks thinking it found between <think> tags in the
+    # content: no reasoning parser took it out
+    return "thinking in content" if origin == "content" else "thinking"
+
+
 async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed:
     """
     Write out a trial's events as they come: its thinking, then its answer,
     as text or as the call that gives it. Answer with the answer, and
     whether any thinking came back.
     """
-    at_start = True
-    # just after a label: what follows it starts on its line
-    labelled = False
+    out = Transcript(console)
     answer: Any = None
     thought = False
-
-    def write(text: str, style: str = "") -> None:
-        nonlocal at_start, labelled
-        if labelled:
-            text = text.lstrip()
-        if text:
-            console.out(text, style=style or None, end="", highlight=False)
-            at_start = text.endswith("\n")
-            labelled = False
-
-    def begin(label: str | None) -> None:
-        nonlocal at_start, labelled
-        if not at_start:
-            console.out("")
-            at_start = True
-        labelled = False
-        if label:
-            console.out(f"[{label}] ", style=LABEL, end="", highlight=False)
-            at_start = False
-            labelled = True
 
     async for event in events:
         match event:
             case PartStartEvent(part=ThinkingPart(content=text, id=origin)):
-                # pydantic-ai marks thinking it found between <think> tags in
-                # the content: no reasoning parser took it out
-                begin("thinking in content" if origin == "content" else "thinking")
-                write(text, THINKING)
+                out.begin(_thinking(origin))
+                out.write(text, THINKING)
                 thought = True
             case PartDeltaEvent(delta=ThinkingPartDelta(content_delta=text)) if text:
-                write(text, THINKING)
+                out.write(text, THINKING)
                 thought = True
             case PartStartEvent(part=TextPart(content=text)):
-                begin(None)
-                write(text)
+                out.begin(None)
+                out.write(text)
             case PartDeltaEvent(delta=TextPartDelta(content_delta=text)):
-                write(text)
+                out.write(text)
             case PartStartEvent(part=ToolCallPart(tool_name=name, args=args)):
-                begin(name)
-                write(_arguments(args))
+                out.begin(name)
+                out.write(_arguments(args))
             case PartDeltaEvent(delta=ToolCallPartDelta(args_delta=args)) if args:
-                write(_arguments(args))
+                out.write(_arguments(args))
             case FunctionToolResultEvent(part=ToolReturnPart(content=content)):
-                begin("result")
-                write(_arguments(content))
-                begin(None)
+                out.begin("result")
+                out.write(_arguments(content))
+                out.begin(None)
             case PartEndEvent():
-                begin(None)
+                out.begin(None)
             case AgentRunResultEvent(result=result):
                 answer = result.output
                 usage = result.usage
-                begin(None)
-                rounds = f", {usage.requests} requests" if usage.requests > 1 else ""
-                console.out(
-                    f"({usage.input_tokens} in, {usage.output_tokens} out{rounds})",
-                    style=LABEL,
-                    highlight=False,
-                )
+                out.usage(usage.input_tokens, usage.output_tokens, usage.requests)
             case _:
                 pass
 
     return Streamed(answer, thought)
+
+
+def show_messages(
+    console: Console, messages: list[ModelMessage], answered: bool
+) -> None:
+    """
+    Write out a recorded run's messages as its events came when it ran, and
+    what it used, if it came to an answer.
+    """
+    out = Transcript(console)
+    responses = [message for message in messages if isinstance(message, ModelResponse)]
+
+    for message in messages:
+        match message:
+            case ModelResponse(parts=parts):
+                for part in parts:
+                    match part:
+                        case ThinkingPart(content=text, id=origin):
+                            out.begin(_thinking(origin))
+                            out.write(text, THINKING)
+                        case TextPart(content=text):
+                            out.begin(None)
+                            out.write(text)
+                        case ToolCallPart(tool_name=name, args=args):
+                            out.begin(name)
+                            out.write(_arguments(args))
+                        case _:
+                            pass
+
+                    out.begin(None)
+            case ModelRequest(parts=parts):
+                for part in parts:
+                    # what the answer's own tool returns, the model never reads
+                    if (
+                        isinstance(part, ToolReturnPart)
+                        and part.tool_name != FINAL_RESULT
+                    ):
+                        out.begin("result")
+                        out.write(_arguments(part.content))
+                        out.begin(None)
+
+    if answered:
+        out.usage(
+            sum(response.usage.input_tokens for response in responses),
+            sum(response.usage.output_tokens for response in responses),
+            len(responses),
+        )
+
+
+def show_validity(console: Console, problem: str | None) -> None:
+    if problem is None:
+        console.print("valid", style=VALID)
+    else:
+        console.print(Text(f"invalid: {problem}", style=REFUSED))
+
+
+def show_views(console: Console, output: OutputTrailBase, answer: Any) -> None:
+    """What each of the output's views reads from the answer."""
+    for view in output.views:
+        items = output.view(view, answer)
+        console.print(view, style="bold")
+
+        for i, item in enumerate(items, 1):
+            text = item if isinstance(item, str) else json.dumps(item)
+            console.print(Text(f"  {i}. {text}"))
+
+        if not items:
+            console.print("  nothing", style=LABEL)
 
 
 def _arguments(args: Any) -> str:
@@ -1007,15 +1268,9 @@ def repl(
 
     shell = Repl(identity_name, Console())
 
-    # looked up once: a name is completed from these as it is typed
-    names = {
-        entity: shell.names(entity)
-        for entity in ("configuration", "stack", "case", *SLICES)
-    }
-
     def completer(_word: str, state: int) -> str | None:
         line = readline.get_line_buffer()[: readline.get_endidx()]
-        matches = complete(names, line)
+        matches = complete(shell.completions(), line)
         # the space readline leaves out, so the next word can follow
         return f"{matches[state]} " if state < len(matches) else None
 
