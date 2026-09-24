@@ -3,14 +3,17 @@ A trial: a resolved cell run on a case (new-datamodel.md §5).
 
 It is sent through pydantic-ai on vLLM (data-generation.md §2.4), with a
 profile taken from the model's facts instead of one matched on its served
-name, and with every field resolution wrote. The exact request body is kept:
-the request, not the variations' names, says what ran.
+name, and with every field resolution wrote. The exact bodies are kept, each
+request as it went and each response as it came: the request, not the
+variations' names, says what ran. So are pydantic-ai's messages, as far as
+the run got.
 """
 
 import importlib
-from collections.abc import AsyncGenerator, Callable
+import uuid
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from typing import Any, cast
+from typing import Any, cast, override
 
 import httpx2
 from jsonschema.validators import validator_for
@@ -18,6 +21,7 @@ from pydantic import JsonValue
 from pydantic_ai import (
     Agent,
     AgentRunEvents,
+    ModelMessage,
     ModelSettings,
     NativeOutput,
     PromptedOutput,
@@ -25,6 +29,7 @@ from pydantic_ai import (
     Tool,
     ToolOutput,
     UsageLimits,
+    capture_run_messages,
 )
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles import DEFAULT_PROFILE, ModelProfile, merge_profile
@@ -75,18 +80,29 @@ class Trial:
         transport: httpx2.AsyncBaseTransport | None = None,
         seed: int | None = None,
         implementations: dict[str, str] | None = None,
+        run_id: str | None = None,
+        conversation_id: str | None = None,
     ):
         self.resolution: Resolution = resolution
         self.case: str = case
         self.api_key: str | None = api_key
         self.transport: httpx2.AsyncBaseTransport | None = transport
-        # the trial's own, not the configuration's (new-datamodel.md §2)
+        # the trial's own, not the configuration's (new-datamodel.md §6)
         self.seed: int | None = seed
         # what each tool runs, by its name: the entry point its branch says
         # it has; it changes the tool's results, not the request
         self.implementations: dict[str, str] = implementations or {}
-        # the request bodies, as they were sent: one per round
+        # pydantic-ai's ids for the run and the conversation it is held in:
+        # every message carries them
+        self.run_id: str = run_id or str(uuid.uuid4())
+        self.conversation_id: str = conversation_id or str(uuid.uuid4())
+        # the bodies as they went and came, one of each per round; a
+        # response's fills as it streams
         self.requests: list[bytes] = []
+        self.responses: list[bytearray] = []
+        # the run's messages, as pydantic-ai keeps them: as far as it got,
+        # whether or not it got to an answer
+        self.messages: list[ModelMessage] = []
 
         for tool in resolution.tools:
             if tool.name not in self.implementations:
@@ -98,7 +114,7 @@ class Trial:
 
         async with httpx2.AsyncClient(
             transport=self.transport,
-            event_hooks={"request": [self._keep]},
+            event_hooks={"request": [self._sent], "response": [self._received]},
         ) as client:
             provider = VLLMProvider(
                 base_url=self.resolution.endpoint,
@@ -121,12 +137,17 @@ class Trial:
                 retries={"output": 0, "tools": 0},
             )
 
-            async with agent.run_stream_events(
-                user,
-                model_settings=self.settings(),
-                usage_limits=UsageLimits(request_limit=TOOL_ROUNDS + 1),
-            ) as events:
-                yield events
+            with capture_run_messages() as messages:
+                self.messages = messages
+
+                async with agent.run_stream_events(
+                    user,
+                    model_settings=self.settings(),
+                    usage_limits=UsageLimits(request_limit=TOOL_ROUNDS + 1),
+                    run_id=self.run_id,
+                    conversation_id=self.conversation_id,
+                ) as events:
+                    yield events
 
     def settings(self) -> ModelSettings:
         settings: dict[str, Any] = {}
@@ -190,8 +211,39 @@ class Trial:
             OWN,
         )
 
-    async def _keep(self, request: httpx2.Request) -> None:
+    async def _sent(self, request: httpx2.Request) -> None:
         self.requests.append(request.content)
+
+    async def _received(self, response: httpx2.Response) -> None:
+        body = bytearray()
+        self.responses.append(body)
+
+        try:
+            # one made in memory, as a transport of the tests' makes it, is
+            # read already
+            body.extend(response.content)
+        except httpx2.ResponseNotRead:
+            # before its body is read: it is copied as it is
+            stream = cast(httpx2.AsyncByteStream, response.stream)
+            response.stream = _Copied(stream, body)
+
+
+class _Copied(httpx2.AsyncByteStream):
+    """A response's body, copied into `into` as it is read."""
+
+    def __init__(self, stream: httpx2.AsyncByteStream, into: bytearray):
+        self._stream: httpx2.AsyncByteStream = stream
+        self._into: bytearray = into
+
+    @override
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        async for chunk in self._stream:
+            self._into.extend(chunk)
+            yield chunk
+
+    @override
+    async def aclose(self) -> None:
+        await self._stream.aclose()
 
 
 def load(entry_point: str) -> Callable[..., Any]:

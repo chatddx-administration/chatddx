@@ -18,7 +18,7 @@ from pydantic_ai import (
 )
 
 from chatddx.core import settings
-from chatddx.dx.fake_vllm import ANSWER, FakeTransport, server, stream
+from chatddx.dx.fake_vllm import ANSWER, FakeTransport, server, stream, thinking
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.parsers.inventory import parse
 from chatddx.runtime.resolution import Resolution, Sampling, resolve
@@ -76,6 +76,44 @@ async def test_a_trial_sends_what_resolution_wrote(inventory: ParsedInventory):
 
     # and keeps the body as it was sent
     assert [json.loads(body) for body in trial.requests] == fake.requests
+
+
+@pytest.mark.asyncio
+async def test_a_trial_keeps_each_response_as_it_came(inventory: ParsedInventory):
+    fake = FakeTransport()
+    trial = Trial(
+        resolution(inventory, "free-text", "qwen3-8b-awq@fake"),
+        CASE,
+        transport=fake,
+    )
+
+    _ = await run(trial)
+
+    [response] = trial.responses
+    lines = [line for line in response.decode().split("\n\n") if line]
+    chunks = [json.loads(line.removeprefix("data: ")) for line in lines[:-1]]
+    deltas = [c["choices"][0]["delta"] for c in chunks if c["choices"]]
+
+    assert lines[-1] == "data: [DONE]"
+    assert "".join(d.get("reasoning", "") for d in deltas) == thinking(fake.requests[0])
+
+
+@pytest.mark.asyncio
+async def test_every_message_carries_the_trial_s_ids(inventory: ParsedInventory):
+    trial = Trial(
+        resolution(inventory, "free-text", "qwen3-8b-awq@fake"),
+        CASE,
+        transport=FakeTransport(),
+        run_id="run-1",
+        conversation_id="conversation-1",
+    )
+
+    _ = await run(trial)
+
+    assert [message.kind for message in trial.messages] == ["request", "response"]
+    assert {(m.run_id, m.conversation_id) for m in trial.messages} == {
+        ("run-1", "conversation-1")
+    }
 
 
 @pytest.mark.asyncio
@@ -173,12 +211,17 @@ async def test_a_trial_runs_against_the_fake_over_http(
 ):
     cell = resolution(inventory, "free-text", "gpt-oss-20b@fake")
     cell = replace(cell, endpoint=fake_endpoint)
+    trial = Trial(cell, CASE)
 
-    events = await run(Trial(cell, CASE))
+    events = await run(trial)
 
     result = events[-1]
     assert isinstance(result, AgentRunResultEvent)
     assert result.result.output == ANSWER
+    # and what streamed back is kept whole
+    [response] = trial.responses
+    assert response.startswith(b"data: {")
+    assert response.endswith(b"data: [DONE]\n\n")
 
 
 # ------------------------------------------------------------------ coercion
@@ -414,6 +457,9 @@ async def test_a_model_still_calling_after_its_rounds_is_stopped(
 
     # its rounds, and the one it was to answer in
     assert len(bodies) == TOOL_ROUNDS + 1
+    # and the messages as far as it got: the last round's results, unsent
+    assert len(trial.messages) == 2 * (TOOL_ROUNDS + 1) + 1
+    assert trial.messages[-1].kind == "request"
 
 
 def test_a_tool_with_nothing_to_run_is_refused_before_anything_is_sent(
