@@ -808,7 +808,7 @@ fingerprinted.
 
 `data-generation.md` counted the client as part of the stack. As an entity
 it stands apart: it changes with every chatddx deploy while the server
-doesn't, and a trial joins the two.
+doesn't, and a run joins the two.
 
 ### Request-time slices
 
@@ -883,10 +883,12 @@ Each entity below is one slice, and each of its records is a variation.
 | `payload` | trail | yes | unchanged |
 
 A trial is history, not part of the registry. It points at trails: the
-configuration, the case, the stack and the client, and it has its seed and
-replicate. It can be run more than once, to see its seed hold or to retry
-one that errored, and each run records:
+configuration, the case and the stack, and it has its seed and replicate.
+It can be run more than once, to see its seed hold, to retry one that
+errored, or on the client of a later deploy, and each run records:
 
+- the client it ran on: its build's trail, and the revision and package
+  versions it ran with;
 - the branch rows whose details resolution read;
 - the requests and responses themselves (`data-generation.md` §4);
 - the output value, and whether it is valid (§4).
