@@ -326,6 +326,28 @@ def test_an_answer_that_doesn_t_parse_says_so():
     assert "invalid: the answer doesn't parse" in repl.console.export_text()
 
 
+def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for():
+    provision()
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        # as if the grammar had kept the model from thinking
+        body["chat_template_kwargs"] = {"enable_thinking": False}
+        return httpx2.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content="".join(stream(body)).encode(),
+        )
+
+    repl = Repl("alex", Console(record=True, width=200), httpx2.MockTransport(handler))
+    _ = repl.handle("cell diagnoses qwen3-8b-awq@fake")
+    _ = repl.handle("run case-1")
+
+    written = repl.console.export_text()
+    assert "no thinking came back, though reasoning resolved to 'on'" in written
+    assert "valid" in written
+
+
 def test_run_takes_the_trial_s_seed(say: Say, fake: FakeTransport):
     written = say("cell free-text qwen3-8b-awq@fake", "run case-1 42", "run case-1 x")
 

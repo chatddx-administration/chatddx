@@ -16,6 +16,7 @@ import readline
 import shlex
 import sys
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any, get_args
 
@@ -101,6 +102,13 @@ SLICES: tuple[EntityName, ...] = (
 )
 
 EFFORTS: tuple[Effort, ...] = get_args(Effort.__value__)
+
+
+@dataclass(frozen=True)
+class Streamed:
+    answer: Any
+    # whether any of the model's thinking came back
+    thought: bool
 
 
 class Repl:
@@ -431,7 +439,7 @@ class Repl:
         )
 
         try:
-            answer = asyncio.run(self.stream(trial))
+            streamed = asyncio.run(self.stream(trial))
         except KeyboardInterrupt:
             self.console.print("\n(stopped)", style=LABEL)
         except UnexpectedModelBehavior as e:
@@ -442,7 +450,7 @@ class Repl:
             # the model or its server failed mid-run: say so and carry on
             self.error(f"\n{type(e).__name__}: {e}")
         else:
-            self.judge(resolution, answer)
+            self.judge(resolution, streamed)
 
     # -------------------------------------------------------------- helpers
 
@@ -483,12 +491,36 @@ class Repl:
             self.stack.target.serving,
         )
 
-    async def stream(self, trial: Trial) -> Any:
+    async def stream(self, trial: Trial) -> Streamed:
         async with trial.stream() as events:
             return await show_events(self.console, events)
 
-    def judge(self, resolution: Resolution, answer: Any) -> None:
-        """Whether the answer holds to its schema, and what its views read."""
+    def judge(self, resolution: Resolution, streamed: Streamed) -> None:
+        """
+        Whether the model reasoned as it was asked to, whether its answer
+        holds to its schema, and what the output's views read from it.
+        """
+        # The facts are claims: a trial is what shows whether the model
+        # honours them (new-datamodel.md §2).
+        intent = resolution.reasoning.intent
+
+        if intent != "off" and not streamed.thought:
+            self.console.print(
+                Text(
+                    f"no thinking came back, though reasoning resolved to '{intent}'",
+                    style=LATER,
+                )
+            )
+        elif intent == "off" and streamed.thought:
+            self.console.print(
+                Text(
+                    "thinking came back, though reasoning resolved to 'off'",
+                    style=LATER,
+                )
+            )
+
+        answer = streamed.answer
+
         if resolution.coercion is not None:
             problem = invalid(resolution.coercion.schema, answer)
 
@@ -699,13 +731,15 @@ def _writes(writes: dict[str, JsonValue], prefix: str = "") -> str:
     return " ".join(field for field in fields if field)
 
 
-async def show_events(console: Console, events: AgentRunEvents[Any]) -> Any:
+async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed:
     """
     Write out a trial's events as they come: its thinking, then its answer,
-    as text or as the call that gives it. Answer with the answer.
+    as text or as the call that gives it. Answer with the answer, and
+    whether any thinking came back.
     """
     at_start = True
     answer: Any = None
+    thought = False
 
     def write(text: str, style: str = "") -> None:
         nonlocal at_start
@@ -727,8 +761,10 @@ async def show_events(console: Console, events: AgentRunEvents[Any]) -> Any:
             case PartStartEvent(part=ThinkingPart(content=text)):
                 begin("thinking")
                 write(text, THINKING)
+                thought = True
             case PartDeltaEvent(delta=ThinkingPartDelta(content_delta=text)) if text:
                 write(text, THINKING)
+                thought = True
             case PartStartEvent(part=TextPart(content=text)):
                 begin(None)
                 write(text)
@@ -753,7 +789,7 @@ async def show_events(console: Console, events: AgentRunEvents[Any]) -> Any:
             case _:
                 pass
 
-    return answer
+    return Streamed(answer, thought)
 
 
 def _arguments(args: Any) -> str:
