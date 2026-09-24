@@ -8,9 +8,11 @@ import pytest
 from rich.console import Console
 from typer.testing import CliRunner
 
+from chatddx.core.models import IdentityModel
 from chatddx.core.repl import Repl, complete
 from chatddx.dx.fake_vllm import FakeTransport, stream
 from chatddx.manage import app
+from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
 
 pytestmark = pytest.mark.django_db
@@ -21,9 +23,9 @@ INVENTORY = Path(__file__).parents[2] / "repo/tests/data/test-inventory.toml"
 type Say = Callable[..., str]
 
 
-def provision(*options: str) -> None:
+def provision(*options: str, user: str = "alex") -> None:
     result = CliRunner().invoke(
-        app, ["init-data", "alex", "--inventory", str(INVENTORY), *options]
+        app, ["init-data", user, "--inventory", str(INVENTORY), *options]
     )
     assert result.exit_code == 0, result.output
 
@@ -492,6 +494,36 @@ def test_a_configuration_of_one_s_own_shadows_the_archive_s(fake: FakeTransport)
     assert repl.handle("use plan")
     assert repl.configuration is not None
     assert repl.configuration.owner.name == "alex"
+
+
+def test_only_the_archive_s_configurations_run_beside_one_s_own(
+    fake: FakeTransport,
+):
+    provision()
+    provision("--with-giftbag", user="bob")
+    alex = IdentityModel.objects.get(name="alex")
+
+    # bob shares his, one of them by a name the archive doesn't have
+    _ = ConfigurationBranchModel.objects.filter(
+        owner__name="bob", name="plan-web"
+    ).update(name="bobs-plan")
+    for branch in ConfigurationBranchModel.objects.filter(owner__name="bob"):
+        branch.collaborators.add(alex)
+
+    repl = Repl("alex", Console(record=True, width=200), transport=fake)
+
+    # the archive's plan, not one of two
+    assert repl.handle("use plan")
+    assert repl.configuration is not None
+    assert repl.configuration.owner.name == "archive"
+
+    _ = repl.handle("use bobs-plan")
+    assert "no configuration 'bobs-plan' for alex" in repl.console.export_text()
+
+    # nor are bob's listed, or completed
+    _ = repl.handle("configurations")
+    assert "bob" not in repl.console.export_text()
+    assert "bobs-plan" not in repl.names("configuration")
 
 
 def test_the_repl_needs_an_identity():

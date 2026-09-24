@@ -319,3 +319,33 @@ def test_one_name_shared_by_two_is_ambiguous(
 
     with pytest.raises(AmbiguousBranchError, match="other, third"):
         _ = get_visible_branch_model("case", owner.name, "case-1")
+
+
+def test_shared_by_one_owner_alone_nothing_is_ambiguous(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("case-1", other_owner.name, owner.name)
+    case("case-1", "third", owner.name)
+    case("case-2", "third", owner.name)
+
+    found = get_visible_branch_model("case", owner.name, "case-1", shared_by="other")
+    visible = select_visible_branch_models("case", owner.name, shared_by="other")
+
+    assert found.owner.name == "other"
+    assert [(m.name, m.owner.name) for m in visible] == [("case-1", "other")]
+
+    with pytest.raises(BranchNotFoundError):
+        _ = get_visible_branch_model("case", owner.name, "case-2", shared_by="other")
+
+
+def test_shared_by_one_owner_its_own_still_shadows(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("case-1", other_owner.name, owner.name)
+    case("case-1", owner.name)
+
+    found = get_visible_branch_model("case", owner.name, "case-1", shared_by="other")
+
+    assert found.owner.name == "alex"

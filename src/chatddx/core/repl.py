@@ -43,6 +43,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
@@ -108,6 +109,11 @@ SLICES: tuple[EntityName, ...] = (
     "sampling",
     "toolset",
 )
+
+# Who a branch is looked for from, beside the identity: a configuration runs
+# from the identity's own or the archive's, and one another user shares is
+# saved as the identity's own before it can run.
+SHARED_BY: dict[str, str] = {"configuration": settings.ARCHIVE_IDENTITY_NAME}
 
 # the slices a configuration can do without, and the word that takes one out
 OPTIONAL: tuple[EntityName, ...] = ("toolset",)
@@ -217,9 +223,10 @@ class Repl:
         return True
 
     def names(self, entity: EntityName) -> list[str]:
-        return sorted(
-            {m.name for m in select_visible_branch_models(entity, self.identity)}
+        models = select_visible_branch_models(
+            entity, self.identity, SHARED_BY.get(entity)
         )
+        return sorted({model.name for model in models})
 
     # ------------------------------------------------------------- commands
 
@@ -237,7 +244,9 @@ class Repl:
         for column in ("configuration", *SLICES, "owner"):
             table.add_column(column)
 
-        for model in select_visible_branch_models("configuration", self.identity):
+        for model in select_visible_branch_models(
+            "configuration", self.identity, SHARED_BY["configuration"]
+        ):
             trail: Any = model.target
             slices = [self.name_of(entity, getattr(trail, entity)) for entity in SLICES]
             table.add_row(model.name, *slices, self.owner(model.owner.name))
@@ -267,7 +276,9 @@ class Repl:
         self.console.print(f"{len(names)} cases", style=LABEL)
 
     def do_use(self, name: str) -> None:
-        model = get_visible_branch_model("configuration", self.identity, name)
+        model = get_visible_branch_model(
+            "configuration", self.identity, name, shared_by=SHARED_BY["configuration"]
+        )
         self.put_configuration(model)
         self.say_cell()
 
@@ -279,7 +290,10 @@ class Repl:
     def do_cell(self, configuration: str, stack: str) -> None:
         # both looked up before either is put in the cell
         configuration_model = get_visible_branch_model(
-            "configuration", self.identity, configuration
+            "configuration",
+            self.identity,
+            configuration,
+            shared_by=SHARED_BY["configuration"],
         )
         stack_model = get_visible_branch_model("stack", self.identity, stack)
 

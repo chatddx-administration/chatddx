@@ -99,17 +99,16 @@ get_branch_model_async = make_async(get_branch_model)
 def select_visible_branch_models(
     entity_name: EntityName,
     identity_name: str,
+    shared_by: str | None = None,
 ) -> list[BranchModel]:
     """
     The canon of every branch of `entity_name` that `identity_name` can use,
-    by name: its own, and those shared with it. Its own shadows a shared one
-    of the same name.
+    by name: its own, and those shared with it, by `shared_by` alone where
+    it is given. Its own shadows a shared one of the same name.
     """
     model_cls = entity_of(entity_name).branch_model
-    visible = _prefer_own(
-        list(qs_canon_col(model_cls.objects.all(), identity_name)),
-        identity_name,
-    )
+    qs = _shared_by(model_cls.objects.all(), identity_name, shared_by)
+    visible = _prefer_own(list(qs_canon_col(qs, identity_name)), identity_name)
     models = sorted(visible, key=lambda model: (model.name, model.owner.name))
 
     _ = resolve_trails([model.target for model in models])
@@ -122,15 +121,17 @@ def get_visible_branch_model(
     identity_name: str,
     branch_name: str | None = None,
     trail: TrailModel | int | None = None,
+    shared_by: str | None = None,
 ) -> BranchModel:
     """
     The canon of the branch of `entity_name` that `identity_name` means by
     `branch_name`, or that holds `trail`: its own if it has one, else the
-    one shared with it.
+    one shared with it, by `shared_by` alone where it is given.
     """
     assert branch_name or trail
 
     qs = entity_of(entity_name).branch_model.objects.all()
+    qs = _shared_by(qs, identity_name, shared_by)
 
     if branch_name:
         qs = qs.filter(name=branch_name)
@@ -152,6 +153,15 @@ def get_visible_branch_model(
     model.target = resolve_trail(model.target)
 
     return model
+
+
+def _shared_by(
+    qs: QuerySet[Any], identity_name: str, shared_by: str | None
+) -> QuerySet[Any]:
+    if shared_by is None:
+        return qs
+
+    return qs.filter(owner__name__in=(identity_name, shared_by))
 
 
 def _prefer_own(models: list[BranchModel], identity_name: str) -> list[BranchModel]:
