@@ -1,0 +1,72 @@
+"""A line is a command and its words, and a word completes as it is typed."""
+
+from collections.abc import Callable
+
+import pytest
+
+from chatddx.core.repl.commands import COMMANDS, complete, handle
+from chatddx.core.repl.shell import Repl
+
+type Say = Callable[..., str]
+
+pytestmark = pytest.mark.django_db
+
+
+def test_the_prompt_shows_the_cell(repl: Repl, say: Say):
+    assert repl.prompt == "alex> "
+
+    _ = say("use free-text")
+    assert repl.prompt == "alex free-text> "
+
+    _ = say("on qwen3-8b-awq@fake")
+    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
+
+
+def test_help_lists_every_command_with_the_words_it_takes(say: Say):
+    written = say("help")
+
+    for verb in COMMANDS:
+        assert verb in written
+
+    assert "set SLICE VARIATION" in written
+    assert "run CASE [SEED]" in written
+
+
+def test_what_it_doesn_t_know_is_said_and_nothing_changes(repl: Repl, say: Say):
+    written = say("use nope", "cell free-text nope", "on", "frobnicate", "use 'x")
+
+    assert "no configuration 'nope' for alex" in written
+    assert "no stack 'nope' for alex" in written
+    assert "usage: on STACK" in written
+    assert "no command 'frobnicate': try help" in written
+    assert "No closing quotation" in written
+    assert repl.cell.configuration is None
+
+
+def test_quit_leaves(repl: Repl):
+    assert handle(repl, "quit") is False
+    assert handle(repl, "exit") is False
+
+
+def test_it_completes_a_command_and_then_its_names():
+    names = {
+        "configuration": ["free-text", "plan", "plan-web"],
+        "stack": ["qwen3-8b-awq@fake", "qwen3-8b-awq@pelle"],
+        "case": ["case-1", "case-2"],
+        "reasoning": ["default", "high", "off", "on", "on-budget-2048"],
+        "toolset": ["sentinel", "web"],
+    }
+
+    assert complete(names, "us") == ["use"]
+    assert complete(names, "use pl") == ["plan", "plan-web"]
+    assert complete(names, "cell plan qwen3-8b-awq@") == [
+        "qwen3-8b-awq@fake",
+        "qwen3-8b-awq@pelle",
+    ]
+    assert complete(names, "run case-") == ["case-1", "case-2"]
+    assert complete(names, "show ") == []
+    assert complete(names, "set r") == ["reasoning"]
+    assert complete(names, "set reasoning o") == ["off", "on", "on-budget-2048"]
+    assert complete(names, "set toolset ") == ["sentinel", "web", "none"]
+    assert complete(names, "set reasoning n") == []
+    assert complete(names, "frobnicate x") == []

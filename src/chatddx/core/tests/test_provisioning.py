@@ -11,7 +11,8 @@ from typer.testing import CliRunner
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
-from chatddx.core.repl import Repl
+from chatddx.core.repl.commands import handle
+from chatddx.core.repl.shell import Repl
 from chatddx.dx.fake_vllm import FakeTransport
 from chatddx.history.models import RunModel, SessionModel, TrialModel
 from chatddx.manage import app
@@ -233,8 +234,8 @@ def ran_test_tools(user: str) -> None:
     case = next(iter(parse(INVENTORY).case))
     repl = Repl(user, Console(record=True, width=200), transport=FakeTransport())
 
-    assert repl.handle("cell test-tools qwen3-8b-awq@fake")
-    assert repl.handle(f"run {case}")
+    assert handle(repl, "cell test-tools qwen3-8b-awq@fake")
+    assert handle(repl, f"run {case}")
     assert "recorded as run 1" in repl.console.export_text()
 
 
