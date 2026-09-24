@@ -1199,8 +1199,8 @@ Each run records:
 - the output value, whether it is valid, the last response's finish
   reason, and the error, if any (§4);
 - its session: the exchange as pydantic-ai's messages, with a message for
-  the error where there was one. A later run could continue a session, as
-  a chat would, though no run does yet;
+  the error where there was one. A run can continue a session, as a chat
+  would; the repl doesn't yet;
 - its scores (§4): per scorer, the value, what in the answer it rests on or
   why there is none, and what it was made with: the view, the target, and
   the git blob of the scorer's file. A run scored again keeps every score.
