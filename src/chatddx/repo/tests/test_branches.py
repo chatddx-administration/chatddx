@@ -38,6 +38,7 @@ from chatddx.repo.shufflers.branch import (
     commit_copies,
     get_branch_model,
     get_branch_spec,
+    get_shared_branch_model,
     get_visible_branch_model,
     select_visible_branch_models,
 )
@@ -351,6 +352,30 @@ def test_shared_by_one_owner_its_own_still_shadows(
     found = get_visible_branch_model("case", owner.name, "case-1", shared_by="other")
 
     assert found.owner.name == "alex"
+
+
+def test_an_owner_s_branch_is_found_by_the_owner_where_it_is_shared(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("case-1", other_owner.name, owner.name)
+    case("case-1", owner.name)
+
+    theirs = get_shared_branch_model("case", owner.name, other_owner.name, "case-1")
+    mine = get_shared_branch_model("case", owner.name, owner.name, "case-1")
+
+    assert theirs.owner.name == "other"
+    assert mine.owner.name == "alex"
+
+
+def test_an_owner_s_branch_not_shared_isn_t_found_by_the_owner(
+    owner: IdentityModel,
+    other_owner: IdentityModel,
+):
+    case("case-1", other_owner.name)
+
+    with pytest.raises(BranchNotFoundError, match="no case 'other/case-1' for alex"):
+        _ = get_shared_branch_model("case", owner.name, other_owner.name, "case-1")
 
 
 SENTINEL = {

@@ -158,6 +158,31 @@ def get_visible_branch_model(
     return model
 
 
+def get_shared_branch_model(
+    entity_name: EntityName,
+    identity_name: str,
+    owner_name: str,
+    branch_name: str,
+) -> BranchModel:
+    """
+    The canon of `owner_name`'s branch `branch_name` of `entity_name`, as
+    `identity_name` sees it: its own, or shared with it.
+    """
+    qs = entity_of(entity_name).branch_model.objects.filter(
+        owner__name=owner_name, name=branch_name
+    )
+    model = qs_canon_col(qs, identity_name).first()
+
+    if model is None:
+        raise BranchNotFoundError(
+            f"no {entity_name} '{owner_name}/{branch_name}' for {identity_name}"
+        )
+
+    model.target = resolve_trail(model.target)
+
+    return model
+
+
 def _shared_by(
     qs: QuerySet[Any], identity_name: str, shared_by: str | None
 ) -> QuerySet[Any]:
