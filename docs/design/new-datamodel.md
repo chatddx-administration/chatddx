@@ -595,8 +595,8 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
 
 ### What a trial records, and what the log carries
 
-- **The trial records the value, not only the transcript.** `output` is
-  `result.output` with the envelope removed, the same whichever mode
+- **A trial's run records the value, not only the transcript.** `output`
+  is `result.output` with the envelope removed, the same whichever mode
   carried it (PR #68's `RunModel.output`). `valid` says whether it
   validates against the output's schema.
 - **chatddx writes one inspect sample per trial** (`data-generation.md` §5,
@@ -883,11 +883,12 @@ Each entity below is one slice, and each of its records is a variation.
 | `payload` | trail | yes | unchanged |
 
 A trial is history, not part of the registry. It points at trails: the
-configuration, the case, the stack and the client. It also records:
+configuration, the case, the stack and the client, and it has its seed and
+replicate. It can be run more than once, to see its seed hold or to retry
+one that errored, and each run records:
 
-- the seed and replicate;
 - the branch rows whose details resolution read;
-- the request itself (`data-generation.md` §4);
+- the requests and responses themselves (`data-generation.md` §4);
 - the output value, and whether it is valid (§4).
 
 A batch is history too (§5).
@@ -1003,8 +1004,9 @@ other view follows its entity. Form data isn't identity.
 | `scorers` | inspect scorers, each with the view it reads |
 | (new) | `varied`, `replicates` |
 
-Experiments and runs become trials, which `data-generation.md` §4
-describes. PR #68's `RunModel.output` becomes the trial's `output`.
+An experiment becomes a trial, which `data-generation.md` §4 describes,
+and a run stays: one go at a trial, one pydantic-ai agent run. PR #68's
+`RunModel.output` stays the run's `output`.
 
 ## 8. New fields, and what was left out
 
