@@ -13,7 +13,8 @@ model, it spends `max_tokens` on thinking first. A word is a token.
 Asked for a structured answer, it gives a document that holds to the
 schema: one `response_format` names, as guided decoding would force, or one
 a system message shows, as a model that follows it would. Offered tools, it
-calls the first.
+calls each of them once, then answers: through the final-result tool, when
+it is offered one.
 """
 
 import json
@@ -28,6 +29,10 @@ import httpx2
 import typer
 
 ANSWER = "Fake diagnosis A\nFake diagnosis B\nFake diagnosis C"
+
+# the tool an answer is given through, in tool mode: the trial's, named here
+# so the fake stands on its own
+FINAL_RESULT = "final_result"
 
 # what a request says beside the fields its thinking reads back
 _TRANSPORT = frozenset({"messages", "model", "stream", "stream_options"})
@@ -73,12 +78,11 @@ def respond(body: dict[str, Any]) -> Reply:
     """What the model gives back, within `max_tokens`."""
     thought_text = thinking(body)
     thought = _words(thought_text or "")
-    tools: list[dict[str, Any]] = body.get("tools") or []
+    tool = _next_tool(body)
     schema = _schema(body)
     call: tuple[str, str] | None = None
 
-    if tools:
-        tool = tools[0]["function"]
+    if tool is not None:
         call = (tool["name"], json.dumps(instance(tool.get("parameters") or {})))
         answer: list[str] = []
     elif schema is not None:
@@ -195,8 +199,8 @@ def instance(
 ) -> Any:
     """
     A document that holds to `schema`. Strings say what they are, by the
-    property that holds them, and count up through an array: `fake
-    diagnosis 1`, `fake diagnosis 2`.
+    property that holds them, and count up through an array, as numbers do
+    from 1: `fake diagnosis 1`, `fake diagnosis 2`.
     """
     root = schema if root is None else root
 
@@ -240,9 +244,9 @@ def instance(
         case "string":
             return f"fake {key.replace('_', ' ')}" + ("" if n is None else f" {n}")
         case "integer":
-            return int(schema.get("minimum", 0))
+            return int(schema.get("minimum", n or 1))
         case "number":
-            return float(schema.get("minimum", 0))
+            return float(schema.get("minimum", n or 1))
         case "boolean":
             return False
         case _:
@@ -369,6 +373,30 @@ def _usage(body: dict[str, Any], reply: Reply) -> dict[str, int]:
         "completion_tokens": completion_tokens,
         "total_tokens": prompt + completion_tokens,
     }
+
+
+def _next_tool(body: dict[str, Any]) -> dict[str, Any] | None:
+    """The first tool offered and not called yet, and the answer's last."""
+    messages: list[dict[str, Any]] = body.get("messages", [])
+    called: set[str] = {
+        call["function"]["name"]
+        for message in messages
+        if message.get("role") == "assistant"
+        for call in cast(list[dict[str, Any]], message.get("tool_calls") or [])
+    }
+    offered: list[dict[str, Any]] = [
+        tool["function"] for tool in cast(list[dict[str, Any]], body.get("tools") or [])
+    ]
+    pending = [
+        tool
+        for tool in offered
+        if tool["name"] not in called and tool["name"] != FINAL_RESULT
+    ]
+
+    if pending:
+        return pending[0]
+
+    return next((tool for tool in offered if tool["name"] == FINAL_RESULT), None)
 
 
 def _schema(body: dict[str, Any]) -> dict[str, Any] | None:

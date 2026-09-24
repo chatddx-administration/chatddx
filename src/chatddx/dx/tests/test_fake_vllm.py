@@ -117,7 +117,7 @@ def test_what_it_writes_follows_references_unions_and_counts():
         "diagnoses": [{"name": "fake name 1"}, {"name": "fake name 2"}],
         "severity": "high",
         "kind": "plan",
-        "maybe": 0,
+        "maybe": 1,
     }
 
 
@@ -150,6 +150,56 @@ def test_offered_a_tool_it_calls_it():
 
     assert reply.call == ("final_result", '{"ok": false}')
     assert (reply.content, reply.finish) == ("", "tool_calls")
+
+
+def function(name: str) -> dict[str, Any]:
+    return {"type": "function", "function": {"name": name, "parameters": {}}}
+
+
+def called(*names: str) -> list[dict[str, Any]]:
+    """A conversation in which the model called `names`, one a round."""
+    messages: list[dict[str, Any]] = [{"role": "user", "content": "a cough"}]
+
+    for n, name in enumerate(names):
+        messages += [
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": f"call-{n}",
+                        "type": "function",
+                        "function": {"name": name, "arguments": "{}"},
+                    }
+                ],
+            },
+            {"role": "tool", "tool_call_id": f"call-{n}", "content": "done"},
+        ]
+
+    return messages
+
+
+def test_offered_tools_it_calls_each_once_then_answers():
+    tools = [function("lookup"), function("now")]
+
+    assert respond(body(tools=tools)).call == ("lookup", "null")
+    assert respond(body(tools=tools, messages=called("lookup"))).call == (
+        "now",
+        "null",
+    )
+
+    reply = respond(body(tools=tools, messages=called("lookup", "now")))
+    assert (reply.call, reply.content, reply.finish) == (None, ANSWER, "stop")
+
+
+def test_offered_the_final_result_tool_too_it_answers_through_it_last():
+    tools = [function("final_result"), function("lookup")]
+
+    assert respond(body(tools=tools)).call == ("lookup", "null")
+    assert respond(body(tools=tools, messages=called("lookup"))).call == (
+        "final_result",
+        "null",
+    )
 
 
 # ------------------------------------------------------------------ streams
