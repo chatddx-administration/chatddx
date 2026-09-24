@@ -84,6 +84,31 @@ def test_max_tokens_are_spent_on_thinking_first():
     assert respond(body(max_tokens=5)) == reply
 
 
+def test_without_a_reasoning_parser_the_thinking_stays_in_the_content():
+    reply = respond(body(), reasoning_parser=False)
+
+    assert reply.reasoning is None
+    assert reply.content == f"<think>\n{thinking(body())}\n</think>\n\n{ANSWER}"
+
+
+def test_without_a_reasoning_parser_a_grammar_leaves_no_room_to_think():
+    schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
+    held = respond(
+        body(
+            response_format={"type": "json_schema", "json_schema": {"schema": schema}}
+        ),
+        reasoning_parser=False,
+    )
+    required = respond(
+        body(tools=[function("final_result")], tool_choice="required"),
+        reasoning_parser=False,
+    )
+
+    assert (held.reasoning, json.loads(held.content)) == (None, {"ok": False})
+    assert (required.reasoning, required.content) == (None, "")
+    assert required.call == ("final_result", "null")
+
+
 # ------------------------------------------------------------------ schemas
 
 

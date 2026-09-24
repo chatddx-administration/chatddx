@@ -184,6 +184,28 @@ def test_setting_the_configuration_s_own_variation_unsets_it(repl: Repl, say: Sa
     assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
 
 
+def test_none_takes_the_toolset_out(repl: Repl, say: Say, fake: FakeTransport):
+    written = say("cell test-tools qwen3-8b-awq@fake", "set toolset none", "show")
+
+    assert repl.prompt == "alex test-tools+toolset=none×qwen3-8b-awq@fake> "
+    assert "none (set; test-tools has sentinel)" in written
+
+    _ = say("run case-1")
+
+    [request] = fake.requests
+    assert "tools" not in request
+
+    # and back: the configuration's own toolset unsets it
+    _ = say("set toolset sentinel")
+    assert repl.prompt == "alex test-tools×qwen3-8b-awq@fake> "
+
+
+def test_none_of_a_toolset_it_has_none_of_is_nothing_set(repl: Repl, say: Say):
+    _ = say("cell free-text qwen3-8b-awq@fake", "set toolset none")
+
+    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
+
+
 def test_use_puts_a_configuration_in_as_it_is(repl: Repl, say: Say):
     _ = say("cell free-text qwen3-8b-awq@fake", "set reasoning off", "use free-text")
 
@@ -209,6 +231,9 @@ def test_set_says_what_it_can_t_set(say: Say):
         in written
     )
     assert "no reasoning 'nope' for alex" in written
+    assert "a configuration always has a reasoning: only a toolset can be none" in say(
+        "set reasoning none"
+    )
 
 
 # ----------------------------------------------------------------- reasoning
@@ -248,6 +273,8 @@ def test_the_reasoning_table_sets_every_variation_on_every_stack(say: Say):
 
     assert "refused: always reasons" in written
     assert "thinking_token_budget=2048" in written
+    # pelle has no reasoning parser to spend a budget
+    assert "a budget needs a reasoning parser" in written
     assert "the cell has no configuration: no sampling is pulled in" in written
 
 
@@ -348,6 +375,20 @@ def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for():
     written = repl.console.export_text()
     assert "no thinking came back, though reasoning resolved to 'on'" in written
     assert "valid" in written
+
+
+def test_thinking_no_reasoning_parser_took_out_is_labelled_so():
+    provision()
+    fake = FakeTransport(reasoning_parser=False)
+
+    repl = Repl("alex", Console(record=True, width=200), transport=fake)
+    _ = repl.handle("cell free-text qwen3-8b-awq@fake")
+    _ = repl.handle("run case-1")
+
+    written = repl.console.export_text()
+    assert "[thinking in content] I am the fake vLLM" in written
+    assert "Fake diagnosis A" in written
+    assert "no thinking came back" not in written
 
 
 def test_run_takes_the_trial_s_seed(say: Say, fake: FakeTransport):
@@ -466,6 +507,7 @@ def test_it_completes_a_command_and_then_its_names():
         "stack": ["qwen3-8b-awq@fake", "qwen3-8b-awq@pelle"],
         "case": ["case-1", "case-2"],
         "reasoning": ["default", "high", "off", "on", "on-budget-2048"],
+        "toolset": ["sentinel", "web"],
     }
 
     assert complete(names, "us") == ["use"]
@@ -478,6 +520,9 @@ def test_it_completes_a_command_and_then_its_names():
     assert complete(names, "show ") == []
     assert complete(names, "set r") == ["reasoning"]
     assert complete(names, "set reasoning o") == ["off", "on", "on-budget-2048"]
+    # a toolset can be none
+    assert complete(names, "set toolset ") == ["sentinel", "web", "none"]
+    assert complete(names, "set reasoning n") == []
 
 
 def test_a_session_can_be_piped_in(tmp_path: Path):

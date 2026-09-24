@@ -15,6 +15,11 @@ schema: one `response_format` names, as guided decoding would force, or one
 a system message shows, as a model that follows it would. Offered tools, it
 calls each of them once, then answers: through the final-result tool, when
 it is offered one.
+
+Without a reasoning parser (`--no-reasoning-parser`), it serves as pelle
+does: the thinking stays in `content`, between `<think>` tags, and a grammar
+(`response_format`, or `tool_choice` = required) holds the answer from its
+first token, so under one it doesn't think at all.
 """
 
 import json
@@ -37,7 +42,9 @@ FINAL_RESULT = "final_result"
 # what a request says beside the fields its thinking reads back
 _TRANSPORT = frozenset({"messages", "model", "stream", "stream_options"})
 
-_WORD = re.compile(r"\S+\s*|\s+")
+# a word and the space after it; a thinking tag is a token of its own, as it
+# is in Qwen3's vocabulary, and vLLM streams it alone
+_WORD = re.compile(r"</?think>|(?:(?!</?think>)\S)+\s*|\s+")
 
 
 def thinking(body: dict[str, Any]) -> str | None:
@@ -74,9 +81,9 @@ class Reply:
     finish: str
 
 
-def respond(body: dict[str, Any]) -> Reply:
+def respond(body: dict[str, Any], reasoning_parser: bool = True) -> Reply:
     """What the model gives back, within `max_tokens`."""
-    thought_text = thinking(body)
+    thought_text = None if _held(body, reasoning_parser) else thinking(body)
     thought = _words(thought_text or "")
     tool = _next_tool(body)
     schema = _schema(body)
@@ -105,12 +112,19 @@ def respond(body: dict[str, Any]) -> Reply:
 
     reasoning = "".join(thought) if thought_text is not None else None
 
+    if reasoning is not None and not reasoning_parser:
+        # nothing takes the thinking out of the answer
+        closed = "\n</think>\n\n" if finish != "length" or answer else ""
+        return Reply(
+            None, f"<think>\n{reasoning}{closed}{''.join(answer)}", call, finish
+        )
+
     return Reply(reasoning, "".join(answer), call, finish)
 
 
-def completion(body: dict[str, Any]) -> dict[str, Any]:
+def completion(body: dict[str, Any], reasoning_parser: bool = True) -> dict[str, Any]:
     """The whole response, for a request that doesn't stream."""
-    reply = respond(body)
+    reply = respond(body, reasoning_parser)
     message: dict[str, Any] = {"role": "assistant", "content": reply.content}
 
     if reply.reasoning is not None:
@@ -136,9 +150,9 @@ def completion(body: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def stream(body: dict[str, Any]) -> Iterator[str]:
+def stream(body: dict[str, Any], reasoning_parser: bool = True) -> Iterator[str]:
     """The response as server-sent events, a word at a time."""
-    reply = respond(body)
+    reply = respond(body, reasoning_parser)
     model = body.get("model")
 
     yield _event(model, {"role": "assistant", "content": ""})
@@ -258,8 +272,9 @@ def instance(
 class FakeTransport(httpx2.AsyncBaseTransport):
     """The fake vLLM in-process, keeping every request it was sent."""
 
-    def __init__(self):
+    def __init__(self, reasoning_parser: bool = True):
         self.requests: list[dict[str, Any]] = []
+        self.reasoning_parser: bool = reasoning_parser
 
     @override
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
@@ -270,15 +285,16 @@ class FakeTransport(httpx2.AsyncBaseTransport):
             return httpx2.Response(
                 200,
                 headers={"content-type": "text/event-stream"},
-                content="".join(stream(body)).encode(),
+                content="".join(stream(body, self.reasoning_parser)).encode(),
             )
 
-        return httpx2.Response(200, json=completion(body))
+        return httpx2.Response(200, json=completion(body, self.reasoning_parser))
 
 
 class _Handler(BaseHTTPRequestHandler):
     # seconds between the streamed words
     delay: float = 0.0
+    reasoning_parser: bool = True
 
     def do_POST(self) -> None:
         if self.path.rstrip("/") != "/v1/chat/completions":
@@ -293,7 +309,7 @@ class _Handler(BaseHTTPRequestHandler):
             return
 
         if not body.get("stream"):
-            self._json(200, completion(body))
+            self._json(200, completion(body, self.reasoning_parser))
             return
 
         self.send_response(200)
@@ -301,7 +317,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
 
-        for event in stream(body):
+        for event in stream(body, self.reasoning_parser):
             _ = self.wfile.write(event.encode())
             self.wfile.flush()
             time.sleep(self.delay)
@@ -315,8 +331,12 @@ class _Handler(BaseHTTPRequestHandler):
         _ = self.wfile.write(content)
 
 
-def server(host: str, port: int, delay: float = 0.0) -> ThreadingHTTPServer:
-    handler = type("Handler", (_Handler,), {"delay": delay})
+def server(
+    host: str, port: int, delay: float = 0.0, reasoning_parser: bool = True
+) -> ThreadingHTTPServer:
+    handler = type(
+        "Handler", (_Handler,), {"delay": delay, "reasoning_parser": reasoning_parser}
+    )
     return ThreadingHTTPServer((host, port), handler)
 
 
@@ -326,10 +346,18 @@ def fake_vllm(
     delay: Annotated[
         float, typer.Option(help="seconds between the streamed words")
     ] = 0.03,
+    reasoning_parser: Annotated[
+        bool,
+        typer.Option(
+            help="take the thinking out of the answer, as vLLM's reasoning parser "
+            + "does; pelle serves without one"
+        ),
+    ] = True,
 ):
     """Serve the fake vLLM the inventory's @fake stacks send to."""
-    fake = server(host, port, delay)
-    typer.echo(f"the fake vLLM, at http://{host}:{port}/v1/")
+    fake = server(host, port, delay, reasoning_parser)
+    without = "" if reasoning_parser else ", without a reasoning parser"
+    typer.echo(f"the fake vLLM, at http://{host}:{port}/v1/{without}")
 
     try:
         fake.serve_forever()
@@ -373,6 +401,17 @@ def _usage(body: dict[str, Any], reply: Reply) -> dict[str, int]:
         "completion_tokens": completion_tokens,
         "total_tokens": prompt + completion_tokens,
     }
+
+
+def _held(body: dict[str, Any], reasoning_parser: bool) -> bool:
+    """
+    Whether a grammar holds the answer from its first token: without a
+    reasoning parser to find where the thinking ends, vLLM holds all of it.
+    """
+    response_format: dict[str, Any] = body.get("response_format") or {}
+    grammar = response_format.get("type") in ("json_schema", "json_object")
+
+    return not reasoning_parser and (grammar or body.get("tool_choice") == "required")
 
 
 def _next_tool(body: dict[str, Any]) -> dict[str, Any] | None:

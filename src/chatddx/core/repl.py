@@ -89,7 +89,10 @@ COMMANDS: dict[str, tuple[tuple[str, ...], str]] = {
     "use": (("CONFIGURATION",), "put a configuration in the cell"),
     "on": (("STACK",), "put a stack in the cell"),
     "cell": (("CONFIGURATION", "STACK"), "put both in the cell"),
-    "set": (("SLICE", "VARIATION"), "put another variation of a slice in the cell"),
+    "set": (
+        ("SLICE", "VARIATION"),
+        "put another variation of a slice in the cell; none takes the toolset out",
+    ),
     "show": ((), "show the cell, and how it resolves on its stack"),
     "reasoning": ((), "show what each reasoning variation does on each stack"),
     "run": (("CASE", "[SEED]"), "run a case on the cell, with a seed if given"),
@@ -105,6 +108,10 @@ SLICES: tuple[EntityName, ...] = (
     "sampling",
     "toolset",
 )
+
+# the slices a configuration can do without, and the word that takes one out
+OPTIONAL: tuple[EntityName, ...] = ("toolset",)
+NONE = "none"
 
 EFFORTS: tuple[Effort, ...] = get_args(Effort.__value__)
 
@@ -129,7 +136,8 @@ class Repl:
         self.transport: Any = transport
 
         self.configuration: ConfigurationBranchSpec | None = None
-        # the variations `set` put in the cell in place of the configuration's
+        # the variations `set` put in the cell in place of the configuration's;
+        # None where it took an optional slice out
         self.variations: dict[str, Any] = {}
         self.stack: StackBranchSpec | None = None
 
@@ -143,11 +151,16 @@ class Repl:
             return ""
 
         set_ = "".join(
-            f"+{entity}={self.variations[entity].name}"
+            f"+{entity}={self.set_name(entity)}"
             for entity in SLICES
             if entity in self.variations
         )
         return f"{self.configuration.name}{set_}"
+
+    def set_name(self, entity: str) -> str:
+        """The name of the variation set in the cell, or none."""
+        variation = self.variations[entity]
+        return NONE if variation is None else variation.name
 
     @property
     def prompt(self) -> str:
@@ -164,7 +177,8 @@ class Repl:
         assert self.configuration
 
         if entity in self.variations:
-            return self.variations[entity].target
+            variation = self.variations[entity]
+            return None if variation is None else variation.target
 
         return getattr(self.configuration.target, entity)
 
@@ -282,9 +296,25 @@ class Repl:
             self.error("the cell has no configuration to set it in: use CONFIGURATION")
             return
 
+        own = getattr(self.configuration.target, entity)
+
+        if name == NONE:
+            if entity not in OPTIONAL:
+                self.error(
+                    f"a configuration always has a {entity}: only a toolset can be none"
+                )
+                return
+
+            if own is None:
+                _ = self.variations.pop(entity, None)
+            else:
+                self.variations[entity] = None
+
+            self.say_cell()
+            return
+
         model = get_visible_branch_model(entity, self.identity, name)
         spec = entity_of(entity).branch_spec.model_validate(model)
-        own = getattr(self.configuration.target, entity)
 
         if own is not None and own.fingerprint == spec.target.fingerprint:
             # the configuration's own: nothing is set any more
@@ -600,7 +630,7 @@ class Repl:
         if entity not in self.variations:
             return Text(own)
 
-        text = Text(self.variations[entity].name, style="bold")
+        text = Text(self.set_name(entity), style="bold")
         text.append(f" (set; {self.configuration.name} has {own})", style=LABEL)
         return text
 
@@ -775,28 +805,37 @@ async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed
     whether any thinking came back.
     """
     at_start = True
+    # just after a label: what follows it starts on its line
+    labelled = False
     answer: Any = None
     thought = False
 
     def write(text: str, style: str = "") -> None:
-        nonlocal at_start
+        nonlocal at_start, labelled
+        if labelled:
+            text = text.lstrip()
         if text:
             console.out(text, style=style or None, end="", highlight=False)
             at_start = text.endswith("\n")
+            labelled = False
 
     def begin(label: str | None) -> None:
-        nonlocal at_start
+        nonlocal at_start, labelled
         if not at_start:
             console.out("")
             at_start = True
+        labelled = False
         if label:
             console.out(f"[{label}] ", style=LABEL, end="", highlight=False)
             at_start = False
+            labelled = True
 
     async for event in events:
         match event:
-            case PartStartEvent(part=ThinkingPart(content=text)):
-                begin("thinking")
+            case PartStartEvent(part=ThinkingPart(content=text, id=origin)):
+                # pydantic-ai marks thinking it found between <think> tags in
+                # the content: no reasoning parser took it out
+                begin("thinking in content" if origin == "content" else "thinking")
                 write(text, THINKING)
                 thought = True
             case PartDeltaEvent(delta=ThinkingPartDelta(content_delta=text)) if text:
@@ -865,7 +904,8 @@ def complete(names: dict[str, list[str]], line: str) -> list[str]:
             candidates = list(SLICES)
         case "VARIATION":
             # a variation of the slice named before it
-            candidates = names.get(words[position - 1], [])
+            entity = words[position - 1]
+            candidates = names.get(entity, []) + ([NONE] if entity in OPTIONAL else [])
         case param:
             candidates = names.get(param.lower(), [])
 
