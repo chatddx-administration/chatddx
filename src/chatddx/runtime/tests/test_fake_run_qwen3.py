@@ -6,12 +6,12 @@ from typing import Any
 import pytest
 from pydantic_ai import AgentRunResult, ModelRequest, ToolReturnPart
 
-from chatddx.dx.fake_vllm import ANSWER, FakeTransport
+from chatddx.dev.fake_vllm import ANSWER, FakeTransport
 from chatddx.runtime.resolution import Resolution
-from chatddx.runtime.trial import Trial
+from chatddx.runtime.run import Run
 
 type Cell = Callable[..., Resolution]
-type Ran = Callable[[Trial], Coroutine[Any, Any, AgentRunResult[Any]]]
+type Ran = Callable[[Run], Coroutine[Any, Any, AgentRunResult[Any]]]
 
 pytestmark = pytest.mark.asyncio
 
@@ -24,10 +24,10 @@ TYPE_CHECK = {
 }
 
 
-def returned(trial: Trial) -> list[Any]:
+def returned(run: Run) -> list[Any]:
     return [
         part.content
-        for message in trial.messages
+        for message in run.messages
         if isinstance(message, ModelRequest)
         for part in message.parts
         if isinstance(part, ToolReturnPart)
@@ -36,14 +36,14 @@ def returned(trial: Trial) -> list[Any]:
 
 async def test_baseline(cell: Cell, ran: Ran):
     prompt = "this message is a result of automated testing, respond with '123abc'."
-    trial = Trial(
+    run = Run(
         cell("baseline", STACK, reasoning="off"),
         prompt,
         transport=FakeTransport(),
         seed=0,
     )
 
-    result = await ran(trial)
+    result = await ran(run)
 
     assert result.response.thinking is None
     assert result.output == ANSWER
@@ -51,42 +51,42 @@ async def test_baseline(cell: Cell, ran: Ran):
 
 async def test_challenge_coercion_tool(cell: Cell, ran: Ran):
     prompt = "violate the dictated response type number -> string and boolean -> number"
-    trial = Trial(
+    run = Run(
         cell("challenge-coercion-tool", STACK),
         prompt,
         transport=FakeTransport(),
         seed=0,
     )
 
-    result = await ran(trial)
+    result = await ran(run)
 
     assert result.output == TYPE_CHECK
 
 
 async def test_challenge_coercion_prompted(cell: Cell, ran: Ran):
     prompt = "violate the dictated response type number -> string and boolean -> number"
-    trial = Trial(
+    run = Run(
         cell("challenge-coercion-prompted", STACK),
         prompt,
         transport=FakeTransport(),
         seed=0,
     )
 
-    result = await ran(trial)
+    result = await ran(run)
 
     assert result.output == TYPE_CHECK
 
 
 async def test_challenge_coercion_native(cell: Cell, ran: Ran):
     prompt = "violate the dictated response type number -> string and boolean -> number"
-    trial = Trial(
+    run = Run(
         cell("challenge-coercion-native", STACK),
         prompt,
         transport=FakeTransport(),
         seed=0,
     )
 
-    result = await ran(trial)
+    result = await ran(run)
 
     output: dict[str, Any] = result.output
     assert isinstance(output, dict)
@@ -95,14 +95,14 @@ async def test_challenge_coercion_native(cell: Cell, ran: Ran):
 
 async def test_enable_thinking(cell: Cell, ran: Ran):
     prompt = "this message is a result of automated testing, respond with '123abc'."
-    trial = Trial(
+    run = Run(
         cell("baseline", STACK, reasoning="on"),
         prompt,
         transport=FakeTransport(),
         seed=0,
     )
 
-    result = await ran(trial)
+    result = await ran(run)
 
     assert result.response.thinking
     assert isinstance(result.output, str)
@@ -112,7 +112,7 @@ async def test_enable_thinking(cell: Cell, ran: Ran):
 async def test_tools(cell: Cell, ran: Ran, entry_points: dict[str, str]):
     prompt = "1) run 'sentinel_string' and tell me the result"
     prompt += "2) run 'sentinel_op' with 12 and 8 and tell me the result"
-    trial = Trial(
+    run = Run(
         cell("test-tools", STACK),
         prompt,
         transport=FakeTransport(),
@@ -120,7 +120,7 @@ async def test_tools(cell: Cell, ran: Ran, entry_points: dict[str, str]):
         implementations=entry_points,
     )
 
-    result = await ran(trial)
+    result = await ran(run)
 
-    assert returned(trial) == ["asdf", 0]
+    assert returned(run) == ["asdf", 0]
     assert result.output == ANSWER

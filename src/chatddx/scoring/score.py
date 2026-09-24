@@ -29,7 +29,7 @@ from chatddx.repo.entities.scorer.pydantic import Metric, ScorerDetails
 from chatddx.repo.store.branch import select_visible_branch_models
 from chatddx.repo.store.trail import load_trail
 from chatddx.runtime.implementation import (
-    SCORERS as PACKAGE,
+    SCORER_PACKAGE,
     Implementation,
     implementation,
 )
@@ -38,7 +38,7 @@ ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
 
 
 @dataclass(frozen=True)
-class Scorer:
+class VisibleScorer:
     """A scorer as whoever scores sees it: its name, owner, content and metrics."""
 
     name: str
@@ -61,7 +61,7 @@ class Scorer:
 
 # a scorer that applies to a run, the target it holds the run to, and the
 # case branch that target was read from
-type Applicable = tuple[Scorer, str | None, CaseBranchModel | None]
+type Applicable = tuple[VisibleScorer, str | None, CaseBranchModel | None]
 
 
 class Scoring:
@@ -77,21 +77,21 @@ class Scoring:
             .values_list("pk", flat=True)
             .first()
         )
-        self.scorers: tuple[Scorer, ...] = tuple(self._visible())
+        self.scorers: tuple[VisibleScorer, ...] = tuple(self._visible())
         self._implementations: dict[int, Implementation] = {}
         self._outputs: dict[int, OutputTrailOut] = {}
         self._cases: dict[int, CaseBranchModel | None] = {}
 
-    def _visible(self) -> list[Scorer]:
+    def _visible(self) -> list[VisibleScorer]:
         """Its own scorers and the archive's, a trail named once."""
-        scorers: list[Scorer] = []
+        scorers: list[VisibleScorer] = []
 
         for branch in select_visible_branch_models("scorer", self.identity, ARCHIVE):
             if any(scorer.trail.pk == branch.trail_id for scorer in scorers):
                 continue
 
             scorers.append(
-                Scorer(
+                VisibleScorer(
                     name=branch.name,
                     owner=branch.owner.name,
                     trail=cast(ScorerTrailModel, branch.trail),
@@ -101,11 +101,11 @@ class Scoring:
 
         return scorers
 
-    def implementation_of(self, scorer: Scorer) -> Implementation:
+    def implementation_of(self, scorer: VisibleScorer) -> Implementation:
         """What the scorer runs, as its file is now."""
         if scorer.trail.pk not in self._implementations:
             try:
-                ran = implementation(scorer.trail.function, PACKAGE)
+                ran = implementation(scorer.trail.function, SCORER_PACKAGE)
             except ValueError as e:
                 raise ValueError(f"the scorer '{scorer.name}' can't run: {e}") from None
 
@@ -158,7 +158,7 @@ class Scoring:
             RunModel.objects.filter(
                 owner__name=self.identity, status=RunStatus.COMPLETED
             )
-            .select_related("trial__configuration__output", "session")
+            .select_related("trial__configuration__output", "conversation")
             .prefetch_related("scores")
             .order_by("timestamp", "pk")
         )
@@ -173,8 +173,8 @@ class Scoring:
         for scorer, target, case in self.outstanding(run):
             items = (
                 None
-                if run.output is None
-                else [str(item) for item in output.view(scorer.view, run.output)]
+                if run.answer is None
+                else [str(item) for item in output.view(scorer.view, run.answer)]
             )
             ran = self.implementation_of(scorer)
             scored = ran.function(items, target, **scorer.args)
@@ -183,7 +183,7 @@ class Scoring:
                     run=run,
                     owner_id=self.owner_id,
                     scorer=scorer.trail,
-                    name=scorer.name,
+                    scorer_name=scorer.name,
                     case_branch=case,
                     target=target,
                     blob=ran.blob,
@@ -201,7 +201,7 @@ class Scoring:
         scorers it can see first, in their order.
         """
         found = {
-            score.name: score
+            score.scorer_name: score
             for score in run.scores.all()
             if score.owner_id == self.owner_id
         }
@@ -210,8 +210,10 @@ class Scoring:
         return sorted(
             found.values(),
             key=lambda score: (
-                order.index(score.name) if score.name in order else len(order),
-                score.name,
+                order.index(score.scorer_name)
+                if score.scorer_name in order
+                else len(order),
+                score.scorer_name,
             ),
         )
 

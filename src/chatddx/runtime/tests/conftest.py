@@ -6,10 +6,10 @@ from pydantic_ai import AgentRunResult, AgentRunResultEvent
 
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.runtime.resolution import Resolution, resolve
-from chatddx.runtime.trial import Trial
+from chatddx.runtime.run import Run
 
 type Cell = Callable[..., Resolution]
-type Ran = Callable[[Trial], Coroutine[Any, Any, AgentRunResult[Any]]]
+type Ran = Callable[[Run], Coroutine[Any, Any, AgentRunResult[Any]]]
 
 
 @pytest.fixture
@@ -48,10 +48,10 @@ def entry_points(test_inventory: ParsedInventory) -> dict[str, str]:
 
 @pytest.fixture
 def ran() -> Ran:
-    """A trial run to its result."""
+    """A run, streamed to its result."""
 
-    async def ran(trial: Trial) -> AgentRunResult[Any]:
-        async with trial.stream() as events:
+    async def ran(run: Run) -> AgentRunResult[Any]:
+        async with run.stream() as events:
             async for event in events:
                 if isinstance(event, AgentRunResultEvent):
                     return event.result

@@ -115,7 +115,7 @@ def test_a_cell_resolves_to_what_the_facts_write():
     }
 
 
-def test_the_case_is_placed_when_a_trial_renders_the_cell():
+def test_the_case_is_placed_when_a_run_renders_the_cell():
     resolution = resolve(cell(), STACK, FACTS, SERVING)
 
     assert resolution.render("a cough") == ("List the diagnoses.", "a cough")

@@ -6,7 +6,7 @@ from rich.console import Console
 
 from chatddx.core.repl.commands import handle
 from chatddx.core.repl.shell import Repl
-from chatddx.dx.fake_vllm import FakeTransport
+from chatddx.dev.fake_vllm import FakeTransport
 
 type Say = Callable[..., str]
 

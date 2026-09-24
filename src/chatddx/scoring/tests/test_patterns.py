@@ -9,7 +9,7 @@ import pytest
 
 from chatddx.core import settings
 from chatddx.repo.parsers.inventory import parse
-from chatddx.runtime.implementation import SCORERS, implementation
+from chatddx.runtime.implementation import SCORER_PACKAGE, implementation
 from chatddx.scoring.scorers.patterns import (
     Pattern,
     Scored,
@@ -84,7 +84,7 @@ def test_every_scorer_runs_a_function_that_takes_its_arguments(path: str):
     scorer's arguments beside them, as a tool's takes its parameters.
     """
     for name, (scorer, _) in parse(settings.INVENTORY_PATH / path).scorer.items():
-        function = implementation(scorer.function, SCORERS).function
+        function = implementation(scorer.function, SCORER_PACKAGE).function
 
         try:
             _ = inspect.signature(function).bind([], "target", **scorer.args)

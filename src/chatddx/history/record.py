@@ -1,7 +1,7 @@
 # pyright: basic
 """
 Writing a run down: the trial it was a go at, found or made, the run with
-what came of it, and the session its messages were exchanged in.
+what came of it, and the conversation its messages were exchanged in.
 
 Every run is written down, whatever came of it: an answer, one that doesn't
 hold, none, or an error on the way. A run of the same cell on the same case
@@ -27,14 +27,14 @@ from pydantic_ai import (
 
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import (
+    ConversationContext,
+    ConversationModel,
     MessageKind,
     MessageModel,
     Role,
     RunModel,
     RunStatus,
     RunToolBranchModel,
-    SessionContext,
-    SessionModel,
     TrialModel,
 )
 from chatddx.repo.entities.client.django import ClientTrailModel
@@ -43,7 +43,7 @@ from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.store.trail import dump_trail
 from chatddx.runtime.client import Client, running
-from chatddx.runtime.trial import Trial
+from chatddx.runtime.run import Run
 
 
 @dataclass(frozen=True)
@@ -63,7 +63,7 @@ class Outcome:
     """What came of a run."""
 
     status: RunStatus
-    output: JsonValue = None
+    answer: JsonValue = None
     valid: bool | None = None
     error: str | None = None
 
@@ -73,43 +73,43 @@ def record(
     configuration: ConfigurationTrailIn,
     branches: Branches,
     case: int,
-    trial: Trial,
+    run: Run,
     outcome: Outcome,
     started: datetime,
     finished: datetime,
     description: str | None = None,
-    context: SessionContext = SessionContext.REPL,
-    session: SessionModel | None = None,
+    context: ConversationContext = ConversationContext.REPL,
+    conversation: ConversationModel | None = None,
     client: Client | None = None,
 ) -> RunModel:
     """
-    Write down a run of `trial`, a cell run on the case trail `case`: the
-    configuration it ran, as content, and the branches of the stack, LLM
-    and tools it read, and the client it ran on: the one running, unless
-    another is given. A run that continued `session` adds to it.
+    Write down `run`, the cell run on the case trail `case`, as a run of its
+    trial: the configuration it ran, as content, the branches of the stack,
+    LLM and tools it read, and the client it ran on: the one running, unless
+    another is given. A run that continued `conversation` adds to it.
     """
     client = client or running()
 
     with transaction.atomic():
         identity = IdentityModel.objects.get(name=owner)
         stack = StackBranchModel.objects.get(pk=branches.stack)
-        trial_model = _trial(configuration, stack.trail_id, case, trial.seed)
+        trial_model = _trial(configuration, stack.trail_id, case, run.seed)
 
-        session = session or SessionModel.objects.create(
-            uuid=UUID(trial.conversation_id),
+        conversation = conversation or ConversationModel.objects.create(
+            uuid=UUID(run.conversation_id),
             owner=identity,
             context=context,
             description=description[:255] if description else None,
         )
         _ = MessageModel.objects.bulk_create(
-            _messages(session, trial, outcome.error, finished)
+            _messages(conversation, run, outcome.error, finished)
         )
 
-        run = RunModel.objects.create(
-            uuid=UUID(trial.run_id),
+        recorded = RunModel.objects.create(
+            uuid=UUID(run.run_id),
             owner=identity,
             trial=trial_model,
-            session=session,
+            conversation=conversation,
             status=outcome.status,
             stack_branch=stack,
             llm_branch_id=branches.llm,
@@ -118,19 +118,19 @@ def record(
             client_packages=client.packages,
             started=started,
             finished=finished,
-            requests=[body.decode() for body in trial.requests],
-            responses=[bytes(body).decode() for body in trial.responses],
-            output=outcome.output,
+            requests=[body.decode() for body in run.requests],
+            responses=[bytes(body).decode() for body in run.responses],
+            answer=outcome.answer,
             valid=outcome.valid,
-            finish_reason=_finish_reason(trial.new_messages),
+            finish_reason=_finish_reason(run.new_messages),
             error=outcome.error,
         )
         _ = RunToolBranchModel.objects.bulk_create(
-            RunToolBranchModel(run=run, tool_branch_id=tool, blob=blob)
+            RunToolBranchModel(run=recorded, tool_branch_id=tool, blob=blob)
             for tool, blob in branches.tools.items()
         )
 
-    return run
+    return recorded
 
 
 def _trial(
@@ -151,29 +151,29 @@ def _trial(
 
 
 def _messages(
-    session: SessionModel,
-    trial: Trial,
+    conversation: ConversationModel,
+    run: Run,
     error: str | None,
     at: datetime,
 ) -> list[MessageModel]:
-    payloads = ModelMessagesTypeAdapter.dump_python(trial.new_messages, mode="json")
+    payloads = ModelMessagesTypeAdapter.dump_python(run.new_messages, mode="json")
     messages = [
         MessageModel(
-            session=session,
-            run_id=UUID(trial.run_id),
+            conversation=conversation,
+            run_uuid=UUID(run.run_id),
             role=_role(message),
             kind=message.kind,
             payload=payload,
             timestamp=message.timestamp or at,
         )
-        for message, payload in zip(trial.new_messages, payloads, strict=True)
+        for message, payload in zip(run.new_messages, payloads, strict=True)
     ]
 
     if error is not None:
         messages.append(
             MessageModel(
-                session=session,
-                run_id=UUID(trial.run_id),
+                conversation=conversation,
+                run_uuid=UUID(run.run_id),
                 role=Role.UNKNOWN,
                 kind=MessageKind.ERROR,
                 payload={"error": error},

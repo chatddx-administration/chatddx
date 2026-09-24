@@ -1,9 +1,9 @@
-"""The test configurations as a trial sends them to gpt-oss on malborg."""
+"""The test configurations as a run sends them to gpt-oss on malborg."""
 
 from collections.abc import Callable
 
 from chatddx.runtime.resolution import Resolution
-from chatddx.runtime.trial import Trial
+from chatddx.runtime.run import Run
 from chatddx.utils import dig
 
 type Cell = Callable[..., Resolution]
@@ -12,9 +12,9 @@ STACK = "gpt-oss-20b@malborg"
 
 
 def test_baseline(cell: Cell):
-    trial = Trial(cell("baseline", STACK, reasoning="low"), "a case", seed=0)
+    run = Run(cell("baseline", STACK, reasoning="low"), "a case", seed=0)
 
-    settings = trial.settings()
+    settings = run.settings()
 
     assert settings.get("logit_bias") is None
     assert settings.get("seed") == 0
@@ -23,7 +23,7 @@ def test_baseline(cell: Cell):
 
 def test_challenge_coercion_tool(cell: Cell):
     resolution = cell("challenge-coercion-tool", STACK)
-    settings = Trial(resolution, "a case", seed=0).settings()
+    settings = Run(resolution, "a case", seed=0).settings()
 
     assert resolution.coercion is not None
     assert resolution.coercion.mode == "tool"
@@ -34,7 +34,7 @@ def test_challenge_coercion_tool(cell: Cell):
 
 def test_challenge_coercion_prompted(cell: Cell):
     resolution = cell("challenge-coercion-prompted", STACK)
-    settings = Trial(resolution, "a case", seed=0).settings()
+    settings = Run(resolution, "a case", seed=0).settings()
 
     assert resolution.coercion is not None
     assert resolution.coercion.mode == "prompted"
@@ -43,7 +43,7 @@ def test_challenge_coercion_prompted(cell: Cell):
 
 def test_challenge_coercion_native(cell: Cell):
     resolution = cell("challenge-coercion-native", STACK)
-    settings = Trial(resolution, "a case", seed=0).settings()
+    settings = Run(resolution, "a case", seed=0).settings()
 
     assert resolution.coercion is not None
     assert resolution.coercion.mode == "native"
@@ -51,9 +51,9 @@ def test_challenge_coercion_native(cell: Cell):
 
 
 def test_default_reasoning(cell: Cell):
-    trial = Trial(cell("baseline", STACK), "a case", seed=0)
+    run = Run(cell("baseline", STACK), "a case", seed=0)
 
-    settings = trial.settings()
+    settings = run.settings()
 
     assert settings.get("seed") == 0
     assert dig(settings, "extra_body", "reasoning_effort") == "medium"
@@ -61,7 +61,7 @@ def test_default_reasoning(cell: Cell):
 
 def test_tools(cell: Cell, entry_points: dict[str, str]):
     resolution = cell("test-tools", STACK)
-    settings = Trial(
+    settings = Run(
         resolution, "a case", seed=0, implementations=entry_points
     ).settings()
 

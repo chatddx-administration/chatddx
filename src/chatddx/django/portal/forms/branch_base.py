@@ -10,8 +10,8 @@ from unfold.contrib.inlines.forms import NonrelatedInlineModelFormSet
 
 from chatddx.core import settings
 from chatddx.core.utils import ensure_identity
+from chatddx.dev.error_handling import print_pydantic_errors
 from chatddx.django.portal.utils import load_form_data, template_choices
-from chatddx.dx.error_handling import print_pydantic_errors
 from chatddx.repo.bundles import entity_of, presentation_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel, TrailModel

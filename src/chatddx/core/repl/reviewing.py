@@ -24,7 +24,7 @@ from chatddx.core.repl.shell import Repl
 from chatddx.history.models import MessageKind, RunModel, RunStatus
 from chatddx.repo.entities.output.pydantic import OutputTrailOut
 from chatddx.repo.store.trail import load_trail
-from chatddx.runtime.trial import invalid
+from chatddx.runtime.run import invalid
 from chatddx.scoring.score import Scoring
 
 
@@ -35,7 +35,7 @@ def runs(repl: Repl, count: str = "20") -> None:
 
     found = list(
         RunModel.objects.filter(owner__name=repl.identity)
-        .select_related("trial", "session")
+        .select_related("trial", "conversation")
         .prefetch_related("scores")
         .order_by("-timestamp", "-pk")[: int(count)]
     )
@@ -57,7 +57,9 @@ def runs(repl: Repl, count: str = "20") -> None:
             short(run.trial.uuid),
             what_ran(run),
             _outcome(run),
-            "  ".join(f"{s.name} {value_of(s.value)}" for s in scoring.latest(run)),
+            "  ".join(
+                f"{s.scorer_name} {value_of(s.value)}" for s in scoring.latest(run)
+            ),
         )
 
     repl.console.print(table)
@@ -73,11 +75,11 @@ def replay(repl: Repl, prefix: str | None = None) -> None:
         f"{_when(run.timestamp)}, {run.status}, {_client(run)}", style=LABEL
     )
 
-    stored = list(run.session.messages.all()) if run.session else []
+    stored = list(run.conversation.messages.all()) if run.conversation else []
     messages = ModelMessagesTypeAdapter.validate_python(
         [message.payload for message in stored if message.kind != MessageKind.ERROR]
     )
-    answered = run.output is not None
+    answered = run.answer is not None
     show_messages(repl.console, messages, answered)
 
     for message in stored:
@@ -95,9 +97,9 @@ def replay(repl: Repl, prefix: str | None = None) -> None:
         )
 
         if run.valid is not None and output.json_schema is not None:
-            show_validity(repl.console, invalid(output.json_schema, run.output))
+            show_validity(repl.console, invalid(output.json_schema, run.answer))
 
-        show_views(repl.console, output, run.output)
+        show_views(repl.console, output, run.answer)
 
     show_scores(repl.console, Scoring(repl.identity).latest(run))
 
@@ -108,7 +110,11 @@ def short(value: Any) -> str:
 
 
 def what_ran(run: RunModel) -> str:
-    return run.session.description if run.session and run.session.description else "—"
+    conversation = run.conversation
+
+    return (
+        conversation.description if conversation and conversation.description else "—"
+    )
 
 
 def _when(moment: datetime) -> str:

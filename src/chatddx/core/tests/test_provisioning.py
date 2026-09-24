@@ -13,8 +13,8 @@ from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.core.repl.commands import handle
 from chatddx.core.repl.shell import Repl
-from chatddx.dx.fake_vllm import FakeTransport
-from chatddx.history.models import RunModel, SessionModel, TrialModel
+from chatddx.dev.fake_vllm import FakeTransport
+from chatddx.history.models import ConversationModel, RunModel, TrialModel
 from chatddx.manage import app
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import ENTITY_NAMES
@@ -35,7 +35,7 @@ NO_HISTORY = [
     "[score]: removed 0",
     "[run]: removed 0, unshared 0",
     "[message]: removed 0",
-    "[session]: removed 0, unshared 0",
+    "[conversation]: removed 0, unshared 0",
     "[trial]: removed 0",
 ]
 
@@ -248,7 +248,7 @@ def test_wipe_data_takes_back_the_user_s_history_too():
         "[score]: removed 1",
         "[run]: removed 1, unshared 0",
         "[message]: removed 6",
-        "[session]: removed 1, unshared 0",
+        "[conversation]: removed 1, unshared 0",
         "[trial]: removed 1",
     ]
     assert not RunModel.objects.exists()
@@ -263,7 +263,7 @@ def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read():
     ran_test_tools("alex")
 
     bob = IdentityModel.objects.get(name="bob")
-    for model in (RunModel, SessionModel):
+    for model in (RunModel, ConversationModel):
         _ = model.objects.update(owner=bob)
 
     result = CliRunner().invoke(app, ["wipe-data", "alex"])

@@ -8,7 +8,7 @@ from typing import Any
 import httpx2
 import pytest
 
-from chatddx.dx.fake_vllm import FakeTransport, stream
+from chatddx.dev.fake_vllm import FakeTransport, stream
 from chatddx.history.models import RunModel, TrialModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
 
@@ -31,7 +31,7 @@ def failing(_request: httpx2.Request) -> httpx2.Response:
     return httpx2.Response(400, json={"error": {"message": "no such model"}})
 
 
-def test_run_streams_a_trial_of_the_cell(say: Say, fake: FakeTransport):
+def test_run_streams_a_run_of_the_cell(say: Say, fake: FakeTransport):
     written = say("cell free-text qwen3-8b-awq@fake", "run case-1")
 
     assert "trial: free-text × qwen3-8b-awq@fake × case-1" in written
@@ -66,8 +66,8 @@ def test_a_run_whose_server_fails_is_recorded_as_errored(say_through: SayThrough
     assert run.status == "errored"
     assert run.error is not None and "no such model" in run.error
     assert run.responses == ['{"error":{"message":"no such model"}}']
-    assert run.session is not None
-    request, response, error = run.session.messages.all()
+    assert run.conversation is not None
+    request, response, error = run.conversation.messages.all()
     assert (request.kind, response.kind, error.kind) == ("request", "response", "error")
     assert response.payload["state"] == "interrupted"
 

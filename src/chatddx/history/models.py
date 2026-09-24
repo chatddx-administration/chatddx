@@ -7,8 +7,8 @@ by their trails, and the case (new-datamodel.md §6). It is content, like a
 trail, and belongs to no one: runs of the same four are runs of one trial,
 whoever made them. A run is one go at a trial, one pydantic-ai agent run,
 whose id it takes, and it is its maker's. It keeps what resolution read, the
-exact bytes it sent and got back, and what came of them. Its session holds
-the exchange as pydantic-ai's messages. A trial can be run again, to see a
+exact bytes it sent and got back, and what came of them. Its conversation
+holds the exchange as pydantic-ai's messages. A trial can be run again, to see a
 seed hold or to retry one that errored, and each run keeps its own record.
 """
 
@@ -48,26 +48,22 @@ from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.families.django import OrderedJSONField
 
 __all__ = [
+    "ConversationModel",
     "MessageModel",
     "RunModel",
     "RunToolBranchModel",
     "ScoreModel",
-    "SessionModel",
     "TrialModel",
 ]
 
 
 class RunStatus(StrEnum):
-    STORED = "stored"
-    QUEUED = "queued"
-    RUNNING = "running"
     ERRORED = "errored"
     COMPLETED = "completed"
-    SCORED = "scored"
 
 
-class SessionContext(StrEnum):
-    """Where a session was held."""
+class ConversationContext(StrEnum):
+    """Where a conversation was held."""
 
     CHAT = "chat"
     REPL = "repl"
@@ -133,7 +129,7 @@ class TrialModel(Model):
     runs: QuerySet[RunModel]
 
 
-class SessionModel(Model):
+class ConversationModel(Model):
     class Meta:
         app_label = "orm"
 
@@ -158,7 +154,7 @@ class SessionModel(Model):
     collaborators: ManyToManyField[IdentityModel, Any] = ManyToManyField(
         IdentityModel,
         blank=True,
-        related_name="shared_sessions",
+        related_name="shared_conversations",
     )
 
     messages: QuerySet[MessageModel]
@@ -175,10 +171,7 @@ class RunModel(Model):
         unique=True,
     )
     timestamp = DateTimeField(auto_now_add=True)
-    status = CharField(
-        max_length=16,
-        default=RunStatus.STORED.value,
-    )
+    status = CharField(max_length=16)
     owner = ForeignKey(
         IdentityModel,
         on_delete=PROTECT,
@@ -196,15 +189,15 @@ class RunModel(Model):
         related_name="runs",
     )
     trial_id: int
-    session = ForeignKey(
-        SessionModel,
+    conversation = ForeignKey(
+        ConversationModel,
         default=None,
         null=True,
         blank=True,
         on_delete=PROTECT,
         related_name="runs",
     )
-    session_id: int | None
+    conversation_id: int | None
 
     stack_branch = ForeignKey(
         StackBranchModel,
@@ -274,7 +267,7 @@ class RunModel(Model):
         blank=True,
     )
 
-    output = OrderedJSONField(
+    answer = OrderedJSONField(
         default=None,
         null=True,
         blank=True,
@@ -348,7 +341,7 @@ class ScoreModel(Model):
         related_name="scores",
     )
     scorer_id: int
-    name = CharField(max_length=255)
+    scorer_name = CharField(max_length=255)
     # none for a scorer that needs no target
     case_branch = ForeignKey(
         CaseBranchModel,
@@ -390,13 +383,13 @@ class MessageModel(Model):
         app_label = "orm"
         ordering = ("pk",)
 
-    session = ForeignKey(
-        SessionModel,
+    conversation = ForeignKey(
+        ConversationModel,
         related_name="messages",
         on_delete=PROTECT,
     )
-    session_id: int
-    run_id = UUIDField(db_index=True)
+    conversation_id: int
+    run_uuid = UUIDField(db_index=True)
     role = CharField(max_length=16)
     kind = CharField(max_length=16)
     payload: JSONField[dict[str, Any]] = JSONField()

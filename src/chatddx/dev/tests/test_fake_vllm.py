@@ -9,7 +9,7 @@ import pytest
 from jsonschema.validators import validator_for
 
 from chatddx.core import settings
-from chatddx.dx.fake_vllm import (
+from chatddx.dev.fake_vllm import (
     ANSWER,
     completion,
     instance,

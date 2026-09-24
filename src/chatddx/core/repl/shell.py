@@ -36,7 +36,7 @@ class NotFound(Exception):
 class Repl:
     """
     What the repl holds: the identity it runs as, the console it writes to,
-    the transport trials go through in place of the stack's endpoint, where
+    the transport runs go through in place of the stack's endpoint, where
     one is given, and a cell.
 
     Names are looked up as the identity sees them: its own branches first,
@@ -119,7 +119,7 @@ class Repl:
     def run_named(self, prefix: str | None) -> RunModel:
         """The identity's run whose id starts with `prefix`, or its latest."""
         runs = RunModel.objects.filter(owner__name=self.identity).select_related(
-            "trial__configuration__output", "session", "client"
+            "trial__configuration__output", "conversation", "client"
         )
 
         if prefix is not None:

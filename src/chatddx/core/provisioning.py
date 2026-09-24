@@ -12,10 +12,10 @@ from django.db.models import ProtectedError, QuerySet
 
 from chatddx.core.utils import ensure_identity
 from chatddx.history.models import (
+    ConversationModel,
     MessageModel,
     RunModel,
     ScoreModel,
-    SessionModel,
     TrialModel,
 )
 from chatddx.repo.bundles import entity_of
@@ -51,22 +51,24 @@ def wipe_data(
 
 def _wipe_history(user_name: str) -> list[str]:
     """
-    The user's scores and runs, the sessions their messages were in, and the
-    trials no one else's run is left of.
+    The user's scores and runs, the conversations their messages were in,
+    and the trials no one else's run is left of.
     """
     # what refers to a row goes before the row
     scores = _removed(ScoreModel.objects.filter(owner__name=user_name))
     runs = _removed(RunModel.objects.filter(owner__name=user_name))
-    messages = _removed(MessageModel.objects.filter(session__owner__name=user_name))
-    sessions = _removed(SessionModel.objects.filter(owner__name=user_name))
+    messages = _removed(
+        MessageModel.objects.filter(conversation__owner__name=user_name)
+    )
+    conversations = _removed(ConversationModel.objects.filter(owner__name=user_name))
     trials = _removed(TrialModel.objects.filter(runs__isnull=True))
 
     return [
         f"[score]: removed {scores}",
         f"[run]: removed {runs}, unshared {_unshared(RunModel, user_name)}",
         f"[message]: removed {messages}",
-        f"[session]: removed {sessions}, "
-        + f"unshared {_unshared(SessionModel, user_name)}",
+        f"[conversation]: removed {conversations}, "
+        + f"unshared {_unshared(ConversationModel, user_name)}",
         f"[trial]: removed {trials}",
     ]
 
@@ -76,7 +78,7 @@ def _removed(qs: QuerySet[Any]) -> int:
     return removed.get(qs.model._meta.label, 0)
 
 
-def _unshared(model: type[RunModel | SessionModel], user_name: str) -> int:
+def _unshared(model: type[RunModel | ConversationModel], user_name: str) -> int:
     unshared, _ = model.collaborators.through.objects.filter(
         identitymodel__name=user_name
     ).delete()

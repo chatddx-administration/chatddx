@@ -231,7 +231,7 @@ def get_branch_out(
         return spec_cls.model_validate(model)
     except ValidationError as e:
         if settings.MODE == "dev":
-            from chatddx.dx.error_handling import print_pydantic_errors
+            from chatddx.dev.error_handling import print_pydantic_errors
 
             print_pydantic_errors(e)
         raise
@@ -274,7 +274,7 @@ def commit(
 
     A version is its trail and its details: what the branch says about the
     content without being part of it, such as an LLM's facts or a stack's
-    endpoint. Resolution reads details, and a trial has to be able to say
+    endpoint. Resolution reads details, and a run has to be able to say
     which version it resolved against, so a change to them makes a new
     version as a change to the trail does (new-datamodel.md §1). What the
     branch is related to, its tags and collaborators, is not read by

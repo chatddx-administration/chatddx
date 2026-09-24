@@ -1,8 +1,8 @@
 """
 A branch is an owner's named version of a trail, and the details beside it.
 
-What a version is: its trail and its details. Resolution reads details, a
-LLM's facts and a stack's endpoint, and a trial must be able to say which
+What a version is: its trail and its details. Resolution reads details, an
+LLM's facts and a stack's endpoint, and a run must be able to say which
 version it resolved against, so a change to them is a new version
 (new-datamodel.md §1). What a branch is related to, tags and collaborators,
 changes in place.
@@ -97,7 +97,7 @@ def test_a_change_to_details_is_a_new_version(
 ):
     """
     The trail stays put, since details aren't content; the branch gets a
-    version whose facts a trial can name.
+    version whose facts a run can name.
     """
     llm = trails.llm["gpt-oss-20b"]
 

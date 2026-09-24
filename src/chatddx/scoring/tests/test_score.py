@@ -16,7 +16,7 @@ from django.utils import timezone
 from pydantic_ai import AgentRunResultEvent, UnexpectedModelBehavior
 
 from chatddx.core.utils import ensure_identity
-from chatddx.dx.fake_vllm import FakeTransport, stream
+from chatddx.dev.fake_vllm import FakeTransport, stream
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.entities.case.django import CaseBranchModel
@@ -34,7 +34,7 @@ from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.store.branch import commit, get_visible_branch_model
 from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import resolve
-from chatddx.runtime.trial import Trial
+from chatddx.runtime.run import Run
 from chatddx.scoring import scorers
 from chatddx.scoring.score import Scoring
 
@@ -50,13 +50,13 @@ def provisioned(provision: Callable[..., None]) -> None:
     provision()
 
 
-async def outcome_of(trial: Trial) -> Outcome:
-    """What came of `trial`, as the repl has it."""
+async def outcome_of(run: Run) -> Outcome:
+    """What came of `run`, as the repl has it."""
     try:
-        async with trial.stream() as events:
+        async with run.stream() as events:
             async for event in events:
                 if isinstance(event, AgentRunResultEvent):
-                    return Outcome(RunStatus.COMPLETED, output=event.result.output)
+                    return Outcome(RunStatus.COMPLETED, answer=event.result.output)
     except UnexpectedModelBehavior as e:
         return Outcome(RunStatus.COMPLETED, valid=False, error=str(e))
     except Exception as e:  # noqa: BLE001
@@ -84,20 +84,20 @@ def ran(
     facts = LLMBranchOut.model_validate(llm).details.facts
     case_model = get_visible_branch_model("case", "alex", case)
 
-    trial = Trial(
+    run = Run(
         resolve(cell, stack.details, facts, stack.trail.serving),
         case_model.trail.vignette,
         transport=transport or FakeTransport(),
     )
     started = timezone.now()
-    outcome = asyncio.run(outcome_of(trial))
+    outcome = asyncio.run(outcome_of(run))
 
     return record(
         user,
         cell,
         Branches(stack.id, llm.pk),
         case_model.trail_id,
-        trial,
+        run,
         outcome,
         started,
         timezone.now(),
@@ -107,7 +107,9 @@ def ran(
 def made(
     run: RunModel, user: str = "alex"
 ) -> dict[str, tuple[float | None, str | None, str | None]]:
-    return {s.name: (s.value, s.answer, s.reason) for s in Scoring(user).score(run)}
+    return {
+        s.scorer_name: (s.value, s.answer, s.reason) for s in Scoring(user).score(run)
+    }
 
 
 def applicable(run: RunModel, user: str = "alex") -> list[str]:
@@ -190,7 +192,7 @@ def test_a_score_keeps_what_it_was_made_with_and_who_made_it():
 
     patterns = Path(scorers.__file__).parent / "patterns.py"
     assert rank.blob == blob_of(patterns.read_bytes())
-    assert (rank.name, rank.scorer.view, rank.scorer.target_kind) == (
+    assert (rank.scorer_name, rank.scorer.view, rank.scorer.target_kind) == (
         "reciprocal_rank",
         "differential",
         "diagnosis",
@@ -259,7 +261,7 @@ def test_a_plan_that_rightly_raises_no_warning_is_held_to_none():
         "fake acute warning",
         "none expected",
     )
-    assert ScoreModel.objects.get(name="warning_mentions").target is None
+    assert ScoreModel.objects.get(scorer_name="warning_mentions").target is None
 
 
 def test_each_identity_holds_a_run_to_its_own_scores():
@@ -295,7 +297,7 @@ def test_a_run_that_came_to_no_answer_is_scored_as_such():
         )
 
     run = ran("plan-prompted", transport=httpx2.MockTransport(prose))
-    assert (run.status, run.output) == (RunStatus.COMPLETED, None)
+    assert (run.status, run.answer) == (RunStatus.COMPLETED, None)
 
     assert made(run) == {
         "reciprocal_rank": (0.0, None, "no answer"),

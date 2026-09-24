@@ -35,7 +35,7 @@ import typer
 
 ANSWER = "Fake diagnosis A\nFake diagnosis B\nFake diagnosis C"
 
-# the tool an answer is given through, in tool mode: the trial's, named here
+# the tool an answer is given through, in tool mode: the run's, named here
 # so the fake stands on its own
 FINAL_RESULT = "final_result"
 

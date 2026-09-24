@@ -18,29 +18,29 @@ from pydantic_ai import (
     UsageLimitExceeded,
 )
 
-from chatddx.dx.fake_vllm import ANSWER, FakeTransport, server, stream, thinking
+from chatddx.dev.fake_vllm import ANSWER, FakeTransport, server, stream, thinking
 from chatddx.runtime import tools
 from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import Resolution, Sampling
-from chatddx.runtime.trial import TOOL_ROUNDS, Trial, cause_of, invalid
+from chatddx.runtime.run import TOOL_ROUNDS, Run, cause_of, invalid
 
 type Cell = Callable[..., Resolution]
 
 CASE = "A patient presents with a cough."
 
 
-async def run(trial: Trial) -> list[AgentStreamEvent | AgentRunResultEvent[Any]]:
-    async with trial.stream() as events:
+async def events_of(run: Run) -> list[AgentStreamEvent | AgentRunResultEvent[Any]]:
+    async with run.stream() as events:
         return [event async for event in events]
 
 
 @pytest.mark.asyncio
-async def test_a_trial_sends_what_resolution_wrote(cell: Cell):
+async def test_a_run_sends_what_resolution_wrote(cell: Cell):
     resolved = cell("free-text", "qwen3-8b-awq@fake")
     fake = FakeTransport()
-    trial = Trial(resolved, CASE, transport=fake)
+    run = Run(resolved, CASE, transport=fake)
 
-    _ = await run(trial)
+    _ = await events_of(run)
 
     system, user = resolved.render(CASE)
 
@@ -57,21 +57,21 @@ async def test_a_trial_sends_what_resolution_wrote(cell: Cell):
         | resolved.fields
     ]
 
-    assert [json.loads(body) for body in trial.requests] == fake.requests
+    assert [json.loads(body) for body in run.requests] == fake.requests
 
 
 @pytest.mark.asyncio
-async def test_a_trial_keeps_each_response_as_it_came(cell: Cell):
+async def test_a_run_keeps_each_response_as_it_came(cell: Cell):
     fake = FakeTransport()
-    trial = Trial(
+    run = Run(
         cell("free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=fake,
     )
 
-    _ = await run(trial)
+    _ = await events_of(run)
 
-    [response] = trial.responses
+    [response] = run.responses
     lines = [line for line in response.decode().split("\n\n") if line]
     chunks = [json.loads(line.removeprefix("data: ")) for line in lines[:-1]]
     deltas = [c["choices"][0]["delta"] for c in chunks if c["choices"]]
@@ -81,8 +81,8 @@ async def test_a_trial_keeps_each_response_as_it_came(cell: Cell):
 
 
 @pytest.mark.asyncio
-async def test_every_message_carries_the_trial_s_ids(cell: Cell):
-    trial = Trial(
+async def test_every_message_carries_the_run_s_ids(cell: Cell):
+    run = Run(
         cell("free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=FakeTransport(),
@@ -90,23 +90,23 @@ async def test_every_message_carries_the_trial_s_ids(cell: Cell):
         conversation_id="conversation-1",
     )
 
-    _ = await run(trial)
+    _ = await events_of(run)
 
-    assert [message.kind for message in trial.messages] == ["request", "response"]
-    assert {(m.run_id, m.conversation_id) for m in trial.messages} == {
+    assert [message.kind for message in run.messages] == ["request", "response"]
+    assert {(m.run_id, m.conversation_id) for m in run.messages} == {
         ("run-1", "conversation-1")
     }
 
 
 @pytest.mark.asyncio
-async def test_a_trial_streams_the_thinking_then_the_answer(cell: Cell):
-    trial = Trial(
+async def test_a_run_streams_the_thinking_then_the_answer(cell: Cell):
+    run = Run(
         cell("free-text", "qwen3-8b-awq@fake"),
         CASE,
         transport=FakeTransport(),
     )
 
-    events = await run(trial)
+    events = await events_of(run)
 
     starts = [e.part for e in events if isinstance(e, PartStartEvent)]
     assert [type(part) for part in starts] == [ThinkingPart, TextPart]
@@ -119,8 +119,8 @@ async def test_a_trial_streams_the_thinking_then_the_answer(cell: Cell):
 @pytest.mark.asyncio
 async def test_an_empty_system_prompt_sends_no_system_message(cell: Cell):
     fake = FakeTransport()
-    _ = await run(
-        Trial(
+    _ = await events_of(
+        Run(
             cell("baseline", "gpt-oss-20b@fake"),
             CASE,
             transport=fake,
@@ -141,7 +141,7 @@ async def test_the_fields_pydantic_ai_types_go_out_as_the_request_names_them(
     )
     fake = FakeTransport()
 
-    _ = await run(Trial(resolved, CASE, transport=fake))
+    _ = await events_of(Run(resolved, CASE, transport=fake))
 
     sent = fake.requests[0]
     assert (sent["stop"], sent["max_completion_tokens"], sent["top_k"]) == (
@@ -165,8 +165,8 @@ async def test_a_credential_goes_out_as_the_api_key(cell: Cell):
         )
 
     resolved = cell("free-text", "qwen3-8b-awq@fake")
-    _ = await run(
-        Trial(resolved, CASE, api_key="s3cret", transport=httpx2.MockTransport(handler))
+    _ = await events_of(
+        Run(resolved, CASE, api_key="s3cret", transport=httpx2.MockTransport(handler))
     )
 
     assert headers == ["Bearer s3cret"]
@@ -186,17 +186,17 @@ def fake_endpoint() -> Iterator[str]:
 
 
 @pytest.mark.asyncio
-async def test_a_trial_runs_against_the_fake_over_http(cell: Cell, fake_endpoint: str):
+async def test_a_run_goes_to_the_fake_over_http(cell: Cell, fake_endpoint: str):
     resolved = cell("free-text", "gpt-oss-20b@fake")
     resolved = replace(resolved, endpoint=fake_endpoint)
-    trial = Trial(resolved, CASE)
+    run = Run(resolved, CASE)
 
-    events = await run(trial)
+    events = await events_of(run)
 
     result = events[-1]
     assert isinstance(result, AgentRunResultEvent)
     assert result.result.output == ANSWER
-    [response] = trial.responses
+    [response] = run.responses
     assert response.startswith(b"data: {")
     assert response.endswith(b"data: [DONE]\n\n")
 
@@ -213,7 +213,7 @@ async def test_native_asks_for_the_schema_as_written_and_says_nothing_of_it(cell
     assert resolved.coercion is not None
     fake = FakeTransport()
 
-    events = await run(Trial(resolved, CASE, transport=fake))
+    events = await events_of(Run(resolved, CASE, transport=fake))
 
     [request] = fake.requests
     written: dict[str, Any] = resolved.coercion.schema
@@ -241,7 +241,7 @@ async def test_tool_mode_offers_the_schema_as_a_tool_the_answer_is_given_through
     assert resolved.coercion is not None
     fake = FakeTransport()
 
-    events = await run(Trial(resolved, CASE, transport=fake))
+    events = await events_of(Run(resolved, CASE, transport=fake))
 
     [request] = fake.requests
     [tool] = request["tools"]
@@ -259,7 +259,7 @@ async def test_prompted_shows_the_schema_and_holds_the_answer_to_nothing(cell: C
     assert resolved.coercion is not None
     fake = FakeTransport()
 
-    events = await run(Trial(resolved, CASE, transport=fake))
+    events = await events_of(Run(resolved, CASE, transport=fake))
 
     [request] = fake.requests
     assert "response_format" not in request
@@ -283,7 +283,9 @@ async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(cell: Cell):
     resolved = cell("challenge-coercion-prompted", "qwen3-8b-awq@fake")
 
     with pytest.raises(UnexpectedModelBehavior) as unparsed:
-        _ = await run(Trial(resolved, CASE, transport=httpx2.MockTransport(handler)))
+        _ = await events_of(
+            Run(resolved, CASE, transport=httpx2.MockTransport(handler))
+        )
 
     assert len(bodies) == 1
     assert cause_of(unparsed.value) == "Invalid JSON: expected value at line 1 column 1"
@@ -293,8 +295,8 @@ async def test_an_answer_that_doesn_t_parse_is_not_asked_for_again(cell: Cell):
 async def test_a_seed_is_the_trial_s_and_goes_out_with_it(cell: Cell):
     fake = FakeTransport()
 
-    _ = await run(
-        Trial(
+    _ = await events_of(
+        Run(
             cell("free-text", "qwen3-8b-awq@fake"),
             CASE,
             transport=fake,
@@ -311,13 +313,15 @@ def returned(request: dict[str, Any]) -> list[str]:
 
 
 @pytest.mark.asyncio
-async def test_a_trial_offers_the_tools_as_resolution_wrote_them(
+async def test_a_run_offers_the_tools_as_resolution_wrote_them(
     cell: Cell, entry_points: dict[str, str]
 ):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
     fake = FakeTransport()
 
-    _ = await run(Trial(resolved, CASE, transport=fake, implementations=entry_points))
+    _ = await events_of(
+        Run(resolved, CASE, transport=fake, implementations=entry_points)
+    )
 
     offered: list[dict[str, Any]] = fake.requests[0]["tools"]
     assert offered == [
@@ -342,14 +346,14 @@ async def test_each_call_is_run_and_what_it_returned_goes_back(
 ):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
     fake = FakeTransport()
-    trial = Trial(resolved, CASE, transport=fake, implementations=entry_points)
+    run = Run(resolved, CASE, transport=fake, implementations=entry_points)
 
-    events = await run(trial)
+    events = await events_of(run)
 
     assert len(fake.requests) == 3
     assert returned(fake.requests[-1]) == ["asdf", "0"]
     assert answer(events) == ANSWER
-    assert [json.loads(body) for body in trial.requests] == fake.requests
+    assert [json.loads(body) for body in run.requests] == fake.requests
 
 
 def calling(tool: str, arguments: dict[str, Any]) -> httpx2.MockTransport:
@@ -379,16 +383,16 @@ async def test_a_tool_that_fails_tells_the_llm_why(
     cell: Cell, entry_points: dict[str, str]
 ):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
-    trial = Trial(
+    run = Run(
         resolved,
         CASE,
         transport=calling("sentinel_op", {"v1": 12, "v2": 0}),
         implementations=entry_points,
     )
 
-    events = await run(trial)
+    events = await events_of(run)
 
-    assert returned(json.loads(trial.requests[-1])) == [
+    assert returned(json.loads(run.requests[-1])) == [
         "asdf",
         "ZeroDivisionError: integer modulo by zero",
     ]
@@ -400,16 +404,16 @@ async def test_arguments_that_don_t_hold_go_back_to_the_llm_uncalled(
     cell: Cell, entry_points: dict[str, str]
 ):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
-    trial = Trial(
+    run = Run(
         resolved,
         CASE,
         transport=calling("sentinel_op", {"v1": "twelve", "v2": 8}),
         implementations=entry_points,
     )
 
-    _ = await run(trial)
+    _ = await events_of(run)
 
-    assert returned(json.loads(trial.requests[-1])) == [
+    assert returned(json.loads(run.requests[-1])) == [
         "asdf",
         "invalid arguments: $.v1: 'twelve' is not of type 'integer'",
     ]
@@ -422,12 +426,12 @@ def test_only_chatddx_s_own_tools_run(cell: Cell, entry_points: dict[str, str]):
         ValueError,
         match="the tool 'sentinel_op' can't run: os:system isn't one of chatddx's",
     ):
-        _ = Trial(
+        _ = Run(
             resolved, CASE, implementations=entry_points | {"sentinel_op": "os:system"}
         )
 
     with pytest.raises(ValueError, match="there is no chatddx.runtime.tools.nope"):
-        _ = Trial(
+        _ = Run(
             resolved,
             CASE,
             implementations=entry_points
@@ -437,7 +441,7 @@ def test_only_chatddx_s_own_tools_run(cell: Cell, entry_points: dict[str, str]):
     with pytest.raises(
         ValueError, match="there is no chatddx.runtime.tools.sentinel_op:nope"
     ):
-        _ = Trial(
+        _ = Run(
             resolved,
             CASE,
             implementations=entry_points
@@ -445,13 +449,13 @@ def test_only_chatddx_s_own_tools_run(cell: Cell, entry_points: dict[str, str]):
         )
 
 
-def test_a_trial_keeps_the_blob_of_each_tool_file_it_runs(
+def test_a_run_keeps_the_blob_of_each_tool_file_it_runs(
     cell: Cell, entry_points: dict[str, str]
 ):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
-    trial = Trial(resolved, CASE, implementations=entry_points)
+    run = Run(resolved, CASE, implementations=entry_points)
 
-    assert {name: ran.blob for name, ran in trial.implementations.items()} == {
+    assert {name: ran.blob for name, ran in run.implementations.items()} == {
         name: blob_of(Path(tools.__file__).parent.joinpath(f"{name}.py").read_bytes())
         for name in ("sentinel_string", "sentinel_op")
     }
@@ -472,7 +476,7 @@ async def test_an_llm_still_calling_after_its_rounds_is_stopped(
         )
 
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
-    trial = Trial(
+    run = Run(
         resolved,
         CASE,
         transport=httpx2.MockTransport(handler),
@@ -480,18 +484,18 @@ async def test_an_llm_still_calling_after_its_rounds_is_stopped(
     )
 
     with pytest.raises(UsageLimitExceeded):
-        _ = await run(trial)
+        _ = await events_of(run)
 
     assert len(bodies) == TOOL_ROUNDS + 1
-    assert len(trial.messages) == 2 * (TOOL_ROUNDS + 1) + 1
-    assert trial.messages[-1].kind == "request"
+    assert len(run.messages) == 2 * (TOOL_ROUNDS + 1) + 1
+    assert run.messages[-1].kind == "request"
 
 
 def test_a_tool_with_nothing_to_run_is_refused_before_anything_is_sent(cell: Cell):
     resolved = cell("test-tools", "qwen3-8b-awq@fake")
 
     with pytest.raises(ValueError, match="'sentinel_op' has nothing to run"):
-        _ = Trial(
+        _ = Run(
             resolved,
             CASE,
             transport=FakeTransport(),

@@ -1,5 +1,5 @@
 # pyright: basic
-"""Running a case on the cell, as a trial, and recording the run."""
+"""Running the cell on a case, and recording the run as one of its trial's."""
 
 import asyncio
 
@@ -22,14 +22,15 @@ from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import CellRefused, Resolution
-from chatddx.runtime.trial import TOOL_ROUNDS, Trial, cause_of, invalid
+from chatddx.runtime.run import TOOL_ROUNDS, Run, cause_of, invalid
 from chatddx.scoring.score import Scoring
 
 
 def run(repl: Repl, name: str, seed: str | None = None) -> None:
     """
-    Make a trial of the cell on a case, stream it, record the run, and hold
-    it to the scorers that apply. An answer that doesn't come, or doesn't
+    Run the cell on a case, stream the run, record it as a run of the trial
+    the cell, the case and the seed make, and hold it to the scorers that
+    apply. An answer that doesn't come, or doesn't
     parse, doesn't hold, where one is asked for; an LLM or server that
     fails mid-run is said, and recorded.
     """
@@ -67,7 +68,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     tools = repl.tools()
 
     try:
-        trial = Trial(
+        run = Run(
             resolution,
             case.trail.vignette,
             api_key=api_key,
@@ -91,7 +92,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     started = timezone.now()
 
     try:
-        streamed = asyncio.run(_stream(repl, trial))
+        streamed = asyncio.run(_stream(repl, run))
     except KeyboardInterrupt:
         repl.console.print("\n(stopped)", style=LABEL)
         outcome = Outcome(RunStatus.ERRORED, error="stopped")
@@ -108,7 +109,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
         outcome = Outcome(RunStatus.ERRORED, error=f"{type(e).__name__}: {e}")
     else:
         valid = _judge(repl, resolution, streamed)
-        outcome = Outcome(RunStatus.COMPLETED, output=streamed.answer, valid=valid)
+        outcome = Outcome(RunStatus.COMPLETED, answer=streamed.answer, valid=valid)
 
     finished = timezone.now()
 
@@ -121,11 +122,11 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
                 llm=repl.llm_of(cell.stack)[1],
                 tools={
                     tools[tool].id: ran.blob
-                    for tool, ran in trial.implementations.items()
+                    for tool, ran in run.implementations.items()
                 },
             ),
             case.trail_id,
-            trial,
+            run,
             outcome,
             started,
             finished,
@@ -147,8 +148,8 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     )
 
 
-async def _stream(repl: Repl, trial: Trial) -> Streamed:
-    async with trial.stream() as events:
+async def _stream(repl: Repl, run: Run) -> Streamed:
+    async with run.stream() as events:
         return await show_events(repl.console, events)
 
 
@@ -156,7 +157,7 @@ def _judge(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | Non
     """
     Whether the LLM reasoned as it was asked to, whether its answer holds
     to its schema, and what the output's views read from it: the facts are
-    claims, and a trial is what shows whether the LLM honours them
+    claims, and a run is what shows whether the LLM honours them
     (new-datamodel.md §2). Answer with whether it holds, where there is a
     schema to hold to.
     """

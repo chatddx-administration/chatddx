@@ -7,7 +7,7 @@ transformers and default prompt text are library code. A run from a dev
 shell has no build, and is recorded as such: a client with none.
 
 A client is not part of a stack. It changes with every deploy while the
-servers don't, and a trial joins the two (new-datamodel.md §6).
+servers don't, and a run joins the two (new-datamodel.md §6).
 """
 
 from pydantic import Field

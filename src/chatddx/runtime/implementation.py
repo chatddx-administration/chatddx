@@ -20,8 +20,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, override
 
-TOOLS = "chatddx.runtime.tools"
-SCORERS = "chatddx.scoring.scorers"
+TOOL_PACKAGE = "chatddx.runtime.tools"
+SCORER_PACKAGE = "chatddx.scoring.scorers"
 
 
 @dataclass(frozen=True)
@@ -31,7 +31,7 @@ class Implementation:
     blob: str
 
 
-def implementation(entry_point: str, package: str = TOOLS) -> Implementation:
+def implementation(entry_point: str, package: str = TOOL_PACKAGE) -> Implementation:
     """The function `entry_point` names in `package`, and its file's blob id."""
     module_name, _, name = entry_point.partition(":")
 

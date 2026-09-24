@@ -29,7 +29,7 @@ from rich.text import Text
 
 from chatddx.history.models import ScoreModel
 from chatddx.repo.entities.output.pydantic import VIEWS, OutputTrailBase
-from chatddx.runtime.trial import FINAL_RESULT
+from chatddx.runtime.run import FINAL_RESULT
 
 THINKING = "#5f87af"
 LABEL = "dim"
@@ -87,7 +87,7 @@ class Transcript:
 
 async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed:
     """
-    Write out a trial's events as they come: its thinking, then its answer,
+    Write out a run's events as they come: its thinking, then its answer,
     as text or as the call that gives it.
     """
     out = Transcript(console)
@@ -208,10 +208,10 @@ def show_scores(console: Console, scores: Iterable[ScoreModel]) -> None:
         return
 
     console.print("scores", style="bold")
-    width = max(len(score.name) for score in rows)
+    width = max(len(score.scorer_name) for score in rows)
 
     for score in rows:
-        text = Text(f"  {score.name:<{width}}  {value_of(score.value):<5}")
+        text = Text(f"  {score.scorer_name:<{width}}  {value_of(score.value):<5}")
 
         if score.answer is not None:
             text.append(f"  {clipped_line(score.answer)}")

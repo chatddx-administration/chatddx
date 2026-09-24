@@ -4,7 +4,7 @@ The repl: run cases on a cell, and watch the LLM answer as it goes.
 A cell is a configuration joined to a stack (new-datamodel.md §5), and the
 repl holds one the way psql holds a database: `use` puts a configuration in
 it, `on` a stack, `set` another variation of one of its slices, and `run`
-makes a trial of it on a case. Every run is recorded: `runs` lists them, and
+runs it on a case. Every run is recorded: `runs` lists them, and
 `replay` shows one again as it streamed. `save` keeps the cell as a
 configuration of the identity's own.
 

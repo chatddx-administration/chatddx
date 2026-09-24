@@ -1,6 +1,6 @@
 """
 A run written down: the trial it was a go at, the run with what came of it,
-and the session its messages were exchanged in.
+and the conversation its messages were exchanged in.
 """
 
 import asyncio
@@ -16,7 +16,7 @@ from django.utils import timezone
 from pydantic_ai import AgentRunResultEvent, UsageLimitExceeded
 
 from chatddx.core.utils import ensure_identity
-from chatddx.dx.fake_vllm import ANSWER, FakeTransport, stream
+from chatddx.dev.fake_vllm import ANSWER, FakeTransport, stream
 from chatddx.history.models import (
     RunModel,
     RunStatus,
@@ -38,7 +38,7 @@ from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime import tools
 from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import resolve
-from chatddx.runtime.trial import TOOL_ROUNDS, Trial
+from chatddx.runtime.run import TOOL_ROUNDS, Run
 
 pytestmark = pytest.mark.django_db
 
@@ -58,12 +58,12 @@ def branch(
     return get_visible_branch_model(entity, "alex", name, trail=trail)
 
 
-async def outcome_of(trial: Trial) -> Outcome:
+async def outcome_of(run: Run) -> Outcome:
     try:
-        async with trial.stream() as events:
+        async with run.stream() as events:
             async for event in events:
                 if isinstance(event, AgentRunResultEvent):
-                    return Outcome(RunStatus.COMPLETED, output=event.result.output)
+                    return Outcome(RunStatus.COMPLETED, answer=event.result.output)
     except UsageLimitExceeded as e:
         return Outcome(RunStatus.COMPLETED, error=str(e))
 
@@ -101,7 +101,7 @@ def written(
     ]
     case = branch("case", "case-1")
 
-    trial = Trial(
+    run = Run(
         resolve(cell, stack.details, facts, stack.trail.serving),
         case.trail.vignette,
         transport=transport or FakeTransport(),
@@ -113,7 +113,7 @@ def written(
         },
     )
     started = timezone.now()
-    outcome = asyncio.run(outcome_of(trial))
+    outcome = asyncio.run(outcome_of(run))
 
     return record(
         user,
@@ -121,10 +121,10 @@ def written(
         Branches(
             stack.id,
             llm.pk,
-            {tool.id: trial.implementations[tool.trail.name].blob for tool in tools},
+            {tool.id: run.implementations[tool.trail.name].blob for tool in tools},
         ),
         case.trail_id,
-        trial,
+        run,
         outcome,
         started,
         timezone.now(),
@@ -132,11 +132,11 @@ def written(
     )
 
 
-def test_a_run_is_written_down_with_its_trial_session_and_messages():
+def test_a_run_is_written_down_with_its_trial_conversation_and_messages():
     run = written(seed=7)
 
     assert run.status == RunStatus.COMPLETED
-    assert (run.output, run.valid, run.finish_reason, run.error) == (
+    assert (run.answer, run.valid, run.finish_reason, run.error) == (
         ANSWER,
         None,
         "stop",
@@ -164,15 +164,17 @@ def test_a_run_is_written_down_with_its_trial_session_and_messages():
     assert run.client_rev is not None
     assert run.client_packages["pydantic-ai-slim"]
 
-    assert run.session is not None
-    messages = list(run.session.messages.all())
+    assert run.conversation is not None
+    messages = list(run.conversation.messages.all())
     assert [(m.kind, m.role) for m in messages] == [
         ("request", "user"),
         ("response", "assistant"),
     ]
-    assert {m.run_id for m in messages} == {run.uuid}
-    assert {m.payload["conversation_id"] for m in messages} == {str(run.session.uuid)}
-    assert (run.session.context, run.session.description) == ("repl", "a run")
+    assert {m.run_uuid for m in messages} == {run.uuid}
+    assert {m.payload["conversation_id"] for m in messages} == {
+        str(run.conversation.uuid)
+    }
+    assert (run.conversation.context, run.conversation.description) == ("repl", "a run")
 
 
 def test_the_same_cell_case_and_seed_is_another_run_of_one_trial():
@@ -219,7 +221,7 @@ def test_a_run_keeps_its_tools_branches_and_every_round():
         for name in ("sentinel_op", "sentinel_string")
     }
     assert len(run.requests) == len(run.responses) == 3
-    assert [m.role for m in run.session.messages.all()] == [  # pyright: ignore[reportOptionalMemberAccess]
+    assert [m.role for m in run.conversation.messages.all()] == [  # pyright: ignore[reportOptionalMemberAccess]
         "user",
         "assistant",
         "tool",
@@ -239,21 +241,21 @@ def test_a_run_that_came_to_no_answer_keeps_its_exchange_as_far_as_it_got():
 
     run = written("test-tools", transport=httpx2.MockTransport(handler))
 
-    assert (run.output, run.finish_reason) == (None, "tool_call")
+    assert (run.answer, run.finish_reason) == (None, "tool_call")
     assert run.error is not None
     assert len(run.requests) == len(run.responses) == TOOL_ROUNDS + 1
 
-    assert run.session is not None
-    messages = list(run.session.messages.all())
+    assert run.conversation is not None
+    messages = list(run.conversation.messages.all())
     assert len(messages) == 2 * (TOOL_ROUNDS + 1) + 2
     assert [m.kind for m in messages[-2:]] == ["request", "error"]
     assert messages[-1].payload == {"error": run.error}
-    assert messages[-1].run_id == run.uuid
+    assert messages[-1].run_uuid == run.uuid
 
 
 def test_a_run_s_uuid_is_the_one_pydantic_ai_ran_under():
     run = written()
 
-    assert run.session is not None
-    [request, _] = run.session.messages.all()
+    assert run.conversation is not None
+    [request, _] = run.conversation.messages.all()
     assert uuid.UUID(request.payload["run_id"]) == run.uuid

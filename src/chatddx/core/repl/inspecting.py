@@ -27,7 +27,7 @@ from chatddx.runtime.resolution import (
     Tool,
     realize,
 )
-from chatddx.runtime.trial import FINAL_RESULT
+from chatddx.runtime.run import FINAL_RESULT
 
 EFFORTS: tuple[Effort, ...] = get_args(Effort.__value__)
 

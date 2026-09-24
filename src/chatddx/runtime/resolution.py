@@ -6,7 +6,7 @@ Each slice's variation states an intent, and the facts of the stack's LLM
 realize it. The slices are resolved in the order each reads the ones before
 it: the stack, reasoning, sampling, output and coercion, the instruction
 with its slots filled, then the toolset. The case is left out: a cell is
-resolved once, and each trial renders it with a case of its own.
+resolved once, and each run renders it with a case of its own.
 """
 
 import json

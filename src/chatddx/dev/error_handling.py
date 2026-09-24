@@ -20,7 +20,7 @@ def resolve_weirdos(val: Any):
     except ValidationError as e:
         if settings.MODE == "dev":
             from rich import print
-            from chatddx.dx.error_handling import format_pydantic_errors
+            from chatddx.dev.error_handling import format_pydantic_errors
             print(format_pydantic_errors(e))
 
         raise e

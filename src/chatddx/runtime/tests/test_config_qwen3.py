@@ -1,5 +1,5 @@
 """
-The test configurations as a trial sends them to Qwen3 on pelle, which serves
+The test configurations as a run sends them to Qwen3 on pelle, which serves
 it without a reasoning parser.
 """
 
@@ -8,7 +8,7 @@ from collections.abc import Callable
 import pytest
 
 from chatddx.runtime.resolution import CellRefused, Resolution
-from chatddx.runtime.trial import Trial
+from chatddx.runtime.run import Run
 from chatddx.utils import dig
 
 type Cell = Callable[..., Resolution]
@@ -17,9 +17,9 @@ STACK = "qwen3-8b-awq@pelle"
 
 
 def test_baseline(cell: Cell):
-    trial = Trial(cell("baseline", STACK, reasoning="off"), "a case", seed=0)
+    run = Run(cell("baseline", STACK, reasoning="off"), "a case", seed=0)
 
-    settings = trial.settings()
+    settings = run.settings()
 
     assert settings.get("seed") == 0
     assert (
@@ -32,7 +32,7 @@ def test_challenge_coercion_tool(cell: Cell):
         _ = cell("challenge-coercion-tool", STACK)
 
     resolution = cell("challenge-coercion-tool", STACK, reasoning="off")
-    settings = Trial(resolution, "a case", seed=0).settings()
+    settings = Run(resolution, "a case", seed=0).settings()
 
     assert resolution.coercion is not None
     assert resolution.coercion.mode == "tool"
@@ -41,7 +41,7 @@ def test_challenge_coercion_tool(cell: Cell):
 
 def test_challenge_coercion_prompted(cell: Cell):
     resolution = cell("challenge-coercion-prompted", STACK)
-    settings = Trial(resolution, "a case", seed=0).settings()
+    settings = Run(resolution, "a case", seed=0).settings()
 
     assert resolution.coercion is not None
     assert resolution.coercion.mode == "prompted"
@@ -53,7 +53,7 @@ def test_challenge_coercion_native(cell: Cell):
         _ = cell("challenge-coercion-native", STACK)
 
     resolution = cell("challenge-coercion-native", STACK, reasoning="off")
-    settings = Trial(resolution, "a case", seed=0).settings()
+    settings = Run(resolution, "a case", seed=0).settings()
 
     assert resolution.coercion is not None
     assert resolution.coercion.mode == "native"
@@ -61,9 +61,9 @@ def test_challenge_coercion_native(cell: Cell):
 
 
 def test_enable_thinking(cell: Cell):
-    trial = Trial(cell("baseline", STACK, reasoning="on"), "a case", seed=0)
+    run = Run(cell("baseline", STACK, reasoning="on"), "a case", seed=0)
 
-    settings = trial.settings()
+    settings = run.settings()
 
     assert settings.get("seed") == 0
     assert (
@@ -73,7 +73,7 @@ def test_enable_thinking(cell: Cell):
 
 def test_tools(cell: Cell, entry_points: dict[str, str]):
     resolution = cell("test-tools", STACK)
-    settings = Trial(
+    settings = Run(
         resolution, "a case", seed=0, implementations=entry_points
     ).settings()
 

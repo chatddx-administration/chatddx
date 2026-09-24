@@ -1,5 +1,5 @@
 """
-The client a trial runs on: the chatddx build that turns a configuration into
+The client a run is made on: the chatddx build that turns a configuration into
 a request (new-datamodel.md §6). A build is its store path; a dev shell has
 none, and says which revision it runs at instead, with "-dirty" when the
 checkout has changes. Either way the versions of the libraries that build

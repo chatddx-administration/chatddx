@@ -1,6 +1,6 @@
 NOTE:
 The project is under a heavy refactor, only repo/* is instructive, the rest is relying on remnants from the past.
-Meanwhile, interim baseline is currently `pytest -m "not network" src/chatddx/repo src/chatddx/core/tests/test_provisioning.py src/chatddx/core/tests/repl src/chatddx/runtime src/chatddx/dx src/chatddx/history src/chatddx/scoring`
+Meanwhile, interim baseline is currently `pytest -m "not network" src/chatddx/repo src/chatddx/core/tests/test_provisioning.py src/chatddx/core/tests/repl src/chatddx/runtime src/chatddx/dev src/chatddx/history src/chatddx/scoring`
 
 Devenv in flake.nix devShell
 
