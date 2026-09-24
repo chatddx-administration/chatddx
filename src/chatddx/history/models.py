@@ -3,12 +3,13 @@
 History: what ran, and what came of it.
 
 A trial is one cell on one case, with its seed: a configuration and a stack,
-by their trails, and the case (new-datamodel.md §6). A run is one go at a
-trial, one pydantic-ai agent run, whose id it takes. It keeps what resolution
-read, the exact bytes it sent and got back, and what came of them. Its
-session holds the exchange as pydantic-ai's messages. A trial can be run
-again, to see a seed hold or to retry one that errored, and each run keeps
-its own record.
+by their trails, and the case (new-datamodel.md §6). It is content, like a
+trail, and belongs to no one: runs of the same four are runs of one trial,
+whoever made them. A run is one go at a trial, one pydantic-ai agent run,
+whose id it takes, and it is its maker's. It keeps what resolution read, the
+exact bytes it sent and got back, and what came of them. Its session holds
+the exchange as pydantic-ai's messages. A trial can be run again, to see a
+seed hold or to retry one that errored, and each run keeps its own record.
 """
 
 from __future__ import annotations
@@ -32,14 +33,16 @@ from django.db.models import (
     Model,
     QuerySet,
     TextField,
+    UniqueConstraint,
     UUIDField,
 )
 
 from chatddx.core.models import IdentityModel
-from chatddx.repo.entities.case.django import CaseTrailModel
+from chatddx.repo.entities.case.django import CaseBranchModel, CaseTrailModel
 from chatddx.repo.entities.client.django import ClientTrailModel
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
 from chatddx.repo.entities.model.django import ModelBranchModel
+from chatddx.repo.entities.scorer.django import ScorerTrailModel
 from chatddx.repo.entities.stack.django import StackBranchModel, StackTrailModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.families.django import OrderedJSONField
@@ -88,6 +91,13 @@ class MessageKind(StrEnum):
 class TrialModel(Model):
     class Meta:
         app_label = "orm"
+        constraints = (
+            UniqueConstraint(
+                fields=("configuration", "stack", "case", "seed"),
+                nulls_distinct=False,
+                name="one_trial_per_cell_case_and_seed",
+            ),
+        )
 
     uuid = UUIDField(
         default=uuid.uuid4,
@@ -95,16 +105,6 @@ class TrialModel(Model):
         unique=True,
     )
     timestamp = DateTimeField(auto_now_add=True)
-    owner = ForeignKey(
-        IdentityModel,
-        on_delete=PROTECT,
-    )
-    owner_id: int
-    collaborators: ManyToManyField[IdentityModel, Any] = ManyToManyField(
-        IdentityModel,
-        blank=True,
-        related_name="shared_trials",
-    )
 
     configuration = ForeignKey(
         ConfigurationTrailModel,
@@ -320,9 +320,11 @@ class RunToolBranchModel(Model):
 class ScoreModel(Model):
     """
     What a scorer made of a run: its value, what in the answer it rests on,
-    or why there is none; and what it was made with: the view it read, the
-    target it held that to, and the git blob id of the scorer's file. A run
-    scored again, after either changed, keeps each score.
+    or why there is none; and what it was made with: the scorer, by its trail
+    and by the name it had for whoever scored, the case branch whose targets
+    were read, the target the view was held to, and the git blob id of the
+    scorer's file. A run scored again, after any of them changed, keeps each
+    score.
     """
 
     class Meta:
@@ -335,9 +337,34 @@ class ScoreModel(Model):
         on_delete=CASCADE,
     )
     run_id: int
-    scorer = CharField(max_length=64)
-    view = CharField(max_length=32)
-    target = TextField()
+    owner = ForeignKey(
+        IdentityModel,
+        on_delete=PROTECT,
+    )
+    owner_id: int
+    scorer = ForeignKey(
+        ScorerTrailModel,
+        on_delete=PROTECT,
+        related_name="scores",
+    )
+    scorer_id: int
+    name = CharField(max_length=255)
+    # none for a scorer that needs no target
+    case_branch = ForeignKey(
+        CaseBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="scores",
+    )
+    case_branch_id: int | None
+    # none where the case expects none, or the scorer needs none
+    target = TextField(
+        default=None,
+        null=True,
+        blank=True,
+    )
     blob = CharField(max_length=64)
     value = FloatField(
         default=None,

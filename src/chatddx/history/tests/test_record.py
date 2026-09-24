@@ -15,6 +15,7 @@ import pytest
 from django.utils import timezone
 from pydantic_ai import AgentRunResultEvent, UsageLimitExceeded
 
+from chatddx.core.utils import ensure_identity
 from chatddx.dx.fake_vllm import ANSWER, FakeTransport, stream
 from chatddx.history.models import (
     RunModel,
@@ -74,8 +75,12 @@ def written(
     seed: int | None = None,
     transport: httpx2.AsyncBaseTransport | None = None,
     reasoning: str | None = None,
+    user: str = "alex",
 ) -> RunModel:
-    """A run of `configuration`, with `reasoning` set in it if given, on case-1."""
+    """
+    A run of `configuration`, with `reasoning` set in it if given, on case-1,
+    written down as `user`'s.
+    """
     own = ConfigurationBranchSpec.model_validate(branch("configuration", configuration))
     slices: dict[str, Any] = {entity: getattr(own.target, entity) for entity in SLICES}
 
@@ -111,7 +116,7 @@ def written(
     outcome = asyncio.run(outcome_of(trial))
 
     return record(
-        "alex",
+        user,
         cell,
         Branches(
             stack.id,
@@ -178,6 +183,17 @@ def test_the_same_cell_case_and_seed_is_another_run_of_one_trial():
     assert first.trial_id == again.trial_id != other.trial_id
     assert first.uuid != again.uuid
     assert TrialModel.objects.count() == 2
+
+
+def test_a_trial_is_no_one_s_and_each_run_its_maker_s():
+    _ = ensure_identity("bob")
+    alex = written()
+    bob = written(user="bob")
+
+    assert alex.trial_id == bob.trial_id
+    assert (alex.owner.name, bob.owner.name) == ("alex", "bob")
+    assert alex.trial.seed is None
+    assert TrialModel.objects.count() == 1
 
 
 def test_a_variation_set_in_a_cell_runs_a_configuration_with_no_branch():

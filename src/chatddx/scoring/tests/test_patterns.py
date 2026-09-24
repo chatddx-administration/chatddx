@@ -3,11 +3,13 @@ The pattern language, held to what an answer says, and the scorers that
 hold answers to it.
 """
 
-import tomllib
+import inspect
 
 import pytest
 
 from chatddx.core import settings
+from chatddx.repo.parsers.inventory import parse
+from chatddx.runtime.implementation import SCORERS, implementation
 from chatddx.scoring.scorers.patterns import (
     Pattern,
     Scored,
@@ -63,16 +65,31 @@ def test_a_pattern_that_doesn_t_read_is_refused(pattern: str, problem: str):
         _ = Pattern(pattern)
 
 
-@pytest.mark.parametrize(
-    "path", ["targets.toml", "test-targets.toml"], ids=lambda path: path
-)
-def test_every_target_reads(path: str):
-    targets = tomllib.loads((settings.INVENTORY_PATH / path).read_text())
+INVENTORIES = ["inventory.toml", "test-inventory.toml"]
 
-    for case, expected in targets.items():
-        for kind, pattern in expected.items():
-            assert kind in ("diagnosis", "warning", "disposition"), case
-            _ = Pattern(pattern)
+
+@pytest.mark.parametrize("path", INVENTORIES, ids=lambda path: path)
+def test_every_target_reads(path: str):
+    """What the pattern scorers read of a case's targets: each a pattern."""
+    for _, details in parse(settings.INVENTORY_PATH / path).case.values():
+        for target in details.targets.values():
+            if target is not False:
+                _ = Pattern(target)
+
+
+@pytest.mark.parametrize("path", INVENTORIES, ids=lambda path: path)
+def test_every_scorer_runs_a_function_that_takes_its_arguments(path: str):
+    """
+    A scorer's function takes the view's items and the target, and the
+    scorer's arguments beside them, as a tool's takes its parameters.
+    """
+    for name, (scorer, _) in parse(settings.INVENTORY_PATH / path).scorer.items():
+        function = implementation(scorer.function, SCORERS).function
+
+        try:
+            _ = inspect.signature(function).bind([], "target", **scorer.args)
+        except TypeError as e:
+            pytest.fail(f"{name}: {e}")
 
 
 def test_the_reciprocal_rank_is_that_of_the_first_diagnosis_found():
@@ -126,3 +143,11 @@ def test_mentions_says_whether_the_target_is_named_at_all():
     assert mentions(["Discharge home."], "admit*") == Scored(0.0, reason="not named")
     assert mentions([], "admit*") == Scored(0.0, reason="not named")
     assert mentions(None, "admit*") == Scored(0.0, reason="no answer")
+
+
+def test_mentions_with_no_target_expects_nothing_named():
+    assert mentions([], None) == Scored(1.0, reason="none named, as expected")
+    assert mentions(["Signs of sepsis."], None) == Scored(
+        0.0, "Signs of sepsis.", "none expected"
+    )
+    assert mentions(None, None) == Scored(0.0, reason="no answer")

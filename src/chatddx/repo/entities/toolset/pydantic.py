@@ -1,9 +1,10 @@
 """
-A toolset: a request-time slice, deferred until a study needs it. It
-replaces the tool group (new-datamodel.md §6).
+A toolset: a request-time slice. It replaces the tool group
+(new-datamodel.md §6).
 
 A variation is ordered tools and the text that fills the instruction's
-`tool_guidance` slot. A configuration names one or none.
+`tool_guidance` slot. A configuration names one or none, and tools need a
+serving with a tool call parser.
 """
 
 from typing import Annotated

@@ -208,10 +208,10 @@ def show_scores(console: Console, scores: Iterable[ScoreModel]) -> None:
         return
 
     console.print("scores", style="bold")
-    width = max(len(score.scorer) for score in rows)
+    width = max(len(score.name) for score in rows)
 
     for score in rows:
-        text = Text(f"  {score.scorer:<{width}}  {value_of(score.value):<5}")
+        text = Text(f"  {score.name:<{width}}  {value_of(score.value):<5}")
 
         if score.answer is not None:
             text.append(f"  {clipped_line(score.answer)}")

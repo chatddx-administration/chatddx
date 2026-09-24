@@ -25,7 +25,7 @@ from chatddx.history.models import MessageKind, RunModel, RunStatus
 from chatddx.repo.entities.output.pydantic import OutputTrailSpec
 from chatddx.repo.shufflers.trail import load_trail
 from chatddx.runtime.trial import invalid
-from chatddx.scoring.score import latest
+from chatddx.scoring.score import Scoring
 
 
 def runs(repl: Repl, count: str = "20") -> None:
@@ -44,6 +44,7 @@ def runs(repl: Repl, count: str = "20") -> None:
         repl.console.print(f"{repl.identity} has no runs", style=LABEL)
         return
 
+    scoring = Scoring(repl.identity)
     table = Table(box=None, header_style="bold")
 
     for column in ("run", "when", "trial", "what ran", "outcome", "scores"):
@@ -56,7 +57,7 @@ def runs(repl: Repl, count: str = "20") -> None:
             short(run.trial.uuid),
             what_ran(run),
             _outcome(run),
-            "  ".join(f"{s.scorer} {value_of(s.value)}" for s in latest(run)),
+            "  ".join(f"{s.name} {value_of(s.value)}" for s in scoring.latest(run)),
         )
 
     repl.console.print(table)
@@ -98,7 +99,7 @@ def replay(repl: Repl, prefix: str | None = None) -> None:
 
         show_views(repl.console, output, run.output)
 
-    show_scores(repl.console, latest(run))
+    show_scores(repl.console, Scoring(repl.identity).latest(run))
 
 
 def short(value: Any) -> str:

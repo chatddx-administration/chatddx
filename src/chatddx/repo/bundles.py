@@ -24,6 +24,7 @@ ALL_ENTITIES: tuple[AnyEntity, ...] = (
     SAMPLING,
     CONFIGURATION,
     CASE,
+    SCORER,
 )
 
 ALL_VIEWS: tuple[AnyView, ...] = (
@@ -42,6 +43,7 @@ ALL_VIEWS: tuple[AnyView, ...] = (
     SAMPLING_VIEW,
     CONFIGURATION_VIEW,
     CASE_VIEW,
+    SCORER_VIEW,
 )
 
 
@@ -185,6 +187,12 @@ def entity_of(
 def entity_of(
     x: CaseMember | type[CaseMember] | Literal["case"],
 ) -> CaseEntity: ...
+
+
+@overload
+def entity_of(
+    x: ScorerMember | type[ScorerMember] | Literal["scorer"],
+) -> ScorerEntity: ...
 
 
 @overload

@@ -10,8 +10,10 @@ pattern is held to one item at a time, a diagnosis, a sentence or a field,
 never to two at once.
 
 A scorer takes what a view read, or None where the run came to no answer,
-and a target pattern, and says what it makes of them. This file imports
-nothing else of chatddx's, so its git blob id names every scorer in it.
+and a target pattern, and says what it makes of them. `mentions` also takes
+None for a target: the case expects nothing to be named, as a plan that
+rightly raises no warning. This file imports nothing else of chatddx's, so
+its git blob id names every scorer in it.
 """
 
 import re
@@ -195,10 +197,20 @@ def first_mention(items: list[str] | None, target: str) -> Scored:
     return Scored(None, reason="never named")
 
 
-def mentions(items: list[str] | None, target: str) -> Scored:
-    """1 where the target is found in what the view read, and 0 where it isn't."""
+def mentions(items: list[str] | None, target: str | None) -> Scored:
+    """
+    1 where the target is found in what the view read, and 0 where it isn't.
+    With no target, 1 where the view read nothing, and 0 where it read
+    something.
+    """
     if items is None:
         return Scored(0.0, reason="no answer")
+
+    if target is None:
+        if items:
+            return Scored(0.0, answer=items[0], reason="none expected")
+
+        return Scored(1.0, reason="none named, as expected")
 
     pattern = Pattern(target)
 

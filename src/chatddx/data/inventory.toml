@@ -9,7 +9,8 @@
 #   inventory/clients.toml         the chatddx builds that compose requests
 #   inventory/slices.toml          every request-time slice and its variations
 #   inventory/configurations.toml  one variation of each slice, named
-#   cases.toml                     the case corpus
+#   inventory/scorers.toml         what a run's answer comes to
+#   cases.toml                     the case corpus, and its targets
 #
 # "# guessed" marks every value not yet collected from the machines
 # themselves, or not yet settled.
@@ -21,5 +22,6 @@ extends = [
   "inventory/clients.toml",
   "inventory/slices.toml",
   "inventory/configurations.toml",
+  "inventory/scorers.toml",
   "cases.toml",
 ]

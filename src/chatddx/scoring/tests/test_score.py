@@ -1,7 +1,8 @@
 """
-Runs held to the scorers that apply to them: by the views their output
-offers and the targets their case has, each score kept with the file and
-target it was made with.
+Runs held to the scorers that apply to them: the registry's scorers, by the
+views their output offers and the targets their case's branch has, each score
+kept with the scorer, the case branch, the target and the file it was made
+with, and with whoever scored.
 """
 
 import asyncio
@@ -14,22 +15,28 @@ import pytest
 from django.utils import timezone
 from pydantic_ai import AgentRunResultEvent, UnexpectedModelBehavior
 
-from chatddx.core import settings
+from chatddx.core.utils import ensure_identity
 from chatddx.dx.fake_vllm import FakeTransport, stream
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.history.record import Branches, Outcome, record
+from chatddx.repo.entities.case.django import CaseBranchModel
+from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Target
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchSpec,
     ConfigurationTrailSchema,
 )
 from chatddx.repo.entities.model.pydantic import ModelBranchSpec
+from chatddx.repo.entities.scorer.pydantic import (
+    ScorerBranchDetails,
+    ScorerTrailSchema,
+)
 from chatddx.repo.entities.stack.pydantic import StackBranchSpec
-from chatddx.repo.shufflers.branch import get_visible_branch_model
+from chatddx.repo.shufflers.branch import commit, get_visible_branch_model
 from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import resolve
 from chatddx.runtime.trial import Trial
 from chatddx.scoring import scorers
-from chatddx.scoring.score import Scoring, latest
+from chatddx.scoring.score import Scoring
 
 pytestmark = pytest.mark.django_db
 
@@ -62,6 +69,7 @@ def ran(
     configuration: str,
     case: str = "case-1",
     transport: httpx2.AsyncBaseTransport | None = None,
+    user: str = "alex",
 ) -> RunModel:
     """A run of `configuration` on `case`, against the fake vLLM, written down."""
     own = ConfigurationBranchSpec.model_validate(
@@ -85,7 +93,7 @@ def ran(
     outcome = asyncio.run(outcome_of(trial))
 
     return record(
-        "alex",
+        user,
         cell,
         Branches(stack.id, model.pk),
         case_model.target_id,
@@ -96,8 +104,25 @@ def ran(
     )
 
 
-def made(run: RunModel) -> dict[str, tuple[float | None, str | None, str | None]]:
-    return {s.scorer: (s.value, s.answer, s.reason) for s in Scoring().score(run)}
+def made(
+    run: RunModel, user: str = "alex"
+) -> dict[str, tuple[float | None, str | None, str | None]]:
+    return {s.name: (s.value, s.answer, s.reason) for s in Scoring(user).score(run)}
+
+
+def applicable(run: RunModel, user: str = "alex") -> list[str]:
+    return [scorer.name for scorer, _, _ in Scoring(user).applicable(run)]
+
+
+def retarget(case: str, owner: str = "archive", **targets: Target) -> None:
+    """Commit a version of `owner`'s branch of `case` that expects `targets`."""
+    branch = CaseBranchModel.objects.filter(owner__name=owner, name=case).latest("pk")
+    _ = commit(
+        branch.target,
+        CaseBranchDetails.model_validate(
+            {"name": case, "owner": owner, "targets": targets}
+        ),
+    )
 
 
 def test_free_text_is_held_to_its_rank_and_its_first_mention():
@@ -120,44 +145,133 @@ def test_a_scorer_applies_where_the_view_is_offered_and_the_target_expected():
     raw = ran("baseline")
     without_warnings = ran("plan", "case-2")
 
-    assert [s.name for s, _ in Scoring().applicable(diagnoses)] == ["reciprocal_rank"]
-    assert [s.name for s, _ in Scoring().applicable(raw)] == ["first_mention"]
-    assert [s.name for s, _ in Scoring().applicable(without_warnings)] == [
-        "reciprocal_rank"
+    assert applicable(diagnoses) == ["reciprocal_rank"]
+    assert applicable(raw) == ["first_mention"]
+    assert applicable(without_warnings) == ["reciprocal_rank"]
+
+
+def test_the_scorers_are_the_archive_s_and_one_s_own():
+    scorers = Scoring("alex").scorers
+
+    assert [(s.name, s.owner) for s in scorers] == [
+        ("disposition_mentions", "archive"),
+        ("first_mention", "archive"),
+        ("reciprocal_rank", "archive"),
+        ("warning_mentions", "archive"),
     ]
+    assert [(s.view, s.target_kind, s.metrics) for s in scorers[2:3]] == [
+        ("differential", "diagnosis", ["mean", "stderr"])
+    ]
+    assert Scoring("nobody").scorers == ()
 
 
-def test_a_score_keeps_the_file_and_the_target_it_was_made_with():
-    [rank, _] = Scoring().score(ran("free-text"))
+def test_a_scorer_of_one_s_own_shadows_the_archive_s_of_its_name():
+    _ = commit(
+        ScorerTrailSchema(
+            function="chatddx.scoring.scorers.patterns:mentions",
+            view="text",
+            target_kind="diagnosis",
+        ),
+        ScorerBranchDetails(name="reciprocal_rank", owner="alex", metrics=["mean"]),
+    )
+
+    assert made(ran("free-text")) == {
+        "reciprocal_rank": (
+            1.0,
+            "Fake diagnosis A\nFake diagnosis B\nFake diagnosis C",
+            None,
+        ),
+        "first_mention": (17.0, "Fake diagnosis B", None),
+    }
+
+
+def test_a_score_keeps_what_it_was_made_with_and_who_made_it():
+    [_, rank] = Scoring("alex").score(ran("free-text"))
 
     patterns = Path(scorers.__file__).parent / "patterns.py"
     assert rank.blob == blob_of(patterns.read_bytes())
-    assert (rank.view, rank.target) == ("differential", "fake & diagnosis & (b | 2)")
-
-
-def test_a_run_scored_is_outstanding_again_when_its_target_changes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    run = ran("free-text")
-    first = Scoring().score(run)
-
-    assert Scoring().outstanding(run) == []
-    assert Scoring().score(run) == []
-
-    targets = tmp_path / "targets.toml"
-    _ = targets.write_text('[case-1]\ndiagnosis = "fake & diagnosis & a"\n')
-    monkeypatch.setattr(settings, "TARGETS_PATH", targets)
-
-    assert [s.name for s, _ in Scoring().outstanding(run)] == [
+    assert (rank.name, rank.scorer.view, rank.scorer.target_kind) == (
         "reciprocal_rank",
+        "differential",
+        "diagnosis",
+    )
+    assert rank.target == "fake & diagnosis & (b | 2)"
+    assert rank.case_branch is not None
+    assert (rank.case_branch.owner.name, rank.case_branch.name) == (
+        "archive",
+        "case-1",
+    )
+    assert rank.owner.name == "alex"
+
+
+def test_a_run_scored_is_outstanding_again_when_its_target_changes():
+    run = ran("free-text")
+    first = Scoring("alex").score(run)
+
+    assert Scoring("alex").outstanding(run) == []
+    assert Scoring("alex").score(run) == []
+
+    retarget("case-1", diagnosis="fake & diagnosis & a")
+
+    assert [s.name for s, _, _ in Scoring("alex").outstanding(run)] == [
         "first_mention",
+        "reciprocal_rank",
     ]
 
-    again = Scoring().score(run)
+    again = Scoring("alex").score(run)
 
-    assert [s.value for s in again] == [1.0, 0.0]
+    assert [s.value for s in again] == [0.0, 1.0]
+    assert {s.case_branch_id for s in again} == {
+        CaseBranchModel.objects.filter(owner__name="archive", name="case-1")
+        .latest("pk")
+        .pk
+    }
     assert ScoreModel.objects.filter(run=run).count() == len(first) + len(again)
-    assert latest(run) == again
+    assert Scoring("alex").latest(run) == again
+
+
+def test_one_s_own_case_s_targets_shadow_the_archive_s():
+    run = ran("free-text")
+    archive = CaseBranchModel.objects.get(owner__name="archive", name="case-1")
+    _ = commit(
+        archive.target,
+        CaseBranchDetails(
+            name="my-case", owner="alex", targets={"diagnosis": "fake & diagnosis & a"}
+        ),
+    )
+
+    assert made(run) == {
+        "reciprocal_rank": (1.0, "1. Fake diagnosis A", None),
+        "first_mention": (0.0, "Fake diagnosis A", None),
+    }
+
+
+def test_a_plan_that_rightly_raises_no_warning_is_held_to_none():
+    retarget(
+        "case-1",
+        diagnosis="fake & diagnosis & (b | 2)",
+        warning=False,
+        disposition="admit*",
+    )
+
+    assert made(ran("plan"))["warning_mentions"] == (
+        0.0,
+        "fake acute warning",
+        "none expected",
+    )
+    assert ScoreModel.objects.get(name="warning_mentions").target is None
+
+
+def test_each_identity_holds_a_run_to_its_own_scores():
+    _ = CaseBranchModel.objects.get(
+        owner__name="archive", name="case-1"
+    ).collaborators.add(ensure_identity("bob"))
+    run = ran("free-text")
+    _ = Scoring("alex").score(run)
+
+    assert [s.name for s, _, _ in Scoring("bob").outstanding(run)] == []
+    assert Scoring("bob").latest(run) == []
+    assert Scoring("alex").outstanding(run) == []
 
 
 def test_an_errored_run_is_never_scored():
@@ -167,8 +281,8 @@ def test_an_errored_run_is_never_scored():
     run = ran("free-text", transport=httpx2.MockTransport(failing))
 
     assert run.status == RunStatus.ERRORED
-    assert Scoring().applicable(run) == []
-    assert run not in Scoring().outstanding_runs("alex")
+    assert Scoring("alex").applicable(run) == []
+    assert run not in Scoring("alex").outstanding_runs()
 
 
 def test_a_run_that_came_to_no_answer_is_scored_as_such():
@@ -193,6 +307,6 @@ def test_a_run_that_came_to_no_answer_is_scored_as_such():
 def test_outstanding_runs_are_those_with_a_scorer_to_go():
     scored = ran("free-text")
     unscored = ran("plan")
-    _ = Scoring().score(scored)
+    _ = Scoring("alex").score(scored)
 
-    assert Scoring().outstanding_runs("alex") == [unscored]
+    assert Scoring("alex").outstanding_runs() == [unscored]

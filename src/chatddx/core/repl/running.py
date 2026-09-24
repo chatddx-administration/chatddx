@@ -136,7 +136,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
         return
 
     try:
-        show_scores(repl.console, Scoring().score(recorded))
+        show_scores(repl.console, Scoring(repl.identity).score(recorded))
     except Exception as e:  # noqa: BLE001
         repl.error(f"not scored: {type(e).__name__}: {e}")
 

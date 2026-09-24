@@ -19,6 +19,7 @@ type EntityName = Literal[
     "sampling",
     "configuration",
     "case",
+    "scorer",
 ]
 
 # Every entity is presented through one view of its own name.

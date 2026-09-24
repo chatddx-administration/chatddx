@@ -6,11 +6,16 @@ extends = [
   "inventory/clients.toml",
   "inventory/slices.toml",
   "inventory/configurations.toml",
+  "inventory/scorers.toml",
 ]
 
 [case.case-1]
 payload = "case payload 1"
 tags = ["tag-1", "tag-2"]
+targets.diagnosis = "fake & diagnosis & (b | 2)"
+targets.warning = "acute & warning"
+targets.disposition = "admit*"
 
 [case.case-2]
 payload = "case payload 2"
+targets.diagnosis = "nothing & listed"

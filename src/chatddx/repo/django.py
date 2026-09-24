@@ -9,6 +9,7 @@ from chatddx.repo.entities.os.django import *
 from chatddx.repo.entities.output.django import *
 from chatddx.repo.entities.reasoning.django import *
 from chatddx.repo.entities.sampling.django import *
+from chatddx.repo.entities.scorer.django import *
 from chatddx.repo.entities.serving.django import *
 from chatddx.repo.entities.stack.django import *
 from chatddx.repo.entities.tool.django import *

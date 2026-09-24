@@ -32,10 +32,11 @@ GIFTBAG = settings.INVENTORY_PATH / "giftbag-inventory.toml"
 NOTHING: dict[str, set[str]] = {entity: set() for entity in all_entities}
 
 NO_HISTORY = [
+    "[score]: removed 0",
     "[run]: removed 0, unshared 0",
     "[message]: removed 0",
     "[session]: removed 0, unshared 0",
-    "[trial]: removed 0, unshared 0",
+    "[trial]: removed 0",
 ]
 
 
@@ -243,11 +244,12 @@ def test_wipe_data_takes_back_the_user_s_history_too():
     _ = run("init-data", "alex", "--with-giftbag")
     ran_test_tools("alex")
 
-    assert run("wipe-data", "alex")[:4] == [
+    assert run("wipe-data", "alex")[:5] == [
+        "[score]: removed 1",
         "[run]: removed 1, unshared 0",
         "[message]: removed 6",
         "[session]: removed 1, unshared 0",
-        "[trial]: removed 1, unshared 0",
+        "[trial]: removed 1",
     ]
     assert not RunModel.objects.exists()
     assert not TrialModel.objects.exists()
@@ -261,12 +263,12 @@ def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read():
     ran_test_tools("alex")
 
     bob = IdentityModel.objects.get(name="bob")
-    for model in (RunModel, SessionModel, TrialModel):
+    for model in (RunModel, SessionModel):
         _ = model.objects.update(owner=bob)
 
     result = CliRunner().invoke(app, ["wipe-data", "alex"])
 
     assert result.exit_code == 1
-    assert "alex is kept: runs of others read its branches" in result.output
+    assert "alex is kept: others' runs or scores read its branches" in result.output
     assert owned("alex") == names(giftbag)
     assert RunModel.objects.count() == 1

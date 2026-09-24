@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import (
+    CaseBranchDetailsPatch,
     CaseBranchSpec,
     CaseFormDataOut,
     CaseTrailSchema,
@@ -77,6 +78,13 @@ from chatddx.repo.entities.sampling.pydantic import (
     SamplingFormDataOut,
     SamplingTrailSchema,
 )
+from chatddx.repo.entities.scorer.django import ScorerBranchModel
+from chatddx.repo.entities.scorer.pydantic import (
+    ScorerBranchDetailsPatch,
+    ScorerBranchSpec,
+    ScorerFormDataOut,
+    ScorerTrailSchema,
+)
 from chatddx.repo.entities.serving.django import ServingBranchModel
 from chatddx.repo.entities.serving.pydantic import (
     ServingBranchDetailsPatch,
@@ -123,7 +131,8 @@ class ParsedInventory(BaseModel):
     reasoning: dict[str, tuple[ReasoningTrailSchema, BranchDetailsPatch]]
     sampling: dict[str, tuple[SamplingTrailSchema, BranchDetailsPatch]]
     configuration: dict[str, tuple[ConfigurationTrailSchema, BranchDetailsPatch]]
-    case: dict[str, tuple[CaseTrailSchema, BranchDetailsPatch]]
+    case: dict[str, tuple[CaseTrailSchema, CaseBranchDetailsPatch]]
+    scorer: dict[str, tuple[ScorerTrailSchema, ScorerBranchDetailsPatch]]
 
 
 class InventoryTrailSchema(BaseModel):
@@ -142,6 +151,7 @@ class InventoryTrailSchema(BaseModel):
     sampling: dict[str, SamplingTrailSchema]
     configuration: dict[str, ConfigurationTrailSchema]
     case: dict[str, CaseTrailSchema]
+    scorer: dict[str, ScorerTrailSchema]
 
 
 class InventoryFormDataOut(BaseModel):
@@ -160,6 +170,7 @@ class InventoryFormDataOut(BaseModel):
     sampling: dict[str, SamplingFormDataOut]
     configuration: dict[str, ConfigurationFormDataOut]
     case: dict[str, CaseFormDataOut]
+    scorer: dict[str, ScorerFormDataOut]
 
 
 class InventoryBranchSpec(BaseModel):
@@ -178,6 +189,7 @@ class InventoryBranchSpec(BaseModel):
     sampling: dict[str, SamplingBranchSpec]
     configuration: dict[str, ConfigurationBranchSpec]
     case: dict[str, CaseBranchSpec]
+    scorer: dict[str, ScorerBranchSpec]
 
 
 class InventoryBranchModel(TypedDict):
@@ -196,3 +208,4 @@ class InventoryBranchModel(TypedDict):
     sampling: dict[str, SamplingBranchModel]
     configuration: dict[str, ConfigurationBranchModel]
     case: dict[str, CaseBranchModel]
+    scorer: dict[str, ScorerBranchModel]

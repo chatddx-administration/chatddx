@@ -35,7 +35,7 @@ from chatddx.repo.families import (
     TrailSchemaRef,
     TrailSpec,
 )
-from chatddx.repo.families.fields import JsonSchema
+from chatddx.repo.families.fields import EntryPoint, JsonSchema
 
 # as the OpenAI API accepts a function's name
 type ToolName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
@@ -44,9 +44,7 @@ type ToolName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,64}$
 class ToolImplementation(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
-    entry_point: Annotated[
-        str, StringConstraints(pattern=r"^[\w.]+:[A-Za-z_][A-Za-z0-9_]*$")
-    ]
+    entry_point: EntryPoint
 
 
 class ToolDetails(Details):

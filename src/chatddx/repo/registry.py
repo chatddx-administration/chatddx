@@ -3,6 +3,8 @@ from typing import Any
 
 from chatddx.repo.entities.case import (
     Case as CaseProxy,
+    CaseBranchDetails,
+    CaseBranchDetailsPatch,
     CaseBranchModel,
     CaseBranchSchema,
     CaseBranchSpec,
@@ -142,6 +144,20 @@ from chatddx.repo.entities.sampling import (
     SamplingTrailSchema,
     SamplingTrailSchemaRef,
     SamplingTrailSpec,
+)
+from chatddx.repo.entities.scorer import (
+    Scorer as ScorerProxy,
+    ScorerBranchDetails,
+    ScorerBranchDetailsPatch,
+    ScorerBranchModel,
+    ScorerBranchSchema,
+    ScorerBranchSpec,
+    ScorerFormDataIn,
+    ScorerFormDataOut,
+    ScorerTrailModel,
+    ScorerTrailSchema,
+    ScorerTrailSchemaRef,
+    ScorerTrailSpec,
 )
 from chatddx.repo.entities.serving import (
     Serving as ServingProxy,
@@ -593,8 +609,8 @@ type CaseEntity = Entity[
     CaseTrailSchema,
     CaseTrailSpec,
     CaseTrailSchemaRef,
-    BranchSchemaDetails,
-    BranchDetailsPatch,
+    CaseBranchDetails,
+    CaseBranchDetailsPatch,
     CaseTrailModel,
     CaseBranchModel,
 ]
@@ -606,6 +622,28 @@ type CaseMember = (
     | CaseTrailSchemaRef
     | CaseTrailModel
     | CaseBranchModel
+)
+
+
+type ScorerEntity = Entity[
+    ScorerBranchSchema,
+    ScorerBranchSpec,
+    ScorerTrailSchema,
+    ScorerTrailSpec,
+    ScorerTrailSchemaRef,
+    ScorerBranchDetails,
+    ScorerBranchDetailsPatch,
+    ScorerTrailModel,
+    ScorerBranchModel,
+]
+type ScorerMember = (
+    ScorerBranchSchema
+    | ScorerBranchSpec
+    | ScorerTrailSchema
+    | ScorerTrailSpec
+    | ScorerTrailSchemaRef
+    | ScorerTrailModel
+    | ScorerBranchModel
 )
 
 
@@ -823,10 +861,23 @@ CASE: CaseEntity = Entity(
     trail_schema=CaseTrailSchema,
     trail_spec=CaseTrailSpec,
     trail_schema_ref=CaseTrailSchemaRef,
-    branch_details=BranchSchemaDetails,
-    branch_details_patch=BranchDetailsPatch,
+    branch_details=CaseBranchDetails,
+    branch_details_patch=CaseBranchDetailsPatch,
     trail_model=CaseTrailModel,
     branch_model=CaseBranchModel,
+)
+
+SCORER: ScorerEntity = Entity(
+    name="scorer",
+    branch_schema=ScorerBranchSchema,
+    branch_spec=ScorerBranchSpec,
+    trail_schema=ScorerTrailSchema,
+    trail_spec=ScorerTrailSpec,
+    trail_schema_ref=ScorerTrailSchemaRef,
+    branch_details=ScorerBranchDetails,
+    branch_details_patch=ScorerBranchDetailsPatch,
+    trail_model=ScorerTrailModel,
+    branch_model=ScorerBranchModel,
 )
 
 
@@ -967,4 +1018,13 @@ CASE_VIEW: View[CaseProxy, CaseFormDataIn, CaseFormDataOut] = View(
     shared_proxy=SharedCaseProxy,
     form_data_in=CaseFormDataIn,
     form_data_out=CaseFormDataOut,
+)
+
+SCORER_VIEW: View[ScorerProxy, ScorerFormDataIn, ScorerFormDataOut] = View(
+    name="scorer",
+    entity=SCORER,
+    proxy=ScorerProxy,
+    shared_proxy=None,
+    form_data_in=ScorerFormDataIn,
+    form_data_out=ScorerFormDataOut,
 )

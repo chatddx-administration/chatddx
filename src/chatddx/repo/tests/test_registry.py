@@ -64,6 +64,7 @@ def test_the_registry_is_the_new_datamodel_s():
         "sampling",
         "configuration",
         "case",
+        "scorer",
     )
     assert tuple(entity.name for entity in ALL_ENTITIES) == all_entities
 
@@ -131,10 +132,12 @@ def test_the_flat_form_is_the_configuration_s():
     ]
 
 
-def test_only_the_things_below_a_request_and_tools_have_details():
+def test_the_request_time_slices_have_no_details():
     """
-    Details are description, and the request-time slices have none: all they
-    say is content (new-datamodel.md §6).
+    Details are description: what the things below a request are, what a
+    tool runs, what a case is expected to yield, and how a scorer's values are
+    summed up. The request-time slices have none: all they say is content
+    (new-datamodel.md §6, §11).
     """
     described = {
         entity.name: plain_detail_fields(entity.branch_details)
@@ -150,6 +153,8 @@ def test_only_the_things_below_a_request_and_tools_have_details():
         "client": ["rev", "packages"],
         "stack": ["endpoint", "served_name", "api", "credential"],
         "tool": ["implementation"],
+        "case": ["targets"],
+        "scorer": ["metrics"],
     }
 
     for entity in ALL_ENTITIES:

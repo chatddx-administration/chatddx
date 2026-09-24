@@ -10,7 +10,8 @@ named, typed reading of the output. A structured output gives each view as a
 path into its schema, in a subset of JSONPath (names and `[*]`), and free
 text gives a parser. The path is proved against the schema here, when the
 output is committed, so pairing a scorer with an output is set membership:
-does the output offer the scorer's view? Every output offers `text`.
+does the output offer the scorer's view? An output offers only what it
+declares, `text` included.
 
 The schema is kept as written, key order included: a constrained decoder
 emits keys in the order `properties` gives them.

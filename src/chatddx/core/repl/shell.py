@@ -77,7 +77,7 @@ class Repl:
         latest = RunModel.objects.filter(owner__name=self.identity).order_by(
             "-timestamp", "-pk"
         )
-        outstanding = Scoring().outstanding_runs(self.identity)
+        outstanding = Scoring(self.identity).outstanding_runs()
 
         return self._completions | {
             "replay:run": [

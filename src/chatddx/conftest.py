@@ -2,8 +2,7 @@
 """
 Fixtures the tests of every package share, around one test inventory:
 `data/test-inventory.toml`, the live inventory without its case corpus, and
-two cases of its own, whose targets every test scores against
-(`data/test-targets.toml`).
+two cases of its own, whose targets every test scores against.
 
 - A test that needs no database reads it parsed: `test_inventory`.
 - repo, below every command, commits it through its own inventory functions:
@@ -36,7 +35,6 @@ from chatddx.repo.shufflers import inventory
 from chatddx.utils import make_async
 
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
-TEST_TARGETS = settings.INVENTORY_PATH / "test-targets.toml"
 
 
 @pytest.fixture(scope="session")
@@ -57,11 +55,6 @@ def django_db_setup(django_test_environment, django_db_blocker):
 def clear_content_type_cache():
     ContentType.objects.clear_cache()
     yield
-
-
-@pytest.fixture(autouse=True)
-def test_targets(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "TARGETS_PATH", TEST_TARGETS)
 
 
 @pytest.fixture(scope="session")

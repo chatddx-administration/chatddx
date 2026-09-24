@@ -11,7 +11,13 @@ from django.db import transaction
 from django.db.models import ProtectedError, QuerySet
 
 from chatddx.core.utils import ensure_identity
-from chatddx.history.models import MessageModel, RunModel, SessionModel, TrialModel
+from chatddx.history.models import (
+    MessageModel,
+    RunModel,
+    ScoreModel,
+    SessionModel,
+    TrialModel,
+)
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.inventories import ParsedInventory
@@ -34,7 +40,9 @@ def wipe_data(
         with transaction.atomic():
             lines = _wipe_history(user_name) + _wipe_branches(user_name)
     except ProtectedError as e:
-        typer.echo(f"{user_name} is kept: runs of others read its branches", err=True)
+        typer.echo(
+            f"{user_name} is kept: others' runs or scores read its branches", err=True
+        )
         raise typer.Exit(1) from e
 
     for line in lines:
@@ -42,19 +50,24 @@ def wipe_data(
 
 
 def _wipe_history(user_name: str) -> list[str]:
-    """The user's runs and trials, and the sessions their messages were in."""
+    """
+    The user's scores and runs, the sessions their messages were in, and the
+    trials no one else's run is left of.
+    """
     # what refers to a row goes before the row
+    scores = _removed(ScoreModel.objects.filter(owner__name=user_name))
     runs = _removed(RunModel.objects.filter(owner__name=user_name))
     messages = _removed(MessageModel.objects.filter(session__owner__name=user_name))
     sessions = _removed(SessionModel.objects.filter(owner__name=user_name))
-    trials = _removed(TrialModel.objects.filter(owner__name=user_name))
+    trials = _removed(TrialModel.objects.filter(runs__isnull=True))
 
     return [
+        f"[score]: removed {scores}",
         f"[run]: removed {runs}, unshared {_unshared(RunModel, user_name)}",
         f"[message]: removed {messages}",
         f"[session]: removed {sessions}, "
         + f"unshared {_unshared(SessionModel, user_name)}",
-        f"[trial]: removed {trials}, unshared {_unshared(TrialModel, user_name)}",
+        f"[trial]: removed {trials}",
     ]
 
 
@@ -63,7 +76,7 @@ def _removed(qs: QuerySet[Any]) -> int:
     return removed.get(qs.model._meta.label, 0)
 
 
-def _unshared(model: type[RunModel | SessionModel | TrialModel], user_name: str) -> int:
+def _unshared(model: type[RunModel | SessionModel], user_name: str) -> int:
     unshared, _ = model.collaborators.through.objects.filter(
         identitymodel__name=user_name
     ).delete()

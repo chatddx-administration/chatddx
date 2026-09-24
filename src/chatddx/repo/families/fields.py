@@ -8,7 +8,7 @@ from typing import Annotated
 
 import jsonschema
 from jsonschema.validators import validator_for
-from pydantic import AfterValidator, JsonValue
+from pydantic import AfterValidator, JsonValue, StringConstraints
 
 # nix base32 leaves out e, o, t and u
 STORE_PATH = re.compile(r"/nix/store/[0-9a-df-np-sv-z]{32}-[^/]+")
@@ -68,6 +68,12 @@ def distinct[T](label: Callable[[T], object] = lambda item: item) -> AfterValida
 
 # `/nix/store/<hash>-<name>`: the build, system or package a thing is
 StorePath = Annotated[str, AfterValidator(_store_path)]
+
+# `module.path:function`: a function in one of chatddx's own files, which the
+# package it must be in holds to when it is loaded (`runtime.implementation`)
+EntryPoint = Annotated[
+    str, StringConstraints(pattern=r"^[\w.]+:[A-Za-z_][A-Za-z0-9_]*$")
+]
 
 # `<owner>/<repository>@<commit>`, as Hugging Face names a model's revision
 PinnedSource = Annotated[str, AfterValidator(_pinned_source)]

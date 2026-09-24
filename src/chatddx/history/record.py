@@ -5,7 +5,7 @@ what came of it, and the session its messages were exchanged in.
 
 Every run is written down, whatever came of it: an answer, one that doesn't
 hold, none, or an error on the way. A run of the same cell on the same case
-with the same seed is another run of the same trial.
+with the same seed is another run of the same trial, whoever makes it.
 """
 
 from dataclasses import dataclass, field
@@ -93,7 +93,7 @@ def record(
     with transaction.atomic():
         identity = IdentityModel.objects.get(name=owner)
         stack = StackBranchModel.objects.get(pk=branches.stack)
-        trial_model = _trial(identity, configuration, stack.target_id, case, trial.seed)
+        trial_model = _trial(configuration, stack.target_id, case, trial.seed)
 
         session = session or SessionModel.objects.create(
             uuid=UUID(trial.conversation_id),
@@ -134,23 +134,20 @@ def record(
 
 
 def _trial(
-    owner: IdentityModel,
     configuration: ConfigurationTrailSchema,
     stack: int,
     case: int,
     seed: int | None,
 ) -> TrialModel:
-    """The owner's trial of the cell on the case: the one run before, or a new one."""
-    fields = {
-        "owner": owner,
-        "configuration": dump_trail(ConfigurationTrailModel, configuration),
-        "stack_id": stack,
-        "case_id": case,
-        "seed": seed,
-    }
-    found = TrialModel.objects.filter(**fields).order_by("timestamp", "pk").first()
+    """The trial of the cell on the case with the seed: the one run before, or a new one."""
+    trial, _ = TrialModel.objects.get_or_create(
+        configuration=dump_trail(ConfigurationTrailModel, configuration),
+        stack_id=stack,
+        case_id=case,
+        seed=seed,
+    )
 
-    return found or TrialModel.objects.create(**fields)
+    return trial
 
 
 def _messages(

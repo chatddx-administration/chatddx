@@ -115,6 +115,7 @@ def test_every_record_of_the_inventory_parses(inventory: ParsedInventory):
         "sampling": 5,
         "configuration": 12,
         "case": 99,
+        "scorer": 4,
     }
 
 

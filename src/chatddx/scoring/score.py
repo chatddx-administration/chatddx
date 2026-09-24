@@ -1,24 +1,32 @@
 # pyright: basic
 """
 Holding runs to the scorers that apply to them, and writing down what each
-made of them.
+made of them (new-datamodel.md §11).
 
-A scorer is a function in one of chatddx's own scorer files, the view it
-reads, and the target it holds that to. It applies to a completed run whose
-output offers its view and whose case has its target in `targets.toml`, by
-the case's name in the inventory. A run is outstanding for a scorer until it
-has a score from the scorer's file and the target as they are now: an edit
-to either makes it outstanding again. An errored run is never scored.
+A scorer is the registry's: a function in one of chatddx's own scorer files,
+the view it reads, and the kind of target it holds that to. Whoever scores
+holds runs to the scorers they can see, their own and the archive's, and to
+the targets of the case branch that holds the run's case: their own, or else
+the archive's. A scorer applies to a completed run whose output offers its
+view, and whose case has its kind of target if it needs one. A run is
+outstanding for a scorer, for whoever scores, until it has a score of theirs
+from the scorer's trail with the target and the file's blob as they are now:
+an edit to any of them makes it outstanding again. An errored run is never
+scored.
 """
 
-import tomllib
 from dataclasses import dataclass
-from typing import cast
+from typing import Any, cast
 
 from chatddx.core import settings
+from chatddx.core.models import IdentityModel
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.repo.entities.case.django import CaseBranchModel
+from chatddx.repo.entities.case.pydantic import TargetKind
 from chatddx.repo.entities.output.pydantic import OutputTrailSpec, View
+from chatddx.repo.entities.scorer.django import ScorerTrailModel
+from chatddx.repo.entities.scorer.pydantic import Metric, ScorerDetails
+from chatddx.repo.shufflers.branch import select_visible_branch_models
 from chatddx.repo.shufflers.trail import load_trail
 from chatddx.runtime.implementation import (
     SCORERS as PACKAGE,
@@ -26,74 +34,130 @@ from chatddx.runtime.implementation import (
     implementation,
 )
 
-PATTERNS = f"{PACKAGE}.patterns"
+ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
 
 
 @dataclass(frozen=True)
 class Scorer:
+    """A scorer as whoever scores sees it: its name, owner, content and metrics."""
+
     name: str
-    entry_point: str
-    view: View
-    target: str
+    owner: str
+    trail: ScorerTrailModel
+    metrics: list[Metric]
+
+    @property
+    def view(self) -> View:
+        return cast(View, self.trail.view)
+
+    @property
+    def target_kind(self) -> TargetKind | None:
+        return cast(TargetKind | None, self.trail.target_kind)
+
+    @property
+    def args(self) -> dict[str, Any]:
+        return self.trail.args
 
 
-SCORERS: tuple[Scorer, ...] = (
-    Scorer(
-        "reciprocal_rank", f"{PATTERNS}:reciprocal_rank", "differential", "diagnosis"
-    ),
-    Scorer("first_mention", f"{PATTERNS}:first_mention", "text", "diagnosis"),
-    Scorer("warning_mentions", f"{PATTERNS}:mentions", "warning", "warning"),
-    Scorer(
-        "disposition_mentions", f"{PATTERNS}:mentions", "disposition", "disposition"
-    ),
-)
+# a scorer that applies to a run, the target it holds the run to, and the
+# case branch that target was read from
+type Applicable = tuple[Scorer, str | None, CaseBranchModel | None]
 
 
 class Scoring:
     """
-    The scorers as their files are now, and the targets as `targets.toml`
-    has them: read once, for one run or many.
+    The scorers `identity` can see, as their files are now, and the targets
+    it holds runs to: read once, for one run or many.
     """
 
-    def __init__(self):
-        self.implementations: dict[str, Implementation] = {
-            scorer.name: implementation(scorer.entry_point, PACKAGE)
-            for scorer in SCORERS
-        }
-        self.targets: dict[str, dict[str, str]] = tomllib.loads(
-            settings.TARGETS_PATH.read_text()
+    def __init__(self, identity: str):
+        self.identity: str = identity
+        self.owner_id: int | None = (
+            IdentityModel.objects.filter(name=identity)
+            .values_list("pk", flat=True)
+            .first()
         )
+        self.scorers: tuple[Scorer, ...] = tuple(self._visible())
+        self._implementations: dict[int, Implementation] = {}
         self._outputs: dict[int, OutputTrailSpec] = {}
-        self._cases: dict[int, str | None] = {}
+        self._cases: dict[int, CaseBranchModel | None] = {}
 
-    def applicable(self, run: RunModel) -> list[tuple[Scorer, str]]:
+    def _visible(self) -> list[Scorer]:
+        """Its own scorers and the archive's, a trail named once."""
+        scorers: list[Scorer] = []
+
+        for branch in select_visible_branch_models("scorer", self.identity, ARCHIVE):
+            if any(scorer.trail.pk == branch.target_id for scorer in scorers):
+                continue
+
+            scorers.append(
+                Scorer(
+                    name=branch.name,
+                    owner=branch.owner.name,
+                    trail=cast(ScorerTrailModel, branch.target),
+                    metrics=ScorerDetails.model_validate(branch.details).metrics,
+                )
+            )
+
+        return scorers
+
+    def implementation_of(self, scorer: Scorer) -> Implementation:
+        """What the scorer runs, as its file is now."""
+        if scorer.trail.pk not in self._implementations:
+            try:
+                ran = implementation(scorer.trail.function, PACKAGE)
+            except ValueError as e:
+                raise ValueError(f"the scorer '{scorer.name}' can't run: {e}") from None
+
+            self._implementations[scorer.trail.pk] = ran
+
+        return self._implementations[scorer.trail.pk]
+
+    def applicable(self, run: RunModel) -> list[Applicable]:
         """Each scorer that applies to `run`, and the target it holds the run to."""
         if run.status != RunStatus.COMPLETED:
             return []
 
         views = self.output_of(run).views
-        expected = self.targets.get(self.case_of(run) or "", {})
+        case = self.case_of(run)
+        targets: dict[str, str | bool] = case.details.get("targets", {}) if case else {}
+        found: list[Applicable] = []
+
+        for scorer in self.scorers:
+            if scorer.view not in views:
+                continue
+
+            if scorer.target_kind is None:
+                found.append((scorer, None, None))
+            elif scorer.target_kind in targets:
+                target = targets[scorer.target_kind]
+                found.append(
+                    (scorer, target if isinstance(target, str) else None, case)
+                )
+
+        return found
+
+    def outstanding(self, run: RunModel) -> list[Applicable]:
+        """Each scorer `run` has no score of the identity's from, as it is now."""
+        scored = {
+            (score.scorer_id, score.target, score.blob)
+            for score in run.scores.all()
+            if score.owner_id == self.owner_id
+        }
 
         return [
-            (scorer, expected[scorer.target])
-            for scorer in SCORERS
-            if scorer.view in views and scorer.target in expected
+            (scorer, target, case)
+            for scorer, target, case in self.applicable(run)
+            if (scorer.trail.pk, target, self.implementation_of(scorer).blob)
+            not in scored
         ]
 
-    def outstanding(self, run: RunModel) -> list[tuple[Scorer, str]]:
-        """Each scorer `run` has no score from, as its file and target are now."""
-        scored = {(s.scorer, s.view, s.target, s.blob) for s in run.scores.all()}
-
-        return [
-            (scorer, target)
-            for scorer, target in self.applicable(run)
-            if (scorer.name, scorer.view, target, self.blob_of(scorer)) not in scored
-        ]
-
-    def outstanding_runs(self, identity: str) -> list[RunModel]:
+    def outstanding_runs(self) -> list[RunModel]:
         """The identity's runs outstanding for any scorer, oldest first."""
         runs = (
-            RunModel.objects.filter(owner__name=identity, status=RunStatus.COMPLETED)
+            RunModel.objects.filter(
+                owner__name=self.identity, status=RunStatus.COMPLETED
+            )
             .select_related("trial__configuration__output", "session")
             .prefetch_related("scores")
             .order_by("timestamp", "pk")
@@ -106,19 +170,21 @@ class Scoring:
         output = self.output_of(run)
         made: list[ScoreModel] = []
 
-        for scorer, target in self.outstanding(run):
+        for scorer, target, case in self.outstanding(run):
             items = (
                 None
                 if run.output is None
                 else [str(item) for item in output.view(scorer.view, run.output)]
             )
-            ran = self.implementations[scorer.name]
-            scored = ran.function(items, target)
+            ran = self.implementation_of(scorer)
+            scored = ran.function(items, target, **scorer.args)
             made.append(
                 ScoreModel.objects.create(
                     run=run,
-                    scorer=scorer.name,
-                    view=scorer.view,
+                    owner_id=self.owner_id,
+                    scorer=scorer.trail,
+                    name=scorer.name,
+                    case_branch=case,
                     target=target,
                     blob=ran.blob,
                     value=scored.value,
@@ -129,8 +195,25 @@ class Scoring:
 
         return made
 
-    def blob_of(self, scorer: Scorer) -> str:
-        return self.implementations[scorer.name].blob
+    def latest(self, run: RunModel) -> list[ScoreModel]:
+        """
+        The identity's latest score of `run` from each scorer, by its name: the
+        scorers it can see first, in their order.
+        """
+        found = {
+            score.name: score
+            for score in run.scores.all()
+            if score.owner_id == self.owner_id
+        }
+        order = [scorer.name for scorer in self.scorers]
+
+        return sorted(
+            found.values(),
+            key=lambda score: (
+                order.index(score.name) if score.name in order else len(order),
+                score.name,
+            ),
+        )
 
     def output_of(self, run: RunModel) -> OutputTrailSpec:
         output = run.trial.configuration.output
@@ -143,24 +226,23 @@ class Scoring:
 
         return self._outputs[output.pk]
 
-    def case_of(self, run: RunModel) -> str | None:
-        """The run's case, by its name in the inventory: the archive's."""
+    def case_of(self, run: RunModel) -> CaseBranchModel | None:
+        """
+        The case branch whose targets `run` is held to: the newest row of the
+        identity's own that holds the run's case, or else of the archive's that
+        it can see.
+        """
         case_id = run.trial.case_id
 
         if case_id not in self._cases:
+            rows = CaseBranchModel.objects.filter(target_id=case_id).order_by(
+                "-timestamp", "-pk"
+            )
             self._cases[case_id] = (
-                CaseBranchModel.objects.filter(
-                    owner__name=settings.ARCHIVE_IDENTITY_NAME, target_id=case_id
-                )
-                .order_by("-timestamp", "-pk")
-                .values_list("name", flat=True)
-                .first()
+                rows.filter(owner__name=self.identity).first()
+                or rows.filter(
+                    owner__name=ARCHIVE, collaborators__name=self.identity
+                ).first()
             )
 
         return self._cases[case_id]
-
-
-def latest(run: RunModel) -> list[ScoreModel]:
-    """The run's latest score from each scorer, in the scorers' order."""
-    found = {score.scorer: score for score in run.scores.all()}
-    return [found[scorer.name] for scorer in SCORERS if scorer.name in found]

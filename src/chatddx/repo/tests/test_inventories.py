@@ -30,6 +30,7 @@ COUNTS = {
     "sampling": 5,
     "configuration": 12,
     "case": 2,
+    "scorer": 4,
 }
 
 
