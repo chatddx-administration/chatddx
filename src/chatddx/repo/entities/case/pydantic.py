@@ -8,6 +8,9 @@ they are versioned with the branch, and each score records the row whose
 targets it read (new-datamodel.md §11). inspect keeps a sample's target with
 the sample, and a case is chatddx's sample. Unlike inspect's one target per
 sample, a case has one per kind, and each scorer reads the kind it names.
+
+Its language is a detail too: the language its vignette is written in, and
+one day everything a run sends with it (new-datamodel.md §12).
 """
 
 from typing import Annotated, Literal, get_args
@@ -37,6 +40,9 @@ TARGET_KINDS: tuple[TargetKind, ...] = get_args(TargetKind.__value__)
 # `false` says so.
 EXPECTS_NONE: frozenset[TargetKind] = frozenset({"warning"})
 
+# the languages a case can be written in
+type Language = Literal["en", "sv"]
+
 # text its scorers read, or false where the case expects none
 type Target = Annotated[str, StringConstraints(min_length=1)] | Literal[False]
 
@@ -63,6 +69,7 @@ Targets = Annotated[dict[TargetKind, Target], AfterValidator(_none_only_where_ex
 
 
 class CaseDetails(Details):
+    language: Language | None = None
     targets: Targets = Field(default_factory=dict)
 
 
@@ -99,9 +106,11 @@ class CaseBranchOut(BranchOut[CaseTrailOut, CaseDetails]):
 
 
 class CaseFormDataIn(CaseTrailBase, BaseFormDataIn):
+    language: Language | None = None
     targets: Targets = Field(default_factory=dict)
 
 
 class CaseFormDataOut(CaseTrailBase, BaseFormDataOut):
     id: CoercedStr = Field(serialization_alias="template")
+    language: Language | None
     targets: dict[TargetKind, Target]

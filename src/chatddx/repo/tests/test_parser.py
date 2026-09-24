@@ -237,6 +237,17 @@ def test_a_case_s_vignette_is_read_from_its_file(inventory: ParsedInventory):
     assert details.tags == ["dutch-fall"]
 
 
+def test_every_case_says_its_language_and_edn_s_are_swedish(
+    inventory: ParsedInventory,
+):
+    cases = {name: details for name, (_, details) in inventory.case.items()}
+
+    assert all(details.language for details in cases.values())
+    assert {name for name, details in cases.items() if details.language == "sv"} == {
+        name for name, details in cases.items() if "edn" in (details.tags or [])
+    }
+
+
 def test_a_configuration_extends_another(inventory: ParsedInventory):
     plan, _ = inventory.configuration["plan"]
     shown, details = inventory.configuration["plan-shown"]

@@ -12,10 +12,12 @@ extends = [
 [case.case-1]
 vignette = "case vignette 1"
 tags = ["tag-1", "tag-2"]
+language = "en"
 targets.diagnosis = "fake & diagnosis & (b | 2)"
 targets.warning = "acute & warning"
 targets.disposition = "admit*"
 
 [case.case-2]
 vignette = "case vignette 2"
+language = "en"
 targets.diagnosis = "nothing & listed"

@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from pydantic import JsonValue, ValidationError
 
+from chatddx.repo.entities.case.pydantic import CaseDetails
 from chatddx.repo.entities.coercion.pydantic import CoercionTrailIn
 from chatddx.repo.entities.instruction.pydantic import InstructionTrailIn
 from chatddx.repo.entities.llm.pydantic import (
@@ -549,3 +550,14 @@ def test_a_toolset_has_tools_of_different_names():
 def test_a_tool_is_named_as_the_api_allows():
     with pytest.raises(ValidationError, match="name"):
         _ = ToolTrailIn(name="web search")
+
+
+# --------------------------------------------------------------------- cases
+
+
+def test_a_case_says_the_language_it_is_written_in():
+    assert CaseDetails.model_validate({"language": "sv"}).language == "sv"
+    assert CaseDetails().language is None
+
+    with pytest.raises(ValidationError, match="language"):
+        _ = CaseDetails.model_validate({"language": "se"})

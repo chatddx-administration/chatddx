@@ -1,604 +1,707 @@
 # The case corpus. A case is its vignette, read from cases/<name>.txt next
-# to this file, tags that say which dataset it came from, and its targets:
-# what it is expected to yield, by kind (new-datamodel.md §11). `diagnosis`
-# is read by `reciprocal_rank` and `first_mention`, and `warning` and
-# `disposition` by their `mentions` scorers (inventory/scorers.toml).
+# to this file, tags that say which dataset it came from, the language it is
+# written in (EDN's cases are Swedish, the rest English, Dutch Fall's by
+# translation), and its targets: what it is expected to yield, by kind
+# (new-datamodel.md §11). `diagnosis` is read by `reciprocal_rank` and
+# `first_mention`, and `warning` and `disposition` by their `mentions`
+# scorers (inventory/scorers.toml).
 #
 # A target is a pattern of whole words, `*` ending a stem
 # (`chatddx.scoring.scorers.patterns`), and `warning = false` says that the
 # case should raise no warning. Each `warning` and `disposition` is guessed
-# from the case's text, `# guessed`, until a clinician settles it.
+# from the case's text, `# guessed`, until a clinician settles it. The
+# Swedish cases' targets name their words in both languages, since what
+# chatddx sends with them is still English (new-datamodel.md §12).
 
 [case.DutchFall10w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "biliary & (colic | stone*)"
 targets.warning = "dissection | cholangitis | cholecystitis | pancreatitis | perforat*"  # guessed
 targets.disposition = "discharge* | home | outpatient | observation"  # guessed
 
 [case.Dutchfall11w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "aaa | (abdominal | aortic) & aneurysm | dissection"
 targets.warning = "rupture* | dissection | shock | aneurysm*"  # guessed
 targets.disposition = "surg* | operat* | vascular | icu | intensive & care"  # guessed
 
 [case.Dutchfall12w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "pancreatitis"
 targets.warning = "necro* | organ & failure | shock | acute & coronary | myocardial & infarction"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall13w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "torsion | ovarian & torsion"
 targets.warning = "torsion | ischemi* | ischaemi* | necro* | rupture*"  # guessed
 targets.disposition = "surg* | operat* | laparoscop* | gynecolog* | gynaecolog*"  # guessed
 
 [case.Dutchfall14w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall15w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "gastroenteritis"
 targets.warning = "appendicitis | perforat* | peritonitis | sepsis | dehydrat*"  # guessed
 targets.disposition = "discharge* | home | outpatient | observation"  # guessed
 
 [case.Dutchfall16w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "chf | (congestive | failure) & heart"
 targets.warning = "hypoxi* | respiratory & failure | pulmonary & (edema | oedema) | acute & coronary | myocardial & infarction"  # guessed
 targets.disposition = "icu | intensive & care | ccu | coronary & care | admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall17w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "liver & failure | cirrosis | cirrhosis"
 targets.warning = "bleed* | variceal | varices | peritonitis | encephalopath* | hepatorenal"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall18w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "pneumonia"
 targets.warning = "sepsis | septic | hypoxi* | respiratory & failure"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall19w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall1w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "pneumonia"
 targets.warning = "pulmonary & embolism | pe | hypoxi* | sepsis"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall20w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "vasculitis"
 targets.warning = "renal | kidney | glomerulonephritis | hemorrhag* | haemorrhag* | sepsis"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall21w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning = "hypoxi* | hypercapni* | respiratory & failure"  # guessed
 targets.disposition = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [case.Dutchfall22w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "uti | urinary & infection* | cystitis | urosepsis"
 targets.warning = "sepsis | septic | urosepsis | pyelonephritis"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall23w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning = "pulmonary & embolism | pe | dvt | deep & vein & thrombosis | hypoxi* | respiratory & failure"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall24w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning = "respiratory & failure | hypercapni* | hypoxi* | sepsis | exhaust*"  # guessed
 targets.disposition = "icu | intensive & care | high & dependency | hdu | niv"  # guessed
 
 [case.Dutchfall25w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "pancreatitis"
 targets.warning = "necro* | shock | organ & failure | bradycard* | cholangitis"  # guessed
 targets.disposition = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [case.Dutchfall26w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "pneumonia"
 targets.warning = "pulmonary & embolism | pe | pneumothorax | sepsis"  # guessed
 targets.disposition = "discharge* | home | outpatient"  # guessed
 
 [case.Dutchfall27w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "(renal | kidney) & (colic | stone*) | nephrolithiasis | urolithiasis"
 targets.warning = "sepsis | urosepsis | pyelonephritis | infect*"  # guessed
 targets.disposition = "discharge* | home | outpatient"  # guessed
 
 [case.Dutchfall28w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "pneumonia"
 targets.warning = "sepsis | respiratory & failure | hypoxi* | hypercapni*"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall29w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "(renal | kidney) & (colic | stone*) | nephrolithiasis | urolithiasis"
 targets.warning = "pyelonephritis | urosepsis | sepsis | hydronephros* | kidney & injury"  # guessed
 targets.disposition = "admit* | admission | hospital* | urolog*"  # guessed
 
 [case.Dutchfall2w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "(diverticular | gastrointestinal | (gastro & intestinal) | gi) & bleed*"
 targets.warning = "shock | hypovolem* | hemorrhag* | haemorrhag* | massive & bleed*"  # guessed
 targets.disposition = "admit* | admission | hospital* | gastroenterolog* | colonoscop*"  # guessed
 
 [case.Dutchfall30w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "pneumonia"
 targets.warning = "sepsis | septic | respiratory & failure | hypoxi* | heart & failure"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall3w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "diverticulitis | (gastro & intestinal | gi) & inflammation"
 targets.warning = "perforat* | abscess | peritonitis | sepsis"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall4w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "pancreatitis"
 targets.warning = "necro* | cholangitis | shock | organ & failure | sepsis"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall5w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "uti | urinary & infection* | cystitis | urosepsis"
 targets.warning = "sepsis | septic | urosepsis | shock"  # guessed
 targets.disposition = "icu | intensive & care | admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall6w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning = "hypoxi* | hypercapni* | respiratory & failure | sepsis"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall7w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "hernia"
 targets.warning = "incarcerat* | strangulat* | ischemi* | ischaemi* | perforat* | appendicitis"  # guessed
 targets.disposition = "surg* | operat* | admit* | admission | hospital* | observation"  # guessed
 
 [case.Dutchfall8w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "chf | (congestive | failure) & heart"
 targets.warning = "pneumothorax | tamponade | pulmonary & embolism | pe"  # guessed
 targets.disposition = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall9w]
 tags = ["dutch-fall"]
+language = "en"
 targets.diagnosis = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
 targets.warning = "cholangitis | sepsis | septic"  # guessed
 targets.disposition = "admit* | admission | hospital* | ercp"  # guessed
 
 [case.casesfromedn1]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning = "respiratory & failure | hypercapni* | airway | intubat* | andningssvikt | intuber*"  # guessed
 targets.disposition = "icu | intensive & care | iva | intensivvård*"  # guessed
 
 [case.casesfromedn10]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "scad | dissection | dissektion"
 targets.warning = "stemi | st & elevation | myocardial & infarction | dissection | hjärtinfarkt"  # guessed
 targets.disposition = "cath* | pci | angiograph* | angiografi | ccu | coronary & care | hia | hjärtintensiv*"  # guessed
 
 [case.casesfromedn11]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "delirium | abstinens"
 targets.warning = "delirium & tremens | withdrawal | seizure* | dissection | abstinens | kramp*"  # guessed
 targets.disposition = "icu | intensive & care | iva | intensivvård* | admit* | admission | hospital*"  # guessed
 
 [case.casesfromedn12]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "depression"
 targets.warning = "suicid* | självmord* | postpartum | psychos* | psykos"  # guessed
 targets.disposition = "outpatient | primary & care | follow* | psychiatr* | vårdcentral* | öppenvård*"  # guessed
 
 [case.casesfromedn13]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "leptospirosis"
 targets.warning = "kidney & failure | renal & failure | kidney & injury | hemorrhag* | haemorrhag* | sepsis | meningit* | weil*"  # guessed
 targets.disposition = "admit* | admission | hospital* | icu | intensive & care | infect*"  # guessed
 
 [case.casesfromedn14]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "ektopisk & graviditet | ektopisk"
 targets.warning = "rupture* | hemorrhag* | haemorrhag* | shock | hypovolem* | blödning | chock"  # guessed
 targets.disposition = "surg* | operat* | laparo* | gyn* | kirurg* | operation"  # guessed
 
 [case.casesfromedn15]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "hematom | hematoma"
 targets.warning = "bleed* | hemorrhag* | haemorrhag* | blödning | anticoag*"  # guessed
 targets.disposition = "discharge* | home | outpatient | observation | hemgång"  # guessed
 
 [case.casesfromedn16]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "tarmperforation | perforation"
 targets.warning = "perforat* | peritonitis | free & (air | gas) | sepsis | shock | fri & gas"  # guessed
 targets.disposition = "surg* | operat* | laparotom* | kirurg* | operation"  # guessed
 
 [case.casesfromedn17]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "porfyri"
 targets.warning = "paralys* | respiratory & failure | seizure* | hyponatrem* | neuropath* | förlamning"  # guessed
 targets.disposition = "admit* | admission | hospital* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn18]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "malaria"
 targets.warning = "falciparum | severe & malaria | cerebral & malaria | allvarlig & malaria"  # guessed
 targets.disposition = "admit* | admission | hospital* | infect* | infektion* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn19]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "meningit*"
 targets.warning = "meningit* | encephalit* | sepsis | septic | herniat*"  # guessed
 targets.disposition = "admit* | admission | hospital* | icu | intensive & care | iva | intensivvård* | infekt*"  # guessed
 
 [case.casesfromedn2]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "psychosis | psychotic | psykos | psykotisk"
 targets.warning = "encephalit* | autoimmune | nmda | suicid* | catatoni*"  # guessed
 targets.disposition = "psychiatr* | psykiatri* | neurolog* | admit* | admission | hospital*"  # guessed
 
 [case.casesfromedn20]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "viral & meningit* | meningit*"
 targets.warning = "encephalit* | herpes | hsv | bacterial & meningit*"  # guessed
 targets.disposition = "admit* | admission | hospital* | infect* | infekt* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn3]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "psychosis | psychotic | psykos | psykotisk"
 targets.warning = "organic | delirium | encephalit* | tumo* | stroke | suicid*"  # guessed
 targets.disposition = "psychiatr* | psykiatri* | involuntary | compulsory | tvångsvård* | lpt"  # guessed
 
 [case.casesfromedn4]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "sepsis | septic"
 targets.warning = "septic & shock | shock | sepsis | multi* & organ | hyperkal* | hypoglyc*"  # guessed
 targets.disposition = "icu | intensive & care | iva | intensivvård*"  # guessed
 
 [case.casesfromedn5]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "acl | (cruciate | ligament) & (tear* | injur*)"
 targets.warning = "fracture* | dislocat* | popliteal | compartment & syndrome"  # guessed
 targets.disposition = "discharge* | home | outpatient | orthop* | physio* | follow*"  # guessed
 
 [case.casesfromedn6]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "lungbleeding | bleeding | lungblödning | blödning"
 targets.warning = "hemoptys* | haemoptys* | massive | sepsis | pulmonary & embolism | lungblödning | blödning"  # guessed
 targets.disposition = "admit* | admission | hospital* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn7]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
 targets.warning = "cord & compression | compression | paralys* | cauda | sepsis | ryggmärgskompression"  # guessed
 targets.disposition = "surg* | operat* | neurosurg* | decompress* | neurokirurg*"  # guessed
 
 [case.casesfromedn8]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "hjärntumör | tumör| brain & (tumour | tumor)"
 targets.warning = "intracranial & pressure | icp | herniat* | tumo* | hydroceph* | tumör"  # guessed
 targets.disposition = "admit* | admission | hospital* | neurosurg* | neurokirurg* | neurolog* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn9]
 tags = ["edn"]
+language = "sv"
 targets.diagnosis = "ileus | tarmvred | obstruction | obstruktion"
 targets.warning = "ischemi* | ischaemi* | strangulat* | perforat* | volvulus | necro*"  # guessed
 targets.disposition = "surg* | operat* | laparotom* | kirurg* | operation"  # guessed
 
 [case.openxddx-case_1]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
 targets.warning = "hyperkal* | dialys* | renal & failure | kidney & failure | uremi*"  # guessed
 targets.disposition = "admit* | admission | hospital* | nephrolog*"  # guessed
 
 [case.openxddx-case_10]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
 targets.warning = "tamponade | arrhythmi* | shock | contusion | aortic & injury"  # guessed
 targets.disposition = "icu | intensive & care | ccu | telemetry | trauma | admit* | admission | hospital*"  # guessed
 
 [case.openxddx-case_11]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "osteoarthritis | arthritis"
 targets.warning = "cirrhosis | cardiomyopath* | hepatocellular & carcinoma | liver"  # guessed
 targets.disposition = "outpatient | follow* | referr* | rheumatolog* | hepatolog* | gastroenterolog*"  # guessed
 
 [case.openxddx-case_12]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "endometriosis"
 targets.warning = "ectopic | torsion | rupture*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | gynecolog* | gynaecolog* | laparoscop* | fertility"  # guessed
 
 [case.openxddx-case_13]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "tension & pneumothorax"
 targets.warning = "tension & pneumothorax | hemothorax | haemothorax | aortic & (rupture | injury) | shock"  # guessed
 targets.disposition = "surg* | operat* | trauma | icu | intensive & care"  # guessed
 
 [case.openxddx-case_14]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "physiological & jaundice | neonatal & jaundice"
 targets.warning = "kernicterus | bilirubin & encephalopath* | hemoly* | haemoly* | exchange & transfusion"  # guessed
 targets.disposition = "phototherap* | nicu | neonatal & intensive | admit* | admission | hospital*"  # guessed
 
 [case.openxddx-case_15]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "aortic & stenosis | valve & dysfunction"
 targets.warning = "heart & failure | endocardit* | dissection"  # guessed
 targets.disposition = "outpatient | follow* | referr* | cardiolog* | echocardiogra*"  # guessed
 
 [case.openxddx-case_16]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
 targets.warning = "suicid* | self & harm"  # guessed
 targets.disposition = "psychiatr* | dialectical | dbt"  # guessed
 
 [case.openxddx-case_17]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "(liver & failure) | cirrosis | cirrhosis"
 targets.warning = "peritonitis | sbp | encephalopath* | sepsis | hepatorenal"  # guessed
 targets.disposition = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [case.openxddx-case_18]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "toxoplasma & gondi* | toxoplasmosis"
 targets.warning = "microcephal* | congenital & infection | zika | fetal & anomal*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | obstetric* | maternal & fetal | perinatolog*"  # guessed
 
 [case.openxddx-case_19]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "stroke | cvl"
 targets.warning = "respiratory & failure | paralys* | botulism | airway"  # guessed
 targets.disposition = "icu | intensive & care | admit* | admission | hospital*"  # guessed
 
 [case.openxddx-case_2]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "pneumonia"
 targets.warning = "disseminat* | respiratory & failure | immunocompromis*"  # guessed
 targets.disposition = "outpatient | home | discharge* | follow*"  # guessed
 
 [case.openxddx-case_20]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "physiological & jaundice | neonatal & jaundice"
 targets.warning = "biliary & atresia | cirrhosis | liver & failure | cholesta*"  # guessed
 targets.disposition = "surg* | kasai | referr* | admit* | admission"  # guessed
 
 [case.openxddx-case_21]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "vascular & insufficiency | vascular & disease"
 targets.warning = "limb & ischemi* | critical & limb | gangren* | amputat*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | vascular"  # guessed
 
 [case.openxddx-case_22]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "dementia | alzheimer"
 targets.warning = "tumo* | hydroceph* | safety | capacity"  # guessed
 targets.disposition = "outpatient | follow* | referr* | neurolog* | memory & clinic"  # guessed
 
 [case.openxddx-case_23]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "measles | rubeola"
 targets.warning = "encephalit* | pneumonia | superinfect* | secondary & infection | immunocompromis*"  # guessed
 targets.disposition = "discharge* | home | outpatient | isolat*"  # guessed
 
 [case.openxddx-case_24]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "takotsubo | cardiomyopathy"
 targets.warning = "cardiogenic & shock | shock | heart & failure | arrhythmi* | thromb*"  # guessed
 targets.disposition = "admit* | admission | hospital* | ccu | coronary & care | cardiolog* | telemetry | icu"  # guessed
 
 [case.openxddx-case_25]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "osteoarthritis | arthritis"
 targets.warning = "septic & arthritis | fracture* | infect*"  # guessed
 targets.disposition = "outpatient | follow* | physio* | physical & therap* | rheumatolog* | home"  # guessed
 
 [case.openxddx-case_26]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "testicular & torsion"
 targets.warning = "torsion | abscess | orchitis | infarct*"  # guessed
 targets.disposition = "outpatient | home | discharge* | follow* | urolog*"  # guessed
 
 [case.openxddx-case_27]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "gynecomastia | hormonal & imbalance"
 targets.warning = "tumo* | malignan* | cancer"  # guessed
 targets.disposition = "reassur* | follow* | outpatient | home"  # guessed
 
 [case.openxddx-case_28]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "cholecystitis"
 targets.warning = "sepsis | septic | perforat* | gangren* | empyema"  # guessed
 targets.disposition = "admit* | admission | hospital* | cholecystostom* | palliat* | hospice"  # guessed
 
 [case.openxddx-case_29]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "insulinoma"
 targets.warning = "hypoglyc* | seizure* | coma | factitious"  # guessed
 targets.disposition = "admit* | admission | hospital* | observation | endocrinolog* | monitor*"  # guessed
 
 [case.openxddx-case_3]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "osteoarthritis | arthritis"
 targets.warning = "septic & arthritis | infect*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | rheumatolog*"  # guessed
 
 [case.openxddx-case_30]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "dysmenorrhea"
 targets.warning = "ectopic | pregnan* | pelvic & inflammatory | pid"  # guessed
 targets.disposition = "outpatient | home | follow* | discharge*"  # guessed
 
 [case.openxddx-case_31]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "hiv"
 targets.warning = "dengue | hemorrhag* | haemorrhag* | shock | meningit*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | infectious & disease* | infect*"  # guessed
 
 [case.openxddx-case_32]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "hernia"
 targets.warning = "testicular & (tumo* | cancer) | malignan* | torsion"  # guessed
 targets.disposition = "outpatient | follow* | referr* | urolog* | elective"  # guessed
 
 [case.openxddx-case_33]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "gastroenteritis"
 targets.warning = "dehydrat* | hypovolem*"  # guessed
 targets.disposition = "discharge* | home | outpatient"  # guessed
 
 [case.openxddx-case_34]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "basal & cell & carcinoma | bcc"
 targets.warning = "squamous & cell & carcinoma | scc | malignan* | melanoma"  # guessed
 targets.disposition = "outpatient | follow* | referr* | dermatolog* | excision"  # guessed
 
 [case.openxddx-case_35]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "pneumonia"
 targets.warning = "sepsis | septic | respiratory & failure | empyema | necrotiz*"  # guessed
 targets.disposition = "admit* | admission | hospital* | ward | icu | intensive & care"  # guessed
 
 [case.openxddx-case_36]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "precocious & puberty"
 targets.warning = "abuse | fracture* | malignan* | tumo*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | endocrinolog*"  # guessed
 
 [case.openxddx-case_37]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "(liver & failure) | cirrosis | cirrhosis"
 targets.warning = "encephalopath* | bleed* | variceal | sepsis | hypokal* | dehydrat*"  # guessed
 targets.disposition = "admit* | admission | hospital* | ward"  # guessed
 
 [case.openxddx-case_38]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "bleeding | hypovolemic & shock | postpartum & bleeding"
 targets.warning = "hypotens* | shock | fetal & distress | bradycard* | hemorrhag* | haemorrhag*"  # guessed
 targets.disposition = "labor | labour | delivery | obstetric* | monitor*"  # guessed
 
 [case.openxddx-case_39]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "parkinson | parkinson's & disease"
 targets.warning = "stroke | tumo* | demyelinat* | multiple & sclerosis"  # guessed
 targets.disposition = "outpatient | follow* | referr* | neurolog* | mri"  # guessed
 
 [case.openxddx-case_4]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "hirschsprung & disease | intestinal & disease"
 targets.warning = "volvulus | malrotation | enterocolitis | perforat* | shock | sepsis"  # guessed
 targets.disposition = "nicu | neonatal & intensive | surg* | pediatric & surg* | paediatric & surg*"  # guessed
 
 [case.openxddx-case_40]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "overdose | drug & use | intoxication"
 targets.warning = "respiratory & (failure | depression) | hypoventilat* | airway | overdose"  # guessed
 targets.disposition = "icu | intensive & care | admit* | admission | hospital* | monitor*"  # guessed
 
 [case.openxddx-case_41]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "myopathy"
 targets.warning = "respiratory & (failure | insufficiency) | aspirat* | feeding"  # guessed
 targets.disposition = "admit* | admission | hospital* | referr* | neurolog*"  # guessed
 
 [case.openxddx-case_42]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "thyroid & cyst* | benign & thyroid & nodule*"
 targets.warning = "malignan* | carcinoma | cancer | papillary"  # guessed
 targets.disposition = "outpatient | follow* | referr* | biopsy | fna | endocrin* | surg*"  # guessed
 
 [case.openxddx-case_44]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "(liver & failure) | cirrosis | cirrhosis"
 targets.warning = "liver & failure | hepatic & failure | encephalopath* | coagulopath* | fetal | hepatitis e"  # guessed
 targets.disposition = "icu | intensive & care | admit* | admission | hospital* | transplant*"  # guessed
 
 [case.openxddx-case_45]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "copd | ((exacerbation | obstructive) & pulmonary)"
 targets.warning = "lung & cancer | malignan* | hypoxi*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | home | pulmonolog* | pulmonary & rehab* | smoking & cessation"  # guessed
 
 [case.openxddx-case_46]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "dermatitis"
 targets.warning = "lymphoma | malignan* | malabsor*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | dermatolog* | gastroenterolog* | gluten | diet*"  # guessed
 
 [case.openxddx-case_47]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "gastroenteritis"
 targets.warning = "dehydrat* | hypovolem* | electrolyte*"  # guessed
 targets.disposition = "discharge* | home | outpatient"  # guessed
 
 [case.openxddx-case_48]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "hypocalcemia"
 targets.warning = "tetany | laryngospasm | seizure* | arrhythmi* | qt"  # guessed
 targets.disposition = "admit* | admission | hospital* | monitor* | ward"  # guessed
 
 [case.openxddx-case_49]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "gynecomastia | hormonal & imbalance"
 targets.warning = "tumo* | cancer | malignan* | leydig"  # guessed
 targets.disposition = "outpatient | follow* | referr* | urolog* | ultrasound | orchiectom*"  # guessed
 
 [case.openxddx-case_5]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "peripheral & artery & disease | arterial & insufficiency | peripheral & arterial & disease"
 targets.warning = "critical & limb | limb & ischemi* | gangren* | amputat* | ulcer*"  # guessed
 targets.disposition = "outpatient | follow* | referr* | vascular | exercise"  # guessed
 
 [case.openxddx-case_50]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "spontaneous & abortion | miscarriage"
 targets.warning = "hemorrhag* | haemorrhag* | bleed* | shock | sepsis | ectopic"  # guessed
 targets.disposition = "home | discharge* | follow* | gynecolog* | gynaecolog* | obstetric* | evacuat* | curettage"  # guessed
 
 [case.openxddx-case_6]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "hypertension"
 targets.warning = "hypokal* | arrhythmi* | hypertensive & (crisis | emergency | urgency)"  # guessed
 targets.disposition = "outpatient | follow* | referr* | endocrinolog*"  # guessed
 
 [case.openxddx-case_7]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "tardive & dyskinesia | dyskinesia"
 targets.warning = "neuroleptic & malignant | nms"  # guessed
 targets.disposition = "psychiatr* | follow* | medication & review"  # guessed
 
 [case.openxddx-case_8]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "hemolytic & uremic & syndrome | hus"
 targets.warning = "kidney & injury | renal & failure | anuri* | oliguri* | dialys* | seizure*"  # guessed
 targets.disposition = "admit* | admission | hospital* | picu | (pediatric | paediatric) & intensive | nephrolog* | dialys*"  # guessed
 
 [case.openxddx-case_9]
 tags = ["openxddx"]
+language = "en"
 targets.diagnosis = "hyperthyroidism | graves & disease"
 targets.warning = "heart & failure | cardiac & failure | arrhythmi* | tachyarrhythmi* | thyroid & storm"  # guessed
 targets.disposition = "nicu | neonatal & intensive | admit* | admission | hospital*"  # guessed

@@ -148,7 +148,7 @@ def test_the_request_time_slices_have_no_details():
         "client": ["rev", "packages"],
         "stack": ["endpoint", "served_name", "api", "credential"],
         "tool": ["implementation"],
-        "case": ["targets"],
+        "case": ["language", "targets"],
         "scorer": ["metrics"],
     }
 

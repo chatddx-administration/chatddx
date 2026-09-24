@@ -16,8 +16,8 @@ the entities, it covers:
 
 It then maps every current field to its new home or scraps it, and marks
 each field as fingerprinted or not. It ends with the scorers and targets
-kept in the registry (§11), and with where the code still differs from
-this note (§12).
+kept in the registry (§11), with running in one language throughout
+(§12), and with where the code still differs from this note (§13).
 
 For inspect-ai, option C of `data-generation.md` §5 was chosen: chatddx
 generates and inspect scores. So the registry keeps what generation needs,
@@ -1179,6 +1179,7 @@ on a serving without one.
 | Field | In | Fingerprinted | Notes |
 |---|---|---|---|
 | `vignette` | trail | yes | the case as the LLM receives it, through the instruction's `case` variable |
+| `language` | details | no | the language the vignette is written in: `en` or `sv` (§12) |
 | `targets` | details | no | what the case is expected to yield, by kind (§11) |
 
 **scorer**: what a run's answer comes to, by a function of chatddx's own,
@@ -1356,6 +1357,7 @@ Only the fields the redesign cannot work without were added:
 - **`output.views`:** where scorers read an output.
 - **`case.targets`, and the `scorer` entity:** what a case is expected to
   yield, and what reads a run's answer against it (§11).
+- **`case.language`:** the language a case is written in (§12).
 - **`coercion.mode`:** the mode, as a slice of its own.
 - **`reasoning.effort`, `reasoning.budget`:** reasoning as a slice of its
   own, with `default` as a variation.
@@ -1369,8 +1371,7 @@ Left out on purpose, to be added when a study needs them:
 - a reasoning slot in the instruction;
 - `tool_choice`;
 - few-shot examples;
-- a case's language, source and stage (tags cover dataset membership for
-  now);
+- a case's source and stage (tags cover dataset membership for now);
 - pricing;
 - a model-graded extractor for free text, which would be a pinned judge
   configuration like any other;
@@ -1618,7 +1619,55 @@ ports with little change:
   the sample's metadata;
 - inspect's reasons for what can't be read, when inspect scores (§4).
 
-## 12. Where the code lags
+## 12. One language throughout
+
+The research is Swedish, and what holds in English may not hold in
+Swedish. So a run is to be in one language throughout: its case, the
+instruction, the guidance and every other text a slice brings, and the
+targets it is held to, all Swedish or all English, never mixed.
+
+As built:
+
+- **A case names its language:** `language`, a detail, `en` or `sv`. The
+  corpus seeds EDN's twenty cases as Swedish and the rest as English,
+  Dutch Fall's by translation. A test holds every case of the inventory to
+  name one.
+- **Everything chatddx writes to an LLM is still English,** so a Swedish
+  case runs in a mixed language today. Its targets name their words in both
+  languages, to hold an answer in either.
+
+The rest is for later, and is the way translation files have long done it:
+
+- **Language is a slice, realized by translation.** A text a slice brings
+  (an instruction's templates, an output's guidance, a coercion's schema
+  prompt and tool description, a toolset's guidance, a tool's description)
+  is written once, in a source language. A variation of the language slice
+  is a catalog of translations of those texts, as a gettext `.po` file is
+  of a program's messages: each entry a source text and its translation.
+  Resolution renders every text through the cell's catalog.
+- **A text with no translation refuses the cell,** for want of a
+  translation, as an intent with no fact does (§2): nothing is guessed, and
+  nothing mixes. A source text that changes finds no translation until one
+  is written for it, as gettext finds no message for a changed `msgid`.
+- **A catalog is content,** a trail like any variation, so a changed
+  translation is a new version and a run names the catalog it read. `.po`
+  files are how it would travel to translators and back.
+- **A case is in the cell's language, or the cell refuses it.** A case
+  translated from another is a case of its own, with targets of its own in
+  its language, and names the case it translates (`translation_of`), so a
+  study can pair them.
+- **A batch compares languages** by varying the language slice over cases
+  paired by translation: each language's cells run on that language's
+  cases, every other slice held.
+- **The log carries it:** the cell's language and the case's in each
+  sample's metadata (§4).
+
+Parallel variations per language (`ddx-sv`, `free-text-sv`) would do
+without a new slice, but nothing would hold them to one another or to
+completeness, and comparing languages would mean varying several slices in
+lockstep.
+
+## 13. Where the code lags
 
 Where this note and the code differ, the note is what was decided:
 
