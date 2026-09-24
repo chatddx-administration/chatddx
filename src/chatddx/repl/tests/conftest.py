@@ -4,9 +4,9 @@ from typing import Any
 import pytest
 from rich.console import Console
 
+from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.repl.commands import handle
 from chatddx.repl.shell import Repl
-from chatddx.dev.fake_vllm import FakeTransport
 
 type Say = Callable[..., str]
 

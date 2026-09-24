@@ -4,6 +4,10 @@
 echoed after the prompt as if it was typed. A name holds `-`, `@` and `.`,
 so only a space ends the word completed. httpx's line per request is kept
 out of the answer as it streams.
+
+The database connection is let go after each line, as Django lets it go
+after each request: an idle repl holds none, and the next line opens one,
+whether or not the server dropped the last.
 """
 
 import logging
@@ -13,6 +17,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from django.db import connections
 from rich.console import Console
 
 from chatddx.core.models import IdentityModel
@@ -41,6 +46,7 @@ def repl(
         logging.getLogger(logger).setLevel(logging.WARNING)
 
     shell = Repl(identity_name, Console())
+    let_go()
 
     matches: list[str] = []
 
@@ -49,7 +55,11 @@ def repl(
 
         if state == 0:
             line = readline.get_line_buffer()[: readline.get_endidx()]
-            matches = complete(shell.completions(), line)
+
+            try:
+                matches = complete(shell.completions(), line)
+            finally:
+                let_go()
 
         return f"{matches[state]} " if state < len(matches) else None
 
@@ -78,10 +88,23 @@ def repl(
             if not interactive:
                 print(line)
 
-            if not handle(shell, line):
-                break
+            try:
+                if not handle(shell, line):
+                    break
+            finally:
+                let_go()
     finally:
         try:
             readline.write_history_file(history)
         except OSError:
             pass
+
+
+def let_go() -> None:
+    """
+    Close each connection that isn't inside a transaction, where Django's
+    rules for a connection's age would: with them as they are, every one.
+    """
+    for connection in connections.all(initialized_only=True):
+        if not connection.in_atomic_block:
+            connection.close_if_unusable_or_obsolete()

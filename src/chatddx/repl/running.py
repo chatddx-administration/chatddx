@@ -7,6 +7,8 @@ from django.utils import timezone
 from pydantic_ai import UnexpectedModelBehavior, UsageLimitExceeded
 from rich.text import Text
 
+from chatddx.history.models import RunStatus
+from chatddx.history.record import Branches, Outcome, record
 from chatddx.repl.render import (
     LABEL,
     LATER,
@@ -17,8 +19,6 @@ from chatddx.repl.render import (
     show_views,
 )
 from chatddx.repl.shell import SHARED_BY, Repl
-from chatddx.history.models import RunStatus
-from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import CellRefused, Resolution

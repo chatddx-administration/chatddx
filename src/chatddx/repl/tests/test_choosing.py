@@ -6,9 +6,9 @@ import pytest
 from rich.console import Console
 
 from chatddx.core.models import IdentityModel
+from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.repl.commands import handle
 from chatddx.repl.shell import Repl
-from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
 

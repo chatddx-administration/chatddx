@@ -3,10 +3,16 @@
 from collections.abc import Callable
 from pathlib import Path
 
+import psycopg
 import pytest
+from django.db import connection
+from rich.console import Console
 from typer.testing import CliRunner
 
 from chatddx.manage import app
+from chatddx.repl.cli import let_go
+from chatddx.repl.commands import handle
+from chatddx.repl.shell import Repl
 
 pytestmark = pytest.mark.django_db
 
@@ -31,3 +37,43 @@ def test_a_session_can_be_piped_in(provision: Callable[..., None], tmp_path: Pat
     assert "alex> cell free-text qwen3-8b-awq@fake\n" in result.output
     assert "alex free-text×qwen3-8b-awq@fake> show\n" in result.output
     assert "the LLM's default, 'on'" in result.output
+
+
+@pytest.mark.django_db(transaction=True)
+def test_an_idle_repl_holds_no_connection(
+    provision: Callable[..., None], tmp_path: Path
+):
+    provision()
+    assert connection.connection is not None
+
+    result = CliRunner().invoke(
+        app,
+        ["repl", "alex", "--history", str(tmp_path / "history")],
+        input="stacks\nquit\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert connection.connection is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_dropped_connection_is_said_and_the_next_line_opens_another(
+    provision: Callable[..., None],
+):
+    provision()
+    repl = Repl("alex", Console(record=True, width=200))
+    assert handle(repl, "stacks")
+
+    settings = connection.settings_dict
+    backend = connection.connection.info.backend_pid
+    with psycopg.connect(
+        dbname=settings["NAME"], user=settings["USER"], host=settings["HOST"]
+    ) as other:
+        _ = other.execute("select pg_terminate_backend(%s)", [backend])
+
+    assert handle(repl, "stacks")
+    assert "the database failed: terminating connection" in repl.console.export_text()
+
+    let_go()
+    assert handle(repl, "cases")
+    assert "case-1" in repl.console.export_text()

@@ -4,6 +4,7 @@ import shlex
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from django import db
 from rich.table import Table
 
 from chatddx.repl import (
@@ -130,6 +131,13 @@ def handle(repl: Repl, line: str) -> bool:
         command.run(repl, *args)
     except (BranchNotFoundError, AmbiguousBranchError, NotFound) as e:
         repl.error(str(e))
+    except db.Error as e:
+        # the server went away, or refused the statement: the command is lost,
+        # the repl isn't
+        said = str(e).strip()
+        repl.error(
+            f"the database failed: {said.splitlines()[0] if said else type(e).__name__}"
+        )
 
     return True
 

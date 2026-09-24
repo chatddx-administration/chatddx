@@ -11,11 +11,11 @@ from typer.testing import CliRunner
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
-from chatddx.repl.commands import handle
-from chatddx.repl.shell import Repl
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.history.models import ConversationModel, RunModel, TrialModel
 from chatddx.manage import app
+from chatddx.repl.commands import handle
+from chatddx.repl.shell import Repl
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.inventories import ParsedInventory
