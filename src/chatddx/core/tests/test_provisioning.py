@@ -233,7 +233,9 @@ def test_wipe_data_of_nobody_removes_nothing():
 def ran_test_tools(user: str) -> None:
     """A run of test-tools, on the user's own tools, written down."""
     case = next(iter(parse(INVENTORY).case))
-    repl = Repl(user, Console(record=True, width=200), transport=FakeTransport())
+    repl = Repl(
+        user, Console(record=True, width=200), transport=FakeTransport(), seed=None
+    )
 
     assert handle(repl, "cell test-tools qwen3-8b-awq@fake")
     assert handle(repl, f"run {case}")

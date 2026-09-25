@@ -1,4 +1,5 @@
 # pyright: basic
+import secrets
 from collections.abc import Iterable
 from typing import Any
 
@@ -29,6 +30,17 @@ from chatddx.scoring.score import Scoring
 
 SHARED_BY: dict[str, str] = {"configuration": settings.ARCHIVE_IDENTITY_NAME}
 
+# a seed the repl draws is below this: five digits, to be read in the prompt
+# and typed back
+SEEDS = 100_000
+
+# the seed a repl holds when it isn't given one: drawn as it starts
+DRAWN: Any = object()
+
+
+def drawn_seed() -> int:
+    return secrets.randbelow(SEEDS)
+
 
 class NotFound(Exception):
     pass
@@ -45,13 +57,24 @@ class Repl:
     and the archive's alone (SHARED_BY), as those are what it runs; one
     another user shares is called by its owner, OWNER/NAME, and runs once
     it is saved as the identity's own.
+
+    It holds a seed too, drawn as it starts unless it is given one, which
+    `run` and `batch` send: every run is reproducible, and a batch's cases
+    share one seed. None runs unseeded.
     """
 
-    def __init__(self, identity_name: str, console: Console, transport: Any = None):
+    def __init__(
+        self,
+        identity_name: str,
+        console: Console,
+        transport: Any = None,
+        seed: int | None = DRAWN,
+    ):
         self.identity: str = identity_name
         self.console: Console = console
         self.transport: Any = transport
         self.cell: Cell = Cell()
+        self.seed: int | None = drawn_seed() if seed is DRAWN else seed
 
         self._names: dict[tuple[EntityName, int], str] = {}
         self._llms: dict[int, tuple[LLMFacts, int | None]] = {}
@@ -62,7 +85,8 @@ class Repl:
         cell = self.cell
         stack = f"×{cell.stack.name}" if cell.stack else ""
         held = f" {cell.label}{stack}" if cell.configuration or cell.stack else ""
-        return f"{self.identity}{held}> "
+        seed = f"#{self.seed}" if self.seed is not None else "#none"
+        return f"{self.identity}{held} {seed}> "
 
     def completions(self) -> dict[str, list[str]]:
         """
@@ -73,7 +97,7 @@ class Repl:
         if self._completions is None:
             self._completions = {
                 entity: self.names(entity) for entity in ENTITY_NAMES
-            } | {"batch:tag": self.tags("case")}
+            } | {"batch:tag": self.tags("case"), "seed:seed": ["none"]}
 
         latest = RunModel.objects.filter(owner__name=self.identity).order_by(
             "-timestamp", "-pk"

@@ -13,13 +13,13 @@ pytestmark = pytest.mark.django_db
 
 
 def test_the_prompt_shows_the_cell(repl: Repl, say: Say):
-    assert repl.prompt == "alex> "
+    assert repl.prompt == "alex #none> "
 
     _ = say("use free-text")
-    assert repl.prompt == "alex free-text> "
+    assert repl.prompt == "alex free-text #none> "
 
     _ = say("on qwen3-8b-awq@fake")
-    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake #none> "
 
 
 def test_help_lists_every_command_with_the_words_it_takes(say: Say):

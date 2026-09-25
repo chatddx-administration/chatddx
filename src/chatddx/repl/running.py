@@ -24,6 +24,7 @@ from rich.text import Text
 
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.history.record import Branches, Outcome, record
+from chatddx.repl.cell import NONE
 from chatddx.repl.render import (
     LABEL,
     LATER,
@@ -37,7 +38,7 @@ from chatddx.repl.render import (
     tally_events,
 )
 from chatddx.repl.scoring import summary
-from chatddx.repl.shell import SHARED_BY, Repl
+from chatddx.repl.shell import SHARED_BY, Repl, drawn_seed
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.entities.tool.pydantic import ToolBranchOut
 from chatddx.repo.families.django import BranchModel
@@ -47,6 +48,9 @@ from chatddx.runtime.run import TOOL_ROUNDS, Run, cause_of, invalid
 from chatddx.scoring.score import Scoring
 
 STOPPED = Outcome(RunStatus.ERRORED, error="stopped")
+
+# the largest seed a trial keeps, and vLLM takes
+MAX_SEED = 2**63 - 1
 
 
 @dataclass(frozen=True)
@@ -58,25 +62,47 @@ class Ready:
     tools: dict[str, ToolBranchOut]
 
 
+def seed(repl: Repl, word: str | None = None) -> None:
+    """
+    Draw a fresh seed for `run` and `batch` to send; or hold SEED, or none,
+    to run unseeded.
+    """
+    if word is None:
+        repl.seed = drawn_seed()
+    elif word == NONE:
+        repl.seed = None
+    else:
+        chosen = _seed_of(repl, word)
+
+        if chosen is None:
+            return
+
+        repl.seed = chosen
+
+    held = f"#{repl.seed}" if repl.seed is not None else "none: runs go unseeded"
+    repl.console.print(f"seed: {held}")
+
+
 def run(repl: Repl, name: str, seed: str | None = None) -> None:
     """
-    Run the cell on a case, stream the run, record it as a run of the trial
-    the cell, the case and the seed make, and hold it to the scorers that
-    apply. An answer that doesn't come, or doesn't
-    parse, doesn't hold, where one is asked for; an LLM or server that
-    fails mid-run is said, and recorded.
+    Run the cell on a case, with SEED or else the seed the repl holds, stream
+    the run, record it as a run of the trial the cell, the case and the seed
+    make, and hold it to the scorers that apply. An answer that doesn't
+    come, or doesn't parse, doesn't hold, where one is asked for; an LLM or
+    server that fails mid-run is said, and recorded.
     """
-    if seed is not None and not seed.isdigit():
-        repl.error(f"a seed is a whole number, not '{seed}'")
+    chosen = repl.seed if seed is None else _seed_of(repl, seed)
+
+    if seed is not None and chosen is None:
         return
 
     ready = _ready(repl)
 
-    if ready is None:
+    if ready is None or not _seedable(repl, ready, chosen):
         return
 
     case = get_visible_branch_model("case", repl.identity, name)
-    run = _made(repl, ready, case, int(seed) if seed is not None else None)
+    run = _made(repl, ready, case, chosen)
 
     if run is None:
         return
@@ -128,7 +154,7 @@ def batch(repl: Repl, *tags: str) -> None:
     """
     ready = _ready(repl)
 
-    if ready is None:
+    if ready is None or not _seedable(repl, ready, repl.seed):
         return
 
     tagged = " or ".join(tags)
@@ -156,7 +182,8 @@ def batch(repl: Repl, *tags: str) -> None:
 
     repl.console.print(
         f"batch: {cell.label} × {cell.stack.name} × {len(cases)} case{many}"
-        + f" tagged {tagged}",
+        + f" tagged {tagged}, "
+        + (f"seed {repl.seed}" if repl.seed is not None else "unseeded"),
         style="bold",
     )
     repl.console.print(columns.header())
@@ -170,7 +197,7 @@ def batch(repl: Repl, *tags: str) -> None:
                 if stopping.asked:
                     break
 
-                run = _made(repl, ready, case, None)
+                run = _made(repl, ready, case, repl.seed)
 
                 if run is None:
                     break
@@ -244,6 +271,36 @@ def _ready(repl: Repl) -> Ready | None:
         return None
 
     return Ready(resolution, api_key, repl.tools())
+
+
+def _seed_of(repl: Repl, word: str) -> int | None:
+    """The seed `word` names, or None, having said why it names none."""
+    if not word.isdigit() or int(word) > MAX_SEED:
+        repl.error(f"a seed is a whole number up to {MAX_SEED}, not '{word}'")
+        return None
+
+    return int(word)
+
+
+def _seedable(repl: Repl, ready: Ready, seed: int | None) -> bool:
+    """
+    Whether the cell can run with `seed`: greedy sampling ignores a seed, so
+    a seeded run of it would claim a reproducibility the seed plays no part
+    in, and a second seed would repeat it rather than replicate it.
+    """
+    if seed is None or not _greedy(ready.resolution):
+        return True
+
+    repl.error(
+        "refused: seed: sampling is greedy (temperature 0), which ignores the"
+        + " seed: `seed none` runs it unseeded"
+    )
+    return False
+
+
+def _greedy(resolution: Resolution) -> bool:
+    writes = resolution.sampling.writes
+    return writes.get("temperature") == 0 or writes.get("top_k") == 1
 
 
 def _made(repl: Repl, ready: Ready, case: BranchModel, seed: int | None) -> Run | None:

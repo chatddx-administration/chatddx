@@ -79,8 +79,13 @@ COMMANDS: dict[str, Command] = {
     ),
     "run": Command(
         ("CASE", "[SEED]"),
-        "run a case on the cell, with a seed if given",
+        "run a case on the cell, with SEED or the seed the repl holds",
         running.run,
+    ),
+    "seed": Command(
+        ("[SEED]",),
+        "draw a fresh seed for run and batch; SEED holds it, none runs unseeded",
+        running.seed,
     ),
     "batch": Command(
         ("TAG...",),

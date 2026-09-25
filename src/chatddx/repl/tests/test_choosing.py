@@ -39,7 +39,7 @@ def test_set_puts_another_variation_in_the_cell(
 ):
     written = say("cell free-text qwen3-8b-awq@fake", "set reasoning off", "run case-1")
 
-    assert repl.prompt == "alex free-text+reasoning=off×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex free-text+reasoning=off×qwen3-8b-awq@fake #none> "
     assert "trial: free-text+reasoning=off × qwen3-8b-awq@fake × case-1" in written
 
     [request] = fake.requests
@@ -51,13 +51,13 @@ def test_setting_the_configuration_s_own_variation_unsets_it(repl: Repl, say: Sa
     _ = say("cell free-text qwen3-8b-awq@fake", "set reasoning off")
     _ = say("set reasoning default")
 
-    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake #none> "
 
 
 def test_none_takes_the_toolset_out(repl: Repl, say: Say, fake: FakeTransport):
     written = say("cell test-tools qwen3-8b-awq@fake", "set toolset none", "show")
 
-    assert repl.prompt == "alex test-tools+toolset=none×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex test-tools+toolset=none×qwen3-8b-awq@fake #none> "
     assert "none (set; test-tools has sentinel)" in written
 
     _ = say("run case-1")
@@ -66,19 +66,19 @@ def test_none_takes_the_toolset_out(repl: Repl, say: Say, fake: FakeTransport):
     assert "tools" not in request
 
     _ = say("set toolset sentinel")
-    assert repl.prompt == "alex test-tools×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex test-tools×qwen3-8b-awq@fake #none> "
 
 
 def test_none_of_a_toolset_it_has_none_of_is_nothing_set(repl: Repl, say: Say):
     _ = say("cell free-text qwen3-8b-awq@fake", "set toolset none")
 
-    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake #none> "
 
 
 def test_use_puts_a_configuration_in_as_it_is(repl: Repl, say: Say):
     _ = say("cell free-text qwen3-8b-awq@fake", "set reasoning off", "use free-text")
 
-    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake #none> "
 
 
 def test_set_says_what_it_can_t_set(say: Say):
@@ -100,7 +100,7 @@ def test_save_keeps_the_cell_as_a_configuration_of_one_s_own(repl: Repl, say: Sa
     written = say("cell free-text qwen3-8b-awq@fake", "set reasoning off", "save quiet")
 
     assert "saved as quiet: created" in written
-    assert repl.prompt == "alex quiet×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex quiet×qwen3-8b-awq@fake #none> "
 
     saved = ConfigurationBranchModel.objects.get(owner__name="alex", name="quiet")
     off = ReasoningBranchModel.objects.get(owner__name="archive", name="off")
@@ -150,7 +150,7 @@ def test_save_says_what_it_can_t_save(say: Say):
 
 def test_a_configuration_of_one_s_own_shadows_the_archive_s(provision: Provision):
     provision("--with-giftbag")
-    repl = Repl("alex", Console(record=True, width=200))
+    repl = Repl("alex", Console(record=True, width=200), seed=None)
 
     assert handle(repl, "use plan")
     assert repl.cell.configuration is not None
@@ -158,7 +158,7 @@ def test_a_configuration_of_one_s_own_shadows_the_archive_s(provision: Provision
 
     assert handle(repl, "use archive/plan")
     assert repl.cell.configuration.owner.name == "archive"
-    assert repl.prompt == "alex archive/plan> "
+    assert repl.prompt == "alex archive/plan #none> "
 
 
 @pytest.mark.usefixtures("bobs")
@@ -178,7 +178,7 @@ def test_another_s_configuration_is_put_in_by_its_owner_and_saved_to_run(
 ):
     written = say("cell bob/bobs-plan qwen3-8b-awq@fake", "show")
 
-    assert repl.prompt == "alex bob/bobs-plan×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex bob/bobs-plan×qwen3-8b-awq@fake #none> "
     assert "a schema; views: differential, warning, disposition" in written
 
     written = say("run case-1")
@@ -190,7 +190,7 @@ def test_another_s_configuration_is_put_in_by_its_owner_and_saved_to_run(
 
     assert "saved as my-plan: created" in written
     assert "recorded as run 1 of trial" in written
-    assert repl.prompt == "alex my-plan×qwen3-8b-awq@fake> "
+    assert repl.prompt == "alex my-plan×qwen3-8b-awq@fake #none> "
 
 
 @pytest.mark.usefixtures("bobs")
@@ -210,5 +210,5 @@ def test_another_s_configuration_is_found_only_where_it_is_shared(say: Say):
 def test_one_s_own_configuration_goes_by_one_s_own_name_too(repl: Repl, say: Say):
     _ = say("use free-text", "save mine", "use alex/mine")
 
-    assert repl.prompt == "alex mine> "
+    assert repl.prompt == "alex mine #none> "
     assert "no configuration 'alex/free-text' for alex" in say("use alex/free-text")

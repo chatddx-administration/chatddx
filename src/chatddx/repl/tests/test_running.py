@@ -13,11 +13,13 @@ from typing import Any, override
 
 import httpx2
 import pytest
+from rich.console import Console
 
 from chatddx.dev.fake_vllm import FakeTransport, completion, stream
 from chatddx.history.models import RunModel, TrialModel
 from chatddx.history.record import record
 from chatddx.repl import running
+from chatddx.repl.shell import SEEDS, Repl
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import CaseBranchDetails
 from chatddx.repo.entities.tool.django import ToolBranchModel
@@ -103,7 +105,7 @@ def test_run_takes_the_trial_s_seed(say: Say, fake: FakeTransport):
 
     assert "trial: free-text × qwen3-8b-awq@fake × case-1 (seed 42)" in written
     assert fake.requests[0]["seed"] == 42
-    assert "a seed is a whole number, not 'x'" in written
+    assert "a seed is a whole number up to" in written
     assert len(fake.requests) == 1
 
 
@@ -489,3 +491,71 @@ def test_ctrl_c_again_is_let_through_to_a_run_being_written_down(
     assert tokens.isdigit()
     assert "stopped after 0 of 2 cases" in written
     assert not RunModel.objects.exists()
+
+
+def test_the_repl_holds_a_seed_drawn_as_it_starts(fake: FakeTransport):
+    repl = Repl("alex", Console(record=True, width=200), transport=fake)
+
+    assert repl.seed is not None and 0 <= repl.seed < SEEDS
+    assert repl.prompt == f"alex #{repl.seed}> "
+
+
+def test_seed_draws_holds_and_clears_the_seed(repl: Repl, say: Say):
+    assert "seed: #42" in say("seed 42")
+    assert repl.prompt == "alex #42> "
+
+    written = say("seed")
+    assert repl.seed is not None and f"seed: #{repl.seed}" in written
+
+    assert "runs go unseeded" in say("seed none")
+    assert repl.prompt == "alex #none> "
+
+    assert "a seed is a whole number" in say("seed x")
+    assert repl.seed is None
+
+
+def test_run_and_batch_send_the_seed_the_repl_holds(say: Say, fake: FakeTransport):
+    written = say(
+        "cell free-text qwen3-8b-awq@fake", "seed 42", "batch tag-2", "run case-1"
+    )
+
+    assert "2 cases tagged tag-2, seed 42" in written
+    assert [request["seed"] for request in fake.requests] == [42, 42, 42]
+
+    # a run afterwards is another run of the trial the batch made
+    assert "recorded as run 2 of trial" in written
+    assert TrialModel.objects.count() == 2
+
+
+def test_a_seed_given_to_run_is_that_run_s_alone(
+    repl: Repl, say: Say, fake: FakeTransport
+):
+    _ = say("cell free-text qwen3-8b-awq@fake", "seed 42", "run case-1 7")
+
+    assert fake.requests[0]["seed"] == 7
+    assert repl.seed == 42
+
+
+def test_unseeded_runs_send_no_seed(say: Say, fake: FakeTransport):
+    written = say("cell free-text qwen3-8b-awq@fake", "seed none", "batch tag-1")
+
+    assert "1 case tagged tag-1, unseeded" in written
+    assert "seed" not in fake.requests[0]
+
+
+def test_greedy_sampling_is_refused_a_seed(say: Say, fake: FakeTransport):
+    written = say(
+        "cell free-text qwen3-8b-awq@fake",
+        "set sampling greedy",
+        "seed 42",
+        "run case-1",
+        "batch tag-1",
+        "run case-1 7",
+    )
+
+    assert written.count("sampling is greedy (temperature 0), which ignores") == 3
+    assert fake.requests == []
+
+    _ = say("seed none", "run case-1")
+
+    assert len(fake.requests) == 1

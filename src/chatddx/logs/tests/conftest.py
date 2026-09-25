@@ -25,7 +25,10 @@ def run_as(provision: Callable[..., None]) -> Callable[..., Run]:
             provisioned.add(identity)
 
         repl = Repl(
-            identity, Console(record=True, width=200), transport or FakeTransport()
+            identity,
+            Console(record=True, width=200),
+            transport or FakeTransport(),
+            seed=None,
         )
 
         def run(*lines: str) -> None:

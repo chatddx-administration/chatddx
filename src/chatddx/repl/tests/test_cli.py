@@ -1,5 +1,6 @@
 """`chatddx repl IDENTITY`, as the command line runs it."""
 
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -34,8 +35,13 @@ def test_a_session_can_be_piped_in(provision: Callable[..., None], tmp_path: Pat
     )
 
     assert result.exit_code == 0, result.output
-    assert "alex> cell free-text qwen3-8b-awq@fake\n" in result.output
-    assert "alex free-text×qwen3-8b-awq@fake> show\n" in result.output
+    # a seed drawn as it starts, in the prompt
+    assert re.search(
+        r"alex #\d{1,5}> cell free-text qwen3-8b-awq@fake\n", result.output
+    )
+    assert re.search(
+        r"alex free-text×qwen3-8b-awq@fake #\d{1,5}> show\n", result.output
+    )
     assert "the LLM's default, 'on'" in result.output
 
 
@@ -61,7 +67,7 @@ def test_a_dropped_connection_is_said_and_the_next_line_opens_another(
     provision: Callable[..., None],
 ):
     provision()
-    repl = Repl("alex", Console(record=True, width=200))
+    repl = Repl("alex", Console(record=True, width=200), seed=None)
     assert handle(repl, "stacks")
 
     settings = connection.settings_dict
@@ -96,5 +102,5 @@ def test_ctrl_c_ends_the_command_not_the_repl(
     )
 
     assert result.exit_code == 0, result.output
-    assert "alex> cases\n\n(interrupted)\nalex> stacks\n" in result.output
+    assert re.search(r"> cases\n\n\(interrupted\)\nalex #\d+> stacks\n", result.output)
     assert "qwen3-8b-awq@fake" in result.output
