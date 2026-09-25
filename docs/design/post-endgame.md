@@ -2,7 +2,106 @@
 
 What was designed, discussed and set aside. Nothing here is planned: each
 entry says what was proposed, how it went, and why it stopped, so that a
-later round starts from the reasons rather than from scratch.
+later round starts from the reasons rather than from scratch. The entries:
+the batch as a record, and clinical sign-off.
+
+## The batch as a record
+
+**Set aside, September 2026.** `batch TAG...` is a repl command, and
+nothing more: it runs the held cell on the cases with any of the tags, one
+after another, each run recorded as `run` records it. No run points at a
+batch, and nothing more is planned for it. The seed is the de facto batch
+key until there is a reason to do otherwise.
+
+### What was designed
+
+A batch was to be an order kept in history, naming:
+
+| Field | Held |
+|---|---|
+| `base` | a configuration and a stack: the variation every slice keeps unless it is varied |
+| `varied` | groups of slices, each with its variations, such as `[{stack: [qwen3-8b-awq@pelle, gpt-oss-20b@malborg], reasoning: [off, low, high]}, {output: [management-plan, diagnoses, free-text]}]` |
+| `case_tags` | the cases with any of the tags the owner can see, resolved when it runs; a vignette under two names run once |
+| `scorers` | the registry's scorers, by their trails |
+| `replicates` | its seeds, one per replicate; a replicate's position among them, from 1, its epoch in a cell's inspect log |
+
+- **Cells.** The slices within a group crossed, and the groups varied one
+  at a time with every other slice at the base: groups of one slice give a
+  one-slice-at-a-time design, one group of every slice a full cross. A cell
+  labelled by its varied slices (`stack=gpt-oss-20b@malborg
+  reasoning=low`), for people only; to keep one was to commit its
+  configuration under a name.
+- **A report.** Every cell resolved against its stack before anything ran:
+  realized, collapsed into another cell, or refused, with the facts it
+  rested on; per cell and scorer, whether the output offers the view; per
+  scorer and case, whether the case has the target. This was to be the
+  compatibility table of PR #68, derived rather than authored, and kept
+  with the batch. The derivation stays: `show` gives the same for the
+  repl's cell.
+- **A log per cell,** so a batch would have been an inspect eval set in all
+  but name, with a reducer per batch for its replicates.
+- **`batch --seeds 1,2,3`,** to run replicates in one go, and fractional
+  designs later.
+- **Languages compared by a batch** varying the language slice over cases
+  paired by translation.
+- **The old planner's rules carried over** (`history/batches.py`, removed
+  in `6ade722`): cases by tag, scorers named or all, two names of one
+  vignette run once, a `plan` before `generate` (now `show`), and the order
+  kept so it could be generated again.
+
+### Why it was set aside
+
+- **A trial is content.** Its cell, case and seed say what ran, and its
+  fingerprints make it reproducible, so a batch adds nothing to what ran:
+  it is an initiator. Runs are to be started from anywhere, a chat, the
+  repl or a script, and grouped by their parameters, never by what started
+  them. `export.md` selects by parameters for that reason.
+- **A second grouping costs more than it buys.** A recorded batch would
+  give the order itself (who asked for which cells, cases and seeds, and
+  when), a report kept with it, and an epoch that is a replicate's place in
+  one batch rather than a seed's place in an export's selection. It would
+  also be a grouping that a run started from a chat never has, to be kept
+  consistent with the parameters beside it.
+- **The seed already does most of it,** below.
+
+### The seed as the batch's key
+
+The repl holds a seed, drawn as it starts, and `run` and `batch` send it.
+A batch's cases share one seed, and a fresh one is one word away (`seed`).
+So every run of a batch carries its seed, and that is the trace it leaves.
+
+What it can do:
+
+- **Find a batch's runs:** the owner's runs of one cell with the seed, over
+  the cases with the batch's tags, as long as nothing else ran that cell
+  with that seed. A fresh seed per batch makes that the rule.
+- **Line its cases up:** every case has the same seed, so the seed is its
+  epoch in a log, and two batches under two seeds are two replicates.
+- **Say what a later run repeats:** a `run CASE` under the batch's seed is
+  another run of the batch's trial, which is how a seed is seen to hold.
+
+What it can't do:
+
+- **Tell a batch from what followed it.** A later `run`, or a second batch,
+  under the same seed on the same cell makes more runs of the same trials;
+  only times tell them apart.
+- **Keep one person's sessions apart.** Two sessions can draw the same
+  seed, about one chance in 100,000 per pair; the owner keeps two people's
+  apart, not one person's two sessions.
+- **Say what was asked for:** not the tags, the scorers, or whether the
+  batch ran to its end or was stopped.
+- **Mark an unseeded batch,** or a greedy one, which must run unseeded:
+  those leave no trace but their cell and their times.
+- **Span cells:** a batch runs one cell, and runs of another cell under the
+  same seed are another batch's, or a comparison made on purpose.
+
+### What would bring it back
+
+A study whose cells, cases and replicates must be ordered, kept and
+generated again as one unit, or runs whose seeds can't tell batches apart.
+Then start from the table above, and from the question the deferral left
+open: whether the selection of `export.md`, with its manifest, is enough
+of a record.
 
 ## Clinical sign-off
 

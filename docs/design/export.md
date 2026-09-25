@@ -54,8 +54,8 @@ inspect's scores ─────── imported as Score rows
 ### Selection: by parameters, not by what started the runs
 
 A selection names what the trials are, never what initiated them: a batch,
-the repl or a chat makes no difference (see `new-datamodel.md` §5, on the
-batch as an initiator).
+the repl or a chat makes no difference (`post-endgame.md`, on the batch
+as a record; the seed is the de facto batch key).
 
 | Parameter | Selects |
 |---|---|
