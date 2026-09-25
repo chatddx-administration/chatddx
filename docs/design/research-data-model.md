@@ -253,6 +253,8 @@ Study design and results
   - factor effects from a mixed model with case as a random effect;
   - the trade-off frontier between accuracy, latency and cost;
   - rates of invalid output and of errors.
+  `export.md` keeps the descriptive ones in chatddx and moves the
+  inferential ones (paired differences, the mixed model) to R.
 - **The clinical product** keeps sessions and messages as its chat record.
   A `Release` names an (Agent, Deployment) pair promoted from a study.
   `/diagnose` selects a release, and credentials come from

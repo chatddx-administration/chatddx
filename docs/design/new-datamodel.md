@@ -20,6 +20,11 @@ each field as fingerprinted or not. It ends with the scorers and targets
 kept in the registry (§11), with running in one language throughout
 (§12), and with where the code still differs from this note (§13).
 
+Two notes beside it take up what leaves chatddx: `export.md`, how runs
+become inspect logs, spreadsheets and data for R, and what chatddx
+analyses itself; and `clinical-input.md`, what clinicians provide, and
+where.
+
 For inspect-ai, option C of `data-generation.md` §5 was chosen: chatddx
 generates and inspect scores. So the registry keeps what generation needs,
 and what only evaluation needs moves to inspect. §11 makes one change to
@@ -58,7 +63,9 @@ Terms used here:
   It is content, like a trail, and belongs to no one. A run is one go at a
   trial, and it is the runner's (§6).
 - **Replicate:** one of a batch's seeds. Its position among them, from 1,
-  is inspect's epoch when the batch is written as a log (§4, §5).
+  is inspect's epoch when the batch is written as a log (§4, §5). Until a
+  batch is recorded (§5), `export` numbers a log's seeds instead: an epoch
+  is a seed's place among the seeds of the runs it selects.
 - **Intent and realization:** a variation states what is wanted. Its
   realization on a stack is what it writes into the request: its
   contribution (`data-generation.md` §3.1).
@@ -754,7 +761,9 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
   the same functions, to the same values (below, inspect scores the log).
 - **`export` writes the identity's runs of the cell as an inspect log**
   (`chatddx.logs.export`, `data-generation.md` §5, option C), a sample per
-  draw of a case:
+  draw of a case. It is the repl's today; `export.md` moves it to a
+  stateless `chatddx export` that selects runs by their parameters and
+  writes xlsx and R's files from the same rows. The log is laid out so:
 
   | Sample field | Holds |
   |---|---|
@@ -784,7 +793,7 @@ These are the rules for when inspect scores with scorers of its own.
 chatddx's scorers keep theirs until then (below), in a log too.
 
 - **Refused before running.** A cell whose output lacks a view that a
-  scorer reads is refused for that scorer when the batch is planned (§5).
+  scorer reads is refused for that scorer when it is validated (§5).
   If no scorer is left, the cell isn't generated.
 - **Unreadable at scoring.**
   - An output that isn't valid, or whose view yields a value that fails
@@ -938,16 +947,17 @@ A batch names:
 - scorers;
 - replicates.
 
-It stays an order in history, not a registry entity, and today's split
-between `plan` and `generate` stays.
+It is not a registry entity. Whether it is kept in history at all is
+deferred (below, What a batch is). The `plan` and `generate` of the old
+batch planner are gone: what `plan` showed is `validate`'s now (below).
 
 | Field | Holds |
 |---|---|
 | `base` | a configuration and a stack: the variation every slice keeps unless it is varied |
 | `varied` | groups of slices, each slice with its variations, such as `[{stack: [qwen3-8b-awq@pelle, gpt-oss-20b@malborg], reasoning: [off, low, high]}, {output: [management-plan, diagnoses, free-text]}]` |
-| `case_tags` | as today; the cases are resolved when the batch generates |
+| `case_tags` | the cases with any of the tags that the owner can see, their own and those shared with them, resolved when the batch runs. A vignette under two names is one case, run once. |
 | `scorers` | inspect scorers with their arguments, which include the view each reads: the registry's scorers, by their trails (§11) |
-| `replicates` | its seeds, one per replicate. A replicate's position among them, from 1, is its epoch in the cell's inspect log. Each seed makes a trial of every cell on every case. |
+| `replicates` | its seeds, one per replicate. A replicate's position among them, from 1, is its epoch in the cell's inspect log. Each seed makes a trial of every cell on every case. None is one unseeded draw of each. |
 
 - **Cells.** The slices within a group are crossed, and the groups are
   varied one at a time, with every other slice at the base.
@@ -956,10 +966,9 @@ between `plan` and `generate` stays.
   - One group holding every varied slice is a full cross.
   - The example above does both. It crosses stack with reasoning, which
     gives the table of §2, and varies output on its own.
-  - A batch with nothing varied is today's batch: one configuration.
-    The repl's `batch TAG...` runs one as it is asked for, the cell on the
-    cases with any of the tags, once each and with no seed, and keeps no
-    order: each run is recorded as `run` records it.
+  - A batch with nothing varied is one cell: the repl's `batch TAG...`,
+    the cell it holds on the cases with any of the tags, each run recorded
+    as `run` records it.
 - **A cell is content, not a name.**
   - Its configuration is a trail, deduplicated by fingerprint. The base
     cell appears once, however many groups reach it.
@@ -970,11 +979,78 @@ between `plan` and `generate` stays.
   - To keep a cell is to commit its configuration, under a name the
     committer chooses.
 
+### What "as today" meant
+
+The old batch planner (`history/batches.py`, removed with the old history
+in `6ade722`) is what "today" referred to. What it did, and where each rule
+went:
+
+| The old planner | Now |
+|---|---|
+| cases with any of the tags | the same |
+| the owner's own cases only | their own and those shared with them: the corpus is the archive's now |
+| a case with no target for the chosen scorers left out, and named before anything was made | run, and named before anything is sent (`validate`, below); the scorers without a target leave its line blank |
+| scorers named, or all where none were | the same; the repl's batch takes all the owner sees whose view the output offers |
+| one experiment per case and expectation | one run per case and seed, scored by each scorer that applies |
+| two cases of one content made once | the same |
+| `plan` before `generate` | `validate` before running |
+| kept as an order, re-generatable | deferred (below) |
+| no seeds | `replicates`; the repl's batch has none yet (below) |
+
+### `validate` replaces `plan`
+
+`validate [CASE]` checks, without sending anything, what the old `plan` and
+this section's report would have said, and `run` and `batch` call it first:
+
+- for the cell held in the repl, a slice the stack refuses, with the facts
+  it rests on, and a scorer whose view the output doesn't offer;
+- for each case, a missing target for a scorer that applies, a target that
+  doesn't parse, and the targets and vignettes clinicians have yet to
+  settle (`clinical-input.md` §4).
+
+Without a case it covers every case the owner sees. `run` and `batch` stop
+on what makes a run impossible and say the rest before the first run.
+
+### What a batch is
+
+**Deferred.** A trial is content: its cell, case and seed say what ran, and
+its fingerprints make it reproducible. So a batch adds nothing to what ran;
+it is an initiator. The ambition is that runs are started from anywhere, a
+chat, the repl or a batch, and grouped by their parameters, never by what
+started them. `export.md` selects by parameters for that reason.
+
+- **What recording a batch would buy:** the order itself (who asked for
+  which cells, cases and seeds, and when), a report kept with it, and an
+  epoch that is a replicate's place in one batch rather than a seed's place
+  in an export's selection.
+- **What it would cost:** a second grouping beside the parameters, which a
+  run started from a chat would never have.
+- **To scrutinize:** whether the selection of `export.md`, with its
+  manifest, is enough of a record.
+
+### Seeds in the repl
+
+The repl's batch runs unseeded, one draw of each case. `batch TAG...
+--seeds 1,2,3` is to make each seed a replicate. To keep the cross in check
+and the repl easy, a seed is to be explored as part of the repl's state:
+
+- the repl holds a seed, drawn at random when it starts, shown in its
+  prompt, and set with `seed N` or cleared with `seed none`;
+- `run CASE` and `batch TAG...` use it, so a single run repeats what a
+  batch did, and a batch run twice runs the same trials twice, which is
+  how a seed is seen to hold;
+- `--seeds` overrides it for one batch, and is the only way to more than
+  one replicate.
+
+Open: whether a seed held by default hides that unseeded draws differ;
+and whether seeded runs repeat at all without vLLM's batch invariance
+(`data-generation.md` §1).
+
 ### The compatibility table is the batch's resolution report
 
-**Decision:** there is no authored compatibility table. Planning a batch
+**Decision:** there is no authored compatibility table. `validate`
 resolves every cell against its stack, as a dry run (`data-generation.md`
-§2.4). The report of that run is the table.
+§2.4). Its report is the table.
 
 - **Its inputs are all in the datamodel already:**
   - the variations' content;
@@ -988,16 +1064,16 @@ resolves every cell against its stack, as a dry run (`data-generation.md`
 - **Per cell and scorer,** it says whether the output offers the scorer's
   view.
 - **Per scorer and case,** it says whether the case has a target the scorer
-  reads. A case without one is left out for that scorer, as `plan` does
-  today.
+  reads. A case without one is run, and left out for that scorer, and
+  `validate` says so before anything is sent.
 - **Pairwise tables are views of the report.** Stack × reasoning (§2) is
   the report projected onto two slices.
 - **Collapsed cells are shown and not run.** Refused cells are shown and
   not run either, so a sweep whose base variation some LLM can't honour
   says so before generating. For example, a base with reasoning `off`
   swept across stacks refuses the gpt-oss cell.
-- **The batch keeps its report,** so a missing cell can still be explained
-  after generation.
+- **Whether the report is kept** goes with whether the batch is (above,
+  What a batch is).
 
 ### PR #68's pairs, in the new datamodel
 
@@ -1011,7 +1087,7 @@ has a home now:
 | sampling params × connection (the provider settings an LLM honours) | reasoning × LLM: reasoning is an intent that the LLM's facts translate, and `provider_params` is dissolved | derived from facts |
 | sampling params × connection (settings never sent: `top_k`, `n`) | gone: `top_k` goes out in `extra_body`, and `n` is scrapped | none |
 | instruction × output type | the output's guidance fills the instruction's slot, and resolution checks that the slot is placed | derived |
-| scorer × expectation | scorer × case: does the case have a target the scorer reads, and does it parse? Both are checked when the batch is planned, not when the run is scored. | derived |
+| scorer × expectation | scorer × case: does the case have a target the scorer reads, and does it parse? Both are checked by `validate`, not when the run is scored. | derived |
 
 ### What goes away
 
@@ -1612,6 +1688,10 @@ A case's targets are its details:
   see it: the newest row that holds the run's case trail. So a fixed target
   reaches earlier runs of the same vignette, and a new vignette comes with
   targets of its own.
+- **A target is to become its plain words, its pattern and its review
+  state,** with a fourth kind, `dont_miss` (`clinical-input.md` §3). The
+  pattern stays what the pattern scorers read; the words are what the judge
+  reads and people see.
 
 ### Scores
 
@@ -1738,6 +1818,13 @@ lockstep.
 Where this note and the code differ, the note is what was decided:
 
 - **Request hashes** (`data-generation.md` §3) aren't computed yet.
+- **`validate`** doesn't exist; `batch` refuses a cell up front, and says
+  nothing of a case's missing targets before it runs (§5).
+- **The repl's batch takes no seeds** (§5).
+- **`export`** is the repl's, per cell, writing inspect logs only
+  (`export.md`).
+- **Targets** are patterns alone, with `# guessed` in comments, and there
+  is no `dont_miss` (`clinical-input.md`).
 
 ## Sources
 
