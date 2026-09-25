@@ -202,31 +202,69 @@ words ("the rank at which the differential first names the diagnosis, as
 
 A signature is not content, and not a detail either: it changes nothing a
 run or a score reads, and it says who vouches, which a branch row can't (a
-row has an owner, and no author). It is a relation of the branch row, as
-its tags and collaborators are (`new-datamodel.md` §1): a row, the identity
-that signed it, what it signed, and when.
+row has an owner, and no author). It is kept beside the registry, keyed by
+what was signed rather than by the row that holds it: the identity that
+signed, the part, when, the chatddx revision, and a fingerprint of what the
+part holds.
 
+- **What a part's fingerprint covers:** the case's trail fingerprint, the
+  part's name, and its value. For `vignette`, that is the trail; for a
+  target kind, its `text` and `pattern` too, which are details and in no
+  trail's fingerprint; for the whole row in step 1, the trail and every
+  detail a signature covers. A target signed on one case is not signed on
+  another that happens to share its words.
 - **The signer is the session's owner,** in the repl (`sign case NAME
-  [PART]`, `unsign`) or the portal. Signing a row changes nothing in it, so
-  anyone who can see a row can sign it, the archive's included.
-- **An edit starts unsigned.** A changed target or vignette makes a new row
-  (details and content are versioned), and the signatures stay with the row
-  they were given to. Nothing has to remember to reset a flag.
-- **A score says what it was held to.** A score keeps the case row it read,
-  so an export can say whether that row was signed, by whom, and whether it
-  is signed now.
+  [PART]`, `unsign`) or the portal. A signature changes nothing in a row,
+  so anyone who can see a case can sign it, the archive's included.
+- **An edit starts unsigned.** A changed target or vignette has a new
+  fingerprint, and no signature. Nothing has to remember to reset a flag.
+- **Signatures outlive their rows.** `wipe-data` and `init-data` remove
+  and remake branch rows, and a signature keyed by fingerprint holds for
+  the same content when it comes back: a dev cycle doesn't lose its
+  sign-offs.
+- **A score says what it was held to.** A score keeps the case row it read;
+  the row's parts' fingerprints then say whether it was signed when the
+  score was made, and whether it is now.
 - **It is generic:** an output's guidance and schema, a scorer's
-  description, the judge's rules are branch rows too, and can be signed the
-  same way.
+  description, the judge's rules can be signed the same way.
 
 ### The archive signs the inventory
 
-`init-data` commits the inventory as the archive's, and the archive signs
-every row it commits, but for the parts the case's `draft` names. An
-archive signature says "this came in through the curated inventory"; who
-wrote it is in git, and the signature keeps the chatddx revision it was
-committed from, so the one leads to the other. The archive never signs in a
-session, and a clinician's signature is never the archive's.
+`init-data` signs, as the archive, every part it commits but those the
+case's `draft` names. `draft` is the inventory's alone: it is read by
+`init-data` and kept nowhere, since what the database needs to know is who
+signed, not what the archive held back. An archive signature says "this
+came in through the curated inventory"; who wrote it is in git, and the
+signature keeps the revision it was committed from, so the one leads to
+the other. The archive never signs in a session, and a clinician's
+signature is never the archive's.
+
+### What signing by fingerprint leaves open
+
+- **The archive's signatures are a projection of the inventory,** not
+  events. `init-data` has to sign what is newly out of `draft` even where
+  nothing else changed, and a commit that changes nothing does nothing
+  today; and it has to take back the archive's signature of a part put
+  back in `draft`, which a signature that outlives its row would otherwise
+  keep.
+- **A value that comes back is signed again.** A target edited from A to B
+  and back to A finds A's signature, given before B existed. The
+  fingerprint says the content is the same; whether the signer's judgement
+  still holds is another matter. The signature's time says when.
+- **Signatures without rows.** A signature whose content no row holds any
+  longer lingers: harmless, but `validate` should count them, and
+  `wipe-data USER` must say whether a user's signatures go with their
+  runs, or stay, as a wipe for a test cycle would want.
+- **Copies share signatures.** A case the archive signed is signed in
+  alex's copy of it too, where the content is the same: right for the
+  content, but the signature then vouches for a row its signer never saw.
+- **The part's fingerprint is a new one.** Trails are fingerprinted, and
+  details aren't; a part's fingerprint needs a canonical form of its
+  details (`data-generation.md` §3.2), defined per part, and changed with
+  care, since a change of form unsigns everything.
+- **What `draft` doesn't say is lost.** The database knows a part is
+  unsigned, not whether the inventory meant to hold it back, forgot to, or
+  never had a clinician; `validate` reads the inventory to tell.
 
 ### Granularity, in two steps
 
@@ -259,8 +297,8 @@ clinical rigour, for a tool that is primarily for research:
 |---|---|---|
 | `targets.<kind>.pattern` | case branch details (today's `targets`) | the pattern scorers read it; a change is a new version, and makes runs outstanding |
 | `targets.<kind>.text` | case branch details, beside the pattern | the judge and the exports read it; a change should make the judge's scores outstanding |
-| `draft` | case branch details | what the archive doesn't sign; read by `init-data` and `validate` only |
-| signatures | a relation of every branch row: identity, part, time, revision | who vouches, which no row records; stays with the row signed |
+| `draft` | the inventory's TOML only | what the archive doesn't sign; read by `init-data` and `validate`, kept nowhere |
+| signatures | a table beside the registry, keyed by the fingerprint of the part signed: identity, part, time, revision | who vouches, which no row records; outlives `wipe-data` and `init-data` for the same content |
 | `dont_miss` | a target kind (code vocabulary), a view of the output (the differential's items marked critical), and a scorer | as the other kinds |
 | the disposition scale | the arguments of the scorer that reads it (trail content) | it changes scores, so each score cites it |
 | the judge's rules | the judge registered as a scorer, its rules in its arguments | a changed rule is a new scorer trail; inspect gets them as options |

@@ -114,13 +114,13 @@ trail field that cannot take part in the fingerprint is not content", and
 - **Storage.** Relations stay many-to-many. Plain details go in one JSON
   column on the entity's branch model, validated by its details schema. A
   typed column is added only where something queries it.
-- **Signatures are to be a relation too** (`clinical-input.md` §6): who
-  vouches for a branch row, and for which part of it, which the row itself
-  can't say, since it has an owner and no author. Like tags and
-  collaborators, a signature changes nothing resolution or scoring reads,
-  and is set on the row without making a new version; unlike them, it is
-  never carried to the next version, so an edit starts unsigned. Unlike
-  them too, it isn't the row owner's: whoever can see a row can sign it.
+- **Signatures sit beside the branches** (`clinical-input.md` §6): who
+  vouches for a case, or a part of it, which a row can't say, since it has
+  an owner and no author. Like tags and collaborators, a signature changes
+  nothing resolution or scoring reads; unlike them, it is keyed by a
+  fingerprint of what it signed, not by a row, so an edit starts unsigned
+  and the same content keeps its signatures through `wipe-data` and
+  `init-data`. Whoever can see a case can sign it.
 
 ### Passthroughs are the router
 
@@ -1037,21 +1037,61 @@ started them. `export.md` selects by parameters for that reason.
 
 ### Seeds in the repl
 
-The repl's batch runs unseeded, one draw of each case. `batch TAG...
---seeds 1,2,3` is to make each seed a replicate. To keep the cross in check
-and the repl easy, a seed is to be explored as part of the repl's state:
+**Decided:** a run is seeded unless someone says otherwise. The repl holds
+a seed, drawn at random as it starts and shown in its prompt (`alex
+plan×qwen3-8b-awq@pelle #48213>`). `run` and `batch` send it; `seed` draws a
+fresh one, `seed N` holds N, and `seed none` runs unseeded; `run CASE SEED`
+is that run's alone. So a batch's cases share one seed and their epochs
+line up, and a `run CASE` afterwards is another run of the trial the batch
+made. Refreshing the seed is one word, so a held seed never quietly turns
+replicates into repeats.
 
-- the repl holds a seed, drawn at random when it starts, shown in its
-  prompt, and set with `seed N` or cleared with `seed none`;
-- `run CASE` and `batch TAG...` use it, so a single run repeats what a
-  batch did, and a batch run twice runs the same trials twice, which is
-  how a seed is seen to hold;
-- `--seeds` overrides it for one batch, and is the only way to more than
-  one replicate.
+Why seeding by default (vLLM, main branch):
 
-Open: whether a seed held by default hides that unseeded draws differ;
-and whether seeded runs repeat at all without vLLM's batch invariance
-(`data-generation.md` §1).
+- **Only a seed can repeat a run.** With batch invariance on, vLLM itself
+  warns that "random sampling without an explicit seed may not be batch
+  invariant". A seed is necessary, not sufficient: the same hardware, vLLM
+  version, request and batch invariance are needed too
+  (`data-generation.md` §1).
+- **Unseeded isn't independent either.** An unseeded request draws from
+  the server's own generator, seeded once at start (`--seed`, 0 by
+  default), so what it draws depends on the server's history, unrecorded.
+- **A seeded draw is a trial of its own,** and a seed run again is a check
+  that it holds, or a retry of one that errored. Unseeded runs of a cell on
+  a case all fall into one trial, though each is a different draw.
+
+What it costs:
+
+- **Throughput.** vLLM gives a seeded request a generator of its own. On
+  CUDA, one seeded request in a step sends the whole step from FlashInfer's
+  top-k and top-p kernel to PyTorch's, and draws its noise in a Python loop
+  per seeded request. To be measured with batch invariance's own cost
+  (`data-generation.md` §6).
+- **Trials grow with seeds,** one per seed and cell and case: a batch
+  shares its seed, so a batch adds one trial per case, not per run.
+- **Greedy sampling ignores the seed.** A seeded run at temperature 0, or
+  top-k 1, would claim a reproducibility the seed has no part in, and a
+  second seed would repeat it rather than replicate it. So the repl
+  refuses it, and says `seed none` runs it unseeded.
+- **One seed across cells correlates them.** The same seed reuses the same
+  noise, which helps a paired comparison of two cells on one LLM, and is
+  why replicates need seeds of their own.
+
+Learned in building it:
+
+- **Greedy is known only from what resolution writes:** a temperature of 0
+  or a top-k of 1, the variation's own or the LLM's generation config as
+  its facts declare it. A server whose own defaults are greedy goes
+  unseen.
+- **Five digits read well and collide sooner:** two sessions drawing the
+  same seed on the same cell and case make a repeat where a replicate was
+  meant, about one chance in 100,000 per pair. `validate` could say when a
+  batch's seed has run its cases before.
+- **Tests hold the seed:** the repl takes one, or none, so a test's
+  output doesn't change with a draw. The fake vLLM reads a seed back in its
+  thinking, and ignores it otherwise.
+
+Open: `batch --seeds 1,2,3` for more than one replicate at a time.
 
 ### The compatibility table is the batch's resolution report
 
@@ -1828,7 +1868,7 @@ Where this note and the code differ, the note is what was decided:
 - **Request hashes** (`data-generation.md` §3) aren't computed yet.
 - **`validate`** doesn't exist; `batch` refuses a cell up front, and says
   nothing of a case's missing targets before it runs (§5).
-- **The repl's batch takes no seeds** (§5).
+- **`batch --seeds`** isn't built: a replicate is a `seed`, then a batch (§5).
 - **`export`** is the repl's, per cell, writing inspect logs only
   (`export.md`).
 - **Targets** are patterns alone, with `# guessed` in comments, and there
