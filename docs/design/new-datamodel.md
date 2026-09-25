@@ -8,8 +8,9 @@ the entities, it covers:
   (§2);
 - why slices compose only as intents, and what makes them appear to
   compose (§3);
-- how an inspect-ai scorer reads an output that pydantic-ai produced, and
-  how chatddx scores runs until inspect does (§4);
+- how an inspect-ai scorer reads an output that pydantic-ai produced, how
+  chatddx scores runs, and how a cell's runs are written as an inspect log
+  that inspect scores the same way (§4);
 - where the combinatorial batch and the compatibility table of
   [PR #68](https://github.com/chatddx-administration/chatddx/pull/68) go
   (§5).
@@ -747,36 +748,40 @@ def reciprocal_rank(view: str = "differential") -> Scorer:
   for free text. It is false where no answer that parses came, and then
   there is no answer, and where one parsed but doesn't hold, and then the
   answer is kept.
-- **Until inspect scores runs, chatddx does,** with scorers of its own and
-  rules of their own (below, How chatddx scores).
-- **chatddx writes one inspect sample per trial** (`data-generation.md` §5,
-  option C):
+- **chatddx scores its runs, and inspect scores logs of them the same
+  way.** chatddx holds each run to the registry's scorers in its database
+  (below, How chatddx scores). A log of the runs is scored by inspect with
+  the same functions, to the same values (below, inspect scores the log).
+- **`export` writes the identity's runs of the cell as an inspect log**
+  (`chatddx.logs.export`, `data-generation.md` §5, option C), a sample per
+  draw of a case:
 
   | Sample field | Holds |
   |---|---|
-  | `id`, `epoch` | the case, and the replicate: the position of the trial's seed among the batch's seeds, from 1 |
-  | `input` | the case, as the LLM received it |
+  | `id`, `epoch` | the case, by the name the exporter sees it by, or its short fingerprint; and the draw. A seeded trial is one draw, its latest run that completed standing for it, or its latest run. Its epoch is its seed's place among the seeds the log holds, from 1, so that an epoch is one seed across cases, as a batch's replicate is. A trial with no seed makes a draw of each of its runs, the epochs after the seeded ones. |
+  | `input` | what the LLM was first sent: the instructions, as the system message they went out as, and the case |
   | `output.completion` | the answer as text: where inspect expects an answer, and where `react()` puts a submitted one. It is the `text` view where the output offers one, and a structured answer's JSON otherwise |
-  | `messages`, and a `ModelEvent` | the exchange as it happened, tool call or `response_format` included, with the raw request and response |
-  | `target` | the case's target of the kind the batch's scorers read, where they read one kind; for `diagnosis`, read by `reciprocal_rank` and `first_mention`, one pattern |
-  | `metadata` | one key per slice, naming the cell's variation; the identities and hashes; the output's fingerprint and its views; the case's targets, by kind, for scorers that read another (§11) |
+  | `messages`, and a `ModelEvent` per request | the exchange as pydantic-ai kept it, thinking and tool calls included. Each event carries the request as it went, and the response, a streamed one joined into the completion its chunks make up, as inspect keeps one. The bytes themselves stay on the run. |
+  | `target` | the case's `diagnosis` target, which `reciprocal_rank` and `first_mention` read |
+  | `metadata` | the cell's variation of each slice, its stack and the stack's parts, by name; the case, its language, the seed, the trial's and the run's ids, and the run's status, validity, finish reason and error; the answer, and what each view the output offers reads from it, as a scorer gets it; the case's targets, by kind, as the exporter is held to them (§11); the fingerprints of the configuration, the stack, the case and the output; the client; each tool's blob |
 
-- **A batch writes one log per cell.**
-  - An inspect log is one task on one LLM, and a sample id appears once
-    per epoch. So a cell, one configuration on one stack, is the natural
-    unit.
-  - `data-generation.md` wrote one log per batch, when a batch held one
-    configuration.
-  - A batch is then an inspect eval set in all but name.
-- **Analysis needs no join.** `samples_df` over a batch's logs gives one
-  row per trial, with its variation per slice as `metadata_*` columns and
-  its scores as `score_*` columns. That is the factor vector of
-  `research-data-model.md`, as a table.
+- **A log is one task on one model:** its task is the cell's label, and its
+  model the stack, `vllm/qwen3-8b-awq@pelle`. The served name is on each
+  output. An errored run's sample carries its error, as inspect's own do.
+- **A cell is the natural unit.** An inspect log is one task on one LLM,
+  and a sample id appears once per epoch. `data-generation.md` wrote one
+  log per batch, when a batch held one configuration. A batch will write a
+  log per cell (§5), and is then an inspect eval set in all but name.
+- **Analysis needs no join.** `samples_df` over logs gives one row per
+  draw, with its variation per slice as `metadata_*` columns and its scores
+  as `score_*` columns. That is the factor vector of
+  `research-data-model.md`, as a table. It takes pandas and pyarrow, which
+  the `analysis` dependency group brings.
 
 ### When an output can't be read
 
-These are the rules for when inspect scores. chatddx's own scorers keep
-theirs until then (below).
+These are the rules for when inspect scores with scorers of its own.
+chatddx's scorers keep theirs until then (below), in a log too.
 
 - **Refused before running.** A cell whose output lacks a view that a
   scorer reads is refused for that scorer when the batch is planned (§5).
@@ -858,6 +863,32 @@ differ from inspect's above.
   scorers the identity can see, their metrics and owners, and whether the
   cell's output offers each one's view.
 - **What is kept:** a score row per run and scorer (§6).
+
+### inspect scores the log
+
+- **The registry's scorers run in inspect** (`chatddx.logs.scorers`): each
+  runs its function, loaded as chatddx loads it, on the view it names and
+  the case's target of its kind, both read from the sample's metadata. It
+  keeps its registry name, and its function, view, target kind and
+  arguments are its options, so the log says what scored it. A score keeps
+  the target it was held to and the blob, as a score row does.
+- **Where chatddx makes no score, inspect's is unscored,** which inspect's
+  metrics and reducers leave out: for an errored run, or a case without
+  the scorer's kind of target. A value chatddx leaves empty, as
+  `first_mention`'s where the target is never named, is unscored too, with
+  the same reason.
+- **A test holds inspect to chatddx** (`logs/tests/test_scorers.py`): each
+  sample's value, answer, reason, target and blob are its run's, for every
+  scorer, and a scorer's metrics are chatddx's over the same values.
+- **The scorers a log is scored with** are those the exporter sees whose
+  view the output offers. They go in the order of the views they read, the
+  differential first, so that the log's headline in inspect's viewer is
+  the diagnosis's rank where the output offers a differential.
+- **A case's epochs are folded first.** inspect takes the mean of a case's
+  epochs, then a metric over the cases. chatddx's summary takes it over
+  runs, so the two agree where each case has one epoch.
+- **`export` scores the log as it writes it.** A log can be scored again
+  without generating, by any scorer, with `inspect score`.
 
 ## 5. The batch and the compatibility table
 
@@ -1485,9 +1516,9 @@ A scorer is an entity:
 | `args` | trail | yes | keyword arguments the function takes beside the view's items and the target; empty by default |
 | `metrics` | details | no | how its values are summed up: `mean`, `stderr`, `std` or `var`; `mean` and `stderr` by default |
 
-- **It is inspect's `ScorerSpec`.** The function is the name, the view, the
-  target kind and the arguments are the options, and the metrics are the
-  metrics.
+- **In a log it is an inspect scorer** (§4, inspect scores the log): it
+  keeps its name, its function, view, target kind and arguments are its
+  options, and its metrics are its metrics.
 - **What can change a score is content,** so a score can cite exactly what
   made it. Metrics change no score, so they are details, and a change to
   them leaves every run scored.
@@ -1614,10 +1645,10 @@ ports with little change:
 - people's edits to scores, as rows beside a score, each with its author,
   time and reason, when clinicians adjudicate in the portal (inspect's
   `ScoreEdit` and `ProvenanceData`);
-- reducers over a batch's replicates;
-- a log per cell, each scorer as an `EvalScorer` and the case's targets in
-  the sample's metadata;
-- inspect's reasons for what can't be read, when inspect scores (§4).
+- a reducer per batch for its replicates, where a log folds a case's
+  epochs by their mean today;
+- inspect's reasons for what can't be read, when inspect scores with
+  scorers of its own (§4).
 
 ## 12. One language throughout
 

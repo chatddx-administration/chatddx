@@ -29,7 +29,9 @@ chatddx = "chatddx.manage:app"
 django = "chatddx.django.manage:main"
 
 [dependency-groups]
+analysis = ["pandas>=3.0.6", "pyarrow>=25.0.1"]
 dev = [
+  { include-group = "analysis" },
   { include-group = "lint" },
   { include-group = "test" },
   { include-group = "typing" },

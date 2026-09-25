@@ -9,6 +9,7 @@ from rich.table import Table
 
 from chatddx.repl import (
     choosing,
+    exporting,
     inspecting,
     listing,
     reviewing,
@@ -98,6 +99,11 @@ COMMANDS: dict[str, Command] = {
         (),
         "list the scorers, what each reads, and which the cell's output offers",
         scoring.scorers,
+    ),
+    "export": Command(
+        ("[DIRECTORY]",),
+        "write your runs of the cell as an inspect log, into DIRECTORY or ./logs",
+        exporting.export,
     ),
     "help": Command((), "list the commands", help_),
     "quit": Command((), "leave (or Ctrl-D)", None),
