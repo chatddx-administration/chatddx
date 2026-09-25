@@ -1090,8 +1090,51 @@ Learned in building it:
 - **Tests hold the seed:** the repl takes one, or none, so a test's
   output doesn't change with a draw. The fake vLLM reads a seed back in its
   thinking, and ignores it otherwise.
+- **Replicates are made by hand:** `seed`, then `batch`, as many times as
+  replicates are wanted, each batch under a fresh seed. `batch --seeds
+  1,2,3`, for more than one at a time, is open.
 
-Open: `batch --seeds 1,2,3` for more than one replicate at a time.
+### What a seed says of a batch
+
+No run points at a batch: a batch is an initiator (above), and a run is
+known by its trial. A batch under a seed of its own leaves a trace all the
+same, since every one of its runs carries that seed. How far that trace
+goes:
+
+What it can do:
+
+- **Find a batch's runs.** The owner's runs of one cell with the batch's
+  seed, over the cases with its tags, are the batch's, as long as nothing
+  else ran that cell with that seed. A fresh seed per batch, one word away,
+  makes that the rule.
+- **Line its cases up.** Every case of a batch has the same seed, so the
+  seed is its epoch in a log, and two batches under two seeds are two
+  replicates.
+- **Say what a later run repeats.** A `run CASE` under the batch's seed is
+  another run of the batch's trial, which is the point: it is how a seed is
+  seen to hold.
+
+What it can't do:
+
+- **Tell a batch from what followed it.** A later `run`, or a second batch,
+  under the same seed on the same cell makes more runs of the same trials.
+  Only the runs' times, and their conversations' descriptions, tell them
+  apart.
+- **Keep other people's seeds apart.** Two sessions can draw the same seed
+  (above); the owner keeps two people's apart, not one person's two
+  sessions.
+- **Say what was asked for.** The seed doesn't hold the tags, the scorers,
+  or whether the batch ran to its end or was stopped; a case tagged since,
+  or a run of it, looks the same.
+- **Mark an unseeded batch,** or a greedy one, which must run unseeded:
+  those leave no trace but their cell and their times.
+- **Span cells as one.** A batch runs one cell; runs of another cell under
+  the same seed are another batch's, or a comparison made on purpose.
+
+So a seed is a good key for a batch that was given a fresh one, and no
+record of it. An export selects by it (`export.md`), with times where two
+batches share one; whether a batch is kept as an order is still deferred
+(above).
 
 ### The compatibility table is the batch's resolution report
 
