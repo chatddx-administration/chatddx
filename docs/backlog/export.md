@@ -1,26 +1,33 @@
 # Export and analysis: from a run to inspect, xlsx and R
 
-This note charts how chatddx's runs leave chatddx: as inspect logs, as
-spreadsheets, and as data for R. It supersedes the repl's `export` command
-(`new-datamodel.md` §4), and settles how much analysis chatddx does itself.
+Not built. This note charts how chatddx's runs are to leave chatddx: as
+inspect logs, as spreadsheets, and as data for R, and settles how much
+analysis chatddx does itself. The repl's `export` command has been removed
+in favour of it; the code that writes an inspect log
+(`chatddx.logs.export`) stays, with no command in front of it.
 
 Decided, as of this note:
 
 - **One selection, one set of rows, many writers.** An export is a
   selection of trials by their parameters, read from the database once, and
   written as an inspect log, an xlsx workbook, or files for R.
-- **A stateless command,** `chatddx export`, not a repl command. The repl's
-  `export` goes.
+- **A stateless command,** `chatddx export`, not a repl command.
 - **Descriptive analysis in-house, inference in R.** chatddx summarizes;
   paired comparisons and models are R's.
 - **The xlsx is a data handoff and a summary report,** not a review sheet.
 
 ## 1. Where things stand
 
+The repl had `export [DIRECTORY]`: it wrote all the identity's runs of the
+held cell as one inspect log, into DIRECTORY or `./logs`, scored by the
+registry's scorers, and printed `inspect view --log-dir logs` to look
+through it. It is gone; `cell_log` and `write` remain, used by the tests
+and ready for `chatddx export`.
+
 ```
 Run, Score (database)
-  └─ repl `export` (the cell held in the repl, and the identity)
-       └─ cell_log(): one EvalLog per identity × cell
+  └─ cell_log(identity, configuration, stack, label)
+       └─ one EvalLog per identity × cell
             ├─ a sample per draw; a seeded trial is one draw, its latest
             │  completed run, and the trial's other runs are left out
             ├─ metadata: the cell's variations, views, fingerprints, and
@@ -40,6 +47,32 @@ What that leaves out:
   until the log is exported again.
 - **Tables need inspect.** `samples_df` reads logs, so a spreadsheet would
   wait on a log, and take inspect's shape.
+
+### The log's layout
+
+`cell_log` writes an identity's runs of a cell as an inspect log
+(`data-generation.md` §5, option C), a sample per draw of a case, laid out
+so:
+
+| Sample field | Holds |
+|---|---|
+| `id`, `epoch` | the case, by the name the exporter sees it by, or its short fingerprint; and the draw. A seeded trial is one draw, its latest run that completed standing for it, or its latest run. Its epoch is its seed's place among the seeds the log holds, from 1, so that an epoch is one seed across cases. A trial with no seed makes a draw of each of its runs, the epochs after the seeded ones. |
+| `input` | what the LLM was first sent: the instructions, as the system message they went out as, and the case |
+| `output.completion` | the answer as text: where inspect expects an answer, and where `react()` puts a submitted one. It is the `text` view where the output offers one, and a structured answer's JSON otherwise |
+| `messages`, and a `ModelEvent` per request | the exchange as pydantic-ai kept it, thinking and tool calls included. Each event carries the request as it went, and the response, a streamed one joined into the completion its chunks make up, as inspect keeps one. The bytes themselves stay on the run. |
+| `target` | the pattern of the case's `diagnosis` target, which `reciprocal_rank` and `first_mention` read |
+| `metadata` | the cell's variation of each slice, its stack and the stack's parts, by name; the case, its language, the seed, the trial's and the run's ids, and the run's status, validity, finish reason and error; the answer, and what each view the output offers reads from it, as a scorer gets it; the case's targets, by kind, as the exporter is held to them (`research/output-and-scorers.md` §2); the fingerprints of the configuration, the stack, the case and the output; the client; each tool's blob |
+
+- **A log is one task on one model:** its task is the cell's label, and its
+  model the stack, `vllm/qwen3-8b-awq@pelle`. The served name is on each
+  output. An errored run's sample carries its error, as inspect's own do.
+- **A cell is the natural unit.** An inspect log is one task on one LLM,
+  and a sample id appears once per epoch.
+- **Analysis needs no join.** `samples_df` over logs gives one row per
+  draw, with its variation per slice as `metadata_*` columns and its scores
+  as `score_*` columns. That is the factor vector of
+  `research-data-model.md`, as a table. It takes pandas and pyarrow, which
+  the `analysis` dependency group brings.
 
 ## 2. The flow
 
@@ -120,8 +153,8 @@ chatddx export --owner alex --configuration plan --stack qwen3-8b-awq@pelle \
   and repeated, and a repl isn't needed to hold a cell.
 - **It writes a manifest** beside what it writes: the selection, the
   command line, when, the chatddx revision, and each file's rows.
-- **The repl's `export` goes.** The repl stays the place to run and look;
-  `runs`, `replay`, `score` and the batch summary cover looking.
+- **The repl is the place to run and look,** not to export: `runs`,
+  `replay`, `score` and the batch summary cover looking.
 - **inspect is loaded only for `eval`,** as `agreement` loads it.
 - **Needs:** openpyxl for xlsx, and pyarrow for parquet, which the
   `analysis` dependency group brings with pandas; they move to the
@@ -178,8 +211,7 @@ For a data handoff and a summary report; nothing is read back from it.
 
 ## 7. What changes elsewhere
 
-- `new-datamodel.md` §4: `export` in the repl is replaced by this command;
-  the log's layout stays.
-- `new-datamodel.md` §11, "Later, from inspect": scores come back first.
+- `research/output-and-scorers.md` §2, "Later, from inspect": scores come
+  back first.
 - `research-data-model.md`'s derived views: descriptive ones stay in
   chatddx, inferential ones go to R.

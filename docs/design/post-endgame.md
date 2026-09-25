@@ -3,7 +3,8 @@
 What was designed, discussed and set aside. Nothing here is planned: each
 entry says what was proposed, how it went, and why it stopped, so that a
 later round starts from the reasons rather than from scratch. The entries:
-the batch as a record, and clinical sign-off.
+the batch as a record, clinical sign-off, and what was left out of the
+datamodel.
 
 ## The batch as a record
 
@@ -204,3 +205,51 @@ whether to read those comments, or a flag, to say what was left.
 A study that has to report who reviewed each target, with a regulator or a
 journal asking for it. Then start at step 4's open problems; step 1 is not
 enough, and steps 2 and 3 are where it gets expensive.
+
+## Left out of the datamodel
+
+**Set aside, September 2026,** as each was when the datamodel was
+redesigned: nothing needs them yet, and each is to be added when a study
+does.
+
+### The `plan` view
+
+A view reading a management plan whole (its workup, treatment and
+disposition) for rubric scoring, where a clinician's rubric awards points
+per item.
+
+- **Nothing would read it.** No rubric exists, and a rubric is a clinical
+  instrument of its own: someone has to write it per case and validate it,
+  as the judge has to be validated (`research/output-and-scorers.md`).
+- **What is scored now covers the questions asked:** the diagnosis's rank,
+  whether a warning and a disposition are named, and the differential's
+  critical items, offered as the `critical` view for `dont_miss`.
+- **A view is cheap to add later:** a name in the vocabulary, and a path
+  in the outputs that offer it, proved at commit like the others.
+
+### A reasoning guidance slot
+
+A `reasoning_guidance` slot in the instruction, filled by the reasoning
+slice with text telling the LLM how to reason ("think step by step",
+"answer at once").
+
+- **Reasoning is a request field, not text.** The LLM's facts translate an
+  effort into what the LLM honours (`chat_template_kwargs`,
+  `reasoning_effort`, a thinking budget), or refuse it. Text beside that
+  would make one variation mean different things on different LLMs, which
+  is what refusing rather than faking a variation is meant to prevent.
+- **Words that ask for reasoning are a variation of the instruction,** and
+  can be compared as one, with no new slot.
+
+### Also left out
+
+- **Sending to APIs other than vLLM:** a stack names its API, and
+  resolution refuses anything but `vllm` as later.
+- **A run continuing a conversation,** as a chat would: a run keeps its
+  conversation, and none continues one.
+- **More sampling settings:** `min_p`, `repetition_penalty` and vLLM's
+  other settings.
+- **`tool_choice`,** few-shot examples, and pricing.
+- **A case's stage,** beyond the tags that say which dataset it came from.
+- **Fractional designs,** for comparing many slices at once.
+
