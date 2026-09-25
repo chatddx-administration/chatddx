@@ -4,7 +4,7 @@ A branch is an owner's named version of a trail, and the details beside it.
 What a version is: its trail and its details. Resolution reads details, an
 LLM's facts and a stack's endpoint, and a run must be able to say which
 version it resolved against, so a change to them is a new version
-(new-datamodel.md §1). What a branch is related to, tags and collaborators,
+(datamodel.md §1). What a branch is related to, tags and collaborators,
 changes in place.
 """
 

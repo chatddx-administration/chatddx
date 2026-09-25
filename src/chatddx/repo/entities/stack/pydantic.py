@@ -11,7 +11,7 @@ requests can be checked, and its machine says so.
 The stack slice writes almost nothing into the request, only the `model`
 field and where the request goes, and those are details: the endpoint and
 the served name, the API and the name of the credential. Every other slice
-is resolved against the stack (new-datamodel.md §2).
+is resolved against the stack (datamodel.md §3).
 """
 
 from typing import Literal

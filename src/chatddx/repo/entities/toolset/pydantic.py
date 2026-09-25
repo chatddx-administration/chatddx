@@ -1,6 +1,6 @@
 """
 A toolset: a request-time slice. It replaces the tool group
-(new-datamodel.md §6).
+(datamodel.md §4).
 
 A variation is ordered tools and the text that fills the instruction's
 `tool_guidance` slot. A configuration names one or none, and tools need a

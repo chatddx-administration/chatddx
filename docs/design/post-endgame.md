@@ -56,7 +56,7 @@ A batch was to be an order kept in history, naming:
   fingerprints make it reproducible, so a batch adds nothing to what ran:
   it is an initiator. Runs are to be started from anywhere, a chat, the
   repl or a script, and grouped by their parameters, never by what started
-  them. `export.md` selects by parameters for that reason.
+  them. `backlog/export.md` selects by parameters for that reason.
 - **A second grouping costs more than it buys.** A recorded batch would
   give the order itself (who asked for which cells, cases and seeds, and
   when), a report kept with it, and an epoch that is a replicate's place in
@@ -101,7 +101,7 @@ What it can't do:
 A study whose cells, cases and replicates must be ordered, kept and
 generated again as one unit, or runs whose seeds can't tell batches apart.
 Then start from the table above, and from the question the deferral left
-open: whether the selection of `export.md`, with its manifest, is enough
+open: whether the selection of `backlog/export.md`, with its manifest, is enough
 of a record.
 
 ## Clinical sign-off

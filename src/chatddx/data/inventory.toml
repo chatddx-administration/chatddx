@@ -1,5 +1,5 @@
 # The inventory `chatddx init-data` commits to the archive: every entity of
-# the registry, per docs/design/new-datamodel.md.
+# the registry, per docs/datamodel.md.
 #
 #   inventory/pelle.toml           pelle, an RTX 3070 serving Qwen3-8B-AWQ
 #   inventory/malborg.toml         malborg, an RTX 5090 serving gpt-oss-20b

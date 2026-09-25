@@ -3,7 +3,7 @@ The inventory parser: TOML files in, trails and the details beside them out.
 
 An author writes one record per entity, and the entity's bundle decides which
 of the record's keys are content, fingerprinted in its trail, and which are
-details, the description its branch carries (new-datamodel.md §1). A key
+details, the description its branch carries (datamodel.md §1). A key
 that is neither is an error.
 
 Run on its own, beside a project that still speaks the old model:
@@ -480,7 +480,7 @@ def test_a_relation_names_one_record_not_several_to_merge(tmp_path: Path):
     """
     `sampling_params = ["seed-locked", "low-reasoning"]` merged two records
     into an anonymous third. The seed is the trial's now, reasoning a slice
-    of its own, and the merge is gone (new-datamodel.md §5).
+    of its own, and the merge is gone (datamodel.md §8).
     """
     with pytest.raises(
         ParseError, match=r"configuration 'k': 'sampling' names a sampling"

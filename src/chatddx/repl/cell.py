@@ -20,7 +20,7 @@ NONE = "none"
 
 class Cell:
     """
-    A configuration joined to a stack (new-datamodel.md §5), called what it
+    A configuration joined to a stack (datamodel.md §2), called what it
     was called when it was put in, and the variations `set` put in it in
     place of the configuration's: None where it took an optional slice out.
     """

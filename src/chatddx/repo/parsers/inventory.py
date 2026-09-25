@@ -4,7 +4,7 @@ schema of their content and the details their branch carries.
 
 An inventory file holds a table per entity, and each holds named records.
 An author writes one record per entity, and the entity's bundle decides
-which of its keys are content and which are details (new-datamodel.md §1).
+which of its keys are content and which are details (datamodel.md §1).
 A key that is neither is an error, and so is a record that names itself or
 its owner: its name is its key, and its owner is whoever parses it.
 

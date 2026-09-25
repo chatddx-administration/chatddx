@@ -1,5 +1,5 @@
 """
-Coercion: a request-time slice, split from the output (new-datamodel.md §2).
+Coercion: a request-time slice, split from the output (datamodel.md §4).
 
 The output's schema says what is asked for; the mode says how the LLM is
 held to it, and it goes with the LLM's capabilities rather than with the

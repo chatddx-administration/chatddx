@@ -43,9 +43,9 @@ Keys come in two sorts, and the difference matters:
 
 Each entry below says which sort its keys are, where it isn't plain.
 
-A comment `# guessed` after a value marks it as not yet confirmed: a
-target no clinician has settled, or a machine detail no one has read off
-the machine.
+A comment `# guessed` after a value is a note for people: a target no
+clinician has written, or a machine detail no one has read off the
+machine. Nothing reads it; the value is used as it is.
 
 ## Writing a record
 
@@ -83,9 +83,16 @@ A case is a clinical vignette and what the model is expected to make of it.
 [case.Dutchfall14w]
 tags = ["dutch-fall"]
 language = "en"
-targets.diagnosis = "copd | (exacerbation | obstructive) & pulmonary"
-targets.warning = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
-targets.disposition = "admit* | admission | hospital*"  # guessed
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
+targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
+```
+
+A target can also say in plain words what is expected, beside its pattern:
+
+```toml
+targets.diagnosis.text = "Acute exacerbation of COPD"
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 ```
 
 - **The vignette** is the text of `cases/<name>.txt`, sent to the model as
@@ -96,17 +103,24 @@ targets.disposition = "admit* | admission | hospital*"  # guessed
   The EDN cases are Swedish; Dutch Fall's were translated into English.
 - **`targets`:** what a good answer names, one per kind. They describe the
   case: a changed target is a new version, and earlier runs are scored
-  again. A case may leave a kind out, and then the scorers of that kind
-  skip it.
+  again. Each kind has two keys, and either may be left out:
+  - `text`: what is expected, in plain words, for people to read;
+  - `pattern`: what the scorers look for in an answer (below).
+
+  A case may leave a kind out, or give a target no pattern. The scorers of
+  that kind then skip the case, and the shell's `show` says `missing`.
+  The kinds:
   - `diagnosis`: the diagnosis the case is known to have.
-  - `warning`: what the answer should warn about. `warning = false` says
-    the case should raise no warning at all.
+  - `warning`: what the answer should warn about. `targets.warning = false`
+    says the case should raise no warning at all.
   - `disposition`: where the patient should go: home, admission, intensive
     care, theatre.
+  - `dont_miss`: a condition the differential must include, however
+    unlikely. No scorer reads it yet.
 
 ### How a target is written
 
-A target is a pattern that the answer's words are matched against, one
+A target's pattern is what the answer's words are matched against, one
 item at a time: one diagnosis of the differential, one warning.
 
 | Write | Matches |
@@ -165,6 +179,7 @@ guidance = "Fill in the management plan for the case."
 views.differential = "$.diagnoses[*].diagnosis"
 views.warning = "$.acute_warning"
 views.disposition = "$.management.disposition"
+views.critical = "$.diagnoses[?(@.critical)].diagnosis"
 ```
 
 - **`guidance`:** the words that ask for the answer. The instruction
@@ -177,11 +192,13 @@ views.disposition = "$.management.disposition"
   - `differential`: the ranked diagnoses;
   - `warning`: the red flags;
   - `disposition`: where the patient goes;
+  - `critical`: the diagnoses the answer marks critical;
   - `text`: the answer as written.
 
   In a structured answer a view is a path into it: `$.acute_warning` is a
   field, `$.diagnoses[*]` every item of a list, `$.diagnoses[*].diagnosis`
-  a field of every item. In free text, `whole` reads the whole answer as
+  a field of every item, and `$.diagnoses[?(@.critical)].diagnosis` that
+  field of the items whose `critical` is true. In free text, `whole` reads the whole answer as
   `text`, and `lines` reads each non-empty line as an item of the
   `differential`, list markers stripped.
 

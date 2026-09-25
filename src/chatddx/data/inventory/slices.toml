@@ -1,5 +1,5 @@
 # Request-time slices. Each record is a variation of its slice, and a
-# configuration names one variation of each (new-datamodel.md §2, §6).
+# configuration names one variation of each (datamodel.md §2, §4).
 #
 # A variation states an intent. Resolution realizes it on a stack with the
 # LLM's facts (llms.toml): it writes a fragment of the request, collapses

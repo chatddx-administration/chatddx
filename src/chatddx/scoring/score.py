@@ -1,7 +1,7 @@
 # pyright: basic
 """
 Holding runs to the scorers that apply to them, and writing down what each
-made of them (new-datamodel.md §11).
+made of them (datamodel.md §7).
 
 A scorer is the registry's: a function in one of chatddx's own scorer files,
 the view it reads, and the kind of target it holds that to. Whoever scores

@@ -1,6 +1,6 @@
 # pyright: basic
 """
-An identity's runs of a cell as an inspect eval log (new-datamodel.md §4):
+An identity's runs of a cell as an inspect eval log (docs/backlog/export.md):
 a sample per draw of a case, holding what the LLM was sent, the exchange,
 the answer, and a model event per request with the bodies as they went and
 came. Its metadata holds what inspect has no place for: the cell's

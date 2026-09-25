@@ -1,7 +1,7 @@
 from typing import Literal, get_args
 
 # In commit order: anything an entity references comes before it
-# (new-datamodel.md §10), so committing in this order finds the branch an
+# (datamodel.md §1), so committing in this order finds the branch an
 # owner gave each part before a composition reaches it.
 type EntityName = Literal[
     "machine",

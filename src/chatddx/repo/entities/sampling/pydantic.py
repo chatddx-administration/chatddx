@@ -1,5 +1,5 @@
 """
-Sampling: a request-time slice (new-datamodel.md §2).
+Sampling: a request-time slice (datamodel.md §4).
 
 A variation holds explicit values, and says what a value left out means:
 `generation_config`, the LLM's own generation config, or `recommended`,

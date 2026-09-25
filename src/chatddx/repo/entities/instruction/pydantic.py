@@ -1,5 +1,5 @@
 """
-Instruction: a request-time slice (new-datamodel.md §2).
+Instruction: a request-time slice (datamodel.md §4).
 
 A variation is the templates of the system and user messages (Handlebars,
 through pydantic-ai's `TemplateStr`) and the variables they declare: `case`,
@@ -33,7 +33,7 @@ from chatddx.repo.templates import placements
 
 # `case`, and each slot by the slice that fills it: the output's guidance,
 # the coercion's schema prompt and the toolset's guidance. A reasoning slot
-# is left out until a study needs it (new-datamodel.md §8).
+# is left out until a study needs it (post-endgame.md).
 type Variable = Literal["case", "output_guidance", "schema_prompt", "tool_guidance"]
 
 VARIABLES: tuple[Variable, ...] = get_args(Variable.__value__)

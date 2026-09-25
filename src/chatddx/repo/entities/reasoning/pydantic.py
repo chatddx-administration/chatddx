@@ -1,5 +1,5 @@
 """
-Reasoning: a request-time slice (new-datamodel.md §2).
+Reasoning: a request-time slice (datamodel.md §4).
 
 A variation is an effort, and optionally a token budget. It states an intent,
 and an LLM's facts translate it: into a request fragment, into another
@@ -37,7 +37,7 @@ type Intent = Literal["off", "on", "minimal", "low", "medium", "high", "xhigh"]
 INTENTS: tuple[Intent, ...] = get_args(Intent.__value__)
 
 # The request fields the reasoning slice writes, whatever an LLM's facts
-# have it write. No other slice writes them (new-datamodel.md §3).
+# have it write. No other slice writes them (datamodel.md §5).
 REASONING_WRITES = frozenset(
     {
         "chat_template_kwargs",

@@ -1,6 +1,6 @@
 """
 A configuration: a composition of one variation of each request-time slice,
-and optionally a toolset. It replaces the agent (new-datamodel.md §6).
+and optionally a toolset. It replaces the agent (datamodel.md §4).
 
 It holds no LLM. The stack is chosen per trial, so one configuration runs
 on every LLM, and a cell joins a configuration to a stack. Resolution

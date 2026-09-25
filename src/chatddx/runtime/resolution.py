@@ -1,6 +1,6 @@
 """
 Resolution: a cell, a configuration joined to a stack, made into one request
-or refused with its reasons (new-datamodel.md §2, §9).
+or refused with its reasons (datamodel.md §2, §5).
 
 Each slice's variation states an intent, and the facts of the stack's LLM
 realize it. The slices are resolved in the order each reads the ones before

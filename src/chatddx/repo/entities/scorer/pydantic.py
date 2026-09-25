@@ -1,7 +1,7 @@
 """
 A scorer: what a run's answer comes to, by a function of chatddx's own, the
 view of the output it reads, and the kind of target it holds that view to
-(new-datamodel.md §11).
+(datamodel.md §7).
 
 It is inspect's scorer spec. The function is the scorer's name, and the view,
 the target kind and the arguments are its options. What can change a score is

@@ -1,7 +1,7 @@
 # Configurations: one variation of each request-time slice, and optionally a
 # toolset. A configuration holds no LLM. The stack is chosen per trial, so
 # one configuration runs on every LLM; where an LLM can't honour a
-# variation, the cell is refused with the reason (new-datamodel.md §2, §5).
+# variation, the cell is refused with the reason (datamodel.md §2).
 #
 # Today's agents paired an LLM with a reasoning switch written for it
 # (`disable-thinking` for Qwen3, `low-reasoning` for gpt-oss). Here reasoning

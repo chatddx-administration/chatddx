@@ -141,7 +141,7 @@ class Details(BaseModel):
     What an entity's branch says about its content without being part of it:
     a machine's specs, an LLM's facts, a stack's endpoint. Details are never
     fingerprinted. They are the owner's, per branch, and a change to them
-    makes a new version of the branch (new-datamodel.md §1).
+    makes a new version of the branch (datamodel.md §1).
 
     An entity with details subclasses this, and its branch details and their
     patch mix it in. The base is empty: most entities have none.

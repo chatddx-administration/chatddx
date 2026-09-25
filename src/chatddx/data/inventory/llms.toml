@@ -3,7 +3,7 @@
 # fixed-output derivation. Its store path, the snapshot, is all that
 # identifies it. Everything else is description, and `facts` is the part of the
 # description that resolution reads to realize each slice's intent on it
-# (new-datamodel.md §2).
+# (datamodel.md §3).
 #
 # A fact translates an intent in one of three ways:
 #   - a request fragment, which is what the intent writes into the request;

@@ -379,7 +379,7 @@ def _judge(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | Non
     Whether the LLM reasoned as it was asked to, whether its answer holds
     to its schema, and what the output's views read from it: the facts are
     claims, and a run is what shows whether the LLM honours them
-    (new-datamodel.md §2). Answer with whether it holds, where there is a
+    (datamodel.md §2). Answer with whether it holds, where there is a
     schema to hold to.
     """
     intent = resolution.reasoning.intent

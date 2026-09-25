@@ -46,7 +46,7 @@ from chatddx.repo.registry import CASE, CONFIGURATION, LLM
 
 
 def test_the_registry_is_the_new_datamodel_s():
-    """new-datamodel.md §10, in its commit order."""
+    """datamodel.md §1, in its commit order."""
     assert ENTITY_NAMES == (
         "machine",
         "os",
@@ -110,8 +110,7 @@ def test_every_entity_has_a_presentation_of_its_name():
 
 def test_the_flat_form_is_the_configuration_s():
     """
-    super_agent's flat form became the configuration's (new-datamodel.md §7):
-    each slice is a template chosen from.
+    The configuration's form is flat: each slice is a template chosen from.
     """
     assert presentation_of(Configuration).form_data_out is ConfigurationFormDataOut
 
@@ -132,7 +131,7 @@ def test_the_request_time_slices_have_no_details():
     Details are description: what the things below a request are, what a
     tool runs, what a case is expected to yield, and how a scorer's values are
     summed up. The request-time slices have none: all they say is content
-    (new-datamodel.md §6, §11).
+    (datamodel.md §3, §6).
     """
     described = {
         entity.name: plain_detail_fields(entity.branch_details)

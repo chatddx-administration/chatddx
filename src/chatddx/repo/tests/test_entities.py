@@ -547,10 +547,9 @@ def test_sampling_says_what_a_value_left_out_means():
 
 def test_what_sampling_params_held_that_isn_t_sampling_is_gone():
     """
-    The seed is the trial's, one per replicate; `n` is scrapped; logit bias
+    The seed is the trial's (datamodel.md §8); `n` is scrapped; logit bias
     keys are token ids, which fit one tokenizer; and provider params were
-    reasoning switches, which are the reasoning slice's now
-    (new-datamodel.md §7).
+    reasoning switches, which are the reasoning slice's now.
     """
     fields = set(SamplingTrailIn.model_fields)
 

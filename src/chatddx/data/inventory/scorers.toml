@@ -1,4 +1,4 @@
-# Scorers: what a run's answer comes to (new-datamodel.md §11). A scorer is a
+# Scorers: what a run's answer comes to (datamodel.md §7). A scorer is a
 # function in one of chatddx's own scorer files, the view of the output it
 # reads, and the kind of target it holds that view to: a case's target of
 # that kind (cases.toml). Its metrics say how its values are summed up.

@@ -1,6 +1,6 @@
 """
 A run: a resolved cell sent with a case, once, and what came back: one run
-of the trial the cell, the case and the seed make (new-datamodel.md §5).
+of the trial the cell, the case and the seed make (datamodel.md §8).
 
 It is sent through pydantic-ai on vLLM (data-generation.md §2.4), with a
 profile taken from the LLM's facts instead of one matched on its served

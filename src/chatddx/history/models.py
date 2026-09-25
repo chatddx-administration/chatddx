@@ -3,7 +3,7 @@
 History: what ran, and what came of it.
 
 A trial is one cell on one case, with its seed: a configuration and a stack,
-by their trails, and the case (new-datamodel.md §6). It is content, like a
+by their trails, and the case (datamodel.md §8). It is content, like a
 trail, and belongs to no one: runs of the same four are runs of one trial,
 whoever made them. A run is one go at a trial, one pydantic-ai agent run,
 whose id it takes, and it is its maker's. It keeps what resolution read, the

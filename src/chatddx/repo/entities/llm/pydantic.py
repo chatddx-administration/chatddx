@@ -9,7 +9,7 @@ is a different snapshot, and so a different LLM. For a cloud LLM, the
 provider's dated model name stands in, unverified.
 
 Everything else is description, and `facts` is the part of it resolution
-reads (new-datamodel.md §2). A fact translates an intent in one of three
+reads (datamodel.md §3). A fact translates an intent in one of three
 ways: a request fragment, the name of an intent it collapses into, or a
 refusal with its reason. An intent the facts don't mention is refused for
 want of a fact: nothing is guessed. Facts are claims, and only an experiment

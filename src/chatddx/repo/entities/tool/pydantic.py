@@ -1,6 +1,6 @@
 """
 A tool: what the LLM sees of a function it can call. It is part of a
-toolset, not a slice (new-datamodel.md §6).
+toolset, not a slice (datamodel.md §4).
 
 The name, description and parameters reach the LLM, so they are content,
 and the parameters keep the order they were written in. What runs when the

@@ -58,7 +58,7 @@ database:
    scorers once its target changes, and `score` holds them to it. Nothing
    is generated again.
 5. **Export again:** an inspect log keeps the targets it was written with
-   (`export.md` §1), so a log written before the change is out of date.
+   (`backlog/export.md` §1), so a log written before the change is out of date.
    inspect itself reads nothing from these files: a sample's `target` is
    the case's diagnosis, and its `metadata.targets` every kind, both as the
    database held them at export.
@@ -97,9 +97,8 @@ targets.dont_miss.pattern = "pulmonary & embolism | pe"
   different diagnosis is not an alternative. A case that truly accepts two
   says so in its `text` ("Spontaneous coronary artery dissection, or aortic
   dissection"), and only then does its pattern offer both.
-- **A Swedish case's pattern names its words in both languages** (§12 of
-  `new-datamodel.md`: what chatddx sends is still English, and the LLM may
-  answer in either).
+- **A Swedish case's pattern names its words in both languages** (`backlog/language-slice.md`:
+  what chatddx sends is still English, and the LLM may answer in either).
 - **`false` still says that none is expected,** where the kind allows it:
   `targets.warning = false`.
 - **A kind left out is missing,** not wrong: the case runs, and the
@@ -135,8 +134,8 @@ there, and says `missing` where something is missing.
   for each scorer the cell's output offers, how many of the cases it would
   run on have its kind of target, and which are missing it. With tags,
   `show TAG...` narrows that to the cases `batch TAG...` would run.
-- **A batch's line** says `missing` in a scorer's column where the case has
-  no target for it, where it is blank today.
+- **A batch's line** leaves a scorer's column blank where the case has no
+  target for it.
 
 ## 5. The other places, in order
 

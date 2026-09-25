@@ -276,7 +276,7 @@ def commit(
     content without being part of it, such as an LLM's facts or a stack's
     endpoint. Resolution reads details, and a run has to be able to say
     which version it resolved against, so a change to them makes a new
-    version as a change to the trail does (new-datamodel.md §1). What the
+    version as a change to the trail does (datamodel.md §1). What the
     branch is related to, its tags and collaborators, is not read by
     resolution, and changes in place.
     """

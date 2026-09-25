@@ -51,7 +51,8 @@ alex #13530>
 - **The cell:** the configuration and the stack you have chosen, together.
   Every run uses the cell.
 - **Case:** a clinical vignette, with what it is expected to yield: its
-  targets.
+  targets. Each target is a few plain words saying what is expected, and a
+  pattern the scorers look for in an answer. Either can be missing.
 - **Run:** one answer to one case from the cell, recorded with everything
   that was sent and received.
 - **Trial:** the cell, a case and a seed together. Running the same trial
@@ -101,7 +102,8 @@ DutchFall10w  Dutchfall11w  ...  casesfromedn1  ...  openxddx-case_9
 ```
 
 Press Tab at any point to complete a command, or a name after it: a
-configuration after `use`, a case after `run`, a tag after `batch`.
+configuration after `use`, a case after `run`, a tag after `batch` or
+`show tag`.
 
 ## Choosing what to run
 
@@ -157,7 +159,10 @@ forgets what you set.
 ### `show`
 
 Shows the cell, and what each slice turns into on this model: the settings
-that will actually be sent, and the prompt text the model will read.
+that will actually be sent, and the prompt text the model will read. Last
+comes a table of the scorers: for each, whether this kind of answer gives
+it anything to read, and how many cases have the target it needs. Nothing
+is sent.
 
 ```
 alex plan×qwen3-8b-awq@fake #13530> show
@@ -165,7 +170,7 @@ cell: plan × qwen3-8b-awq@fake
  slice        variation          on the stack
  stack        qwen3-8b-awq@fake  qwen3-8b-awq, served as Qwen/Qwen3-8B-AWQ at http://localhost:12099/v1/
  instruction  ddx                filled: output_guidance
- output       management-plan    a schema; views: differential, warning, disposition
+ output       management-plan    a schema; views: differential, warning, disposition, critical
  coercion     native             response_format: guided decoding holds the answer to the schema; ...
  reasoning    default            the LLM's default, 'on': chat_template_kwargs.enable_thinking=true
  sampling     recommended        recommended for 'on': temperature=0.6 top_p=0.95 top_k=20 ...
@@ -174,32 +179,66 @@ system
 Fill in the management plan for the case.
 user
 ‹case›
+ scorer                view          target       of 99 cases
+ disposition_mentions  disposition   disposition  99 have it
+ first_mention         text          diagnosis    the output offers no such view
+ reciprocal_rank       differential  diagnosis    99 have it
+ warning_mentions      warning       warning      99 have it
 ```
 
 If the model can't do what a slice asks, `show` says so in red, with the
 reason: that cell is refused, and nothing can be run on it until it is
 changed.
 
+In the scorers' table, a case whose target has no pattern counts as
+missing, and the table names it: `1 have it; missing: case-2`. A pattern
+that doesn't parse is named in red. Cases with missing targets can still
+be run; the scorers that need the missing target just leave them out.
+
+### `show tag TAG...`
+
+The same, with the scorers' table counting only the cases with any of the
+tags: the cases `batch` would run.
+
+```
+alex plan×qwen3-8b-awq@fake #13530> show tag edn
+...
+ scorer                view          target       of 20 cases tagged edn
+ disposition_mentions  disposition   disposition  20 have it
+ first_mention         text          diagnosis    the output offers no such view
+ reciprocal_rank       differential  diagnosis    20 have it
+ warning_mentions      warning       warning      20 have it
+```
+
 ### `show ENTITY [NAME]`
 
 Shows any part of the inventory, by kind and name, and what came of your
 runs with it. Without a name, it shows the cell's own. For a case, that is
-its vignette, its targets, and your scores on it:
+its vignette, each kind of target, and your scores on it. Each target shows
+its words and its pattern, and `missing` where either, or the whole target,
+isn't there:
 
 ```
 alex #5> show case DutchFall10w
 case DutchFall10w, archive's  e647d6
- vignette             Main complaint: abdominal pain in upper abdomen ...
- language             en
- targets.diagnosis    biliary & (colic | stone*)
- targets.warning      dissection | cholangitis | cholecystitis | pancreatitis | perforat*
- targets.disposition  discharge* | home | outpatient | observation
- tags                 dutch-fall
+ vignette                     Main complaint: abdominal pain in upper abdomen ...
+ language                     en
+ targets.diagnosis.text       missing
+ targets.diagnosis.pattern    biliary & (colic | stone*)
+ targets.warning.text         missing
+ targets.warning.pattern      dissection | cholangitis | cholecystitis | pancreatitis | perforat*
+ targets.disposition.text     missing
+ targets.disposition.pattern  discharge* | home | outpatient | observation
+ targets.dont_miss            missing
+ tags                         dutch-fall
 2 runs of yours with it
  scorer           runs  mean  stderr  without a value
  first_mention    2     —     —       2
  reciprocal_rank  2     0     0
 ```
+
+A case that expects no warning says `none expected` instead. A pattern that
+doesn't parse is shown with the reason, in red.
 
 The kinds are `case`, `configuration`, `stack`, the six slices, `llm`,
 `machine`, `os`, `serving`, `client`, `tool` and `scorer`.
@@ -381,19 +420,6 @@ alex free-text×qwen3-8b-awq@fake #5> save my-free-text
 saved as my-free-text: created 87f14d
 yours now too: instruction ddx, output free-text, coercion auto, reasoning default, sampling recommended
 cell: my-free-text × qwen3-8b-awq@fake
-```
-
-### `export [DIRECTORY]`
-
-Writes all your runs of the cell as a log for inspect-ai, into DIRECTORY or
-`./logs`, scored by the same scorers. Look through it with the command the
-shell prints:
-
-```
-alex my-free-text×qwen3-8b-awq@fake #5> export
-22 samples of 21 cases, in up to 3 epochs: logs/2026-09-25T15-32-45+0000_my-free-text_....eval
-scored by reciprocal_rank, first_mention
-to see it: inspect view --log-dir logs
 ```
 
 ## Leaving
