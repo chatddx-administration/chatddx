@@ -1,14 +1,3 @@
-# pyright: basic
-"""
-Running the cell on a case, or on each case with a tag, one after another,
-and recording each run as one of its trial's.
-
-Ctrl-C stops a run as it streams: asyncio cancels it, pydantic-ai closes its
-stream and the connection it came over, which is all the server hears of it,
-and the run is recorded as stopped, with what had come. A run already done is
-written down, and scored, whole: Ctrl-C waits for that, unless it comes again.
-"""
-
 import asyncio
 import signal
 from collections.abc import Callable, Generator
@@ -49,24 +38,17 @@ from chatddx.scoring.score import Scoring
 
 STOPPED = Outcome(RunStatus.ERRORED, error="stopped")
 
-# the largest seed a trial keeps, and vLLM takes
 MAX_SEED = 2**63 - 1
 
 
 @dataclass(frozen=True)
 class Ready:
-    """What the cell runs with: how it resolved, its credential, and its tools."""
-
     resolution: Resolution
     api_key: str | None
     tools: dict[str, ToolBranchOut]
 
 
 def seed(repl: Repl, word: str | None = None) -> None:
-    """
-    Draw a fresh seed for `run` and `batch` to send; or hold SEED, or none,
-    to run unseeded.
-    """
     if word is None:
         repl.seed = drawn_seed()
     elif word == NONE:
@@ -84,13 +66,6 @@ def seed(repl: Repl, word: str | None = None) -> None:
 
 
 def run(repl: Repl, name: str, seed: str | None = None) -> None:
-    """
-    Run the cell on a case, with SEED or else the seed the repl holds, stream
-    the run, record it as a run of the trial the cell, the case and the seed
-    make, and hold it to the scorers that apply. An answer that doesn't
-    come, or doesn't parse, doesn't hold, where one is asked for; an LLM or
-    server that fails mid-run is said, and recorded.
-    """
     chosen = repl.seed if seed is None else _seed_of(repl, seed)
 
     if seed is not None and chosen is None:
@@ -141,17 +116,6 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
 
 
 def batch(repl: Repl, *tags: str) -> None:
-    """
-    Run the cell on each case tagged with any of `tags`, one after another,
-    each on a line of its own: the case, its output tokens as they stream,
-    then what came of its run and what each scorer made of it. Each run is
-    recorded and scored as `run` records and scores it, and the batch ends
-    with each scorer's metrics.
-
-    The first Ctrl-C lets the run under way finish, and stops the batch
-    after it; the second stops that run too, recorded as stopped; a third
-    is let through, for one that hangs.
-    """
     ready = _ready(repl)
 
     if ready is None or not _seedable(repl, ready, repl.seed):
@@ -160,7 +124,6 @@ def batch(repl: Repl, *tags: str) -> None:
     tagged = " or ".join(tags)
     distinct: dict[int, BranchModel] = {}
 
-    # two names for one vignette are one case, and it runs once
     for case in repl.tagged("case", tags):
         _ = distinct.setdefault(case.trail_id, case)
 
@@ -232,7 +195,6 @@ def batch(repl: Repl, *tags: str) -> None:
                 made += scores
                 ran += 1
         except KeyboardInterrupt:
-            # the third Ctrl-C, or one outside what the batch holds
             pass
 
     if made:
@@ -243,7 +205,6 @@ def batch(repl: Repl, *tags: str) -> None:
 
 
 def _ready(repl: Repl) -> Ready | None:
-    """What the cell runs with, or None, having said why it can't run."""
     cell = repl.cell
 
     if not (cell.configuration and cell.stack):
@@ -274,7 +235,6 @@ def _ready(repl: Repl) -> Ready | None:
 
 
 def _seed_of(repl: Repl, word: str) -> int | None:
-    """The seed `word` names, or None, having said why it names none."""
     if not word.isdigit() or int(word) > MAX_SEED:
         repl.error(f"a seed is a whole number up to {MAX_SEED}, not '{word}'")
         return None
@@ -283,11 +243,6 @@ def _seed_of(repl: Repl, word: str) -> int | None:
 
 
 def _seedable(repl: Repl, ready: Ready, seed: int | None) -> bool:
-    """
-    Whether the cell can run with `seed`: greedy sampling ignores a seed, so
-    a seeded run of it would claim a reproducibility the seed plays no part
-    in, and a second seed would repeat it rather than replicate it.
-    """
     if seed is None or not _greedy(ready.resolution):
         return True
 
@@ -304,7 +259,6 @@ def _greedy(resolution: Resolution) -> bool:
 
 
 def _made(repl: Repl, ready: Ready, case: BranchModel, seed: int | None) -> Run | None:
-    """A run of the cell on `case`, or None, having said why a tool can't run."""
     try:
         return Run(
             ready.resolution,
@@ -324,7 +278,6 @@ def _made(repl: Repl, ready: Ready, case: BranchModel, seed: int | None) -> Run 
 
 
 def _described(repl: Repl, case: BranchModel, run: Run) -> str:
-    """What a run is described as: its trial's cell, case and seed."""
     cell = repl.cell
     assert cell.stack
     seeded = f" (seed {run.seed})" if run.seed is not None else ""
@@ -348,11 +301,6 @@ async def _tally(run: Run, tally: Tally, stopping: "_Stopping") -> Streamed:
 
 
 def _failed(error: Exception, resolution: Resolution) -> Outcome:
-    """
-    What came of a run that ended in `error`: an answer that doesn't parse,
-    or an LLM that doesn't stop calling tools, doesn't hold, where one is
-    asked for; anything else is the LLM's, or its server's, failure.
-    """
     unheld = False if resolution.coercion is not None else None
 
     match error:
@@ -367,7 +315,6 @@ def _failed(error: Exception, resolution: Resolution) -> Outcome:
 
 
 def _holds(resolution: Resolution, answer: Any) -> bool | None:
-    """Whether the answer holds to its schema, where there is one to hold to."""
     if resolution.coercion is None:
         return None
 
@@ -375,13 +322,6 @@ def _holds(resolution: Resolution, answer: Any) -> bool | None:
 
 
 def _judge(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | None:
-    """
-    Whether the LLM reasoned as it was asked to, whether its answer holds
-    to its schema, and what the output's views read from it: the facts are
-    claims, and a run is what shows whether the LLM honours them
-    (datamodel.md §2). Answer with whether it holds, where there is a
-    schema to hold to.
-    """
     intent = resolution.reasoning.intent
 
     if intent != "off" and not streamed.thought:
@@ -421,7 +361,6 @@ def _recorded(
     started: datetime,
     finished: datetime,
 ) -> RunModel | None:
-    """The run, recorded as a run of its trial, or None, having said why not."""
     cell = repl.cell
     assert cell.stack
 
@@ -452,7 +391,6 @@ def _recorded(
 def _scored(
     repl: Repl, recorded: RunModel, scoring: Scoring | None = None
 ) -> list[ScoreModel]:
-    """What each scorer that applies made of a run, or nothing, having said why."""
     try:
         return (scoring or Scoring(repl.identity)).score(recorded)
     except Exception as e:  # noqa: BLE001
@@ -462,10 +400,6 @@ def _scored(
 
 @contextmanager
 def _held() -> Generator[Callable[[], bool]]:
-    """
-    Hold Ctrl-C off until the block is done, and answer whether it came; the
-    second is let through, for a block that hangs.
-    """
     pressed = 0
 
     def hold(_signal: int, _frame: FrameType | None) -> None:
@@ -484,13 +418,6 @@ def _held() -> Generator[Callable[[], bool]]:
 
 
 class _Stopping:
-    """
-    Ctrl-C through a batch. The first asks it to stop after the run under
-    way, which the line says; the second cancels that run's stream, as
-    asyncio would on its own; the third is let through. Held here, none
-    reaches asyncio, which only takes Ctrl-C from Python's own handler.
-    """
-
     def __init__(self):
         self.pressed: int = 0
         self.tally: Tally | None = None

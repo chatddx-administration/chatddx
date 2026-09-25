@@ -1,5 +1,3 @@
-"""pydantic-ai's messages as inspect's, and the bodies a run sent and got."""
-
 import json
 from typing import Any
 

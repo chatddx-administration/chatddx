@@ -1,13 +1,3 @@
-"""
-A branch is an owner's named version of a trail, and the details beside it.
-
-What a version is: its trail and its details. Resolution reads details, an
-LLM's facts and a stack's endpoint, and a run must be able to say which
-version it resolved against, so a change to them is a new version
-(datamodel.md §1). What a branch is related to, tags and collaborators,
-changes in place.
-"""
-
 from typing import Any, cast
 
 import pytest
@@ -95,10 +85,6 @@ def test_a_change_to_details_is_a_new_version(
     owner: IdentityModel,
     trails: InventoryTrailIn,
 ):
-    """
-    The trail stays put, since details aren't content; the branch gets a
-    version whose facts a run can name.
-    """
     llm = trails.llm["gpt-oss-20b"]
 
     assert commit(llm, LLMBranchDetails(name="gpt-oss-20b", owner=owner.name))
@@ -155,10 +141,6 @@ def test_a_new_version_carries_over_the_relations_it_doesn_t_name(
 def test_a_version_carries_the_details_it_is_given_and_no_others(
     owner: IdentityModel,
 ):
-    """
-    Details aren't relations: a version says all of them, and one given none
-    has none, whatever the version before it said.
-    """
     assert commit(MACHINE, machine_details(owner, specs={"cpu": "a CPU"}))
     assert commit(MACHINE, machine_details(owner))
 
@@ -171,7 +153,6 @@ def test_details_are_the_owner_s(
     owner: IdentityModel,
     other_owner: IdentityModel,
 ):
-    """One machine, one trail row, and what each owner says of it."""
     assert commit(MACHINE, machine_details(owner, specs={"location": "here"}))
     assert commit(
         MACHINE,
@@ -202,7 +183,6 @@ def test_a_caller_that_says_nothing_of_details_gets_the_defaults(
 
 
 def test_a_detail_the_entity_doesn_t_carry_is_refused(owner: IdentityModel):
-    """A machine has no endpoint: saying it has one is wrong, not generous."""
     with pytest.raises(ValidationError, match="endpoint"):
         _ = commit(
             MACHINE,
@@ -385,7 +365,6 @@ SENTINEL = {
 
 
 def sentinel_tools(owner: str, trails: InventoryTrailIn) -> None:
-    """The sentinel toolset's tools as `owner`'s, each with what it runs."""
     for name, entry_point in SENTINEL.items():
         assert commit(
             trails.tool[name],

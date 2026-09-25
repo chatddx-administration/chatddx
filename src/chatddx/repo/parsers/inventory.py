@@ -1,31 +1,3 @@
-"""
-The inventory parser: TOML files in, each entity's records out, as the trail
-schema of their content and the details their branch carries.
-
-An inventory file holds a table per entity, and each holds named records.
-An author writes one record per entity, and the entity's bundle decides
-which of its keys are content and which are details (datamodel.md §1).
-A key that is neither is an error, and so is a record that names itself or
-its owner: its name is its key, and its owner is whoever parses it.
-
-- `extends` at the top of a file names the files it builds on. Its own
-  records win over theirs, and the first file it names over the next.
-- `extends` in a record names records of the same entity it builds on. Its
-  own keys win, and the first record it names over the next. A table it sets
-  replaces the one it would inherit: records are merged key by key, and no
-  deeper.
-- `partial = true` makes a record a template to extend, never a record of
-  its own: it is left out, and it can't be named by a relation.
-- `<key>_path` reads the key's value from a file next to the file that
-  names it: TOML and JSON as data, anything `.txt` as text. Only a record's
-  own keys read files; what they read is data.
-- A relation names a record of the entity it points at: one name, or a list
-  of names for a list. A record written inline would be committed without a
-  name, and several names would merge into one nobody named, so neither is
-  accepted.
-- A case with no vignette reads it from `cases/<name>.txt` next to its file.
-"""
-
 from __future__ import annotations
 
 import json
@@ -75,9 +47,7 @@ PATH_SUFFIX = "_path"
 class Record:
     entity: EntityName
     name: str
-    # as written, with what its `_path` keys name read in
     values: dict[str, Any]
-    # the file it is written in, and how an error names that file
     file: Path
     where: str
 
@@ -107,11 +77,6 @@ def parse(
     path: Path,
     branch_details: BranchDetailsPatch | None = None,
 ) -> ParsedInventory:
-    """
-    Every record of the inventory at `path` that isn't partial, as its trail
-    and its branch's details. `branch_details` is what every branch carries
-    whatever its record says, such as the owner.
-    """
     records = _read_inventory(path.resolve(), (), path.resolve().parent)
     parser = _Parser(records, branch_details or BranchDetailsPatch())
 
@@ -167,10 +132,6 @@ class _Parser:
             raise referrer.error(f"unknown {entity} '{name}'") from None
 
     def merged(self, record: Record, chain: tuple[str, ...] = ()) -> dict[str, Any]:
-        """
-        The record's values with what it extends merged in, keywords left
-        out: its own keys win, and the first record it names over the next.
-        """
         chain = (*chain, record.name)
         values = {k: v for k, v in record.values.items() if k not in KEYWORDS}
 
@@ -203,7 +164,6 @@ class _Parser:
         details: dict[str, Any] = {}
 
         for key, value in values.items():
-            # content first: a tool's `name` is the name the LLM sees
             if key in content_keys:
                 relation = relations.get(key)
                 content[key] = (
@@ -254,13 +214,11 @@ class _Parser:
 
 
 def _relations(entity: EntityName) -> dict[str, Relation]:
-    """The fields of an entity's trail that point at other entities' trails."""
     relations: dict[str, Relation] = {}
 
     for field_name, field in entity_of(entity).trail_in.model_fields.items():
         annotation: Any = field.annotation
 
-        # an optional relation: the trail it points at, or none
         if NoneType in get_args(annotation):
             options = [arg for arg in get_args(annotation) if arg is not NoneType]
 
@@ -295,14 +253,7 @@ def _listed(keys: Any) -> str:
     return ", ".join(sorted(keys)) or "nothing"
 
 
-# -------------------------------------------------------------------- files
-
-
 def _read_inventory(path: Path, chain: tuple[Path, ...], base: Path) -> Records:
-    """
-    The records of the inventory file at `path` and of every file it
-    extends, its own winning over theirs.
-    """
     where = _relative(path, base)
 
     if path in chain:
@@ -397,7 +348,6 @@ def _record(
 
 
 def _load(record: Record, path: Path) -> JsonValue:
-    """What a record's `_path` key names, read."""
     try:
         return _load_file(path, _relative(path, record.file.parent))
     except ParseError as e:

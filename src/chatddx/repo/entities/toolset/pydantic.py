@@ -1,12 +1,3 @@
-"""
-A toolset: a request-time slice. It replaces the tool group
-(datamodel.md §4).
-
-A variation is ordered tools and the text that fills the instruction's
-`tool_guidance` slot. A configuration names one or none, and tools need a
-serving with a tool call parser.
-"""
-
 from typing import Annotated
 
 from pydantic import Field
@@ -26,7 +17,6 @@ from chatddx.repo.families import (
 )
 from chatddx.repo.families.fields import distinct
 
-# the instruction's variable the guidance fills
 SLOT = "tool_guidance"
 
 
@@ -39,7 +29,6 @@ class ToolsetTrailBase(BaseTrail):
 
 
 class ToolsetTrailIn(ToolsetTrailBase, TrailIn):
-    # two tools of one name would be one tool to the LLM
     tools: Annotated[
         list[ToolTrailIn],
         Field(min_length=1),

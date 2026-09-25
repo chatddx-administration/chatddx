@@ -1,16 +1,3 @@
-"""
-A machine: a thing, identified by one field.
-
-The machine id is assigned when a physical machine is registered, and any
-change to its hardware makes a new machine. Everything else about it is
-description. The GPU UUIDs it lists back a check rather than an identity: a
-host reports its GPUs (`nvidia-smi -L`), and a run on a machine whose GPUs
-don't match its registration is flagged (data-generation.md §1).
-
-A cloud provider is a machine too, marked unreliable: nothing below its
-requests can be checked.
-"""
-
 from typing import Annotated, ClassVar
 from uuid import UUID
 

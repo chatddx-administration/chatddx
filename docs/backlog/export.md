@@ -71,7 +71,7 @@ so:
 - **Analysis needs no join.** `samples_df` over logs gives one row per
   draw, with its variation per slice as `metadata_*` columns and its scores
   as `score_*` columns. That is the factor vector of
-  `research-data-model.md`, as a table. It takes pandas and pyarrow, which
+  `research/a-new-datamodel.md`, as a table. It takes pandas and pyarrow, which
   the `analysis` dependency group brings.
 
 ## 2. The flow
@@ -139,7 +139,7 @@ The inspect log is built from draws, and nothing else reads the database.
 - **Then every writer sees every score,** and `chatddx agreement` could
   read the database as well as logs.
 - **Open:** a grader model's own run: whether the judge's requests are kept
-  as runs, as `research-data-model.md`'s `judge_trial` would have it, so
+  as runs, as `research/a-new-datamodel.md`'s `judge_trial` would have it, so
   that a judge's cost and exchange are on record.
 
 ## 3. The command
@@ -200,7 +200,7 @@ For a data handoff and a summary report; nothing is read back from it.
   `summary` sheet holds it.
 - **Not inference:** paired differences between cells, mixed models with
   the case as a random effect, factor effects and the like are done in R
-  from the parquet files. `research-data-model.md` listed them as derived
+  from the parquet files. `research/a-new-datamodel.md` listed them as derived
   views; they move out of chatddx.
 - **Why here:** numpy is already a dependency (through inspect), and a mean
   with its interval is what someone looking at a run needs; a model needs a
@@ -213,5 +213,5 @@ For a data handoff and a summary report; nothing is read back from it.
 
 - `research/output-and-scorers.md` §2, "Later, from inspect": scores come
   back first.
-- `research-data-model.md`'s derived views: descriptive ones stay in
+- `research/a-new-datamodel.md`'s derived views: descriptive ones stay in
   chatddx, inferential ones go to R.

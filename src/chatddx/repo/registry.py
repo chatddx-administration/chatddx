@@ -242,13 +242,6 @@ class Entity[
     TM: TrailModel,
     BM: BranchModel,
 ]:
-    """
-    A registered kind of record, and its bundle: the schemas and models
-    attached to it. Its content is a trail, content-addressed and immutable;
-    an owner's named version of it is a branch, which also holds its details,
-    what the branch says about the content without being part of it.
-    """
-
     name: EntityName
     branch_in: type[BS]
     branch_out: type[BP]
@@ -653,8 +646,6 @@ class Presentation[
     FDI: BaseFormDataIn,
     FDO: BaseFormDataOut,
 ]:
-    """How an entity is presented: its proxies and its form data."""
-
     name: PresentationName
     entity: AnyEntity
     proxy: type[P]

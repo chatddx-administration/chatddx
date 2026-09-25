@@ -1,5 +1,3 @@
-"""inspect's metrics, as chatddx computes them over a scorer's values."""
-
 import pytest
 
 from chatddx.scoring.metrics import METRICS
@@ -18,5 +16,4 @@ from chatddx.scoring.metrics import METRICS
     ],
 )
 def test_each_metric_is_inspect_s(metric: str, values: list[float], expected: float):
-    """As inspect's: a sample's deviation (ddof=1), and 0 with too few values."""
     assert METRICS[metric](values) == pytest.approx(expected, abs=1e-4)  # pyright: ignore[reportArgumentType]

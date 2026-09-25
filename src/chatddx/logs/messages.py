@@ -1,9 +1,3 @@
-"""
-A run's exchange as inspect keeps one: pydantic-ai's messages as inspect's
-chat messages, and each body sent or received as JSON, a streamed response
-as the chunks it came in.
-"""
-
 import json
 from collections.abc import Iterable, Sequence
 from typing import Any, cast
@@ -45,7 +39,6 @@ STOP_REASONS: dict[str, StopReason] = {
     "tool_call": "tool_calls",
 }
 
-# what a request body's fields are to inspect, those it has a place for
 GENERATE_CONFIG: dict[str, str] = {
     "temperature": "temperature",
     "top_p": "top_p",
@@ -59,7 +52,6 @@ GENERATE_CONFIG: dict[str, str] = {
     "reasoning_effort": "reasoning_effort",
 }
 
-# what a request body carries that isn't a setting
 NOT_SETTINGS = frozenset(
     {
         "messages",
@@ -75,10 +67,6 @@ NOT_SETTINGS = frozenset(
 
 
 def chat_messages(messages: Sequence[ModelMessage]) -> list[ChatMessage]:
-    """
-    The exchange, as inspect's messages: the instructions first, as the
-    system message they went out as, then each part of each message.
-    """
     said: list[ChatMessage] = []
 
     for message in messages:
@@ -99,7 +87,6 @@ def chat_messages(messages: Sequence[ModelMessage]) -> list[ChatMessage]:
 
 
 def assistant(response: ModelResponse) -> ChatMessageAssistant:
-    """A response: what the LLM thought and wrote, and the tools it called."""
     content: list[Content] = []
     calls: list[ToolCall] = []
 
@@ -124,7 +111,6 @@ def assistant(response: ModelResponse) -> ChatMessageAssistant:
 
 
 def output(model: str, response: ModelResponse | None) -> ModelOutput:
-    """A response, as the output of the call that asked for it."""
     if response is None:
         return ModelOutput(model=model)
 
@@ -145,7 +131,6 @@ def stop_reason(finish_reason: str | None) -> StopReason:
 
 
 def usage(responses: Iterable[ModelResponse]) -> ModelUsage | None:
-    """The tokens the responses took, summed, or None where there were none."""
     total: ModelUsage | None = None
 
     for response in responses:
@@ -164,10 +149,6 @@ def usage(responses: Iterable[ModelResponse]) -> ModelUsage | None:
 
 
 def generate_config(sent: str) -> GenerateConfig:
-    """
-    The settings a request went out with, as inspect's: those it has a
-    field for as those fields, the rest as its extra body.
-    """
     request: dict[str, Any] = json.loads(sent)
     fields: dict[str, Any] = {}
     extra: dict[str, Any] = {}
@@ -185,11 +166,6 @@ def generate_config(sent: str) -> GenerateConfig:
 
 
 def body(text: str) -> dict[str, JsonValue]:
-    """
-    A body sent or received, as JSON: a streamed response as the one
-    completion its chunks make up, as inspect keeps a streamed response, and
-    one that is neither as its text. The bytes themselves are the run's.
-    """
     try:
         value = json.loads(text)
     except json.JSONDecodeError:
@@ -218,11 +194,6 @@ def body(text: str) -> dict[str, JsonValue]:
 
 
 def _completion(chunks: list[dict[str, Any]]) -> dict[str, JsonValue]:
-    """
-    A stream's chunks joined into the completion a request that didn't stream
-    would have had: each choice's deltas joined into its message, a tool
-    call's pieces into the call, and the usage the last chunk reports.
-    """
     choices: dict[int, dict[str, Any]] = {}
     usage: JsonValue = None
 
@@ -289,7 +260,6 @@ def _join_tool_calls(calls: list[dict[str, Any]], deltas: list[dict[str, Any]]) 
 
 
 def _request_part(part: ModelRequestPart) -> ChatMessage | None:
-    """A part of a request, where it is one the LLM was sent as a message."""
     match part:
         case SystemPromptPart():
             return ChatMessageSystem(content=part.content)
@@ -325,7 +295,6 @@ def _user_content(content: str | Sequence[Any]) -> str | list[Content]:
 
 
 def _tool_call(part: ToolCallPart) -> ToolCall:
-    """A call, with why its arguments aren't an object where they aren't."""
     arguments: Any = part.args or {}
     problem: str | None = None
 

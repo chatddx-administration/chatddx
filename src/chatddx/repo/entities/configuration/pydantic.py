@@ -1,15 +1,3 @@
-"""
-A configuration: a composition of one variation of each request-time slice,
-and optionally a toolset. It replaces the agent (datamodel.md §4).
-
-It holds no LLM. The stack is chosen per trial, so one configuration runs
-on every LLM, and a cell joins a configuration to a stack. Resolution
-turns the cell into a request, or says why it can't (§9).
-
-The flat form the super agent had is the configuration's: its relations are
-templates chosen from, not forms of their own (§7, Views).
-"""
-
 from pydantic import Field
 
 from chatddx.core.fields import CoercedStr

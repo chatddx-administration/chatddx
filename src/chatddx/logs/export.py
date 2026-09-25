@@ -1,24 +1,3 @@
-# pyright: basic
-"""
-An identity's runs of a cell as an inspect eval log (docs/backlog/export.md):
-a sample per draw of a case, holding what the LLM was sent, the exchange,
-the answer, and a model event per request with the bodies as they went and
-came. Its metadata holds what inspect has no place for: the cell's
-variation of each slice, the stack and its parts, the ids and fingerprints
-that name what ran, the views the output offers as they read the answer,
-and the case's targets, as whoever exports is held to them.
-
-A seeded trial is one draw: its latest run that completed stands for it,
-or its latest run where none did. Its epoch is its seed's place among the
-seeds the log holds, from 1, so that an epoch is one seed across cases, as
-a batch's replicate is. A trial with no seed makes a draw of each of its
-runs, the epochs after the seeded ones, in the order they ran.
-
-A sample is the case, by the name whoever exports sees it by, and by its
-short fingerprint where it has none, or where the name is another case's
-too. An errored run's sample carries its error, as inspect's own do.
-"""
-
 import json
 import os
 import re
@@ -89,7 +68,6 @@ from chatddx.scoring.score import Scoring
 
 STACK_PARTS: tuple[EntityName, ...] = ("machine", "os", "llm", "serving")
 
-# the target a sample holds: what the diagnosis scorers read
 TARGET_KIND = "diagnosis"
 
 
@@ -99,10 +77,6 @@ def cell_log(
     stack: StackTrailModel,
     task: str,
 ) -> EvalLog:
-    """
-    `identity`'s runs of the configuration on the stack, as the log of a
-    task called `task`.
-    """
     runs = list(
         RunModel.objects.filter(
             owner__name=identity,
@@ -212,10 +186,6 @@ def cell_log(
 
 
 def write(log: EvalLog, directory: str | Path | None = None) -> Path:
-    """
-    Write `log` into `directory`, or where inspect looks for logs, named as
-    inspect names its own.
-    """
     where = Path(directory or os.environ.get("INSPECT_LOG_DIR") or "logs")
     where.mkdir(parents=True, exist_ok=True)
     created = datetime.fromisoformat(log.eval.created)
@@ -228,8 +198,6 @@ def write(log: EvalLog, directory: str | Path | None = None) -> Path:
 
 
 class _Names:
-    """What the identity calls each trail, or its short fingerprint."""
-
     def __init__(self, identity: str):
         self.identity: str = identity
         self._names: dict[tuple[EntityName, int], str] = {}
@@ -278,7 +246,6 @@ def _draws(runs: list[RunModel]) -> list[tuple[RunModel, int]]:
 
 
 def _case_ids(names: _Names, cases: list[Any]) -> dict[int, str]:
-    """Each case's sample id: its name, or its short fingerprint."""
     named = {case.pk: names.of("case", case) for case in cases}
     counts: dict[str, int] = defaultdict(int)
 
@@ -398,11 +365,6 @@ def _events(
     model: str,
     served: str,
 ) -> list[Event]:
-    """
-    A model event per request the run sent, with the bodies as they went
-    and came, and what the LLM had been sent up to it: the messages before
-    the answer the request got, its `answers`' place among `messages`.
-    """
     requests = [m for m in added if isinstance(m, ModelRequest)]
     responses = [m for m in added if isinstance(m, ModelResponse)]
     events: list[Event] = []
@@ -436,7 +398,6 @@ def _events(
 def _views(
     output_trail: OutputTrailOut, answer: JsonValue
 ) -> dict[str, list[str]] | None:
-    """What each view the output offers reads from the answer, as a scorer gets it."""
     if answer is None:
         return None
 
@@ -448,10 +409,6 @@ def _views(
 
 
 def _completion(output_trail: OutputTrailOut, answer: JsonValue) -> str:
-    """
-    The answer as text: its `text` view where the output offers one, and a
-    structured answer's JSON otherwise.
-    """
     if answer is None:
         return ""
 
@@ -465,7 +422,6 @@ def _completion(output_trail: OutputTrailOut, answer: JsonValue) -> str:
 
 
 def _served(runs: list[RunModel]) -> str:
-    """The name the stack's LLM was served by, as the runs' stack rows say."""
     for run in reversed(runs):
         if run.stack_branch and run.stack_branch.details.get("served_name"):
             return cast(str, run.stack_branch.details["served_name"])

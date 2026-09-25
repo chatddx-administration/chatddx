@@ -1,16 +1,3 @@
-"""
-The inventory parser: TOML files in, trails and the details beside them out.
-
-An author writes one record per entity, and the entity's bundle decides which
-of the record's keys are content, fingerprinted in its trail, and which are
-details, the description its branch carries (datamodel.md §1). A key
-that is neither is an error.
-
-Run on its own, beside a project that still speaks the old model:
-
-    pytest --ds=chatddx.repo.tests.settings src/chatddx/repo
-"""
-
 from pathlib import Path
 from textwrap import dedent
 from uuid import UUID
@@ -28,8 +15,6 @@ INVENTORY = settings.INVENTORY_PATH / "inventory.toml"
 
 MACHINE_ID = "00000000-0000-4000-8000-000000000001"
 
-# A stack and everything it is made of, each thing by its one identifying
-# field.
 STACK = f"""
 [machine.box]
 machine_id = "{MACHINE_ID}"
@@ -50,7 +35,6 @@ llm = "m"
 serving = "vllm"
 """
 
-# A configuration and one variation of each slice it names.
 SLICES = """
 [instruction.i]
 user = "{{case}}"
@@ -77,7 +61,6 @@ sampling = "s"
 
 
 def write(tmp_path: Path, files: dict[str, str]) -> Path:
-    """Write an inventory's files; the first is its root."""
     for name, text in files.items():
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -88,9 +71,6 @@ def write(tmp_path: Path, files: dict[str, str]) -> Path:
 
 def parse_text(tmp_path: Path, text: str) -> ParsedInventory:
     return parse(write(tmp_path, {"inventory.toml": text}))
-
-
-# ------------------------------------------------------------ the inventory
 
 
 @pytest.fixture(scope="module")
@@ -136,7 +116,6 @@ def test_a_stack_is_the_things_it_names(inventory: ParsedInventory):
     assert stack.llm == inventory.llm["qwen3-8b-awq"][0]
     assert stack.serving == inventory.serving["qwen3-8b-awq@pelle"][0]
 
-    # where the request goes is the stack's description, not its content
     assert str(details.endpoint) == "http://pelle.km:12009/v1/"
     assert details.served_name == "Qwen/Qwen3-8B-AWQ"
     assert details.api == "vllm"
@@ -177,12 +156,10 @@ def test_an_llm_s_facts_reach_its_details_typed(inventory: ParsedInventory):
 
     thinking = {"chat_template_kwargs": {"enable_thinking": True}}
 
-    # Qwen3 has no effort levels: every effort collapses into "on"
     assert qwen3.facts.reasoning.resolve("minimal") == ("on", thinking)
     assert qwen3.facts.reasoning.resolve("default") == ("on", thinking)
     assert qwen3.facts.sampling.recommended["off"].temperature == 0.7
 
-    # gpt-oss can't stop reasoning
     match gpt_oss.facts.reasoning.resolve("off"):
         case ("off", Refusal(refused=reason)):
             assert "always reasons" in reason
@@ -231,7 +208,6 @@ def test_a_case_s_vignette_is_read_from_its_file(inventory: ParsedInventory):
 
     vignette = settings.INVENTORY_PATH / "cases/DutchFall10w.txt"
 
-    # as written, line endings and all: it is what the LLM is sent
     assert case.vignette == vignette.read_bytes().decode().rstrip("\n")
     assert "\r\n" in case.vignette
     assert details.tags == ["dutch-fall"]
@@ -255,7 +231,6 @@ def test_a_configuration_extends_another(inventory: ParsedInventory):
     assert shown.coercion == inventory.coercion["native-shown"][0]
     assert shown.model_copy(update={"coercion": plan.coercion}) == plan
 
-    # what it is tagged with is inherited too
     assert details.tags == ["ddx"]
 
 
@@ -274,9 +249,6 @@ def test_a_dev_shell_s_client_has_no_build(inventory: ParsedInventory):
 
     assert client.build is None
     assert details.packages["pydantic-ai-slim"] == "2.41.0"
-
-
-# ------------------------------------------------------ content and details
 
 
 def test_a_record_is_split_into_content_and_details(tmp_path: Path):
@@ -334,10 +306,6 @@ def test_a_key_that_is_neither_content_nor_detail_is_an_error(tmp_path: Path):
 
 
 def test_another_entity_s_detail_is_an_error(tmp_path: Path):
-    """
-    An endpoint is a stack's to carry, and a machine that says it has one is
-    wrong, not generous.
-    """
     with pytest.raises(ParseError, match=r"machine 'box': unknown key 'endpoint'"):
         _ = parse_text(
             tmp_path,
@@ -351,10 +319,6 @@ def test_another_entity_s_detail_is_an_error(tmp_path: Path):
 
 @pytest.mark.parametrize("key", ["name", "owner"])
 def test_a_record_names_neither_itself_nor_its_owner(tmp_path: Path, key: str):
-    """
-    A record's name is its key, and its owner is whoever parses it: a record
-    that says otherwise used to be overruled without a word.
-    """
     with pytest.raises(ParseError, match=rf"case 'c': .*'{key}'"):
         _ = parse_text(
             tmp_path,
@@ -367,10 +331,6 @@ def test_a_record_names_neither_itself_nor_its_owner(tmp_path: Path, key: str):
 
 
 def test_a_tool_s_name_is_the_one_the_llm_sees(tmp_path: Path):
-    """
-    `name` is a tool's content: the name the LLM calls it by. The branch
-    is still named by the record's key.
-    """
     parsed = parse_text(
         tmp_path,
         """
@@ -386,10 +346,6 @@ def test_a_tool_s_name_is_the_one_the_llm_sees(tmp_path: Path):
 
 
 def test_an_entity_the_registry_does_not_have_is_an_error(tmp_path: Path):
-    """
-    An inventory in the old model used to lose its agents without a word,
-    since the parser read only the tables it knew.
-    """
     with pytest.raises(ParseError, match=r"unknown entity 'agent'"):
         _ = parse_text(
             tmp_path,
@@ -420,9 +376,6 @@ def test_the_caller_s_details_reach_every_branch(tmp_path: Path):
             assert details.collaborators == ["someone else"]
 
 
-# ---------------------------------------------------------------- relations
-
-
 def test_a_relation_names_a_record(tmp_path: Path):
     parsed = parse_text(tmp_path, STACK)
 
@@ -444,7 +397,6 @@ def test_a_relation_to_no_record_is_an_error(tmp_path: Path):
 
 
 def test_an_optional_relation_left_out_is_none(tmp_path: Path):
-    """A cloud stack has no OS and no serving that chatddx could know."""
     parsed = parse_text(
         tmp_path,
         STACK
@@ -461,10 +413,6 @@ def test_an_optional_relation_left_out_is_none(tmp_path: Path):
 
 
 def test_a_relation_is_a_name_not_a_record_of_its_own(tmp_path: Path):
-    """
-    A record written inline would be committed nameless: a variation nobody
-    can name in a batch, or pick out of a report.
-    """
     with pytest.raises(
         ParseError, match=r"stack 'm-on-box': 'machine' names a machine"
     ):
@@ -477,11 +425,6 @@ def test_a_relation_is_a_name_not_a_record_of_its_own(tmp_path: Path):
 
 
 def test_a_relation_names_one_record_not_several_to_merge(tmp_path: Path):
-    """
-    `sampling_params = ["seed-locked", "low-reasoning"]` merged two records
-    into an anonymous third. The seed is the trial's now, reasoning a slice
-    of its own, and the merge is gone (datamodel.md §8).
-    """
     with pytest.raises(
         ParseError, match=r"configuration 'k': 'sampling' names a sampling"
     ):
@@ -553,9 +496,6 @@ def test_a_record_named_twice_is_one_trail(tmp_path: Path):
     assert k.fingerprint == k2.fingerprint
 
 
-# ------------------------------------------------------------ extends, partial
-
-
 def test_a_record_extends_another(tmp_path: Path):
     parsed = parse_text(
         tmp_path,
@@ -624,10 +564,6 @@ def test_a_record_s_own_keys_win_over_what_it_extends(tmp_path: Path):
 
 
 def test_extending_is_shallow(tmp_path: Path):
-    """
-    A table a record sets replaces the one it extends; the two are not
-    merged. Two JSON Schemas merged key by key would be neither.
-    """
     parsed = parse_text(
         tmp_path,
         """
@@ -674,10 +610,6 @@ def test_extends_goes_down_a_chain(tmp_path: Path):
 
 
 def test_a_partial_record_is_a_template_and_nothing_more(tmp_path: Path):
-    """
-    A partial is left out of the inventory, so it needn't be whole: this one
-    has no effort, which every reasoning variation needs.
-    """
     parsed = parse_text(
         tmp_path,
         """
@@ -734,9 +666,6 @@ def test_extends_is_a_name_or_names_and_partial_is_a_flag(tmp_path: Path, value:
             {"extends" if value == "true" else "partial"} = {value}
             """,
         )
-
-
-# -------------------------------------------------------------------- files
 
 
 def test_an_inventory_extends_other_files(tmp_path: Path):
@@ -851,7 +780,6 @@ def test_a_path_key_reads_a_file_next_to_the_file_that_names_it(tmp_path: Path):
     instruction, _ = parsed.instruction["i"]
     output, _ = parsed.output["o"]
 
-    # a text file's last newline is the file's, not the template's
     assert instruction.system == "{{output_guidance}}"
     assert output.json_schema is not None
     assert list(output.json_schema["properties"]) == ["diagnoses", "certainty"]  # pyright: ignore[reportArgumentType]
@@ -882,10 +810,6 @@ def test_a_toml_file_loads_as_a_table(tmp_path: Path):
 
 
 def test_only_a_record_s_own_keys_read_files(tmp_path: Path):
-    """
-    A schema is data: a property it happens to call `…_path` is a property,
-    not a file to read.
-    """
     parsed = parse(
         write(
             tmp_path,
@@ -985,9 +909,6 @@ def test_an_entity_s_table_holds_tables(tmp_path: Path):
             c = "a case"
             """,
         )
-
-
-# ------------------------------------------------------------------- errors
 
 
 def test_a_record_that_does_not_validate_says_which_it_is(tmp_path: Path):

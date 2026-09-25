@@ -1,5 +1,3 @@
-"""`chatddx repl IDENTITY`, as the command line runs it."""
-
 import re
 from collections.abc import Callable
 from pathlib import Path

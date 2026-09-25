@@ -1,19 +1,3 @@
-"""
-A scorer: what a run's answer comes to, by a function of chatddx's own, the
-view of the output it reads, and the kind of target it holds that view to
-(datamodel.md §7).
-
-It is inspect's scorer spec. The function is the scorer's name, and the view,
-the target kind and the arguments are its options. What can change a score is
-content, so a score cites exactly what made it. How scores are summed up
-changes none of them, so the metrics are details.
-
-The function runs as a tool's does (`chatddx.runtime.implementation`): only
-from chatddx's own scorer files, loaded afresh, and each score records the git
-blob of the file that scored. The view and the target kind are fields of their
-own rather than arguments, since pairing a scorer with a run reads them.
-"""
-
 from typing import Annotated, Literal
 
 from pydantic import Field, JsonValue
@@ -51,8 +35,6 @@ class ScorerTrailBase(BaseTrail):
     view: View
     # none for a scorer that needs no target
     target_kind: TargetKind | None = None
-    # keyword arguments the function takes beside the view's items and the
-    # target
     args: dict[str, JsonValue] = Field(default_factory=dict)
 
 

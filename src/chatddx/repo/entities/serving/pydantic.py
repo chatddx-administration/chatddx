@@ -1,17 +1,3 @@
-"""
-Serving: the start-up settings of the server an LLM runs in.
-
-vLLM only. The OS identity already pins them, since NixOS declares them, but
-they are identified on their own too: the vLLM package, and the arguments
-and environment variables that change what the LLM reads or the numbers
-it computes (data-generation.md §1). The `--model` path is left out, since
-that is the LLM's identity. What only changes speed is recorded as
-description, for latency comparisons.
-
-Arguments are held in canonical form: long option names without their
-dashes, `_` spelled `-`, so two spellings of one argument are one argument.
-"""
-
 from collections.abc import Callable
 from typing import Annotated, Literal
 
@@ -33,13 +19,8 @@ from chatddx.repo.families import (
 )
 from chatddx.repo.families.fields import StorePath
 
-# What a variation can need of the serving it is realized on. An LLM's
-# facts name these as couplings, and resolution checks them against the
-# serving's arguments (see `ServingTrailBase.provides`).
 type Requirement = Literal["reasoning_parser", "tool_call_parser"]
 
-# Arguments that change what the LLM reads or the numbers it computes: the
-# first two kinds in data-generation.md §1. They belong to `args`.
 OUTPUT_ARGS = frozenset(
     {
         "chat-template",
@@ -64,7 +45,6 @@ OUTPUT_ARGS = frozenset(
     }
 )
 
-# Arguments that only change speed. They belong to `performance`.
 PERFORMANCE_ARGS = frozenset(
     {
         "gpu-memory-utilization",
@@ -76,7 +56,6 @@ PERFORMANCE_ARGS = frozenset(
     }
 )
 
-# Arguments held elsewhere, and where.
 ELSEWHERE = {
     "model": "the --model path is the LLM's identity: it is llm.snapshot",
     "served-model-name": "the served name is the stack's served_name",
@@ -131,7 +110,6 @@ class ServingTrailBase(BaseTrail):
     env: dict[str, str] = Field(default_factory=dict)
 
     def provides(self) -> frozenset[Requirement]:
-        """The requirements a variation can have that this serving meets."""
         provided: set[Requirement] = set()
 
         if self.args.get("reasoning-parser"):

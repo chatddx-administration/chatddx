@@ -1,23 +1,3 @@
-"""
-Output: a request-time slice.
-
-A variation is what is asked for: a JSON Schema, or none for free text; the
-guidance that fills the instruction's `output_guidance` slot, which says what
-to produce and in what order; and the views it offers scorers.
-
-A scorer never reads an output, a mode or a transcript. It reads a view: a
-named, typed reading of the output. A structured output gives each view as a
-path into its schema, in a subset of JSONPath (names, `[*]`, and a filter
-`[?(@.name)]` that keeps the items whose boolean `name` is true), and free
-text gives a parser. The path is proved against the schema here, when the
-output is committed, so pairing a scorer with an output is set membership:
-does the output offer the scorer's view? An output offers only what it
-declares, `text` included.
-
-The schema is kept as written, key order included: a constrained decoder
-emits keys in the order `properties` gives them.
-"""
-
 import json
 import re
 from typing import Any, Literal, cast, get_args
@@ -39,16 +19,9 @@ from chatddx.repo.families import (
 )
 from chatddx.repo.families.fields import JsonSchema
 
-# The readings of an output a scorer can ask for, each offered by the
-# outputs that declare it. `text` is an answer as written, `differential`
-# the diagnoses, most likely first, `warning` and `disposition` a
-# management plan's red flags and where the patient goes, and `critical`
-# the diagnoses the answer marks critical.
 type View = Literal["text", "differential", "warning", "disposition", "critical"]
 VIEWS: tuple[View, ...] = get_args(View.__value__)
 
-# What each view yields one of: its items' JSON type, and whether a null
-# may stand in for one, and reads as nothing: a plan with no red flags.
 VIEW_ITEMS: dict[View, tuple[str, bool]] = {
     "text": ("string", False),
     "differential": ("string", False),
@@ -57,11 +30,8 @@ VIEW_ITEMS: dict[View, tuple[str, bool]] = {
     "critical": ("string", False),
 }
 
-# Free text's parsers, by the view each gives. `lines`: one item per
-# non-empty line, list markers stripped. `whole`: the answer as written.
 PARSERS: dict[str, View] = {"lines": "differential", "whole": "text"}
 
-# the instruction's variable the guidance fills
 SLOT = "output_guidance"
 
 _NAME = r"[A-Za-z_][A-Za-z0-9_]*"
@@ -69,7 +39,6 @@ _PATH = re.compile(rf"\$(?:\.{_NAME}|\[\*\]|\[\?\(@\.{_NAME}\)\])*")
 _STEP = re.compile(rf"\.({_NAME})|\[\*\]|\[\?\(@\.({_NAME})\)\]")
 
 
-# a list marker the `lines` parser strips: `-`, `*`, `•`, `1.` or `1)`
 _MARKER = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
 
 
@@ -78,10 +47,6 @@ class Unproved(ValueError):
 
 
 def read(document: JsonValue, path: str) -> list[JsonValue]:
-    """
-    Every value `path` reaches in `document`, in the document's order; a
-    null is nothing reached.
-    """
     values: list[JsonValue] = [document]
 
     for step in _STEP.finditer(path, 1):
@@ -105,7 +70,6 @@ def read(document: JsonValue, path: str) -> list[JsonValue]:
 
 
 def lines(text: str) -> list[str]:
-    """The `lines` parser: an item per non-empty line, its list marker stripped."""
     items = (_MARKER.sub("", line).strip() for line in text.splitlines())
     return [item for item in items if item]
 
@@ -121,12 +85,6 @@ PARSE = {"lines": lines, "whole": whole}
 def prove(
     schema: dict[str, JsonValue], path: str, items: str, nullable: bool = False
 ) -> None:
-    """
-    Raise `Unproved` unless every value `path` yields, from any document
-    `schema` accepts, is of JSON type `items`, or null where `nullable`.
-    Conservative: whatever it can't follow (a union, a nullable step, a
-    reference outside the document) it refuses.
-    """
     node = _resolve(schema, schema)
     here = "$"
 
@@ -227,11 +185,6 @@ class OutputTrailBase(BaseTrail):
     views: dict[View, str] = Field(default_factory=dict)
 
     def view(self, name: View, answer: JsonValue) -> list[JsonValue]:
-        """
-        What the view `name` reads from `answer`: the values its path
-        reaches in a structured answer, or its parser's items from free
-        text.
-        """
         reading = self.views[name]
 
         if self.json_schema is None:

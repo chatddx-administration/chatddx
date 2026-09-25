@@ -1,9 +1,3 @@
-"""
-A trail is content, content-addressed and immutable: what goes into the
-database is what comes back, down to the order of a schema's keys, and a
-trail row is never written twice.
-"""
-
 from typing import Any, cast
 
 import pytest
@@ -33,7 +27,6 @@ pytestmark = pytest.mark.django_db
 def test_every_field_of_a_trail_is_fingerprinted_and_nothing_else(
     trails: InventoryTrailIn,
 ):
-    """A field is fingerprinted if and only if it is trail content (§1)."""
     for entity, name, trail in records(trails):
         fields = set(entity_of(entity).trail_in.model_fields)
 
@@ -43,11 +36,6 @@ def test_every_field_of_a_trail_is_fingerprinted_and_nothing_else(
 def test_every_trail_of_the_inventory_comes_back_as_it_went_in(
     trails: InventoryTrailIn,
 ):
-    """
-    Loaded back and validated as content again, each trail has the
-    fingerprint it went in with: nothing it holds was lost, reordered or
-    rounded on the way.
-    """
     for entity, name, trail in records(trails):
         bundle = entity_of(entity)
 
@@ -66,7 +54,6 @@ def test_a_schema_keeps_its_order_in_the_database(trails: InventoryTrailIn):
     stored = dump_trail(OutputTrailModel, output)
 
     fetched = OutputTrailModel.objects.get(pk=stored.pk)
-    # an OrderedJSONField reads back as the document, whatever TextField says
     schema = cast(dict[str, Any], cast(object, fetched.json_schema))
 
     assert list(schema["properties"]) == [

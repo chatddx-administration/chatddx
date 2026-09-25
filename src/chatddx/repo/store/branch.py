@@ -271,14 +271,6 @@ def commit(
     Embed trail in a branch and make it the head
     True: the head changed
     False: the head didn't, the trail was already the branch's head
-
-    A version is its trail and its details: what the branch says about the
-    content without being part of it, such as an LLM's facts or a stack's
-    endpoint. Resolution reads details, and a run has to be able to say
-    which version it resolved against, so a change to them makes a new
-    version as a change to the trail does (datamodel.md §1). What the
-    branch is related to, its tags and collaborators, is not read by
-    resolution, and changes in place.
     """
     entity = entity_of(trail)
     branch_model_cls = entity.branch_model
@@ -322,28 +314,6 @@ commit_async = make_async(commit)
 
 
 def commit_closure(root: TrailModel, owner_name: str) -> list[str]:
-    """
-    Give every trail `root` reaches a branch of `owner_name`'s, and answer
-    with the names of the ones that had to be made.
-
-    A trail an owner holds only through another -- a stack's machine, a
-    toolset's tools -- is as much in their possession as the one they named,
-    and anything that offers to show or edit it needs a branch to say *which*
-    one it is. So a commit is not finished until the closure of what it
-    committed is committed too.
-
-    Only a trail the owner has *no* branch of gets one. Where they already
-    have one, which of their versions is the head and what it is called is
-    theirs, and a save of something referencing it is not the place to
-    revisit that.
-
-    These branches are made on the owner's behalf rather than saved by them,
-    so they carry nothing beside their content: no tags, no collaborators,
-    and every detail at its default. A collaborator saving a shared
-    configuration commits under the owner's name, and what the owner's
-    version of an instruction is tagged with is not the collaborator's to
-    write -- so it is dropped, silently and on purpose.
-    """
     committed: list[str] = []
 
     for trail in trail_closure(root):
@@ -376,18 +346,6 @@ commit_closure_async = make_async(commit_closure)
 
 
 def commit_copies(root: TrailModel, owner_name: str, source_name: str) -> list[str]:
-    """
-    Give every trail `root` reaches that `owner_name` has no branch of a
-    copy of `source_name`'s branch of it, under its name and with its
-    details, and answer with what was copied, as `entity name`.
-
-    It goes before a commit of `root`, whose closure would otherwise give
-    those trails branches under names of its own, with every detail at its
-    default: a tool would lose what it runs. So a trail comes after what it
-    reaches, which by then has a branch of the owner's. What `source_name`
-    has no branch of, or holds under a name the owner already gives another
-    trail, is left to that closure.
-    """
     copied: list[str] = []
 
     for trail in _reached(root):
@@ -416,7 +374,6 @@ def commit_copies(root: TrailModel, owner_name: str, source_name: str) -> list[s
 
 
 def _reached(root: TrailModel) -> list[TrailModel]:
-    """What `root` reaches, each trail after what it reaches in turn."""
     seen: set[tuple[Any, Any]] = set()
     reached: list[TrailModel] = []
 
@@ -447,18 +404,6 @@ def commit_relations(
     previous: BranchModel | None,
     branch_details: BranchDetails,
 ) -> None:
-    """
-    Give `branch_model` what `branch_details` names beside its content, and
-    for everything it doesn't name, what the version it supersedes carried.
-
-    None of this is part of the trail: collaborators and tags belong to the
-    owner's version of the entity, not to its content, and every version
-    keeps the set it was saved with.
-
-    Which relations a branch has is the details model's to say -- every field
-    it tags with a `relation` -- so an entity that carries something extra
-    declares it there instead of being a special case here.
-    """
     owner = branch_model.owner
     entity = entity_of(branch_model).name
 

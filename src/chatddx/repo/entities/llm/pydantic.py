@@ -1,21 +1,3 @@
-"""
-An LLM: a thing, identified by one field.
-
-The identity is the snapshot: the directory vLLM loads, named by the store
-path of the fixed-output derivation that fetched it, which is a hash of it.
-That directory holds the weights, the tokenizer, the chat template and
-generation_config.json, and all of it changes behaviour. A quantized variant
-is a different snapshot, and so a different LLM. For a cloud LLM, the
-provider's dated model name stands in, unverified.
-
-Everything else is description, and `facts` is the part of it resolution
-reads (datamodel.md §3). A fact translates an intent in one of three
-ways: a request fragment, the name of an intent it collapses into, or a
-refusal with its reason. An intent the facts don't mention is refused for
-want of a fact: nothing is guessed. Facts are claims, and only an experiment
-shows whether an LLM honours them.
-"""
-
 from typing import Annotated, Any, ClassVar, cast
 
 from pydantic import (
@@ -65,8 +47,6 @@ def _snapshot(value: str) -> str:
                 + "that fetched it (/nix/store/<hash>-<name>)"
             )
     elif "/" in value:
-        # vLLM would resolve a repository name to whatever revision it has
-        # when it starts (data-generation.md §1)
         raise ValueError(
             f"{value!r} names a repository, not a snapshot: fetch it as a "
             + "fixed-output derivation and give its store path, or give a "
@@ -77,8 +57,6 @@ def _snapshot(value: str) -> str:
 
 
 class Refusal(BaseModel):
-    """An intent the LLM can't honour, and why."""
-
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     refused: Annotated[str, StringConstraints(min_length=1)]
@@ -115,7 +93,6 @@ def _fact_kind(value: Any) -> str:
             return _refusal_or("fragment")(value)
 
 
-# What an intent writes into the request on this LLM.
 ReasoningFragment = Annotated[dict[str, JsonValue], AfterValidator(_within_reasoning)]
 
 ReasoningFact = Annotated[
@@ -125,7 +102,6 @@ ReasoningFact = Annotated[
     Discriminator(_fact_kind),
 ]
 
-# one requirement or several
 Needs = Annotated[
     list[Requirement],
     BeforeValidator(lambda value: [value] if isinstance(value, str) else value),
@@ -133,8 +109,6 @@ Needs = Annotated[
 
 
 class BudgetFact(BaseModel):
-    """Where a token budget goes in the request, and what it needs."""
-
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     field: str
@@ -147,11 +121,6 @@ class BudgetFact(BaseModel):
 
 
 class ReasoningFacts(BaseModel):
-    """
-    How each reasoning intent is realized on the LLM. `default` names the
-    intent that is the LLM's own.
-    """
-
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     default: Intent | None = None
@@ -175,11 +144,6 @@ class ReasoningFacts(BaseModel):
     def resolve(
         self, effort: Effort
     ) -> tuple[Intent, dict[str, JsonValue] | Refusal] | None:
-        """
-        Follow `effort` through the collapses the facts declare to the intent
-        it ends at, and what that intent writes or why it is refused. None
-        when there is no fact to follow: refused for want of one.
-        """
         path: list[Intent] = []
         intent: Intent | None = self.default if effort == "default" else effort
 
@@ -203,7 +167,6 @@ class ReasoningFacts(BaseModel):
         return None
 
     def realized(self) -> frozenset[Intent]:
-        """The intents with a fragment of their own: the LLM's modes."""
         return frozenset(
             intent for intent in INTENTS if isinstance(getattr(self, intent), dict)
         )
@@ -224,19 +187,14 @@ class ReasoningFacts(BaseModel):
 class SamplingFacts(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
-    # the vendor's sampling, per mode the reasoning facts resolve to
     recommended: dict[Intent, SamplingValues] = Field(default_factory=dict)
-    # what vLLM gives a field a request leaves out: generation_config.json
     generation_config: SamplingValues | None = None
 
 
 class ModeFact(BaseModel):
-    """A coercion mode that works on the LLM, with what it needs."""
-
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     needs: Needs = Field(default_factory=list)
-    # what a batch's report says about the mode on this LLM
     note: str | None = None
 
 
@@ -247,8 +205,6 @@ CoercionFact = Annotated[
 
 
 class CoercionFacts(BaseModel):
-    """Which coercion modes work, and the one `auto` resolves to."""
-
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     default: Mode | None = None
@@ -276,7 +232,6 @@ class LLMFacts(BaseModel):
     reasoning: ReasoningFacts = Field(default_factory=ReasoningFacts)
     sampling: SamplingFacts = Field(default_factory=SamplingFacts)
     coercion: CoercionFacts = Field(default_factory=CoercionFacts)
-    # pydantic-ai profile overrides, so that nothing hangs on the served name
     profile: dict[str, JsonValue] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -298,7 +253,6 @@ class LLMSpecs(BaseModel):
 
     family: str | None = None
     parameters_b: float | None = Field(default=None, gt=0)
-    # for a mixture of experts
     active_parameters_b: float | None = Field(default=None, gt=0)
     quantization: str | None = None
     context_length: int | None = Field(default=None, gt=0)

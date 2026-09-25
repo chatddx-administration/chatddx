@@ -1,5 +1,3 @@
-"""The management plan on Qwen3 as pelle serves it, for cases of the live corpus."""
-
 from collections.abc import Callable, Coroutine
 from typing import Any
 

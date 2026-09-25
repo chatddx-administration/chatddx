@@ -1,9 +1,3 @@
-"""
-`chatddx agreement FIRST SECOND LOG...`: how two scorers read the same
-samples of inspect logs. inspect is loaded when the command runs, not when
-`chatddx` starts.
-"""
-
 from pathlib import Path
 from typing import Annotated
 
@@ -20,7 +14,6 @@ def agreement(
         typer.Argument(exists=True, help="logs, or directories of logs"),
     ],
 ):
-    """How two scorers read the same samples, and where they differ."""
     from inspect_ai.log import read_eval_log
 
     from chatddx.logs.agreement import agreement as measure

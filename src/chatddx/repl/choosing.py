@@ -1,6 +1,3 @@
-# pyright: basic
-"""What goes in the cell, and keeping what is in it as one's own."""
-
 from django.db import transaction
 from rich.text import Text
 

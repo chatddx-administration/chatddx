@@ -1,5 +1,3 @@
-"""What goes in the cell, and keeping what is in it as one's own."""
-
 from collections.abc import Callable
 
 import pytest
@@ -20,10 +18,6 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def bobs(repl: Repl, provision: Provision) -> None:
-    """
-    bob's configurations, shared with the repl's identity, bob's plan under
-    a name the archive doesn't have.
-    """
     provision("--with-giftbag", user="bob")
     alex = IdentityModel.objects.get(name=repl.identity)
 

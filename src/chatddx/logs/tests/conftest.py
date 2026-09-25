@@ -13,10 +13,6 @@ type Run = Callable[..., None]
 
 @pytest.fixture
 def run_as(provision: Callable[..., None]) -> Callable[..., Run]:
-    """
-    Lines for an identity's repl on the test inventory, its trials sent to
-    the fake vLLM, or through `transport`.
-    """
     provisioned: set[str] = set()
 
     def run_as(identity: str, transport: Any = None) -> Run:

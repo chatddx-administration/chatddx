@@ -1,10 +1,3 @@
-"""
-Runs held to the scorers that apply to them: the registry's scorers, by the
-views their output offers and the targets their case's branch has, each score
-kept with the scorer, the case branch, the target and the file it was made
-with, and with whoever scored.
-"""
-
 import asyncio
 from collections.abc import Callable
 from pathlib import Path

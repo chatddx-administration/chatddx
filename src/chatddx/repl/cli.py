@@ -1,17 +1,3 @@
-# pyright: basic
-"""
-`chatddx repl IDENTITY`: lines read as they are typed, or piped in, each
-echoed after the prompt as if it was typed. A name holds `-`, `@` and `.`,
-so only a space ends the word completed. httpx's line per request is kept
-out of the answer as it streams.
-
-The database connection is let go after each line, as Django lets it go
-after each request: an idle repl holds none, and the next line opens one,
-whether or not the server dropped the last. Ctrl-C ends the line under
-way, not the repl: a statement it cuts short is cancelled, and the
-transaction it was in rolled back.
-"""
-
 import logging
 import readline
 import sys
@@ -37,7 +23,6 @@ def repl(
         typer.Option(help="where the lines you type are kept"),
     ] = HISTORY,
 ):
-    """Run cases on a configuration and a stack."""
     if not IdentityModel.objects.filter(name=identity_name).exists():
         typer.echo(
             f"no identity '{identity_name}': chatddx init-data {identity_name}",
@@ -95,7 +80,6 @@ def repl(
                 if not handle(shell, line):
                     break
             except KeyboardInterrupt:
-                # Ctrl-C ends the command, not the repl
                 shell.console.print("\n(interrupted)", style=LABEL)
             finally:
                 let_go()
@@ -107,10 +91,6 @@ def repl(
 
 
 def let_go() -> None:
-    """
-    Close each connection that isn't inside a transaction, where Django's
-    rules for a connection's age would: with them as they are, every one.
-    """
     for connection in connections.all(initialized_only=True):
         if not connection.in_atomic_block:
             connection.close_if_unusable_or_obsolete()

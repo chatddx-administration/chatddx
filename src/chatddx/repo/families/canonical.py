@@ -1,18 +1,3 @@
-"""
-The canonical form a trail's fingerprint is taken of (data-generation.md §3.2).
-
-It is the JSON Canonicalization Scheme (RFC 8785) with one exception: a value
-whose order carries meaning keeps it. A JSON Schema is the case in point. A
-constrained decoder emits keys in the order `properties` gives them, and an
-LLM shown the schema reads every key in the order it is written. So each
-object inside an order-carrying value is encoded as its ordered pairs before
-canonicalizing, where the sort can't reach them.
-
-A fingerprint names its scheme and version (`cddx-trail/1:sha256:…`), so a
-change to any of this adds a version instead of silently breaking the
-fingerprints already stored.
-"""
-
 import hashlib
 import math
 from collections.abc import Mapping
@@ -20,9 +5,6 @@ from typing import Any, cast
 
 SCHEME = "cddx-trail/1"
 
-# The one key of the object an ordered object is encoded as. Every object in
-# an order-carrying value is wrapped, so a wrapped object can't be mistaken
-# for a list of pairs that was written as one.
 ORDERED_PAIRS = "ordered"
 
 _ESCAPES = {
@@ -37,7 +19,6 @@ _ESCAPES = {
 
 
 def ordered(value: Any) -> Any:
-    """`value` with every object in it encoded as its ordered pairs."""
     match value:
         case Mapping():
             pairs = cast(Mapping[str, Any], value).items()
@@ -49,7 +30,6 @@ def ordered(value: Any) -> Any:
 
 
 def canonical_json(value: Any) -> str:
-    """`value` serialized as RFC 8785 prescribes."""
     match value:
         case None:
             return "null"
@@ -84,7 +64,6 @@ def fingerprint(value: Any) -> str:
 
 
 def fingerprint_digest(fingerprint: str) -> str:
-    """The hex part of a fingerprint, whatever its scheme."""
     return fingerprint.rpartition(":")[2]
 
 
@@ -101,7 +80,6 @@ def _string(value: str) -> str:
 
 
 def _number(value: float) -> str:
-    """A number as ECMAScript's Number.prototype.toString writes it."""
     if isinstance(value, int) and abs(value) <= 2**53:
         return str(value)
 
@@ -115,13 +93,11 @@ def _number(value: float) -> str:
 
     sign = "-" if number < 0 else ""
 
-    # repr gives the shortest digits that round-trip
     mantissa, _, exponent = repr(abs(number)).partition("e")
     whole, _, fraction = mantissa.partition(".")
     written = whole + fraction
     digits = written.lstrip("0")
 
-    # where the decimal point sits, counted in `digits` from the left
     point = len(whole) - (len(written) - len(digits)) + int(exponent or 0)
     digits = digits.rstrip("0")
 

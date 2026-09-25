@@ -1,17 +1,4 @@
 """
-A judge for the diagnosis: a grader model reads the differential a run gave
-and the diagnosis its case expects, and says which item, if any, is the
-first that names it, allowing what a clinician would allow and a pattern
-can't: a synonym, an abbreviation, another spelling, the other language.
-Its value is 1/rank, and 0 where no item names it, as `reciprocal_rank`'s
-is, so that the two can be held to each other and to clinicians.
-
-The grader is the model given, or else the model bound to the `grader`
-role, which one must be. It sees the target as the case has it: today the
-pattern that `reciprocal_rank` reads, which the template explains. A score
-keeps the grader's reasoning as its explanation, and is unscored where the
-grader's verdict can't be read.
-
 The file reads nothing but the sample, and imports nothing of chatddx's, so
 inspect can load it on its own:
 
@@ -53,7 +40,6 @@ Reason briefly, then end with a line "RANK: n", where n is the number of the \
 item, or "RANK: none" if no item names it.
 """
 
-# the last verdict counts, so that one quoted from the answer can't
 VERDICT = re.compile(r"RANK:\s*(\d+|none)\b", re.IGNORECASE)
 
 
@@ -64,11 +50,6 @@ def diagnosis_judge(
     target_kind: str = "diagnosis",
     template: str = TEMPLATE,
 ) -> Scorer:
-    """
-    Which item of the view, if any, first names the case's target of
-    `target_kind`, as the grader judges it.
-    """
-
     async def judge(state: TaskState, target: Target) -> Score:
         del target  # the sample's targets, by kind, are in its metadata
 

@@ -1,5 +1,3 @@
-"""Each command, the words it takes, what it does, and a line carried out."""
-
 import shlex
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -23,12 +21,6 @@ from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 
 @dataclass(frozen=True)
 class Command:
-    """
-    The words a command takes, a word in brackets optional, and one ending
-    in ... as many times over as it is given, and what it does. One that
-    runs nothing leaves the repl.
-    """
-
     params: tuple[str, ...]
     text: str
     run: Callable[..., None] | None
@@ -121,7 +113,6 @@ COMMANDS: dict[str, Command] = {
 
 
 def handle(repl: Repl, line: str) -> bool:
-    """Carry out one line; False when it asks to leave."""
     try:
         words = shlex.split(line)
     except ValueError as e:
@@ -153,8 +144,6 @@ def handle(repl: Repl, line: str) -> bool:
     except (BranchNotFoundError, AmbiguousBranchError, NotFound) as e:
         repl.error(str(e))
     except db.Error as e:
-        # the server went away, or refused the statement: the command is lost,
-        # the repl isn't
         said = str(e).strip()
         repl.error(
             f"the database failed: {said.splitlines()[0] if said else type(e).__name__}"
@@ -164,7 +153,6 @@ def handle(repl: Repl, line: str) -> bool:
 
 
 def complete(names: dict[str, list[str]], line: str) -> list[str]:
-    """What the last word of `line` can be: a command, then the names it takes."""
     verb, *words = line.split(" ")
 
     if not words:
@@ -176,7 +164,6 @@ def complete(names: dict[str, list[str]], line: str) -> list[str]:
     given: list[str] = []
 
     if command and command.repeats and position >= len(params) - 1:
-        # the word that repeats, and none it was given already
         position = len(params) - 1
         given = words[position:-1]
     elif position >= len(params):

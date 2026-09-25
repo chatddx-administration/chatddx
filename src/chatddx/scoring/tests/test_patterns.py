@@ -1,8 +1,3 @@
-"""
-The pattern language, held to what an answer says, and the scorers that
-hold answers to it.
-"""
-
 import inspect
 
 import pytest
@@ -79,10 +74,6 @@ def test_every_target_reads(path: str):
 
 @pytest.mark.parametrize("path", INVENTORIES, ids=lambda path: path)
 def test_every_scorer_runs_a_function_that_takes_its_arguments(path: str):
-    """
-    A scorer's function takes the view's items and the target, and the
-    scorer's arguments beside them, as a tool's takes its parameters.
-    """
     for name, (scorer, _) in parse(settings.INVENTORY_PATH / path).scorer.items():
         function = implementation(scorer.function, SCORER_PACKAGE).function
 

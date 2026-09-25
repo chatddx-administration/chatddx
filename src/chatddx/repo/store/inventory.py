@@ -101,14 +101,6 @@ def trails_in(parsed_inventory: ParsedInventory) -> InventoryTrailIn:
 
 
 def form_data_out(branches: InventoryBranchOut) -> InventoryFormDataOut:
-    """
-    Validate a branch-out inventory into a form-data-out inventory.
-
-    A form shows a branch flat: its trail's fields and its details beside its
-    name, with the trail's id as the template it was made from. The trail is
-    kept whole under `trail` too, for a field a form renames: a tool's own
-    name, which a form can't call `name`.
-    """
     inventory = {}
 
     for entity_name in ENTITY_NAMES:

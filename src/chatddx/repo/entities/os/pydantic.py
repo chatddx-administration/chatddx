@@ -1,17 +1,3 @@
-"""
-An operating system: a thing, identified by one field.
-
-The identity is the system's top-level store path, what /run/current-system
-points to. It is exactly the closure that runs, the vLLM service included,
-where the flake revision would name source rather than a system, and none at
-all for a dirty tree (data-generation.md §1). The revision is kept as
-description.
-
-A NixOS container has a system of its own but runs on its host's kernel and
-NVIDIA driver, so the host's system is registered as an OS too, and a stack
-points at both.
-"""
-
 from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field

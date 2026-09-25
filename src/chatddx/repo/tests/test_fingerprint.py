@@ -1,8 +1,3 @@
-"""
-What a fingerprint is a hash of: a trail's content, in canonical form
-(data-generation.md §3.2), with a scheme and version in front of it.
-"""
-
 import hashlib
 import math
 import re
@@ -23,9 +18,6 @@ from chatddx.repo.inventories import InventoryTrailIn
 from chatddx.repo.names import closure_branch_name, short_fingerprint
 
 ENGINE = "/nix/store/22222222222222222222222222222222-vllm"
-
-
-# ---------------------------------------------------------- canonical form
 
 
 @pytest.mark.parametrize(
@@ -60,8 +52,6 @@ def test_a_number_json_has_no_form_for_is_an_error(number: float):
 
 
 def test_keys_are_sorted_by_their_utf16_code_units():
-    # "😀" is a surrogate pair, D83D DE00: past "€" at 20AC in UTF-16, though
-    # not in code points
     assert (
         canonical_json({"😀": 1, "€": 2, "b": 3, "a": 4})
         == '{"a":4,"b":3,"€":2,"😀":1}'
@@ -87,14 +77,10 @@ def test_ordered_keeps_every_object_s_order_where_the_sort_cant_reach_it():
 
 
 def test_an_ordered_object_is_not_a_list_of_pairs():
-    """A default that is an object and one that is a list are two schemas."""
     as_object = ordered({"default": {"a": 1}})
     as_pairs = ordered({"default": [["a", 1]]})
 
     assert canonical_json(as_object) != canonical_json(as_pairs)
-
-
-# --------------------------------------------------------------- the scheme
 
 
 def test_a_fingerprint_names_its_scheme_and_version():
@@ -124,14 +110,7 @@ def test_every_trail_of_the_inventory_has_a_fingerprint_of_the_scheme(
             ), f"{entity} {name}"
 
 
-# ------------------------------------------------------------- what counts
-
-
 def test_a_schema_s_order_is_content():
-    """
-    A constrained decoder emits keys in the order `properties` gives them, so
-    the LLM commits to its answer before or after its reasons by it.
-    """
     reasons_first = OutputTrailIn(
         json_schema={
             "type": "object",
@@ -168,7 +147,6 @@ def test_a_tool_s_parameters_keep_their_order_too():
 
 
 def test_what_is_read_as_a_set_is_not_ordered():
-    """vLLM reads its arguments and environment as sets."""
     one = ServingTrailIn(engine=ENGINE, args={"seed": 0, "max-model-len": 8192})
     other = ServingTrailIn(engine=ENGINE, args={"max-model-len": 8192, "seed": 0})
 

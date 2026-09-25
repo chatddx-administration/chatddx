@@ -1,7 +1,3 @@
-"""
-Value types more than one entity holds.
-"""
-
 import re
 from collections.abc import Callable
 from typing import Annotated
@@ -10,7 +6,6 @@ import jsonschema
 from jsonschema.validators import validator_for
 from pydantic import AfterValidator, JsonValue, StringConstraints
 
-# nix base32 leaves out e, o, t and u
 STORE_PATH = re.compile(r"/nix/store/[0-9a-df-np-sv-z]{32}-[^/]+")
 _PINNED_SOURCE = re.compile(r"[\w.-]+/[\w.-]+@[0-9a-f]{40}")
 
@@ -25,8 +20,6 @@ def _store_path(value: str) -> str:
 
 
 def _pinned_source(value: str) -> str:
-    # a floating revision would be resolved when vLLM starts, not when the
-    # LLM was registered (data-generation.md §1)
     if not _PINNED_SOURCE.fullmatch(value):
         raise ValueError(
             f"{value!r} is not a pinned source: write the repository and the "
@@ -48,7 +41,6 @@ def _json_schema(value: dict[str, JsonValue]) -> dict[str, JsonValue]:
 
 
 def distinct[T](label: Callable[[T], object] = lambda item: item) -> AfterValidator:
-    """Holds a list to items that differ in `label`."""
 
     def check(items: list[T]) -> list[T]:
         seen: set[object] = set()

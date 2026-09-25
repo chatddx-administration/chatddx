@@ -1,18 +1,3 @@
-"""
-A run: a resolved cell sent with a case, once, and what came back: one run
-of the trial the cell, the case and the seed make (datamodel.md §8).
-
-It is sent through pydantic-ai on vLLM (data-generation.md §2.4), with a
-profile taken from the LLM's facts instead of one matched on its served
-name, and with every field resolution wrote. chatddx owns every string the
-LLM reads (data-generation.md §2.2): the schema goes out as it was written,
-pydantic-ai adds no words of its own, and an answer that doesn't hold is
-recorded, not repaired by asking again. The exact bodies are kept, each
-request as it went and each response as it came: the request, not the
-variations' names, says what ran. So are pydantic-ai's messages, as far as
-the run got.
-"""
-
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
@@ -141,7 +126,6 @@ class Run:
 
     @property
     def new_messages(self) -> list[ModelMessage]:
-        """The messages the run added to the conversation it continued."""
         return self.messages[len(self.history) :]
 
     def settings(self) -> ModelSettings:
@@ -216,8 +200,6 @@ class Run:
 
 
 class _Copied(httpx2.AsyncByteStream):
-    """A response's body, copied into `into` as it is read."""
-
     def __init__(self, stream: httpx2.AsyncByteStream, into: bytearray):
         self._stream: httpx2.AsyncByteStream = stream
         self._into: bytearray = into
@@ -236,11 +218,6 @@ class _Copied(httpx2.AsyncByteStream):
 def _runner(
     implementation: Implementation, parameters: dict[str, JsonValue]
 ) -> Callable[..., Any]:
-    """
-    A tool's function, called with arguments that hold to its parameters;
-    what doesn't hold, or fails, goes back to the LLM as what it returned.
-    """
-
     def run(**arguments: Any) -> Any:
         problem = invalid(parameters, arguments)
 
@@ -256,7 +233,6 @@ def _runner(
 
 
 def cause_of(error: Exception) -> str:
-    """What went wrong beneath pydantic-ai's own message: the first validation error."""
     cause = error.__cause__
 
     while cause is not None and not isinstance(cause, ValidationError):
@@ -272,7 +248,6 @@ def cause_of(error: Exception) -> str:
 
 
 def invalid(schema: dict[str, JsonValue], answer: Any) -> str | None:
-    """Why `answer` doesn't hold to `schema`, or None when it does."""
     validator = validator_for(schema)(schema)
     error = next(iter(validator.iter_errors(answer)), None)
 

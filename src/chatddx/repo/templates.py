@@ -1,13 +1,3 @@
-"""
-The part of Handlebars chatddx's templates use, read without rendering them:
-which variables a template places as values, and which it branches on.
-
-Rendering is pydantic-ai's `TemplateStr` (pydantic-handlebars), at compile
-time. What is checked here is what a template declares, when it is
-committed: an instruction places every variable it declares and declares
-every variable it places, and never branches on the case.
-"""
-
 import re
 from dataclasses import dataclass, field
 
@@ -112,10 +102,6 @@ def placements(template: str) -> Placements:
 
 
 def _variable(path: str) -> str | None:
-    """
-    The variable a path reads: its root, `case` for `case.x`. None for what a
-    block has in scope rather than the template: `this`, `@index`, `../x`.
-    """
     if path == "this" or path.startswith(("this.", "@", "../")):
         return None
 

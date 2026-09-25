@@ -1,13 +1,3 @@
-"""
-How two scorers read the same samples, for scorers whose value is 0 where
-the target isn't found, as `reciprocal_rank`'s and the judge's are: how
-often both found it, neither did, or one alone; Cohen's kappa on found,
-which discounts the agreement chance alone would give; and the samples
-whose values differ, which are what a clinician should settle first.
-
-A sample either scorer left unscored, or didn't score, is left out.
-"""
-
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -41,7 +31,6 @@ class Agreement:
 
     @property
     def kappa(self) -> float | None:
-        """Cohen's kappa on found, or None where every sample fell alike."""
         if not self.samples:
             return None
 
@@ -54,7 +43,6 @@ class Agreement:
 
 
 def agreement(logs: Iterable[EvalLog], first: str, second: str) -> Agreement:
-    """How the scorers `first` and `second` read the samples of `logs`."""
     counts = {(True, True): 0, (False, False): 0, (True, False): 0, (False, True): 0}
     same = 0
     disagreements: list[Disagreement] = []

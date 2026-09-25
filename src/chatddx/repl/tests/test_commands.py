@@ -1,5 +1,3 @@
-"""A line is a command and its words, and a word completes as it is typed."""
-
 from collections.abc import Callable
 
 import pytest

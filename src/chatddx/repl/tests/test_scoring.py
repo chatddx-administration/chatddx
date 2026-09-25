@@ -1,5 +1,3 @@
-"""A run ends with its scores, and `score` holds the rest to the scorers."""
-
 from collections.abc import Callable
 from typing import Any
 
@@ -20,8 +18,6 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def retarget() -> Callable[[], None]:
-    """Expect case-1's first diagnosis from now on, and nothing else."""
-
     def retarget() -> None:
         case = CaseBranchModel.objects.filter(
             owner__name="archive", name="case-1"

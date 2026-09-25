@@ -1,14 +1,3 @@
-"""
-Resolution: a cell, a configuration joined to a stack, made into one request
-or refused with its reasons (datamodel.md §2, §5).
-
-Each slice's variation states an intent, and the facts of the stack's LLM
-realize it. The slices are resolved in the order each reads the ones before
-it: the stack, reasoning, sampling, output and coercion, the instruction
-with its slots filled, then the toolset. The case is left out: a cell is
-resolved once, and each run renders it with a case of its own.
-"""
-
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -70,8 +59,6 @@ class Configuration(Protocol):
 
 @dataclass(frozen=True)
 class Slices:
-    """A configuration's variations with any of them swapped for another."""
-
     instruction: InstructionTrailBase
     output: OutputTrailBase
     coercion: CoercionTrailBase
@@ -118,8 +105,6 @@ class Tool:
 
 
 class CellRefused(Exception):
-    """A cell refused, with what its other slices resolve to regardless."""
-
     def __init__(
         self,
         refusals: list[SliceRefusal],
@@ -154,11 +139,9 @@ class Resolution:
 
     @property
     def fields(self) -> dict[str, JsonValue]:
-        """What the request states beside its messages and its `model`."""
         return self.reasoning.writes | self.sampling.writes
 
     def render(self, case: str) -> tuple[str, str]:
-        """The system and user messages, with `case` placed."""
         variables: dict[str, str | None] = {
             name: None for name in self.instruction.variables
         }
@@ -231,11 +214,6 @@ def realize(
     facts: LLMFacts,
     serving: ServingTrailBase | None,
 ) -> tuple[Reasoning | None, Sampling | None, list[SliceRefusal]]:
-    """
-    A reasoning variation on an LLM, and the sampling it pulls in. The two
-    are resolved together: sampling can default to what the facts recommend
-    for the mode reasoning resolves to, and a budget spends max_tokens.
-    """
     refusals: list[SliceRefusal] = []
     provided = serving.provides() if serving else frozenset[Requirement]()
 
@@ -372,7 +350,6 @@ def _output(
     serving: ServingTrailBase | None,
     refusals: list[SliceRefusal],
 ) -> tuple[Coercion | None, dict[str, str]]:
-    """How the output is held to its schema, and the slots the two fill."""
     output = configuration.output
     variation = configuration.coercion
     coercion: Coercion | None = None
@@ -400,7 +377,6 @@ def _toolset(
     serving: ServingTrailBase | None,
     refusals: list[SliceRefusal],
 ) -> list[Tool]:
-    """The tools the LLM is offered, as the request carries them."""
     if toolset is None:
         return []
 
@@ -546,13 +522,6 @@ def _coercion(
 
 
 def inlined(schema: dict[str, JsonValue]) -> dict[str, JsonValue]:
-    """
-    `schema` with each reference in it replaced by what it refers to, and its
-    `$defs` dropped: the schema as a request carries it. Done here, it is
-    chatddx's to say what the LLM is held to, not a library's to make of
-    the schema. A reference's siblings are kept beside what it refers to.
-    """
-
     def resolve(node: JsonValue, seen: tuple[str, ...]) -> JsonValue:
         match node:
             case {"$ref": str(ref), **siblings}:

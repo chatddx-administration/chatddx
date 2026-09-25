@@ -1,8 +1,3 @@
-"""
-inspect scores a log as chatddx scores its runs: each sample as its run,
-and a scorer's metrics as chatddx sums its scores up.
-"""
-
 import math
 from collections.abc import Callable
 
@@ -25,7 +20,6 @@ def failing(_request: httpx2.Request) -> httpx2.Response:
 
 
 def logs(identity: str = "alex") -> list[EvalLog]:
-    """A log of each cell `identity` ran, scored by inspect."""
     cells = {
         (trial.configuration, trial.stack)
         for trial in TrialModel.objects.filter(runs__owner__name=identity)

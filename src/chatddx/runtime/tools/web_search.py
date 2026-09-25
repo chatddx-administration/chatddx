@@ -1,5 +1,3 @@
-"""The top results of a DuckDuckGo search: the title, url and snippet of each."""
-
 import re
 from html import unescape
 from urllib.parse import parse_qs, urlparse
@@ -21,7 +19,6 @@ def _clean_html(fragment: str) -> str:
 
 
 def _resolve_result_url(href: str) -> str:
-    """DuckDuckGo's HTML results link through a `/l/?uddg=...` redirect; unwrap it."""
     if href.startswith("//"):
         href = f"https:{href}"
 

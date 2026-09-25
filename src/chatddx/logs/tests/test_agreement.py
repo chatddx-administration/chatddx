@@ -1,5 +1,3 @@
-"""How two scorers read the same samples."""
-
 from pathlib import Path
 
 from inspect_ai.log import (
@@ -19,7 +17,6 @@ NAN = float("nan")
 
 
 def log_of(*pairs: tuple[float, float]) -> EvalLog:
-    """A log whose samples `pattern` and `judge` scored, a pair each."""
     return EvalLog(
         eval=EvalSpec(
             created="2026-09-25T00:00:00+00:00",

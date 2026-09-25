@@ -1,8 +1,3 @@
-"""
-A cell's runs as an inspect log: a sample per draw of a case, and in its
-metadata what inspect has no place for.
-"""
-
 import json
 from collections.abc import Callable
 from pathlib import Path

@@ -13,7 +13,6 @@ pytestmark = [
     pytest.mark.asyncio,
 ]
 
-# the test inventory: the inventory's records, and two cases of its own
 COUNTS = {
     "machine": 3,
     "os": 3,
@@ -47,7 +46,6 @@ async def test_branch_specs(inventory_fixture_bo: InventoryBranchOut):
 
     stack = inventory_fixture_bo.stack["qwen3-8b-awq@malborg"]
 
-    # a spec holds the branch's details beside its content
     assert stack.details.served_name == "Qwen/Qwen3-8B-AWQ"
     assert stack.trail.host_os is not None
     assert stack.tags == ["rtx-5090"]
@@ -58,7 +56,6 @@ async def test_form_data_out(inventory_fixture_fdo: InventoryFormDataOut):
 
     tool = inventory_fixture_fdo.tool["web_search"]
 
-    # a form's `name` is the branch's; the tool's own is `tool_name`
     assert (tool.name, tool.tool_name) == ("web_search", "web_search")
     assert inventory_fixture_fdo.stack["qwen3-8b-awq@pelle"].endpoint == (
         "http://pelle.km:12009/v1/"

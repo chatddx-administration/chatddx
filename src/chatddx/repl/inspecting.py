@@ -1,10 +1,3 @@
-# pyright: basic
-"""
-What the cell is, and how it resolves on its stack, before anything is sent;
-which cases each scorer can hold its runs to, and which are missing a
-target; and what any branch is, and what came of the runs that used it.
-"""
-
 import json
 from typing import Any, cast, get_args
 
@@ -52,7 +45,6 @@ type Parts = tuple[
 ]
 
 
-# Where a run's trial holds each entity's trail, among those one path reaches
 HELD_AT: dict[str, str] = {
     "case": "trial__case",
     "configuration": "trial__configuration",
@@ -68,7 +60,6 @@ STACK_PARTS: tuple[EntityName, ...] = ("machine", "os", "llm", "serving")
 
 
 def _missing() -> Text:
-    """What `show` says where a case has no target, or a target no text or pattern."""
     return Text("missing", style=LATER)
 
 
@@ -77,13 +68,6 @@ NAMED = 10
 
 
 def show(repl: Repl, entity: str | None = None, *names: str) -> None:
-    """
-    The cell: each slice's variation beside what it resolves to on the stack,
-    whether or not the cell is refused, the prompts it makes, and for each
-    scorer the cases it can hold the cell's runs to; `tag TAG...` only the
-    cases with any of the tags. Or ENTITY's NAME, or the cell's ENTITY: what
-    it is, and what came of your runs with it.
-    """
     if entity is None:
         _show_cell(repl)
     elif entity == "tag":
@@ -162,12 +146,6 @@ def _show_cell(repl: Repl, tags: tuple[str, ...] = ()) -> None:
 
 
 def _show_scorers(repl: Repl, tags: tuple[str, ...]) -> None:
-    """
-    Each scorer you see: whether the cell's output offers its view, and of
-    the cases (with any of `tags`) how many have its kind of target, and
-    which are missing one, or have one whose pattern doesn't parse. Two names
-    for one vignette are one case, as for `batch`.
-    """
     distinct: dict[int, Any] = {}
     chosen = repl.tagged("case", tags) if tags else repl.usable("case")
 
@@ -230,13 +208,11 @@ def _show_scorers(repl: Repl, tags: tuple[str, ...]) -> None:
 
 
 def _some(names: list[str]) -> str:
-    """The first names, and how many more there are."""
     more = len(names) - NAMED
     return " ".join(names[:NAMED]) + (f" and {more} more" if more > 0 else "")
 
 
 def _unread(pattern: str) -> str | None:
-    """Why `pattern` doesn't parse, or None where it does."""
     try:
         _ = Pattern(pattern)
     except ValueError as e:
@@ -285,7 +261,6 @@ def _named(repl: Repl, entity: EntityName, name: str) -> Any:
 
 
 def _in_cell(repl: Repl, entity: EntityName) -> Any:
-    """The branch of `entity` the cell holds, or None where it holds none."""
     cell = repl.cell
     trail: Any = None
 
@@ -334,7 +309,6 @@ def _add_rows(repl: Repl, table: Table, field: str, value: Any) -> None:
         and value
         and all(not isinstance(item, (dict, list)) for item in value.values())
     ):
-        # jsonb keeps no order: a vocabulary's keys go in its own
         for vocabulary in (TARGET_KINDS, VIEWS):
             if set(value) <= set(vocabulary):
                 value = {key: value[key] for key in vocabulary if key in value}
@@ -347,7 +321,6 @@ def _add_rows(repl: Repl, table: Table, field: str, value: Any) -> None:
 
 
 def _add_targets(table: Table, targets: dict[str, Expected | bool]) -> None:
-    """A row per kind of target: its text and its pattern, or `missing`."""
     for kind in TARGET_KINDS:
         target = targets.get(kind)
 
@@ -423,11 +396,6 @@ def _show_runs(repl: Repl, entity: EntityName, trail: int) -> None:
 
 
 def reasoning(repl: Repl) -> None:
-    """
-    What each reasoning variation does on each stack, with the sampling the
-    cell's configuration pulls in. Stacks every variation resolves alike on
-    share a column: they differ in nothing the table shows.
-    """
     cell = repl.cell
     variations = sorted(
         (
@@ -546,7 +514,6 @@ def _realized(entity: str, slices: Slices, parts: Parts) -> str:
 
 
 def _coerced(coercion: Coercion, shown: bool) -> str:
-    """How the answer is held to its schema, and how the LLM reads it."""
     match coercion.mode:
         case "native":
             held = "response_format: guided decoding holds the answer to the schema"
@@ -575,11 +542,6 @@ def _effort(
     sampling: Sampling | None,
     refusals: list[SliceRefusal],
 ) -> Text:
-    """
-    A reasoning variation on a stack, as the table shows it: the intent it
-    ends at, where that isn't its effort (the LLM's default, or a
-    collapse), and what it and the sampling write.
-    """
     if refusals:
         return Text(
             "\n".join(f"refused: {refusal.reason}" for refusal in refusals),
@@ -606,7 +568,6 @@ def _same(trail: Any, other: Any) -> bool:
 
 
 def _writes(writes: dict[str, JsonValue], prefix: str = "") -> str:
-    """Request fields as `path=value`, a nested field by its dotted path."""
     fields: list[str] = []
 
     for key, value in writes.items():

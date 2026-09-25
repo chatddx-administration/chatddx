@@ -1,9 +1,3 @@
-"""
-What the cell is, and how it resolves on its stack, before anything is sent;
-which cases each scorer can hold its runs to; and what a branch is, and what
-came of the runs that used it.
-"""
-
 from collections.abc import Callable
 
 import pytest
@@ -26,7 +20,6 @@ REASONING = (
 
 
 def row_names(table: str) -> list[str]:
-    """A table's first column, where a row starts rather than wraps on."""
     cells = [
         line.split("│")[1].strip()
         for line in table.splitlines()

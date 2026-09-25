@@ -1,5 +1,3 @@
-"""A run can take a conversation up where it was left."""
-
 import asyncio
 from collections.abc import Callable, Coroutine
 from typing import Any

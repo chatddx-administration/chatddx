@@ -1,15 +1,3 @@
-"""
-Sampling: a request-time slice (datamodel.md §4).
-
-A variation holds explicit values, and says what a value left out means:
-`generation_config`, the LLM's own generation config, or `recommended`,
-what the LLM's facts recommend for the reasoning mode it resolves to. So one
-sampling variation fits every reasoning variation. Resolution writes every
-value it used into the request, `top_k` included (through `extra_body`).
-
-The seed is not here: it belongs to the trial, one per replicate.
-"""
-
 from typing import Annotated, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt
@@ -31,8 +19,6 @@ type SamplingDefaults = Literal["generation_config", "recommended"]
 
 
 class SamplingFields(BaseModel):
-    """The values a sampling variation, or an LLM's facts, can set."""
-
     temperature: Annotated[float, Field(ge=0, le=2)] | None = None
     top_p: Annotated[float, Field(gt=0, le=1)] | None = None
     # -1 turns it off
@@ -44,8 +30,6 @@ class SamplingFields(BaseModel):
 
 
 class SamplingValues(SamplingFields):
-    """Sampling values on their own, as an LLM's facts give them."""
-
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
 

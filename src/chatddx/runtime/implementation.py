@@ -1,15 +1,3 @@
-"""
-What runs when an LLM calls a tool, or a scorer scores a run: a function in
-one of chatddx's own files, in `chatddx.runtime.tools` or
-`chatddx.scoring.scorers`, named by an entry point (`module.path:function`).
-Nothing else runs, whoever's branch names it.
-
-A file is loaded afresh from its bytes each time, and those bytes' git blob
-id is kept beside what they define: what ran is what the id names, even
-after an edit in a long-running process, and `git cat-file blob <id>` gets
-it back.
-"""
-
 import hashlib
 import importlib.abc
 import importlib.util
@@ -32,7 +20,6 @@ class Implementation:
 
 
 def implementation(entry_point: str, package: str = TOOL_PACKAGE) -> Implementation:
-    """The function `entry_point` names in `package`, and its file's blob id."""
     module_name, _, name = entry_point.partition(":")
 
     if not module_name.startswith(f"{package}."):
@@ -56,13 +43,10 @@ def implementation(entry_point: str, package: str = TOOL_PACKAGE) -> Implementat
 
 
 def blob_of(content: bytes) -> str:
-    """Git's id for a file's content, as `git hash-object` makes it."""
     return hashlib.sha1(b"blob %d\0" % len(content) + content).hexdigest()
 
 
 class _Source(importlib.abc.SourceLoader):
-    """A module's source, as bytes already read: nothing is read again."""
-
     def __init__(self, origin: str, source: bytes):
         self.origin: str = origin
         self.source: bytes = source

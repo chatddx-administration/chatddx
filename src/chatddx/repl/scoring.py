@@ -1,6 +1,3 @@
-# pyright: basic
-"""The scorers, and your runs held to those that apply to them."""
-
 from rich.table import Table
 
 from chatddx.history.models import RunStatus, ScoreModel
@@ -13,11 +10,6 @@ from chatddx.scoring.score import Scoring
 
 
 def score(repl: Repl, prefix: str | None = None) -> None:
-    """
-    Hold each outstanding run of yours, or RUN, to every scorer outstanding
-    for it, and say what each made of it; many runs end with each scorer's
-    metrics.
-    """
     scoring = Scoring(repl.identity)
 
     if prefix is not None:
@@ -55,10 +47,6 @@ def score(repl: Repl, prefix: str | None = None) -> None:
 
 
 def scorers(repl: Repl) -> None:
-    """
-    Each scorer you can see, what it reads and holds to what, how its values
-    are summed up, and whether the cell offers what it reads.
-    """
     scoring = Scoring(repl.identity)
     offered = repl.cell.slices.output.views if repl.cell.configuration else None
     table = Table(box=None, header_style="bold")
@@ -88,7 +76,6 @@ def scorers(repl: Repl) -> None:
 
 
 def summary(repl: Repl, scoring: Scoring, made: list[ScoreModel]) -> None:
-    """Each scorer's scores among `made`: how many, and its metrics."""
     metrics: list[Metric] = [
         metric
         for metric in METRICS

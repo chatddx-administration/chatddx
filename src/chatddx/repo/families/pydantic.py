@@ -18,15 +18,8 @@ from chatddx.core.fields import CoercedStr, NullableStr
 from chatddx.core.schemas import IdentitySchemaOut
 from chatddx.repo.families.canonical import fingerprint, ordered
 
-# Marks a field of a trail schema whose value keeps its order in the
-# fingerprint: a JSON Schema, which an LLM reads, and a constrained decoder
-# emits, in the order it is written. See `chatddx.repo.families.canonical`.
 ORDERED = "ordered"
 
-# Marks a field of a branch-details model as naming rows of another table
-# rather than holding a value. The name is a key into
-# `chatddx.repo.store.branch.RELATION_RESOLVERS`, which turns each name
-# into the row it stands for.
 RELATION = "relation"
 
 
@@ -40,21 +33,12 @@ class BaseTrail(BaseModel):
 
 
 class TrailIn(BaseTrail):
-    """
-    An entity's content: everything authored that identifies it, and nothing
-    else. Its fingerprint is what a trail row is deduplicated on.
-    """
-
     @computed_field
     @property
     def fingerprint(self) -> str:
         return fingerprint(self.canonical_input())
 
     def canonical_input(self) -> dict[str, Any]:
-        """
-        What the fingerprint is a hash of: the fields in JSON form, with each
-        relation standing in as its own fingerprint.
-        """
         relations: dict[str, Any] = {}
 
         # sibling in src/chatddx/repo/store/trail.py
@@ -98,10 +82,6 @@ class BaseBranchTrail[T: BaseTrail](BaseModel):
 
 
 def relation_fields(details: type[BaseModel]) -> list[tuple[str, str]]:
-    """
-    The `(field_name, resolver_name)` pairs of a branch-details model, i.e.
-    the rows of other tables this kind of branch carries beside its content.
-    """
     fields: list[tuple[str, str]] = []
 
     for field_name, field in details.model_fields.items():
@@ -114,11 +94,6 @@ def relation_fields(details: type[BaseModel]) -> list[tuple[str, str]]:
 
 
 def plain_detail_fields(details: type[BaseModel]) -> list[str]:
-    """
-    The fields of a branch-details model that hold values of their own: not
-    the branch's name or owner, and not a relation. They are what the branch's
-    `details` column holds.
-    """
     relations = {field_name for field_name, _ in relation_fields(details)}
 
     return [
@@ -137,16 +112,6 @@ def dump_details(details: BaseModel) -> dict[str, JsonValue]:
 
 
 class Details(BaseModel):
-    """
-    What an entity's branch says about its content without being part of it:
-    a machine's specs, an LLM's facts, a stack's endpoint. Details are never
-    fingerprinted. They are the owner's, per branch, and a change to them
-    makes a new version of the branch (datamodel.md §1).
-
-    An entity with details subclasses this, and its branch details and their
-    patch mix it in. The base is empty: most entities have none.
-    """
-
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
 
@@ -166,7 +131,6 @@ class BranchDetails(BaseModel):
     )
 
 
-# What every branch has as columns of its own rather than in `details`.
 BRANCH_FIELDS = frozenset({"name", "owner"})
 
 
@@ -203,7 +167,6 @@ class BranchOut[T: TrailOut, D: Details](BaseBranch[T], NinjaSchema):
     collaborators: list[IdentitySchemaOut]
     tags: list[Annotated[str, BeforeValidator(str)]]
 
-    # what the version says beside its content; see `Details`
     details: D
 
 
@@ -211,7 +174,6 @@ class BaseFormDataIn(NinjaSchema):
     name: NullableStr = None
     owner: IdentitySchemaOut | None = None
 
-    # None where the form has no field for it, and so nothing to say about it
     collaborators: list[IdentitySchemaOut] | None = None
     tags: list[Annotated[str, BeforeValidator(str)]] | None = None
 
@@ -221,5 +183,4 @@ class BaseFormDataOut(BaseModel):
     name: str = ""
 
 
-# Resolve trail's dependence on BaseBranchDetails
 _ = TrailIn.model_rebuild()

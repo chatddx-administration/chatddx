@@ -28,7 +28,6 @@ def is_str_list(value: object) -> TypeGuard[list[str]]:
 
 
 def dig(data: Any, *path: str) -> Any:
-    """Safely traverse nested dicts/objects without type checker noise."""
     for key in path:
         if not isinstance(data, dict):
             return None

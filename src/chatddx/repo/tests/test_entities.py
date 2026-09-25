@@ -1,8 +1,3 @@
-"""
-What each entity holds itself to, whoever writes it: the parser, a form or
-code.
-"""
-
 from typing import Any
 
 import pytest
@@ -39,14 +34,10 @@ def os(name: str) -> OsTrailIn:
     return OsTrailIn(toplevel=f"/nix/store/{'0' * 32}-nixos-system-{name}")
 
 
-# ------------------------------------------------------------------- things
-
-
 @pytest.mark.parametrize(
     "snapshot",
     [
         "/nix/store/0v4qhx8a2c5m7l1d9rbs6fzjkg3ywpin-Qwen3-8B-AWQ",
-        # a cloud provider's dated model name stands in, unverified
         "gpt-5-mini-2025-08-07",
     ],
 )
@@ -57,10 +48,8 @@ def test_an_llm_is_its_snapshot(snapshot: str):
 @pytest.mark.parametrize(
     "snapshot, problem",
     [
-        # vLLM would resolve the revision when it starts
         ("Qwen/Qwen3-8B-AWQ", "names a repository"),
         ("/models/qwen3-8b-awq", "store path"),
-        # nix base32 has no e, o, t or u
         ("/nix/store/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee-m", "store path"),
     ],
 )
@@ -79,9 +68,6 @@ def test_a_source_pins_a_commit():
 def test_an_os_is_its_system_s_store_path():
     with pytest.raises(ValidationError, match="not a Nix store path"):
         _ = OsTrailIn(toplevel="/run/current-system")
-
-
-# ---------------------------------------------------------------- servings
 
 
 def test_serving_arguments_are_held_in_one_spelling():
@@ -126,15 +112,11 @@ def test_a_serving_provides_what_its_arguments_set_up():
         args={"reasoning-parser": "qwen3", "tool-call-parser": "hermes"},
     )
 
-    # a tool-call parser does nothing without auto tool choice
     assert serving.provides() == {"reasoning_parser"}
 
     serving.args["enable-auto-tool-choice"] = True
 
     assert serving.provides() == {"reasoning_parser", "tool_call_parser"}
-
-
-# ------------------------------------------------------------------- stacks
 
 
 def test_a_container_s_stack_names_both_systems():
@@ -156,9 +138,6 @@ def test_a_host_os_is_for_a_container():
         _ = StackTrailIn(machine=MACHINE, os=os("a"), host_os=os("a"), llm=LLM)
 
 
-# ------------------------------------------------------------------- facts
-
-
 def test_a_fact_is_a_fragment_a_collapse_or_a_refusal():
     facts = ReasoningFacts.model_validate(
         {
@@ -176,7 +155,6 @@ def test_a_fact_is_a_fragment_a_collapse_or_a_refusal():
     )
     assert facts.resolve("default") == facts.resolve("on")
     assert facts.resolve("high") == ("high", Refusal(refused="no"))
-    # no fact at all: refused for want of one
     assert facts.resolve("xhigh") is None
     assert facts.realized() == {"off", "on"}
 
@@ -188,7 +166,6 @@ def test_a_fact_is_a_fragment_a_collapse_or_a_refusal():
         ({"default": "on"}, "collapses into 'on', which ends in no fact"),
         ({"on": "medium", "medium": "on"}, "the collapses go round"),
         ({"low": "maximal"}, "low"),
-        # the reasoning slice writes these, and a fact can't write others
         ({"on": {"temperature": 0.6}}, "not \\['temperature'\\]"),
         ({"budget": {"field": "max_tokens"}}, "not \\['max_tokens'\\]"),
         ({"off": {"refused": ""}}, "refused"),
@@ -244,9 +221,6 @@ def test_a_mode_names_what_it_needs_one_or_several():
         _ = LLMFacts.model_validate({"coercion": {"native": {"needs": "a_parser"}}})
 
 
-# -------------------------------------------------------------- templates
-
-
 def test_a_template_places_values_and_branches_on_conditions():
     placed = placements(
         "{{a}}{{#if b}}{{{c}}}{{else}}{{d.e}}{{/if}}{{^f}}x{{/f}}{{!-- g --}}"
@@ -272,7 +246,6 @@ def test_an_instruction_declares_what_it_places():
         variables=["schema_prompt", "output_guidance", "case"],
     )
 
-    # one order for one set
     assert instruction.variables == ["case", "output_guidance", "schema_prompt"]
 
 
@@ -293,9 +266,6 @@ def test_an_instruction_that_doesn_t_declare_what_it_places_is_refused(
 ):
     with pytest.raises(ValidationError, match=problem):
         _ = InstructionTrailIn(system=system, user=user, variables=variables)  # pyright: ignore[reportArgumentType]
-
-
-# ----------------------------------------------------------------- coercion
 
 
 def test_prompted_mode_needs_a_schema_prompt():
@@ -332,8 +302,6 @@ def test_a_tool_description_is_for_tool_mode_and_places_nothing():
         _ = CoercionTrailIn(mode="tool", tool_description="Answer {{here}}.")
 
 
-# ------------------------------------------------------------------ outputs
-
 PLAN: dict[str, JsonValue] = {
     "type": "object",
     "$defs": {
@@ -361,11 +329,8 @@ PLAN: dict[str, JsonValue] = {
     [
         "$.diagnoses[*].diagnosis",
         "$.names[*]",
-        # one string is a list of one
         "$.summary",
-        # an enum of strings is strings
         "$.diagnoses[*].probability",
-        # the items whose boolean is true
         "$.diagnoses[?(@.critical)].diagnosis",
     ],
 )
@@ -382,13 +347,11 @@ def test_a_view_is_a_path_the_schema_proves(path: str):
         ("$.diagnoses[*]", r"\$\.diagnoses\[\*\] is of type object"),
         ("$.nowhere[*]", r"\$ has no property 'nowhere'"),
         ("$.summary[*]", r"\$\.summary is of type string, not an array"),
-        # a null is not a diagnosis
         ("$.diagnoses[*].maybe", r"of type \['string', 'null'\]"),
         ("$.diagnoses[*].either", r"a union \(anyOf\)"),
         ("diagnoses[*]", "not a path"),
         ("$..diagnosis", "not a path"),
         ("$.diagnoses[0]", "not a path"),
-        # a filter needs a boolean the items declare
         (
             "$.diagnoses[?(@.diagnosis)].diagnosis",
             r"\$\.diagnoses\[\?\(@\.diagnosis\)\]\.diagnosis is of type string, not a boolean",
@@ -461,7 +424,6 @@ def test_a_view_reads_what_its_path_reaches_in_an_answer():
         "diagnoses": [
             {"diagnosis": "pneumonia"},
             {"diagnosis": "copd"},
-            # an item the path doesn't reach is read as nothing
             {"probability": "low"},
         ]
     }
@@ -477,7 +439,6 @@ def test_a_filter_keeps_the_items_whose_boolean_is_true():
         "diagnoses": [
             {"diagnosis": "pneumonia", "critical": False},
             {"diagnosis": "sepsis", "critical": True},
-            # an item that doesn't say is not critical
             {"diagnosis": "copd"},
         ]
     }
@@ -512,9 +473,6 @@ def test_a_schema_is_a_json_schema():
         _ = OutputTrailIn(json_schema={"type": "objet"})
 
 
-# ---------------------------------------------------- reasoning, sampling
-
-
 def test_a_budget_is_for_reasoning_that_is_on():
     assert ReasoningTrailIn(effort="on", budget=1024).budget == 1024
 
@@ -546,18 +504,10 @@ def test_sampling_says_what_a_value_left_out_means():
 
 
 def test_what_sampling_params_held_that_isn_t_sampling_is_gone():
-    """
-    The seed is the trial's (datamodel.md §8); `n` is scrapped; logit bias
-    keys are token ids, which fit one tokenizer; and provider params were
-    reasoning switches, which are the reasoning slice's now.
-    """
     fields = set(SamplingTrailIn.model_fields)
 
     assert fields.isdisjoint({"seed", "n", "logit_bias", "provider_params"})
     assert "stop" in fields and "stop_sequences" not in fields
-
-
-# --------------------------------------------------------------- toolsets
 
 
 def test_a_toolset_has_tools_of_different_names():
@@ -576,9 +526,6 @@ def test_a_toolset_has_tools_of_different_names():
 def test_a_tool_is_named_as_the_api_allows():
     with pytest.raises(ValidationError, match="name"):
         _ = ToolTrailIn(name="web search")
-
-
-# --------------------------------------------------------------------- cases
 
 
 def test_a_case_says_the_language_it_is_written_in():

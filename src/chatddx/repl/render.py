@@ -1,9 +1,3 @@
-# pyright: basic
-"""
-How a run is written out: as it streams, and again from its record; and in a
-batch, on a line of its own.
-"""
-
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -42,22 +36,17 @@ REFUSED = "red"
 VALID = "green"
 LATER = "yellow"
 
-# the widths of a batch line's token count and outcome
 TOKENS = len("tokens")
 OUTCOME = len("completed")
 
 
 @dataclass(frozen=True)
 class Streamed:
-    """A run's answer, and whether any of the LLM's thinking came back."""
-
     answer: Any
     thought: bool
 
 
 class Transcript:
-    """A run written out as it comes: each part on a line of its own, labelled."""
-
     def __init__(self, console: Console):
         self.console: Console = console
         self.at_start: bool = True
@@ -95,10 +84,6 @@ class Transcript:
 
 
 async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed:
-    """
-    Write out a run's events as they come: its thinking, then its answer,
-    as text or as the call that gives it.
-    """
     out = Transcript(console)
     answer: Any = None
     thought = False
@@ -139,12 +124,6 @@ async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed
 
 
 class Columns:
-    """
-    The columns of a batch's lines: the case, as wide as the widest name; its
-    output tokens; what came of its run; and each scorer that reads a view
-    the cell's output offers, as wide as its name.
-    """
-
     def __init__(self, cases: Iterable[str], scorers: Iterable[str]):
         self.case: int = max([len("case"), *(len(name) for name in cases)])
         self.scorers: tuple[str, ...] = tuple(scorers)
@@ -164,17 +143,6 @@ class Columns:
 
 
 class Tally:
-    """
-    A run's line in a batch, drawn as the run goes: its case, and the output
-    tokens it has streamed, one to each piece of output that comes, `~` until
-    the server's own count comes with the answer; then what came of the run,
-    and what each scorer made of it, in its column.
-
-    A terminal has the line drawn again at each piece, in the same thread,
-    and anything written meanwhile above it; anything else has it written
-    once, as it ends.
-    """
-
     def __init__(self, console: Console, columns: Columns, case: str):
         self.console: Console = console
         self.columns: Columns = columns
@@ -189,7 +157,6 @@ class Tally:
         return self
 
     def __exit__(self, *_: object) -> None:
-        # the line stays as far as it got, which on a terminal ends it
         if self.last:
             self.last = False
             self.live.update(self._line())
@@ -200,23 +167,19 @@ class Tally:
             self.console.line()
 
     def count(self) -> None:
-        """Another piece of output streamed."""
         self.tokens += 1
         self.live.update(self._line(), refresh=True)
 
     def stopping(self) -> None:
-        """The batch stops after this run: said until the run is done."""
         self.last = True
         self.live.update(self._line(), refresh=True)
 
     def total(self, tokens: int) -> None:
-        """The server's own count of the output tokens."""
         self.tokens = tokens
         self.counted = True
         self.live.update(self._line(), refresh=True)
 
     def end(self, outcome: Outcome, scores: Iterable[ScoreModel]) -> None:
-        """What came of the run, and what each scorer made of it."""
         word, style = _outcome_word(outcome)
         values = {score.scorer_name: value_of(score.value) for score in scores}
         self.last = False
@@ -249,10 +212,6 @@ class Tally:
 
 
 async def tally_events(events: AgentRunEvents[Any], tally: Tally) -> Streamed:
-    """
-    Count a run's output as its events come, a token to each piece of it,
-    and take the server's own count, and the answer, when they come.
-    """
     answer: Any = None
     thought = False
 
@@ -276,11 +235,6 @@ async def tally_events(events: AgentRunEvents[Any], tally: Tally) -> Streamed:
 def show_messages(
     console: Console, messages: list[ModelMessage], answered: bool
 ) -> None:
-    """
-    Write out a recorded run's messages as its events came when it ran, and
-    what it used, if it came to an answer. What the answer's own tool
-    returns, the LLM never reads.
-    """
     out = Transcript(console)
     responses = [message for message in messages if isinstance(message, ModelResponse)]
 
@@ -328,7 +282,6 @@ def show_validity(console: Console, problem: str | None) -> None:
 
 
 def show_views(console: Console, output: OutputTrailBase, answer: Any) -> None:
-    """What each of the output's views reads from the answer, but its text."""
     for view in VIEWS:
         if view == "text" or view not in output.views:
             continue
@@ -345,7 +298,6 @@ def show_views(console: Console, output: OutputTrailBase, answer: Any) -> None:
 
 
 def show_scores(console: Console, scores: Iterable[ScoreModel]) -> None:
-    """What each scorer made of a run, and what that rests on, or why it has none."""
     rows = list(scores)
 
     if not rows:
@@ -378,7 +330,6 @@ def clipped_line(text: str, width: int = 60) -> str:
 
 
 def _outcome_word(outcome: Outcome) -> tuple[str, str]:
-    """What came of a run, in a word, as a batch's line says it, and its style."""
     if outcome.status == RunStatus.ERRORED:
         return "errored", REFUSED
 
@@ -392,15 +343,10 @@ def _outcome_word(outcome: Outcome) -> tuple[str, str]:
 
 
 def _thinking(origin: str | None) -> str:
-    """
-    Thinking, and whether pydantic-ai found it between <think> tags in the
-    content, where no reasoning parser took it out.
-    """
     return "thinking in content" if origin == "content" else "thinking"
 
 
 def _arguments(args: Any) -> str:
-    """A tool call's arguments, or a piece of them, as they were sent."""
     match args:
         case str():
             return args

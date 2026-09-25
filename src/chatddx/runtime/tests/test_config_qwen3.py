@@ -1,8 +1,3 @@
-"""
-The test configurations as a run sends them to Qwen3 on pelle, which serves
-it without a reasoning parser.
-"""
-
 from collections.abc import Callable
 
 import pytest

@@ -1,4 +1,3 @@
-# pyright: basic
 import secrets
 from collections.abc import Iterable
 from typing import Any
@@ -30,11 +29,8 @@ from chatddx.scoring.score import Scoring
 
 SHARED_BY: dict[str, str] = {"configuration": settings.ARCHIVE_IDENTITY_NAME}
 
-# a seed the repl draws is below this: five digits, to be read in the prompt
-# and typed back
 SEEDS = 100_000
 
-# the seed a repl holds when it isn't given one: drawn as it starts
 DRAWN: Any = object()
 
 
@@ -47,22 +43,6 @@ class NotFound(Exception):
 
 
 class Repl:
-    """
-    What the repl holds: the identity it runs as, the console it writes to,
-    the transport runs go through in place of the stack's endpoint, where
-    one is given, and a cell.
-
-    Names are looked up as the identity sees them: its own branches first,
-    then those shared with it. A configuration is looked up among its own
-    and the archive's alone (SHARED_BY), as those are what it runs; one
-    another user shares is called by its owner, OWNER/NAME, and runs once
-    it is saved as the identity's own.
-
-    It holds a seed too, drawn as it starts unless it is given one, which
-    `run` and `batch` send: every run is reproducible, and a batch's cases
-    share one seed. None runs unseeded.
-    """
-
     def __init__(
         self,
         identity_name: str,
@@ -89,11 +69,6 @@ class Repl:
         return f"{self.identity}{held} {seed}> "
 
     def completions(self) -> dict[str, list[str]]:
-        """
-        The names a command's words complete from: those of the registry,
-        and the cases' tags, looked up once, and the runs as they are now,
-        the latest first.
-        """
         if self._completions is None:
             self._completions = {
                 entity: self.names(entity) for entity in ENTITY_NAMES
@@ -112,7 +87,6 @@ class Repl:
         }
 
     def forget(self) -> None:
-        """Look names up anew: what the identity calls things has changed."""
         self._names.clear()
         self._completions = None
 
@@ -129,7 +103,6 @@ class Repl:
         )
 
     def tagged(self, entity: EntityName, tags: Iterable[str]) -> list[BranchModel]:
-        """The branches of `entity` the identity can use with any of `tags`, by name."""
         wanted = set(tags)
 
         return [
@@ -139,7 +112,6 @@ class Repl:
         ]
 
     def usable(self, entity: EntityName) -> list[BranchModel]:
-        """The branches of `entity` the identity can use, their tags read at once."""
         models = select_visible_branch_models(
             entity, self.identity, SHARED_BY.get(entity)
         )
@@ -148,7 +120,6 @@ class Repl:
         return models
 
     def name_of(self, entity: EntityName, trail: Any) -> str:
-        """What the identity calls `trail`, or its short fingerprint."""
         if trail is None:
             return "—"
 
@@ -167,7 +138,6 @@ class Repl:
         return self._names[key]
 
     def run_named(self, prefix: str | None) -> RunModel:
-        """The identity's run whose id starts with `prefix`, or its latest."""
         runs = RunModel.objects.filter(owner__name=self.identity).select_related(
             "trial__configuration__output", "conversation", "client"
         )
@@ -187,7 +157,6 @@ class Repl:
         return found[0]
 
     def configuration_named(self, name: str) -> BranchModel:
-        """The configuration the identity means by NAME, or by OWNER/NAME."""
         owner, slash, branch = name.partition("/")
 
         if not slash:
@@ -211,11 +180,6 @@ class Repl:
         return self.llm_of(stack)[0]
 
     def llm_of(self, stack: StackBranchOut) -> tuple[LLMFacts, int | None]:
-        """
-        The facts of the stack's LLM, and the branch row they are read
-        from: none where the identity has no branch of it, and resolution
-        refuses for want of them.
-        """
         llm_id = stack.trail.llm.id
 
         if llm_id not in self._llms:
@@ -229,7 +193,6 @@ class Repl:
         return self._llms[llm_id]
 
     def tools(self) -> dict[str, ToolBranchOut]:
-        """The branch of each of the cell's tools, which says what it runs."""
         toolset = self.cell.variation("toolset") if self.cell.configuration else None
         found: dict[str, ToolBranchOut] = {}
 

@@ -1,16 +1,4 @@
 # pyright: basic
-"""
-Fixtures the tests of every package share, around one test inventory:
-`data/test-inventory.toml`, the live inventory without its case corpus, and
-two cases of its own, whose targets every test scores against.
-
-- A test that needs no database reads it parsed: `test_inventory`.
-- repo, below every command, commits it through its own inventory functions:
-  `parsed_inventory`, and the `inventory_fixture_*` built on it.
-- Everywhere else, a test that needs it in the database seeds it as a user
-  would, through init-data: `provision`.
-- A test of the live data itself reads the live inventory.
-"""
 
 from collections.abc import Callable
 
@@ -67,7 +55,6 @@ def test_inventory() -> ParsedInventory:
 
 @pytest.fixture
 def provision() -> Callable[..., None]:
-    """init-data, run as the command line runs it, on the test inventory."""
     from chatddx.manage import app
 
     def provision(*options: str, user: str = "alex") -> None:

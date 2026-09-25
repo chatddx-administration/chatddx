@@ -1,19 +1,3 @@
-"""
-A stack: a composition, and a variation of the stack slice. It replaces the
-connection.
-
-A stack is what answered a request: the machine, its operating system, the
-LLM and the serving settings. For a NixOS container the OS is the
-container's, and `host_os` is the host's, which holds the kernel and the
-NVIDIA driver. A cloud stack has no OS and no serving: nothing below its
-requests can be checked, and its machine says so.
-
-The stack slice writes almost nothing into the request, only the `model`
-field and where the request goes, and those are details: the endpoint and
-the served name, the API and the name of the credential. Every other slice
-is resolved against the stack (datamodel.md §3).
-"""
-
 from typing import Literal
 
 from pydantic import Field, HttpUrl, model_validator
@@ -55,12 +39,9 @@ type Api = Literal["vllm", "openai-chat", "openai-responses", "anthropic", "goog
 
 
 class StackDetails(Details):
-    # where requests go
     endpoint: HttpUrl | None = None
-    # the request's `model` field
     served_name: str | None = None
     api: Api | None = None
-    # the name of a secret, never the secret
     credential: str | None = None
 
 

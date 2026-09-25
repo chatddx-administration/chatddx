@@ -1,5 +1,3 @@
-"""The test configurations as a run sends them to gpt-oss on malborg."""
-
 from collections.abc import Callable
 
 from chatddx.runtime.resolution import Resolution

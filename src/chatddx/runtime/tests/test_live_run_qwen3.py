@@ -1,8 +1,3 @@
-"""
-The test configurations run on Qwen3 as pelle serves it: without a reasoning
-parser, so native and tool mode run with reasoning off.
-"""
-
 from collections.abc import Callable, Coroutine
 from typing import Any
 

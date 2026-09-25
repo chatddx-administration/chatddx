@@ -1,5 +1,3 @@
-"""The test configurations run on gpt-oss as the fake vLLM serves it."""
-
 from collections.abc import Callable, Coroutine
 from typing import Any
 

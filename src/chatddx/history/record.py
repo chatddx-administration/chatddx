@@ -1,13 +1,4 @@
 # pyright: basic
-"""
-Writing a run down: the trial it was a go at, found or made, the run with
-what came of it, and the conversation its messages were exchanged in.
-
-Every run is written down, whatever came of it: an answer, one that doesn't
-hold, none, or an error on the way. A run of the same cell on the same case
-with the same seed is another run of the same trial, whoever makes it.
-"""
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
@@ -48,11 +39,6 @@ from chatddx.runtime.run import Run
 
 @dataclass(frozen=True)
 class Branches:
-    """
-    The branch rows whose details resolution read, by their ids, and the
-    blob id of the file each tool ran, by its branch's.
-    """
-
     stack: int
     llm: int | None
     tools: dict[int, str] = field(default_factory=dict[int, str])
@@ -60,8 +46,6 @@ class Branches:
 
 @dataclass(frozen=True)
 class Outcome:
-    """What came of a run."""
-
     status: RunStatus
     answer: JsonValue = None
     valid: bool | None = None
@@ -82,12 +66,6 @@ def record(
     conversation: ConversationModel | None = None,
     client: Client | None = None,
 ) -> RunModel:
-    """
-    Write down `run`, the cell run on the case trail `case`, as a run of its
-    trial: the configuration it ran, as content, the branches of the stack,
-    LLM and tools it read, and the client it ran on: the one running, unless
-    another is given. A run that continued `conversation` adds to it.
-    """
     client = client or running()
 
     with transaction.atomic():

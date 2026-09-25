@@ -18,21 +18,17 @@ def fake() -> FakeTransport:
 
 @pytest.fixture
 def repl(provision: Callable[..., None], fake: FakeTransport) -> Repl:
-    """alex's repl on the test inventory, its trials sent to the fake vLLM."""
     provision()
     return Repl("alex", Console(record=True, width=200), transport=fake, seed=None)
 
 
 @pytest.fixture
 def say(repl: Repl) -> Say:
-    """Hand the repl its lines, and answer with what it wrote back."""
     return _say_to(repl)
 
 
 @pytest.fixture
 def say_through(provision: Callable[..., None]) -> Callable[[Any], Say]:
-    """`say`, to a repl whose trials go through `transport`."""
-
     def say_through(transport: Any) -> Say:
         provision()
         return _say_to(

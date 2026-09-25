@@ -8,7 +8,6 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 class InstructionTrailModel(TrailModel):
     system = TextField(blank=True)
     user = TextField()
-    # a list, whose order jsonb keeps
     variables = JSONField(default=list)
 
     class Meta(TrailModel.Meta):

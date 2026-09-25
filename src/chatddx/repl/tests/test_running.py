@@ -1,9 +1,3 @@
-"""
-A case run on the cell streams as it comes, is judged, and is recorded; a
-batch runs it on each case with a tag, a line to each. Ctrl-C stops a run as
-it streams, never one being written down, and never the repl.
-"""
-
 import asyncio
 import json
 import re
@@ -32,7 +26,6 @@ pytestmark = pytest.mark.django_db
 
 
 def streaming(body: dict[str, Any]) -> httpx2.Response:
-    """What the fake vLLM streams back for `body`."""
     return httpx2.Response(
         200,
         headers={"content-type": "text/event-stream"},
@@ -252,12 +245,6 @@ def test_a_tool_that_isn_t_chatddx_s_own_is_refused_before_anything_is_sent(
 
 
 class Interrupting(FakeTransport):
-    """
-    The fake vLLM, with Ctrl-C pressed `presses` times once it has sent
-    `after` tokens, and the next token a long time coming, as it is from a
-    busy server, where `waits`.
-    """
-
     def __init__(self, after: int, presses: int = 1, waits: bool = True):
         super().__init__()
         self.after: int = after
@@ -278,7 +265,6 @@ class Interrupting(FakeTransport):
 
 
 def pressing(say: Say, *lines: str) -> str:
-    """`say`, where Ctrl-C is pressed: the command takes it, not the repl."""
     try:
         return say(*lines)
     except KeyboardInterrupt:
@@ -298,7 +284,6 @@ def row(written: str, case: str) -> list[str]:
 
 
 def under(written: str, case: str, scorer: str) -> str:
-    """What the batch line of `case` says in the column of `scorer`."""
     at = line_of(written, "case ").index(scorer)
     return line_of(written, f"{case} ")[at : at + len(scorer)].strip()
 
@@ -486,7 +471,6 @@ def test_ctrl_c_again_is_let_through_to_a_run_being_written_down(
 
     written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
 
-    # the line as far as it got: its case and tokens, and nothing came of it
     _, tokens = row(written, "case-1")
     assert tokens.isdigit()
     assert "stopped after 0 of 2 cases" in written
@@ -522,7 +506,6 @@ def test_run_and_batch_send_the_seed_the_repl_holds(say: Say, fake: FakeTranspor
     assert "2 cases tagged tag-2, seed 42" in written
     assert [request["seed"] for request in fake.requests] == [42, 42, 42]
 
-    # a run afterwards is another run of the trial the batch made
     assert "recorded as run 2 of trial" in written
     assert TrialModel.objects.count() == 2
 

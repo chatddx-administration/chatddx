@@ -1,5 +1,3 @@
-"""What there is to choose from, and whose it is."""
-
 from collections.abc import Callable
 
 import pytest

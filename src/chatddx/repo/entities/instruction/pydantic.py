@@ -1,18 +1,3 @@
-"""
-Instruction: a request-time slice (datamodel.md §4).
-
-A variation is the templates of the system and user messages (Handlebars,
-through pydantic-ai's `TemplateStr`) and the variables they declare: `case`,
-and the slots other slices fill. An instruction never names an output: text
-that asks for one output lives in that output's guidance, and reaches the
-LLM through the `output_guidance` slot. So instruction and output can be
-varied apart.
-
-The case is a value, never a condition: a template places it and never
-branches on it, so equal request skeletons mean equal requests for every
-case (data-generation.md §3.1).
-"""
-
 from typing import Literal, get_args
 
 from pydantic import Field, model_validator
@@ -31,9 +16,6 @@ from chatddx.repo.families import (
 )
 from chatddx.repo.templates import placements
 
-# `case`, and each slot by the slice that fills it: the output's guidance,
-# the coercion's schema prompt and the toolset's guidance. A reasoning slot
-# is left out until a study needs it (post-endgame.md).
 type Variable = Literal["case", "output_guidance", "schema_prompt", "tool_guidance"]
 
 VARIABLES: tuple[Variable, ...] = get_args(Variable.__value__)
@@ -69,7 +51,6 @@ class InstructionTrailBase(BaseTrail):
         if unplaced:
             raise ValueError(f"{unplaced} declared but never placed")
 
-        # one order for one set, so the same declaration is the same content
         self.variables = sorted(self.variables, key=VARIABLES.index)
 
         return self

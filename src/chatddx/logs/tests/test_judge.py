@@ -1,5 +1,3 @@
-"""The judge: which item of the differential a grader takes for the target."""
-
 import math
 import subprocess
 import sys
@@ -32,7 +30,6 @@ DIFFERENTIAL = ["acute cholecystitis", "gallstones", "pancreatitis"]
 
 
 def log_of(**metadata: Any) -> EvalLog:
-    """A log of one sample, a run that gave `DIFFERENTIAL`, unless told otherwise."""
     return EvalLog(
         eval=EvalSpec(
             created="2026-09-25T00:00:00+00:00",
@@ -59,12 +56,9 @@ def log_of(**metadata: Any) -> EvalLog:
 
 
 def judged(log: EvalLog, *verdicts: str) -> Score:
-    """The judge's score of the log's one sample, the grader saying `verdicts`."""
     grader = get_model(
         "mockllm/model",
         custom_outputs=[
-            # with its usage, mockllm counts no tokens, which takes tiktoken's
-            # vocabulary, downloaded
             ModelOutput(
                 model="mockllm/model",
                 choices=[

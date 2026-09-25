@@ -14,8 +14,6 @@ type Ran = Callable[[Run], Coroutine[Any, Any, AgentRunResult[Any]]]
 
 @pytest.fixture
 def cell(test_inventory: ParsedInventory) -> Cell:
-    """A test configuration resolved on a stack, with variations set in it by name."""
-
     def cell(configuration: str, stack: str, **variations: str) -> Resolution:
         trail, _ = test_inventory.configuration[configuration]
         trail = trail.model_copy(
@@ -38,7 +36,6 @@ def cell(test_inventory: ParsedInventory) -> Cell:
 
 @pytest.fixture
 def entry_points(test_inventory: ParsedInventory) -> dict[str, str]:
-    """What each of the test inventory's tools runs, by the tool's name."""
     return {
         trail.name: details.implementation.function
         for trail, details in test_inventory.tool.values()
@@ -48,7 +45,6 @@ def entry_points(test_inventory: ParsedInventory) -> dict[str, str]:
 
 @pytest.fixture
 def ran() -> Ran:
-    """A run, streamed to its result."""
 
     async def ran(run: Run) -> AgentRunResult[Any]:
         async with run.stream() as events:

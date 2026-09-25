@@ -1,20 +1,3 @@
-# pyright: basic
-"""
-The registry's scorers as inspect's, so that inspect scores a log as
-chatddx scores its runs (chatddx.scoring): each runs its function, loaded as
-chatddx loads it, on the view it names and the case's target of its kind,
-both read from the sample's metadata. A scorer keeps its registry name, and
-its function, view, target kind and arguments are its options, so the log
-says what scored it; each score also keeps the target it was held to and
-the blob of the file that scored.
-
-Where chatddx makes no score, inspect's is unscored, which its metrics and
-reducers leave out: for a run that errored, a case without the scorer's
-kind of target, or an output without its view. So is one whose value
-chatddx leaves empty, as `first_mention`'s where the target is never named,
-with the same reason.
-"""
-
 from typing import Any
 
 from inspect_ai import score
@@ -50,8 +33,6 @@ METRICS: dict[MetricName, Metric] = {
 
 
 def as_inspect(visible: VisibleScorer) -> Scorer:
-    """The scorer, as inspect's, under its name."""
-
     @scorer(
         metrics=[METRICS[metric] for metric in visible.metrics],
         name=visible.name,
@@ -108,12 +89,6 @@ def as_inspect(visible: VisibleScorer) -> Scorer:
 
 
 def scored(log: EvalLog, identity: str) -> EvalLog:
-    """
-    `log`, scored by the scorers `identity` sees whose view its output
-    offers, as its metadata says, in place of any scores it had. They go in
-    the order of the views they read, so that the log's headline is the
-    diagnosis's rank where the output offers a differential.
-    """
     offered = (log.eval.metadata or {}).get("views") or []
     scorers = [
         as_inspect(visible)

@@ -1,11 +1,3 @@
-"""
-inspect's metrics, by name and formula, over the values a scorer made. chatddx
-computes them itself rather than load inspect to: a sample's standard
-deviation, as `numpy.std(values, ddof=1)` gives it, and 0 where a formula has
-too few values. The values are those a score has: one without a value, as an
-unscored one, is left out, as inspect leaves it out of its metrics.
-"""
-
 import math
 import statistics
 from collections.abc import Callable

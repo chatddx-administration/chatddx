@@ -1,21 +1,3 @@
-"""
-Patterns an answer is held to, and the scorers that hold it to them.
-
-A pattern names words, whole and in any case: `pneumonia` isn't found in
-"pneumonias", nor `mi` in "anemia". A trailing `*` takes any word that
-starts so (`meningit*`), and words side by side are a phrase, found side by
-side (`acute coronary syndrome`). `&` needs both sides, `|` either, `&` binds
-tighter than `|`, and parentheses group: `(renal | kidney) & stone*`. A
-pattern is held to one item at a time, a diagnosis, a sentence or a field,
-never to two at once.
-
-A scorer takes what a view read, or None where the run came to no answer,
-and a target pattern, and says what it makes of them. `mentions` also takes
-None for a target: the case expects nothing to be named, as a plan that
-rightly raises no warning. This file imports nothing else of chatddx's, so
-its git blob id names every scorer in it.
-"""
-
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -88,7 +70,6 @@ class Pattern:
             raise ValueError(f"unexpected {self._peek()!r} in {text!r}")
 
     def find(self, text: str) -> int | None:
-        """Where in `text` the pattern is first found, by the characters before it."""
         spans = list(_WORD.finditer(text))
         at = self._root.find([span.group().casefold() for span in spans])
 
@@ -153,7 +134,6 @@ def _terms(token: str) -> list[_Term]:
 
 
 def _units(text: str) -> Iterator[tuple[int, str]]:
-    """Each sentence or line of `text`, and the characters before it."""
     start = 0
 
     for gap in _BREAK.finditer(text):
@@ -164,7 +144,6 @@ def _units(text: str) -> Iterator[tuple[int, str]]:
 
 
 def reciprocal_rank(items: list[str] | None, target: str) -> Scored:
-    """1/rank of the first item the target is found in, and 0 where it isn't."""
     if items is None:
         return Scored(0.0, reason="no answer")
 
@@ -178,10 +157,6 @@ def reciprocal_rank(items: list[str] | None, target: str) -> Scored:
 
 
 def first_mention(items: list[str] | None, target: str) -> Scored:
-    """
-    The characters before the target is first named in the text: in the
-    first sentence or line it is found in, at its first word.
-    """
     if items is None:
         return Scored(None, reason="no answer")
 
@@ -198,11 +173,6 @@ def first_mention(items: list[str] | None, target: str) -> Scored:
 
 
 def mentions(items: list[str] | None, target: str | None) -> Scored:
-    """
-    1 where the target is found in what the view read, and 0 where it isn't.
-    With no target, 1 where the view read nothing, and 0 where it read
-    something.
-    """
     if items is None:
         return Scored(0.0, reason="no answer")
 

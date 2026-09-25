@@ -1,11 +1,3 @@
-"""
-The client a run is made on: the chatddx build that turns a configuration into
-a request (datamodel.md §3). A build is its store path; a dev shell has
-none, and says which revision it runs at instead, with "-dirty" when the
-checkout has changes. Either way the versions of the libraries that build
-requests are what they are where it runs.
-"""
-
 import re
 import subprocess
 from dataclasses import dataclass, field
@@ -45,7 +37,6 @@ def running() -> Client:
 
 
 def build_of(path: Path) -> str | None:
-    """The store path `path` is in, if it is in one."""
     found = STORE_PATH.match(str(path))
     return found.group(0) if found else None
 

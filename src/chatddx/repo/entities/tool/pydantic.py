@@ -1,14 +1,3 @@
-"""
-A tool: what the LLM sees of a function it can call. It is part of a
-toolset, not a slice (datamodel.md §4).
-
-The name, description and parameters reach the LLM, so they are content,
-and the parameters keep the order they were written in. What runs when the
-LLM calls it is description: the function, an entry point into one of
-chatddx's own tool files, and each run records the git blob of the file that ran
-(`chatddx.runtime.implementation`).
-"""
-
 from typing import Annotated, ClassVar
 
 from pydantic import (
@@ -37,7 +26,6 @@ from chatddx.repo.families import (
 )
 from chatddx.repo.families.fields import EntryPoint, JsonSchema
 
-# as the OpenAI API accepts a function's name
 type ToolName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
 
 
@@ -52,7 +40,6 @@ class ToolDetails(Details):
 
 
 class ToolTrailBase(BaseTrail):
-    # the name the LLM sees; the branch has a name of its own
     name: ToolName
     description: str = ""
     parameters: JsonSchema = Field(
@@ -89,8 +76,6 @@ class ToolBranchOut(BranchOut[ToolTrailOut, ToolDetails]):
     pass
 
 
-# A form has one `name`, the branch's, so the name the LLM sees is
-# `tool_name` there.
 class ToolFormDataIn(BaseFormDataIn):
     tool_name: ToolName
     description: str = ""
@@ -102,7 +87,6 @@ class ToolFormDataIn(BaseFormDataIn):
 
 class ToolFormDataOut(BaseFormDataOut):
     id: CoercedStr = Field(serialization_alias="template")
-    # read from the trail where a form's flat fields hold the branch's name
     tool_name: str = Field(
         validation_alias=AliasChoices("tool_name", AliasPath("trail", "name"))
     )

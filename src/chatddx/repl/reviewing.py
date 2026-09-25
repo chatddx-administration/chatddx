@@ -1,6 +1,3 @@
-# pyright: basic
-"""The identity's runs, and each again as it streamed."""
-
 from datetime import datetime
 from typing import Any, cast
 
@@ -105,7 +102,6 @@ def replay(repl: Repl, prefix: str | None = None) -> None:
 
 
 def short(value: Any) -> str:
-    """An id as the repl shows it: the first digits of a uuid."""
     return str(value)[:8]
 
 
@@ -122,7 +118,6 @@ def _when(moment: datetime) -> str:
 
 
 def _client(run: RunModel) -> str:
-    """The client a run ran on: its build, or the revision of a dev shell."""
     if run.client is None:
         return "on no client it recorded"
 
@@ -136,10 +131,6 @@ def _client(run: RunModel) -> str:
 
 
 def _outcome(run: RunModel) -> Text:
-    """
-    What came of a run, as the list of runs says it: an error where it came
-    to no answer that holds.
-    """
     if run.status == RunStatus.ERRORED:
         return Text(f"errored: {clipped_line(run.error or '')}", style=REFUSED)
 

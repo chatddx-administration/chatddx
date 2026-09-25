@@ -1,8 +1,3 @@
-"""
-A run written down: the trial it was a go at, the run with what came of it,
-and the conversation its messages were exchanged in.
-"""
-
 import asyncio
 import json
 import uuid
@@ -77,10 +72,6 @@ def written(
     reasoning: str | None = None,
     user: str = "alex",
 ) -> RunModel:
-    """
-    A run of `configuration`, with `reasoning` set in it if given, on case-1,
-    written down as `user`'s.
-    """
     own = ConfigurationBranchOut.model_validate(branch("configuration", configuration))
     slices: dict[str, Any] = {entity: getattr(own.trail, entity) for entity in SLICES}
 

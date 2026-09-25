@@ -37,10 +37,6 @@ def branches_on(trail: TrailModel, owner_name: str):
 
 
 def dangling_trails(owner_name: str) -> list[TrailModel]:
-    """
-    Every trail `owner_name` possesses indirectly and has no branch on. The
-    guarantee is that this is empty.
-    """
     dangling: list[TrailModel] = []
 
     for entity_name in ENTITY_NAMES:
@@ -53,10 +49,6 @@ def dangling_trails(owner_name: str) -> list[TrailModel]:
 
 
 def a_configuration(guidance: str = "nobody named the parts of this"):
-    """
-    A configuration whose whole closure is new and unnamed: five slices and a
-    toolset of two tools.
-    """
     return ConfigurationTrailIn(
         instruction=InstructionTrailIn(
             system="{{output_guidance}}",
@@ -93,7 +85,6 @@ def test_a_commit_leaves_nothing_in_its_closure_branchless(owner: IdentityModel)
     )
     closure = trail_closure(configuration.trail)
 
-    # instruction, output, coercion, reasoning, sampling, toolset, two tools
     assert len(closure) == 8
 
     for trail in closure:
@@ -106,7 +97,6 @@ def test_a_stack_s_closure_is_its_things(
     owner: IdentityModel,
     trails: InventoryTrailIn,
 ):
-    """A container's stack reaches both systems, its own and its host's."""
     assert commit(
         trails.stack["qwen3-8b-awq@malborg"],
         BranchDetails(name="a stack", owner=owner.name),
@@ -154,7 +144,6 @@ def test_a_trail_the_owner_already_has_a_branch_on_is_left_alone(
         "configuration", owner.name, "closure-configuration"
     )
 
-    # the name they chose, and no second branch beside it
     assert [b.name for b in branches_on(configuration.trail.output, owner.name)] == [
         "my output"
     ]
@@ -173,7 +162,6 @@ def test_committing_the_same_configuration_again_makes_no_further_branches(
         for trail in trail_closure(configuration.trail)
     }
 
-    # same content, so the head does not move
     assert not commit_configuration(owner.name)
 
     after = {
@@ -186,12 +174,6 @@ def test_committing_the_same_configuration_again_makes_no_further_branches(
 
 
 def test_the_walk_goes_on_where_a_commit_stops(owner: IdentityModel):
-    """
-    A trail that has a branch is skipped, not stepped over: the walk carries
-    on past it. So an owner left holding a toolset whose tools have no
-    branches is repaired by the next commit that reaches them, even though
-    the commit itself changes nothing.
-    """
     assert commit_configuration(owner.name)
 
     configuration = get_branch_model(
@@ -226,11 +208,6 @@ def test_the_closure_of_a_shared_configuration_belongs_to_the_owner(
     owner: IdentityModel,
     other_owner: IdentityModel,
 ):
-    """
-    A collaborator saving a shared configuration commits under its owner's
-    name, so the closure is committed for the owner too -- and for nobody
-    else.
-    """
     assert commit_configuration(other_owner.name)
 
     configuration = get_branch_model(
@@ -260,7 +237,6 @@ def test_a_branch_made_for_the_closure_carries_nothing_beside_its_content(
         assert list(made.collaborators.all()) == []
         assert list(made.tags.all()) == []
 
-    # a machine's details, all at their defaults
     machine = branches_on(stack.trail.machine, owner.name).get()
 
     assert machine.details == {"unreliable": False, "specs": None}
@@ -270,10 +246,6 @@ def test_the_owner_s_own_branch_keeps_what_it_carries(
     owner: IdentityModel,
     trails: InventoryTrailIn,
 ):
-    """
-    The other half of leaving an already-branched trail alone: a commit that
-    reaches it does not strip the version the owner saved, details included.
-    """
     stack = trails.stack["qwen3-8b-awq@pelle"]
 
     assert commit(
@@ -309,10 +281,6 @@ def test_committed_in_order_every_part_keeps_the_name_its_record_gave_it(
     inventory_fixture_commit: object,
     owner: IdentityModel,
 ):
-    """
-    Committed in the order `EntityName` gives, every trail a composition
-    reaches already has its own branch, and the closure makes none.
-    """
     _ = inventory_fixture_commit
 
     for entity_name in ENTITY_NAMES:
@@ -321,11 +289,6 @@ def test_committed_in_order_every_part_keeps_the_name_its_record_gave_it(
 
 
 def test_the_closure_is_the_trails_and_only_the_trails(owner: IdentityModel):
-    """
-    `trail_closure` walks content. A tag hangs off the branch rather than
-    the trail, so nothing but trails is ever reached, and the trail itself
-    is not in its own closure.
-    """
     _ = ensure_tag(owner, "configuration", "a tag")
 
     assert commit_configuration(owner.name)

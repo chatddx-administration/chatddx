@@ -7,7 +7,6 @@ class RegistryCollisionError(Exception):
     pass
 
 
-# in commit order, as `EntityName` lists them
 ALL_ENTITIES: tuple[AnyEntity, ...] = (
     MACHINE,
     OS,
@@ -86,8 +85,6 @@ _PRESENTATION_BY_CLASS: dict[type, AnyPresentation] = _index_by_class(
 )
 
 
-# Every entity is presented through a presentation of its own name, so an
-# `EntityName` is always a `PresentationName`.
 for _entity in ALL_ENTITIES:
     assert _entity.name in _PRESENTATION_BY_NAME, (
         f"'{_entity.name}' has no presentation of its name"
@@ -210,12 +207,6 @@ def entity_of(
 def entity_of(
     x: AnyEntityMember | type[AnyEntityMember] | EntityName,
 ) -> AnyEntity:
-    """
-    The entity a name, class or instance belongs to.
-
-    A proxy resolves through its branch model, so `entity_of(Configuration(...))`
-    and `entity_of(SharedConfiguration(...))` both answer `configuration`.
-    """
     if isinstance(x, str):
         return _ENTITY_BY_NAME[x]
 
@@ -234,14 +225,6 @@ def presentation_of(
     | type[BranchProxy | AnyEntityMember]
     | PresentationName,
 ) -> AnyPresentation:
-    """
-    The presentation a name, proxy or branch is rendered through.
-
-    Every entity has a presentation of its own name, so an `EntityName` is a
-    `PresentationName` and reaches the entity's presentation. A proxy is
-    rendered through the presentation that registered it, and anything else
-    through its entity's.
-    """
     if isinstance(x, str):
         return _PRESENTATION_BY_NAME[x]
 
@@ -250,5 +233,4 @@ def presentation_of(
     if presentation is not None:
         return presentation
 
-    # not a registered proxy, so it is an entity class and has a presentation
     return _PRESENTATION_BY_NAME[entity_of(cast(AnyEntityMember, x)).name]

@@ -1,8 +1,3 @@
-"""
-An inventory: every entity's records by name, in one of the forms a record
-takes on its way from an inventory file to the database and back.
-"""
-
 from typing import TypedDict
 
 from pydantic import BaseModel
@@ -116,7 +111,6 @@ from chatddx.repo.families.pydantic import BranchDetailsPatch
 
 
 class ParsedInventory(BaseModel):
-    # a record's content, and what its branch says beside it
     machine: dict[str, tuple[MachineTrailIn, MachineBranchDetailsPatch]]
     os: dict[str, tuple[OsTrailIn, OsBranchDetailsPatch]]
     llm: dict[str, tuple[LLMTrailIn, LLMBranchDetailsPatch]]

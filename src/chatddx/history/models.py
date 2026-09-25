@@ -1,15 +1,7 @@
 # pyright: basic
 """
-History: what ran, and what came of it.
-
-A trial is one cell on one case, with its seed: a configuration and a stack,
-by their trails, and the case (datamodel.md §8). It is content, like a
-trail, and belongs to no one: runs of the same four are runs of one trial,
-whoever made them. A run is one go at a trial, one pydantic-ai agent run,
-whose id it takes, and it is its maker's. It keeps what resolution read, the
-exact bytes it sent and got back, and what came of them. Its conversation
-holds the exchange as pydantic-ai's messages. A trial can be run again, to see a
-seed hold or to retry one that errored, and each run keeps its own record.
+A ledger of everything.
+All models are immutable and append-only.
 """
 
 from __future__ import annotations
@@ -294,11 +286,6 @@ class RunModel(Model):
 
 
 class RunToolBranchModel(Model):
-    """
-    A tool's branch a run read, kept as long as the run is, and the git blob
-    id of the file that ran for it (`chatddx.runtime.implementation`).
-    """
-
     class Meta:
         app_label = "history"
         db_table = "history_run_tool_branch"
@@ -315,15 +302,6 @@ class RunToolBranchModel(Model):
 
 
 class ScoreModel(Model):
-    """
-    What a scorer made of a run: its value, what in the answer it rests on,
-    or why there is none; and what it was made with: the scorer, by its trail
-    and by the name it had for whoever scored, the case branch whose targets
-    were read, the target the view was held to, and the git blob id of the
-    scorer's file. A run scored again, after any of them changed, keeps each
-    score.
-    """
-
     class Meta:
         app_label = "history"
         db_table = "history_score"

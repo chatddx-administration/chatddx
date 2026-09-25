@@ -1,9 +1,3 @@
-"""
-chatddx's own tools: each file stands alone, git can name it by its blob, and
-each function takes what its tool declares, by name, order, requirement, type
-and default.
-"""
-
 import ast
 import inspect
 import subprocess
@@ -21,7 +15,6 @@ FILES = sorted(Path(tools.__file__).parent.glob("*.py"))
 
 
 def imported(path: Path) -> list[str]:
-    """What a file imports, a relative import by its leading dots."""
     names: list[str] = []
 
     for node in ast.walk(ast.parse(path.read_text())):

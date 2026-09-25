@@ -1,5 +1,3 @@
-"""The identity's runs, and each again as it streamed."""
-
 from collections.abc import Callable
 from typing import Any
 

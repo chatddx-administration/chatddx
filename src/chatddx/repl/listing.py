@@ -1,6 +1,3 @@
-# pyright: basic
-"""What there is to choose from: configurations, stacks and cases."""
-
 from typing import Any
 
 from rich.table import Table
