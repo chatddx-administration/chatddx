@@ -19,5 +19,6 @@ targets.disposition = "admit*"
 
 [case.case-2]
 vignette = "case vignette 2"
+tags = ["tag-2"]
 language = "en"
 targets.diagnosis = "nothing & listed"

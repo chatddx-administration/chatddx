@@ -25,13 +25,18 @@ from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 @dataclass(frozen=True)
 class Command:
     """
-    The words a command takes, a word in brackets optional, and what it
-    does. One that runs nothing leaves the repl.
+    The words a command takes, a word in brackets optional, and one ending
+    in ... as many times over as it is given, and what it does. One that
+    runs nothing leaves the repl.
     """
 
     params: tuple[str, ...]
     text: str
     run: Callable[..., None] | None
+
+    @property
+    def repeats(self) -> bool:
+        return bool(self.params) and self.params[-1].endswith("...")
 
 
 def help_(repl: Repl) -> None:
@@ -76,6 +81,11 @@ COMMANDS: dict[str, Command] = {
         ("CASE", "[SEED]"),
         "run a case on the cell, with a seed if given",
         running.run,
+    ),
+    "batch": Command(
+        ("TAG...",),
+        "run the cell on each case with any TAG, one after another (Ctrl-C stops)",
+        running.batch,
     ),
     "save": Command(
         ("NAME",), "save the cell's configuration as your own, as NAME", choosing.save
@@ -132,8 +142,9 @@ def handle(repl: Repl, line: str) -> bool:
         return False
 
     required = [param for param in command.params if not param.startswith("[")]
+    most = len(args) if command.repeats else len(command.params)
 
-    if not len(required) <= len(args) <= len(command.params):
+    if not len(required) <= len(args) <= most:
         repl.error(f"usage: {' '.join((verb, *command.params))}")
         return True
 
@@ -162,8 +173,13 @@ def complete(names: dict[str, list[str]], line: str) -> list[str]:
     command = COMMANDS.get(verb)
     params = command.params if command else ()
     position = len(words) - 1
+    given: list[str] = []
 
-    if position >= len(params):
+    if command and command.repeats and position >= len(params) - 1:
+        # the word that repeats, and none it was given already
+        position = len(params) - 1
+        given = words[position:-1]
+    elif position >= len(params):
         return []
 
     match params[position]:
@@ -177,7 +193,9 @@ def complete(names: dict[str, list[str]], line: str) -> list[str]:
         case "[NAME]":
             candidates = names.get(words[position - 1], [])
         case param:
-            key = param.strip("[]").lower()
+            key = param.strip("[].").lower()
             candidates = names.get(f"{verb}:{key}", names.get(key, []))
 
-    return [name for name in candidates if name.startswith(words[-1])]
+    return [
+        name for name in candidates if name.startswith(words[-1]) and name not in given
+    ]

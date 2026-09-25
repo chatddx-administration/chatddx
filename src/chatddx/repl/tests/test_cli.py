@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 from chatddx.manage import app
 from chatddx.repl.cli import let_go
-from chatddx.repl.commands import handle
+from chatddx.repl.commands import COMMANDS, Command, handle
 from chatddx.repl.shell import Repl
 
 pytestmark = pytest.mark.django_db
@@ -77,3 +77,24 @@ def test_a_dropped_connection_is_said_and_the_next_line_opens_another(
     let_go()
     assert handle(repl, "cases")
     assert "case-1" in repl.console.export_text()
+
+
+def test_ctrl_c_ends_the_command_not_the_repl(
+    provision: Callable[..., None], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    provision()
+
+    def pressed(_repl: Repl) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setitem(COMMANDS, "cases", Command((), "", pressed))
+
+    result = CliRunner().invoke(
+        app,
+        ["repl", "alex", "--history", str(tmp_path / "history")],
+        input="cases\nstacks\nquit\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "alex> cases\n\n(interrupted)\nalex> stacks\n" in result.output
+    assert "qwen3-8b-awq@fake" in result.output

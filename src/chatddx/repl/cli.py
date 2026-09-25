@@ -7,7 +7,9 @@ out of the answer as it streams.
 
 The database connection is let go after each line, as Django lets it go
 after each request: an idle repl holds none, and the next line opens one,
-whether or not the server dropped the last.
+whether or not the server dropped the last. Ctrl-C ends the line under
+way, not the repl: a statement it cuts short is cancelled, and the
+transaction it was in rolled back.
 """
 
 import logging
@@ -22,6 +24,7 @@ from rich.console import Console
 
 from chatddx.core.models import IdentityModel
 from chatddx.repl.commands import complete, handle
+from chatddx.repl.render import LABEL
 from chatddx.repl.shell import Repl
 
 HISTORY = Path.home() / ".chatddx_history"
@@ -91,6 +94,9 @@ def repl(
             try:
                 if not handle(shell, line):
                     break
+            except KeyboardInterrupt:
+                # Ctrl-C ends the command, not the repl
+                shell.console.print("\n(interrupted)", style=LABEL)
             finally:
                 let_go()
     finally:

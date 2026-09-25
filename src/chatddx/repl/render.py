@@ -1,10 +1,13 @@
 # pyright: basic
-"""How a run is written out: as it streams, and again from its record."""
+"""
+How a run is written out: as it streams, and again from its record; and in a
+batch, on a line of its own.
+"""
 
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Self
 
 from pydantic_ai import (
     AgentRunEvents,
@@ -25,9 +28,11 @@ from pydantic_ai import (
     ToolReturnPart,
 )
 from rich.console import Console
+from rich.live import Live
 from rich.text import Text
 
-from chatddx.history.models import ScoreModel
+from chatddx.history.models import RunStatus, ScoreModel
+from chatddx.history.record import Outcome
 from chatddx.repo.entities.output.pydantic import VIEWS, OutputTrailBase
 from chatddx.runtime.run import FINAL_RESULT
 
@@ -36,6 +41,10 @@ LABEL = "dim"
 REFUSED = "red"
 VALID = "green"
 LATER = "yellow"
+
+# the widths of a batch line's token count and outcome
+TOKENS = len("tokens")
+OUTCOME = len("completed")
 
 
 @dataclass(frozen=True)
@@ -123,6 +132,125 @@ async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed
                 answer = result.output
                 usage = result.usage
                 out.usage(usage.input_tokens, usage.output_tokens, usage.requests)
+            case _:
+                pass
+
+    return Streamed(answer, thought)
+
+
+class Columns:
+    """
+    The columns of a batch's lines: the case, as wide as the widest name; its
+    output tokens; what came of its run; and each scorer that reads a view
+    the cell's output offers, as wide as its name.
+    """
+
+    def __init__(self, cases: Iterable[str], scorers: Iterable[str]):
+        self.case: int = max([len("case"), *(len(name) for name in cases)])
+        self.scorers: tuple[str, ...] = tuple(scorers)
+
+    def header(self) -> Text:
+        return Text(
+            "  ".join(
+                (
+                    f"{'case':<{self.case}}",
+                    f"{'tokens':>{TOKENS}}",
+                    f"{'outcome':<{OUTCOME}}",
+                    *self.scorers,
+                )
+            ).rstrip(),
+            style="bold",
+        )
+
+
+class Tally:
+    """
+    A run's line in a batch, drawn as the run goes: its case, and the output
+    tokens it has streamed, one to each piece of output that comes, `~` until
+    the server's own count comes with the answer; then what came of the run,
+    and what each scorer made of it, in its column.
+
+    A terminal has the line drawn again at each piece, in the same thread,
+    and anything written meanwhile above it; anything else has it written
+    once, as it ends.
+    """
+
+    def __init__(self, console: Console, columns: Columns, case: str):
+        self.console: Console = console
+        self.columns: Columns = columns
+        self.case: str = case
+        self.tokens: int = 0
+        self.counted: bool = False
+        self.live: Live = Live(self._line(), console=console, auto_refresh=False)
+
+    def __enter__(self) -> Self:
+        self.live.start(refresh=True)
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        # the line stays as far as it got, which on a terminal ends it
+        self.live.stop()
+
+        if not self.console.is_terminal:
+            self.console.line()
+
+    def count(self) -> None:
+        """Another piece of output streamed."""
+        self.tokens += 1
+        self.live.update(self._line(), refresh=True)
+
+    def total(self, tokens: int) -> None:
+        """The server's own count of the output tokens."""
+        self.tokens = tokens
+        self.counted = True
+        self.live.update(self._line(), refresh=True)
+
+    def end(self, outcome: Outcome, scores: Iterable[ScoreModel]) -> None:
+        """What came of the run, and what each scorer made of it."""
+        word, style = _outcome_word(outcome)
+        values = {score.scorer_name: value_of(score.value) for score in scores}
+        line = self._line()
+        line.append("  ")
+        line.append(word, style=style)
+
+        if values:
+            line.append(" " * (OUTCOME - len(word)))
+
+            for scorer in self.columns.scorers:
+                line.append(f"  {values.get(scorer, ''):<{len(scorer)}}")
+
+        if outcome.error is not None:
+            line.append(f"  {clipped_line(outcome.error)}", style=REFUSED)
+
+        line.rstrip()
+        self.live.update(line, refresh=True)
+
+    def _line(self) -> Text:
+        tokens = (
+            str(self.tokens) if self.counted or not self.tokens else f"~{self.tokens}"
+        )
+        return Text(f"{self.case:<{self.columns.case}}  {tokens:>{TOKENS}}")
+
+
+async def tally_events(events: AgentRunEvents[Any], tally: Tally) -> Streamed:
+    """
+    Count a run's output as its events come, a token to each piece of it,
+    and take the server's own count, and the answer, when they come.
+    """
+    answer: Any = None
+    thought = False
+
+    async for event in events:
+        match event:
+            case PartStartEvent(part=part):
+                thought = thought or isinstance(part, ThinkingPart)
+                tally.count()
+            case PartDeltaEvent(delta=delta):
+                thought = thought or isinstance(delta, ThinkingPartDelta)
+                tally.count()
+            case AgentRunResultEvent(result=result):
+                answer = result.output
+                tally.total(result.usage.output_tokens)
             case _:
                 pass
 
@@ -231,6 +359,20 @@ def value_of(value: float | None) -> str:
 def clipped_line(text: str, width: int = 60) -> str:
     line = text.splitlines()[0] if text else ""
     return line if len(line) <= width else line[: width - 1] + "…"
+
+
+def _outcome_word(outcome: Outcome) -> tuple[str, str]:
+    """What came of a run, in a word, as a batch's line says it, and its style."""
+    if outcome.status == RunStatus.ERRORED:
+        return "errored", REFUSED
+
+    match outcome.valid:
+        case True:
+            return "valid", VALID
+        case False:
+            return "invalid", REFUSED
+        case None:
+            return "completed", ""
 
 
 def _thinking(origin: str | None) -> str:

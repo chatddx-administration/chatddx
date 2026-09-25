@@ -2,6 +2,7 @@
 from collections.abc import Iterable
 from typing import Any
 
+from django.db.models import prefetch_related_objects
 from rich.console import Console
 from rich.text import Text
 
@@ -66,10 +67,13 @@ class Repl:
     def completions(self) -> dict[str, list[str]]:
         """
         The names a command's words complete from: those of the registry,
-        looked up once, and the runs as they are now, the latest first.
+        and the cases' tags, looked up once, and the runs as they are now,
+        the latest first.
         """
         if self._completions is None:
-            self._completions = {entity: self.names(entity) for entity in ENTITY_NAMES}
+            self._completions = {
+                entity: self.names(entity) for entity in ENTITY_NAMES
+            } | {"batch:tag": self.tags("case")}
 
         latest = RunModel.objects.filter(owner__name=self.identity).order_by(
             "-timestamp", "-pk"
@@ -93,6 +97,31 @@ class Repl:
             entity, self.identity, SHARED_BY.get(entity)
         )
         return sorted({model.name for model in models})
+
+    def tags(self, entity: EntityName) -> list[str]:
+        """The tags of the branches of `entity` the identity can use."""
+        return sorted(
+            {tag.name for model in self._usable(entity) for tag in model.tags.all()}
+        )
+
+    def tagged(self, entity: EntityName, tags: Iterable[str]) -> list[BranchModel]:
+        """The branches of `entity` the identity can use with any of `tags`, by name."""
+        wanted = set(tags)
+
+        return [
+            model
+            for model in self._usable(entity)
+            if wanted & {tag.name for tag in model.tags.all()}
+        ]
+
+    def _usable(self, entity: EntityName) -> list[BranchModel]:
+        """The branches of `entity` the identity can use, their tags read at once."""
+        models = select_visible_branch_models(
+            entity, self.identity, SHARED_BY.get(entity)
+        )
+        prefetch_related_objects(models, "tags")
+
+        return models
 
     def name_of(self, entity: EntityName, trail: Any) -> str:
         """What the identity calls `trail`, or its short fingerprint."""

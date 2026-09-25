@@ -1,16 +1,27 @@
-"""A case run on the cell streams as it comes, is judged, and is recorded."""
+"""
+A case run on the cell streams as it comes, is judged, and is recorded; a
+batch runs it on each case with a tag, a line to each. Ctrl-C stops a run as
+it streams, never one being written down, and never the repl.
+"""
 
+import asyncio
 import json
 import re
+import signal
 from collections.abc import Callable
-from typing import Any
+from typing import Any, override
 
 import httpx2
 import pytest
 
-from chatddx.dev.fake_vllm import FakeTransport, stream
+from chatddx.dev.fake_vllm import FakeTransport, completion, stream
 from chatddx.history.models import RunModel, TrialModel
+from chatddx.history.record import record
+from chatddx.repl import running
+from chatddx.repo.entities.case.django import CaseBranchModel
+from chatddx.repo.entities.case.pydantic import CaseBranchDetails
 from chatddx.repo.entities.tool.django import ToolBranchModel
+from chatddx.repo.store.branch import commit
 
 type Say = Callable[..., str]
 type SayThrough = Callable[[Any], Say]
@@ -40,6 +51,7 @@ def test_run_streams_a_run_of_the_cell(say: Say, fake: FakeTransport):
 
     [request] = fake.requests
     assert request["messages"][-1] == {"role": "user", "content": "case vignette 1"}
+    assert fake.aborted == []
 
 
 def test_each_run_is_recorded_as_a_run_of_its_trial(say: Say):
@@ -235,3 +247,224 @@ def test_a_tool_that_isn_t_chatddx_s_own_is_refused_before_anything_is_sent(
         in written
     )
     assert fake.requests == []
+
+
+class Interrupting(FakeTransport):
+    """
+    The fake vLLM, with Ctrl-C pressed once it has sent `after` tokens, and
+    the next a long time coming, as it is from a busy server.
+    """
+
+    def __init__(self, after: int):
+        super().__init__()
+        self.after: int = after
+        self.pressed: bool = False
+
+    @override
+    async def next_token(self, generated: int, /) -> None:
+        if generated == self.after and not self.pressed:
+            self.pressed = True
+            signal.raise_signal(signal.SIGINT)
+            await asyncio.sleep(10)
+
+
+def pressing(say: Say, *lines: str) -> str:
+    """`say`, where Ctrl-C is pressed: the command takes it, not the repl."""
+    try:
+        return say(*lines)
+    except KeyboardInterrupt:
+        pytest.fail("Ctrl-C got past the command")
+    finally:
+        assert signal.getsignal(signal.SIGINT) is signal.default_int_handler
+
+
+def line_of(written: str, start: str) -> str:
+    [line] = [line for line in written.splitlines() if line.startswith(start)]
+    return line
+
+
+def row(written: str, case: str) -> list[str]:
+    """The words of the batch line of `case`."""
+    return line_of(written, f"{case} ").split()
+
+
+def under(written: str, case: str, scorer: str) -> str:
+    """What the batch line of `case` says in the column of `scorer`."""
+    at = line_of(written, "case ").index(scorer)
+    return line_of(written, f"{case} ")[at : at + len(scorer)].strip()
+
+
+def test_batch_runs_the_cell_on_each_case_tagged_a_line_to_each(
+    say: Say, fake: FakeTransport
+):
+    written = say("cell plan qwen3-8b-awq@fake", "batch tag-2")
+
+    assert "batch: plan × qwen3-8b-awq@fake × 2 cases tagged tag-2" in written
+    assert [request["messages"][-1]["content"] for request in fake.requests] == [
+        "case vignette 1",
+        "case vignette 2",
+    ]
+    assert row(written, "case-1")[2:] == ["valid", "0", "0.5", "1"]
+    assert row(written, "case-2")[2:] == ["valid", "0"]
+
+    # case-2 expects no warning, nor a disposition
+    assert under(written, "case-2", "reciprocal_rank") == "0"
+    assert under(written, "case-2", "warning_mentions") == ""
+    assert under(written, "case-1", "warning_mentions") == "1"
+
+    assert ["reciprocal_rank", "2", "0.25", "0.25"] in [
+        line.split() for line in written.splitlines()
+    ]
+    assert sorted(
+        RunModel.objects.values_list("conversation__description", flat=True)
+    ) == [
+        "plan × qwen3-8b-awq@fake × case-1",
+        "plan × qwen3-8b-awq@fake × case-2",
+    ]
+
+
+def test_a_batch_line_counts_the_output_tokens_the_server_counted(
+    say: Say, fake: FakeTransport
+):
+    written = say("cell free-text qwen3-8b-awq@fake", "batch tag-1")
+
+    counted = completion(fake.requests[0])["usage"]["completion_tokens"]
+    assert row(written, "case-1")[:3] == ["case-1", str(counted), "completed"]
+
+
+def test_batch_runs_the_cases_with_any_of_its_tags(say: Say, fake: FakeTransport):
+    written = say("cell free-text qwen3-8b-awq@fake", "batch tag-1")
+
+    assert "1 case tagged tag-1" in written
+    assert len(fake.requests) == 1
+
+    written = say("batch nope tag-1 tag-2")
+
+    assert "2 cases tagged nope or tag-1 or tag-2" in written
+    assert len(fake.requests) == 3
+
+    assert "no case tagged nope for alex" in say("batch nope")
+    assert "usage: batch TAG..." in say("batch")
+    assert len(fake.requests) == 3
+
+
+def test_a_case_under_two_names_runs_once(say: Say, fake: FakeTransport):
+    case = CaseBranchModel.objects.filter(owner__name="archive", name="case-1").latest(
+        "pk"
+    )
+    _ = commit(
+        case.trail, CaseBranchDetails(name="case-1-again", owner="alex", tags=["tag-1"])
+    )
+
+    written = say("cell free-text qwen3-8b-awq@fake", "batch tag-1")
+
+    assert "1 case tagged tag-1" in written
+    assert len(fake.requests) == 1
+
+
+def test_batch_sends_nothing_for_a_cell_that_can_t_run(say: Say, fake: FakeTransport):
+    written = say(
+        "batch tag-1",
+        "cell baseline gpt-oss-20b@fake",
+        "set reasoning off",
+        "batch tag-1",
+    )
+
+    assert "the cell needs a configuration and a stack" in written
+    assert "refused: reasoning: always reasons" in written
+    assert fake.requests == []
+
+
+def test_a_run_that_fails_is_said_on_its_line_and_the_batch_goes_on(
+    say_through: SayThrough,
+):
+    say = say_through(httpx2.MockTransport(failing))
+
+    written = say("cell free-text qwen3-8b-awq@fake", "batch tag-2")
+
+    for case in ("case-1", "case-2"):
+        assert row(written, case)[1:4] == ["0", "errored", "ModelHTTPError:"]
+
+    assert [run.status for run in RunModel.objects.all()] == ["errored", "errored"]
+    assert "stopped" not in written
+
+
+def test_ctrl_c_stops_a_run_as_it_streams_and_it_is_recorded_as_stopped(
+    say_through: SayThrough,
+):
+    transport = Interrupting(after=5)
+    say = say_through(transport)
+
+    written = pressing(say, "cell free-text qwen3-8b-awq@fake", "run case-1")
+
+    assert "[thinking] I am the fake" in written
+    assert "(stopped)" in written
+    assert "recorded as run 1 of trial" in written
+    assert transport.aborted == transport.requests
+
+    [run] = RunModel.objects.all()
+    assert (run.status, run.error) == ("errored", "stopped")
+    assert run.conversation is not None
+    request, response, error = run.conversation.messages.all()
+    assert (request.kind, response.kind, error.kind) == ("request", "response", "error")
+    assert response.payload["state"] == "interrupted"
+
+
+def test_ctrl_c_stops_the_batch_with_the_run_under_way(say_through: SayThrough):
+    transport = Interrupting(after=5)
+    say = say_through(transport)
+
+    written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
+
+    tokens = row(written, "case-1")[1]
+    assert re.fullmatch(r"~[1-5]", tokens)
+    assert row(written, "case-1")[2:] == ["errored", "stopped"]
+    assert "case-2 " not in written
+    assert "stopped after 1 of 2 cases" in written
+    assert len(transport.requests) == 1
+    assert transport.aborted == transport.requests
+
+    [run] = RunModel.objects.all()
+    assert (run.status, run.error) == ("errored", "stopped")
+
+
+def test_ctrl_c_waits_for_a_run_to_be_written_down_then_stops_the_batch(
+    say: Say, fake: FakeTransport, monkeypatch: pytest.MonkeyPatch
+):
+    def pressed(*args: Any, **kwargs: Any) -> RunModel:
+        signal.raise_signal(signal.SIGINT)
+        return record(*args, **kwargs)
+
+    monkeypatch.setattr(running, "record", pressed)
+
+    written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
+
+    assert row(written, "case-1")[2:] == ["completed", "17", "0.5"]
+    assert "case-2 " not in written
+    assert "stopped after 1 of 2 cases" in written
+    assert len(fake.requests) == 1
+    assert RunModel.objects.get().scores.count() == 2
+
+    written = pressing(say, "run case-1")
+
+    assert "recorded as run 2 of trial" in written
+    assert "scores" in written
+
+
+def test_ctrl_c_again_is_let_through_to_a_run_being_written_down(
+    say: Say, monkeypatch: pytest.MonkeyPatch
+):
+    def pressed_twice(*args: Any, **kwargs: Any) -> RunModel:
+        signal.raise_signal(signal.SIGINT)
+        signal.raise_signal(signal.SIGINT)
+        return record(*args, **kwargs)
+
+    monkeypatch.setattr(running, "record", pressed_twice)
+
+    written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
+
+    # the line as far as it got: its case and tokens, and nothing came of it
+    _, tokens = row(written, "case-1")
+    assert tokens.isdigit()
+    assert "stopped after 0 of 2 cases" in written
+    assert not RunModel.objects.exists()

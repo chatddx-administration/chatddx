@@ -30,6 +30,7 @@ def test_help_lists_every_command_with_the_words_it_takes(say: Say):
 
     assert "set SLICE VARIATION" in written
     assert "run CASE [SEED]" in written
+    assert "batch TAG..." in written
 
 
 def test_what_it_doesn_t_know_is_said_and_nothing_changes(repl: Repl, say: Say):
@@ -71,3 +72,16 @@ def test_it_completes_a_command_and_then_its_names():
     assert complete(names, "set toolset ") == ["sentinel", "web", "none"]
     assert complete(names, "set reasoning n") == []
     assert complete(names, "frobnicate x") == []
+
+
+def test_a_word_that_repeats_completes_each_time_but_as_it_was_given():
+    names = {"batch:tag": ["dutch-fall", "edn", "openxddx"]}
+
+    assert complete(names, "batch ") == ["dutch-fall", "edn", "openxddx"]
+    assert complete(names, "batch e") == ["edn"]
+    assert complete(names, "batch edn ") == ["dutch-fall", "openxddx"]
+    assert complete(names, "batch edn openxddx d") == ["dutch-fall"]
+
+
+def test_the_tags_complete_as_the_cases_have_them(repl: Repl):
+    assert repl.completions()["batch:tag"] == ["tag-1", "tag-2"]

@@ -861,7 +861,9 @@ differ from inspect's above.
   scores every outstanding run of the identity's, oldest first, and ends
   with each scorer's metrics. `score RUN` scores one. `scorers` lists the
   scorers the identity can see, their metrics and owners, and whether the
-  cell's output offers each one's view.
+  cell's output offers each one's view. `batch TAG...` runs the cell on
+  each case with any of the tags, one after another, a line to each run
+  with what each scorer made of it, and ends as `score` does.
 - **What is kept:** a score row per run and scorer (§6).
 
 ### inspect scores the log
@@ -955,6 +957,9 @@ between `plan` and `generate` stays.
   - The example above does both. It crosses stack with reasoning, which
     gives the table of §2, and varies output on its own.
   - A batch with nothing varied is today's batch: one configuration.
+    The repl's `batch TAG...` runs one as it is asked for, the cell on the
+    cases with any of the tags, once each and with no seed, and keeps no
+    order: each run is recorded as `run` records it.
 - **A cell is content, not a name.**
   - Its configuration is a trail, deduplicated by fingerprint. The base
     cell appears once, however many groups reach it.
