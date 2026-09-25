@@ -181,6 +181,7 @@ class Tally:
         self.case: str = case
         self.tokens: int = 0
         self.counted: bool = False
+        self.last: bool = False
         self.live: Live = Live(self._line(), console=console, auto_refresh=False)
 
     def __enter__(self) -> Self:
@@ -189,6 +190,10 @@ class Tally:
 
     def __exit__(self, *_: object) -> None:
         # the line stays as far as it got, which on a terminal ends it
+        if self.last:
+            self.last = False
+            self.live.update(self._line())
+
         self.live.stop()
 
         if not self.console.is_terminal:
@@ -197,6 +202,11 @@ class Tally:
     def count(self) -> None:
         """Another piece of output streamed."""
         self.tokens += 1
+        self.live.update(self._line(), refresh=True)
+
+    def stopping(self) -> None:
+        """The batch stops after this run: said until the run is done."""
+        self.last = True
         self.live.update(self._line(), refresh=True)
 
     def total(self, tokens: int) -> None:
@@ -209,6 +219,7 @@ class Tally:
         """What came of the run, and what each scorer made of it."""
         word, style = _outcome_word(outcome)
         values = {score.scorer_name: value_of(score.value) for score in scores}
+        self.last = False
         line = self._line()
         line.append("  ")
         line.append(word, style=style)
@@ -229,7 +240,12 @@ class Tally:
         tokens = (
             str(self.tokens) if self.counted or not self.tokens else f"~{self.tokens}"
         )
-        return Text(f"{self.case:<{self.columns.case}}  {tokens:>{TOKENS}}")
+        line = Text(f"{self.case:<{self.columns.case}}  {tokens:>{TOKENS}}")
+
+        if self.last:
+            line.append("  stopping after this case (Ctrl-C again stops it now)", LATER)
+
+        return line
 
 
 async def tally_events(events: AgentRunEvents[Any], tally: Tally) -> Streamed:

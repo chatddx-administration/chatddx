@@ -251,21 +251,28 @@ def test_a_tool_that_isn_t_chatddx_s_own_is_refused_before_anything_is_sent(
 
 class Interrupting(FakeTransport):
     """
-    The fake vLLM, with Ctrl-C pressed once it has sent `after` tokens, and
-    the next a long time coming, as it is from a busy server.
+    The fake vLLM, with Ctrl-C pressed `presses` times once it has sent
+    `after` tokens, and the next token a long time coming, as it is from a
+    busy server, where `waits`.
     """
 
-    def __init__(self, after: int):
+    def __init__(self, after: int, presses: int = 1, waits: bool = True):
         super().__init__()
         self.after: int = after
+        self.presses: int = presses
+        self.waits: bool = waits
         self.pressed: bool = False
 
     @override
     async def next_token(self, generated: int, /) -> None:
         if generated == self.after and not self.pressed:
             self.pressed = True
-            signal.raise_signal(signal.SIGINT)
-            await asyncio.sleep(10)
+
+            for _ in range(self.presses):
+                signal.raise_signal(signal.SIGINT)
+
+            if self.waits:
+                await asyncio.sleep(10)
 
 
 def pressing(say: Say, *lines: str) -> str:
@@ -410,8 +417,24 @@ def test_ctrl_c_stops_a_run_as_it_streams_and_it_is_recorded_as_stopped(
     assert response.payload["state"] == "interrupted"
 
 
-def test_ctrl_c_stops_the_batch_with_the_run_under_way(say_through: SayThrough):
-    transport = Interrupting(after=5)
+def test_ctrl_c_lets_the_run_under_way_finish_then_stops_the_batch(
+    say_through: SayThrough,
+):
+    transport = Interrupting(after=5, waits=False)
+    say = say_through(transport)
+
+    written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
+
+    assert row(written, "case-1")[2:] == ["completed", "17", "0.5"]
+    assert "case-2 " not in written
+    assert "stopped after 1 of 2 cases" in written
+    assert len(transport.requests) == 1
+    assert transport.aborted == []
+    assert RunModel.objects.get().status == "completed"
+
+
+def test_ctrl_c_again_stops_the_run_under_way_too(say_through: SayThrough):
+    transport = Interrupting(after=5, presses=2)
     say = say_through(transport)
 
     written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
@@ -419,9 +442,7 @@ def test_ctrl_c_stops_the_batch_with_the_run_under_way(say_through: SayThrough):
     tokens = row(written, "case-1")[1]
     assert re.fullmatch(r"~[1-5]", tokens)
     assert row(written, "case-1")[2:] == ["errored", "stopped"]
-    assert "case-2 " not in written
     assert "stopped after 1 of 2 cases" in written
-    assert len(transport.requests) == 1
     assert transport.aborted == transport.requests
 
     [run] = RunModel.objects.all()

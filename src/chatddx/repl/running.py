@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from types import FrameType
-from typing import Any
+from typing import Any, Self
 
 from django.utils import timezone
 from pydantic_ai import UnexpectedModelBehavior, UsageLimitExceeded
@@ -120,8 +120,11 @@ def batch(repl: Repl, *tags: str) -> None:
     each on a line of its own: the case, its output tokens as they stream,
     then what came of its run and what each scorer made of it. Each run is
     recorded and scored as `run` records and scores it, and the batch ends
-    with each scorer's metrics. Ctrl-C stops the run under way, which is
-    recorded as stopped, and the batch with it.
+    with each scorer's metrics.
+
+    The first Ctrl-C lets the run under way finish, and stops the batch
+    after it; the second stops that run too, recorded as stopped; a third
+    is let through, for one that hangs.
     """
     ready = _ready(repl)
 
@@ -161,32 +164,35 @@ def batch(repl: Repl, *tags: str) -> None:
     made: list[ScoreModel] = []
     ran = 0
 
-    try:
-        for case in cases:
-            run = _made(repl, ready, case, None)
+    with _Stopping() as stopping:
+        try:
+            for case in cases:
+                if stopping.asked:
+                    break
 
-            if run is None:
-                break
+                run = _made(repl, ready, case, None)
 
-            with Tally(repl.console, columns, case.name) as tally:
-                started = timezone.now()
+                if run is None:
+                    break
 
-                try:
-                    streamed = asyncio.run(_tally(run, tally))
-                except KeyboardInterrupt:
-                    outcome = STOPPED
-                except Exception as e:  # noqa: BLE001
-                    outcome = _failed(e, ready.resolution)
-                else:
-                    outcome = Outcome(
-                        RunStatus.COMPLETED,
-                        answer=streamed.answer,
-                        valid=_holds(ready.resolution, streamed.answer),
-                    )
+                with Tally(repl.console, columns, case.name) as tally:
+                    stopping.tally = tally
+                    started = timezone.now()
 
-                finished = timezone.now()
+                    try:
+                        streamed = asyncio.run(_tally(run, tally, stopping))
+                    except asyncio.CancelledError:
+                        outcome = STOPPED
+                    except Exception as e:  # noqa: BLE001
+                        outcome = _failed(e, ready.resolution)
+                    else:
+                        outcome = Outcome(
+                            RunStatus.COMPLETED,
+                            answer=streamed.answer,
+                            valid=_holds(ready.resolution, streamed.answer),
+                        )
 
-                with _held() as interrupted:
+                    finished = timezone.now()
                     recorded = _recorded(
                         repl, ready, case, run, outcome, started, finished
                     )
@@ -194,15 +200,13 @@ def batch(repl: Repl, *tags: str) -> None:
                         [] if recorded is None else _scored(repl, recorded, scoring)
                     )
                     tally.end(outcome, scores)
+                    stopping.tally = None
 
-            made += scores
-            ran += 1
-
-            if outcome is STOPPED or interrupted():
-                break
-    except KeyboardInterrupt:
-        # between runs: the next one had sent nothing yet
-        pass
+                made += scores
+                ran += 1
+        except KeyboardInterrupt:
+            # the third Ctrl-C, or one outside what the batch holds
+            pass
 
     if made:
         summary(repl, scoring, made)
@@ -276,9 +280,14 @@ async def _stream(repl: Repl, run: Run) -> Streamed:
         return await show_events(repl.console, events)
 
 
-async def _tally(run: Run, tally: Tally) -> Streamed:
-    async with run.stream() as events:
-        return await tally_events(events, tally)
+async def _tally(run: Run, tally: Tally, stopping: "_Stopping") -> Streamed:
+    stopping.streaming = (asyncio.get_running_loop(), asyncio.current_task())
+
+    try:
+        async with run.stream() as events:
+            return await tally_events(events, tally)
+    finally:
+        stopping.streaming = None
 
 
 def _failed(error: Exception, resolution: Resolution) -> Outcome:
@@ -415,3 +424,41 @@ def _held() -> Generator[Callable[[], bool]]:
         yield lambda: pressed > 0
     finally:
         signal.signal(signal.SIGINT, held)
+
+
+class _Stopping:
+    """
+    Ctrl-C through a batch. The first asks it to stop after the run under
+    way, which the line says; the second cancels that run's stream, as
+    asyncio would on its own; the third is let through. Held here, none
+    reaches asyncio, which only takes Ctrl-C from Python's own handler.
+    """
+
+    def __init__(self):
+        self.pressed: int = 0
+        self.tally: Tally | None = None
+        self.streaming: tuple[asyncio.AbstractEventLoop, Any] | None = None
+        self._held: Any = None
+
+    @property
+    def asked(self) -> bool:
+        return self.pressed > 0
+
+    def __enter__(self) -> Self:
+        self._held = signal.signal(signal.SIGINT, self._pressed)
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        signal.signal(signal.SIGINT, self._held)
+
+    def _pressed(self, _signal: int, _frame: FrameType | None) -> None:
+        self.pressed += 1
+
+        if self.pressed == 1:
+            if self.tally is not None:
+                self.tally.stopping()
+        elif self.pressed == 2 and self.streaming is not None:
+            loop, task = self.streaming
+            loop.call_soon_threadsafe(task.cancel)
+        else:
+            raise KeyboardInterrupt
