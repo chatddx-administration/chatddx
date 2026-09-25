@@ -114,6 +114,13 @@ trail field that cannot take part in the fingerprint is not content", and
 - **Storage.** Relations stay many-to-many. Plain details go in one JSON
   column on the entity's branch model, validated by its details schema. A
   typed column is added only where something queries it.
+- **Signatures are to be a relation too** (`clinical-input.md` §6): who
+  vouches for a branch row, and for which part of it, which the row itself
+  can't say, since it has an owner and no author. Like tags and
+  collaborators, a signature changes nothing resolution or scoring reads,
+  and is set on the row without making a new version; unlike them, it is
+  never carried to the next version, so an edit starts unsigned. Unlike
+  them too, it isn't the row owner's: whoever can see a row can sign it.
 
 ### Passthroughs are the router
 
@@ -1688,10 +1695,11 @@ A case's targets are its details:
   see it: the newest row that holds the run's case trail. So a fixed target
   reaches earlier runs of the same vignette, and a new vignette comes with
   targets of its own.
-- **A target is to become its plain words, its pattern and its review
-  state,** with a fourth kind, `dont_miss` (`clinical-input.md` §3). The
-  pattern stays what the pattern scorers read; the words are what the judge
-  reads and people see.
+- **A target is to become its plain words and its pattern,** with a fourth
+  kind, `dont_miss`, and a case's `draft` naming what the archive doesn't
+  sign (`clinical-input.md` §3, §7). The pattern stays what the pattern
+  scorers read; the words are what the judge reads and people see.
+  Whether a target is settled is a signature of the case row (§1).
 
 ### Scores
 
@@ -1824,7 +1832,7 @@ Where this note and the code differ, the note is what was decided:
 - **`export`** is the repl's, per cell, writing inspect logs only
   (`export.md`).
 - **Targets** are patterns alone, with `# guessed` in comments, and there
-  is no `dont_miss` (`clinical-input.md`).
+  is no `dont_miss`; nothing is signed (`clinical-input.md`).
 
 ## Sources
 

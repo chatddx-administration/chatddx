@@ -81,8 +81,8 @@ A draw is one run of a trial, with everything a row needs, read once:
 - the run: its ids, status, validity, finish reason, error, start and end,
   tokens in and out, requests, and the client it ran on;
 - the answer, and what each view reads from it;
-- the case's targets, as the owner is held to them, and their review state
-  (`clinical-input.md`);
+- the case's targets, as the owner is held to them, and the signatures of
+  the case row they were read from, then and now (`clinical-input.md` §6);
 - the scores: per scorer, the value, what it rests on, or why there is
   none, and what made it (scorer trail, blob, target, case row).
 
@@ -136,7 +136,7 @@ For a data handoff and a summary report; nothing is read back from it.
 | `summary` | per cell and scorer: runs, mean, the confidence interval clustered by case, the runs without a value, and the rates of invalid, truncated and errored runs |
 | `runs` | a row per draw: factors, run, views (joined into text), scores as a column per scorer |
 | `scores` | a row per score, long: for filtering and pivots |
-| `cases` | a row per case: tags, language, targets, their review state, and the vignette's file |
+| `cases` | a row per case: tags, language, targets, what is signed and by whom, what is draft, and the vignette's file |
 | `cells` | a row per cell: its variation of each slice, and the stack |
 | `selection` | the manifest |
 | `codebook` | each column of every sheet: what it holds, its type, its values |

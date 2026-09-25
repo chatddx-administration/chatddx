@@ -11,8 +11,11 @@ Decided, as of this note:
 - **A target says in plain words what is expected,** and its pattern is the
   machine's way of finding it. The words are the clinician's; the pattern
   follows them.
-- **Whether a target is settled is data,** not a `# guessed` comment, so
-  `validate`, the exports and the portal can see it.
+- **Settling is signing:** a signature ties a branch row to the identity
+  that vouches for it, always the session's owner in the repl or the
+  portal, and the archive for what the inventory commits (§6). It is data,
+  not a `# guessed` comment, so `validate`, the exports and the portal see
+  it.
 - **Four kinds of target:** `diagnosis`, `warning`, `disposition`, and a new
   `dont_miss`. What `warning` and `disposition` mean is proposed below, and
   waits on clinical sign-off.
@@ -57,29 +60,26 @@ database:
 
 ### The shape of a target
 
-Each kind has its plain words, its pattern, and its review state, together:
+Each kind has its plain words and its pattern, together; what the
+archive doesn't vouch for is named once per case, in `draft`:
 
 ```toml
 [case.Dutchfall14w]
 tags = ["dutch-fall"]
 language = "en"
 source = "Dutch Fall, case 14w; translated from Dutch"
+draft = ["warning", "disposition", "dont_miss"]
 
 targets.diagnosis.text = "Acute exacerbation of COPD"
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
-targets.diagnosis.review = "settled"
-targets.diagnosis.reviewed_by = "AB"
 
 targets.warning.text = "Hypercapnic respiratory failure"
 targets.warning.pattern = "hypercapni* | respiratory & failure"
-targets.warning.review = "guessed"
 
 targets.disposition.text = "ward"
-targets.disposition.review = "guessed"
 
 targets.dont_miss.text = "Pulmonary embolism"
 targets.dont_miss.pattern = "pulmonary & embolism | pe"
-targets.dont_miss.review = "guessed"
 ```
 
 - **`text` is what the clinician means,** in the case's language or in
@@ -95,12 +95,13 @@ targets.dont_miss.review = "guessed"
 - **A Swedish case's pattern names its words in both languages** (§12 of
   `new-datamodel.md`: what chatddx sends is still English, and the LLM may
   answer in either).
-- **`review` is `guessed` or `settled`.** Every target starts `guessed`,
-  whoever wrote it; a clinician who agrees with it, or rewrites it, sets it
-  to `settled` and puts their initials in `reviewed_by`. The `# guessed`
-  comments become `review = "guessed"`.
+- **`draft` names what isn't settled:** target kinds, `vignette` or
+  `deidentified`. The archive signs everything else it commits (§6). The
+  `# guessed` comments become `draft`: every case's warning and
+  disposition today. A clinician settles a part by taking it out of
+  `draft` in the inventory, or by signing it as themselves in the repl.
 - **`false` still says that none is expected,** where the kind allows it:
-  `targets.warning = false`, with its own `review`.
+  `targets.warning = false`.
 
 ### The kinds
 
@@ -126,7 +127,8 @@ The repl's `validate [CASE]` checks what can be checked before anything is
 sent, and `run` and `batch` call it first (`new-datamodel.md` §5). For a
 clinician it is the to-do list:
 
-- a target that is `guessed`, or missing for a kind a scorer reads;
+- what no one has signed, or only the archive, and what the inventory
+  marks `draft`; a target missing for a kind a scorer reads;
 - a pattern that doesn't parse, or that doesn't find its own `text` (a
   pattern should always match what its clinician wrote);
 - a Swedish case whose pattern names no Swedish word;
@@ -163,9 +165,9 @@ its case's record:
 
 - `source`: the dataset and the case's number in it, and where it was
   translated, from what;
-- `deidentified`: who checked that it names no patient, and when;
-- `review` and `reviewed_by`, as for targets: whether a clinician has read
-  the vignette as it is sent, translation included.
+- whether a clinician has read the vignette as it is sent, translation
+  included, and that it names no patient, are signatures (§6), of the parts
+  `vignette` and `deidentified`.
 
 A changed vignette is a new case, so a correction is made in a new file, or
 an edited one committed again, and the runs of the old text stay the old
@@ -194,9 +196,81 @@ words ("the rank at which the differential first names the diagnosis, as
 1/rank"), and a clinician says whether it answers a clinical question.
 `first_mention`, which counts characters, may not.
 
-## 6. Open
+## 6. Signing
 
-- Sign-off on §3's meanings, by whom, and how it is recorded.
-- Whether reviews are per target, as proposed, or per case.
+### Where it lives
+
+A signature is not content, and not a detail either: it changes nothing a
+run or a score reads, and it says who vouches, which a branch row can't (a
+row has an owner, and no author). It is a relation of the branch row, as
+its tags and collaborators are (`new-datamodel.md` §1): a row, the identity
+that signed it, what it signed, and when.
+
+- **The signer is the session's owner,** in the repl (`sign case NAME
+  [PART]`, `unsign`) or the portal. Signing a row changes nothing in it, so
+  anyone who can see a row can sign it, the archive's included.
+- **An edit starts unsigned.** A changed target or vignette makes a new row
+  (details and content are versioned), and the signatures stay with the row
+  they were given to. Nothing has to remember to reset a flag.
+- **A score says what it was held to.** A score keeps the case row it read,
+  so an export can say whether that row was signed, by whom, and whether it
+  is signed now.
+- **It is generic:** an output's guidance and schema, a scorer's
+  description, the judge's rules are branch rows too, and can be signed the
+  same way.
+
+### The archive signs the inventory
+
+`init-data` commits the inventory as the archive's, and the archive signs
+every row it commits, but for the parts the case's `draft` names. An
+archive signature says "this came in through the curated inventory"; who
+wrote it is in git, and the signature keeps the chatddx revision it was
+committed from, so the one leads to the other. The archive never signs in a
+session, and a clinician's signature is never the archive's.
+
+### Granularity, in two steps
+
+1. **The whole row.** A signature covers everything in the row. The archive
+   signs a case only where its `draft` is empty; a clinician signs the
+   whole case. Today no case is archive-signed, since every one has guessed
+   targets: that is the truth.
+2. **The parts.** A signature names one part: a target kind, `vignette`
+   (read as sent, translation included), or `deidentified`. The archive
+   signs every part but those in `draft`.
+
+**Where step 2 ends is open.** A proposal, weighing complexity against
+clinical rigour, for a tool that is primarily for research:
+
+- one signature per part is enough for a part to count as settled;
+- a row may carry more than one signature, and `validate` and the exports
+  count them, so a second, independent reviewer is possible without being
+  required;
+- `diagnosis` asks for two clinicians before a study's results are
+  reported, the other kinds for one; the judge's disagreements with the
+  pattern (`chatddx agreement`) go to a clinician first;
+- no reasons, no adjudication records, no electronic-signature
+  guarantees: clinical-grade rigour (independent double review with
+  adjudication, a full audit trail) is probably not practically achievable
+  here, and the note doesn't pretend otherwise.
+
+## 7. Where each field goes
+
+| Field | Home | Why |
+|---|---|---|
+| `targets.<kind>.pattern` | case branch details (today's `targets`) | the pattern scorers read it; a change is a new version, and makes runs outstanding |
+| `targets.<kind>.text` | case branch details, beside the pattern | the judge and the exports read it; a change should make the judge's scores outstanding |
+| `draft` | case branch details | what the archive doesn't sign; read by `init-data` and `validate` only |
+| signatures | a relation of every branch row: identity, part, time, revision | who vouches, which no row records; stays with the row signed |
+| `dont_miss` | a target kind (code vocabulary), a view of the output (the differential's items marked critical), and a scorer | as the other kinds |
+| the disposition scale | the arguments of the scorer that reads it (trail content) | it changes scores, so each score cites it |
+| the judge's rules | the judge registered as a scorer, its rules in its arguments | a changed rule is a new scorer trail; inspect gets them as options |
+| a scorer's `description` | scorer branch details | it changes no score; it is data, not a model's `help_text` |
+| `source` | case branch details | it describes the content without changing what the LLM reads; copies carry it |
+| guidance and schema texts | output trail content, as today; signed as rows | already fingerprinted |
+
+## 8. Open
+
+- Sign-off on §3's meanings, by whom.
+- Where step 2 of signing ends (§6).
 - Where `false` is allowed: today only for `warning`; `dont_miss` may want
   it.
