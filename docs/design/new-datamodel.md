@@ -9,8 +9,8 @@ the entities, it covers:
 - why slices compose only as intents, and what makes them appear to
   compose (§3);
 - how an inspect-ai scorer reads an output that pydantic-ai produced, how
-  chatddx scores runs, and how a cell's runs are written as an inspect log
-  that inspect scores the same way (§4);
+  chatddx scores runs, how a cell's runs are written as an inspect log that
+  inspect scores the same way, and a judge for the diagnosis (§4);
 - where the combinatorial batch and the compatibility table of
   [PR #68](https://github.com/chatddx-administration/chatddx/pull/68) go
   (§5).
@@ -889,6 +889,36 @@ differ from inspect's above.
   runs, so the two agree where each case has one epoch.
 - **`export` scores the log as it writes it.** A log can be scored again
   without generating, by any scorer, with `inspect score`.
+
+### A judge for the diagnosis
+
+- **What it reads** (`chatddx.logs.judge`): a grader model is given the
+  differential and the case's diagnosis target, and says which item, if
+  any, is the first to name that diagnosis, allowing what a clinician
+  would and a pattern can't: a synonym, an abbreviation, another spelling,
+  a more specific form, or the other language. A related diagnosis, a
+  complication or a symptom doesn't count.
+- **Its value is `reciprocal_rank`'s:** 1/rank, and 0 where no item names
+  the target. So the judge and the pattern can be held to each other, and
+  both to clinicians.
+- **It reads today's target, a pattern,** which its prompt explains. A
+  target in plain words would suit it better.
+- **The grader** is the model given, or else the model bound to the
+  `grader` role, which one must be. The file imports nothing of chatddx's,
+  so inspect loads it on its own:
+  `inspect score LOG --scorer src/chatddx/logs/judge.py@diagnosis_judge
+  --model-role grader=MODEL --action append`.
+- **A score keeps the grader's reasoning** as its explanation. A verdict
+  that can't be read leaves the sample unscored (`grader_failed`). The last
+  verdict counts, so that one quoted from an answer can't.
+- **It is an instrument, and has to be validated.** `chatddx agreement
+  FIRST SECOND LOG...` says how two scorers read the same samples: how
+  often both found the target, neither did, or one alone; Cohen's kappa on
+  found; and the samples whose values differ, which are what clinicians
+  should settle first.
+- **Open:** which model grades, one chatddx serves or a hosted one; a
+  target in plain words for it; how clinicians label a subset, blind to
+  both scorers, and what kappa is good enough.
 
 ## 5. The batch and the compatibility table
 
