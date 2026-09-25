@@ -1,6 +1,10 @@
+import asyncio
 import json
+import socket
 import threading
-from collections.abc import Iterator
+import time
+from collections.abc import Generator, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +15,7 @@ from jsonschema.validators import validator_for
 from chatddx.core import settings
 from chatddx.dev.fake_vllm import (
     ANSWER,
+    FakeTransport,
     completion,
     instance,
     respond,
@@ -265,6 +270,26 @@ def test_it_streams_a_call_as_its_name_then_its_arguments():
     assert chunks[-1]["choices"][0]["finish_reason"] == "tool_calls"
 
 
+def test_asked_for_it_it_counts_the_usage_on_every_chunk_as_it_goes():
+    options = {"include_usage": True, "continuous_usage_stats": True}
+    chunks = events(stream(body(stream_options=options)))
+    counts = [chunk["usage"]["completion_tokens"] for chunk in chunks]
+
+    assert counts[0] == 0
+    assert counts == sorted(counts)
+    # the finish chunk has as many as the usage at the end
+    assert counts[-2] == counts[-1] > 0
+    assert {chunk["usage"]["prompt_tokens"] for chunk in chunks} == {2}
+
+
+def test_the_usage_comes_on_every_chunk_only_with_the_usage_at_the_end():
+    chunks = events(stream(body(stream_options={"continuous_usage_stats": True})))
+    assert not any("usage" in chunk for chunk in chunks)
+
+    chunks = events(stream(body(stream_options={"include_usage": True})))
+    assert ["usage" in chunk for chunk in chunks[-2:]] == [False, True]
+
+
 def test_it_answers_whole_when_asked_not_to_stream():
     response = completion(body(GPT_OSS, stream=False))
     message = response["choices"][0]["message"]
@@ -273,17 +298,25 @@ def test_it_answers_whole_when_asked_not_to_stream():
     assert message["reasoning"] == thinking(body(GPT_OSS))
 
 
-@pytest.fixture
-def fake_url() -> Iterator[str]:
-    fake = server("127.0.0.1", 0)
+@contextmanager
+def serving(delay: float = 0.0) -> Generator[tuple[str, int]]:
+    """The fake vLLM served, `delay` between its words, at a port of its own."""
+    fake = server("127.0.0.1", 0, delay)
     host, port = fake.server_address[:2]
     thread = threading.Thread(target=fake.serve_forever, daemon=True)
     thread.start()
 
-    yield f"http://{host!s}:{port}"
+    try:
+        yield str(host), port
+    finally:
+        fake.shutdown()
+        fake.server_close()
 
-    fake.shutdown()
-    fake.server_close()
+
+@pytest.fixture
+def fake_url() -> Iterator[str]:
+    with serving() as (host, port):
+        yield f"http://{host}:{port}"
 
 
 def test_it_serves_chat_completions_over_http(fake_url: str):
@@ -297,3 +330,62 @@ def test_it_serves_chat_completions_over_http(fake_url: str):
 
 def test_it_serves_nothing_else(fake_url: str):
     assert httpx2.post(f"{fake_url}/v1/completions", json={}).status_code == 404
+
+
+def test_a_client_that_hangs_up_is_heard_at_once_and_its_request_aborted(
+    capsys: pytest.CaptureFixture[str],
+):
+    request = json.dumps(body()).encode()
+    logged = ""
+
+    # the next word is seconds away: the server hears the hang-up from the
+    # socket, as vLLM does, not at the write after it
+    with serving(delay=5.0) as address:
+        with socket.create_connection(address) as client:
+            client.sendall(
+                b"POST /v1/chat/completions HTTP/1.1\r\nHost: fake\r\n"
+                + b"Content-Type: application/json\r\n"
+                + b"Content-Length: %d\r\n\r\n%s" % (len(request), request)
+            )
+            assert b"200 OK" in client.recv(4096)
+
+        hung_up = time.monotonic()
+
+        while "aborted" not in logged and time.monotonic() - hung_up < 2:
+            time.sleep(0.01)
+            logged += capsys.readouterr().err
+
+    logged += capsys.readouterr().err
+    assert "aborted: the client hung up after 0 of" in logged
+    assert "Traceback" not in logged
+
+
+async def read(fake: FakeTransport, upto: str) -> None:
+    """Stream a reply from `fake`, and hang up at the line that holds `upto`."""
+    async with (
+        httpx2.AsyncClient(transport=fake) as client,
+        client.stream(
+            "POST", "http://fake/v1/chat/completions", json=body()
+        ) as response,
+    ):
+        async for line in response.aiter_lines():
+            if upto in line:
+                break
+
+
+def test_in_process_a_stream_closed_before_its_end_is_aborted():
+    fake = FakeTransport()
+
+    asyncio.run(read(fake, '"reasoning"'))
+
+    assert fake.aborted == fake.requests
+
+
+def test_in_process_a_stream_closed_at_done_is_whole():
+    fake = FakeTransport()
+
+    # as the openai client does: [DONE] ends it, whatever comes after
+    asyncio.run(read(fake, "[DONE]"))
+
+    assert fake.requests
+    assert fake.aborted == []
