@@ -458,7 +458,8 @@ case and seed are runs of one trial, whoever made them.
 
 - **A seed makes a draw repeatable,** given the same hardware, server and
   request. Running a seeded trial again checks that it holds, or retries
-  one that errored.
+  one that errored. Why runs are seeded by default, and what it costs, is
+  in `research/seeds.md`.
 - **Unseeded runs** of a cell on a case all belong to one trial, though
   each is a different draw.
 - **The shell holds a seed** and sends it with every run (`repl.md`). With
