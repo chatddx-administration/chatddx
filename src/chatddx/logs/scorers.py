@@ -33,6 +33,7 @@ from inspect_ai.scorer import (
 from inspect_ai.solver import TaskState
 
 from chatddx.history.models import RunStatus
+from chatddx.repo.entities.case.pydantic import pattern_of
 from chatddx.repo.entities.output.pydantic import View
 from chatddx.repo.entities.scorer.pydantic import Metric as MetricName
 from chatddx.runtime.implementation import SCORER_PACKAGE, implementation
@@ -74,11 +75,11 @@ def as_inspect(visible: VisibleScorer) -> Scorer:
 
             targets: dict[str, Any] = state.metadata.get("targets") or {}
 
-            if target_kind is not None and target_kind not in targets:
-                return Score.unscored(reason=f"the case has no {target_kind} target")
-
             wanted = targets.get(target_kind) if target_kind else None
-            held_to = wanted if isinstance(wanted, str) else None
+            held_to = pattern_of(wanted)
+
+            if target_kind is not None and wanted is not False and held_to is None:
+                return Score.unscored(reason=f"the case has no {target_kind} target")
             scored = ran.function(
                 None if views is None else views[view], held_to, **(args or {})
             )

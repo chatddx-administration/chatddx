@@ -103,9 +103,12 @@ def test_a_sample_holds_what_the_llm_was_sent_and_what_came_of_it(run: Run):
         "fake diagnosis 3",
     ]
     assert sample.metadata["targets"] == {
-        "diagnosis": "fake & diagnosis & (b | 2)",
-        "warning": "acute & warning",
-        "disposition": "admit*",
+        "diagnosis": {
+            "text": "Fake diagnosis B",
+            "pattern": "fake & diagnosis & (b | 2)",
+        },
+        "warning": {"text": None, "pattern": "acute & warning"},
+        "disposition": {"text": None, "pattern": "admit*"},
     }
 
     [event] = model_events(sample)

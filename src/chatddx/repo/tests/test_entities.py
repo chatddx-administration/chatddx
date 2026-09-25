@@ -344,6 +344,7 @@ PLAN: dict[str, JsonValue] = {
                 "probability": {"enum": ["high", "low"]},
                 "maybe": {"type": ["string", "null"]},
                 "either": {"anyOf": [{"type": "string"}, {"type": "number"}]},
+                "critical": {"type": "boolean"},
             },
         }
     },
@@ -364,6 +365,8 @@ PLAN: dict[str, JsonValue] = {
         "$.summary",
         # an enum of strings is strings
         "$.diagnoses[*].probability",
+        # the items whose boolean is true
+        "$.diagnoses[?(@.critical)].diagnosis",
     ],
 )
 def test_a_view_is_a_path_the_schema_proves(path: str):
@@ -385,6 +388,14 @@ def test_a_view_is_a_path_the_schema_proves(path: str):
         ("diagnoses[*]", "not a path"),
         ("$..diagnosis", "not a path"),
         ("$.diagnoses[0]", "not a path"),
+        # a filter needs a boolean the items declare
+        (
+            "$.diagnoses[?(@.diagnosis)].diagnosis",
+            r"\$\.diagnoses\[\?\(@\.diagnosis\)\]\.diagnosis is of type string, not a boolean",
+        ),
+        ("$.diagnoses[?(@.nowhere)].diagnosis", "filters on 'nowhere'"),
+        ("$.names[?(@.critical)]", r"\$\.names\[\?\(@\.critical\)\] is of type string"),
+        ("$.diagnoses[?(@.critical == true)]", "not a path"),
     ],
 )
 def test_a_path_the_schema_doesn_t_prove_is_refused(path: str, problem: str):
@@ -456,6 +467,22 @@ def test_a_view_reads_what_its_path_reaches_in_an_answer():
     }
 
     assert output.view("differential", answer) == ["pneumonia", "copd"]
+
+
+def test_a_filter_keeps_the_items_whose_boolean_is_true():
+    output = OutputTrailIn(
+        json_schema=PLAN, views={"critical": "$.diagnoses[?(@.critical)].diagnosis"}
+    )
+    answer: JsonValue = {
+        "diagnoses": [
+            {"diagnosis": "pneumonia", "critical": False},
+            {"diagnosis": "sepsis", "critical": True},
+            # an item that doesn't say is not critical
+            {"diagnosis": "copd"},
+        ]
+    }
+
+    assert output.view("critical", answer) == ["sepsis"]
 
 
 def test_a_view_of_one_string_reads_a_list_of_one():
@@ -561,3 +588,32 @@ def test_a_case_says_the_language_it_is_written_in():
 
     with pytest.raises(ValidationError, match="language"):
         _ = CaseDetails.model_validate({"language": "se"})
+
+
+def test_a_target_is_its_words_and_its_pattern_either_of_which_may_be_missing():
+    details = CaseDetails.model_validate(
+        {
+            "targets": {
+                "diagnosis": {"text": "Biliary colic", "pattern": "biliary & colic"},
+                "warning": False,
+                "disposition": {"text": "home"},
+                "dont_miss": {"pattern": "pulmonary & embolism"},
+            }
+        }
+    )
+
+    assert details.targets["disposition"] is not False
+    assert details.targets["disposition"].pattern is None
+
+    with pytest.raises(ValidationError, match="its text, its pattern, or both"):
+        _ = CaseDetails.model_validate({"targets": {"diagnosis": {}}})
+
+    with pytest.raises(ValidationError, match="Extra inputs"):
+        _ = CaseDetails.model_validate(
+            {"targets": {"diagnosis": {"pattern": "copd", "why": "guessed"}}}
+        )
+
+
+def test_only_a_warning_can_be_expected_to_be_none():
+    with pytest.raises(ValidationError, match="only warning can be false"):
+        _ = CaseDetails.model_validate({"targets": {"dont_miss": False}})

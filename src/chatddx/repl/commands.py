@@ -9,7 +9,6 @@ from rich.table import Table
 
 from chatddx.repl import (
     choosing,
-    exporting,
     inspecting,
     listing,
     reviewing,
@@ -36,7 +35,7 @@ class Command:
 
     @property
     def repeats(self) -> bool:
-        return bool(self.params) and self.params[-1].endswith("...")
+        return bool(self.params) and self.params[-1].strip("[]").endswith("...")
 
 
 def help_(repl: Repl) -> None:
@@ -67,8 +66,9 @@ COMMANDS: dict[str, Command] = {
         choosing.set_,
     ),
     "show": Command(
-        ("[ENTITY]", "[NAME]"),
-        "show the cell, and how it resolves on its stack; or an ENTITY, the"
+        ("[ENTITY]", "[NAME...]"),
+        "show the cell, how it resolves on its stack, and the cases each scorer"
+        + " can hold it to (tag TAG...: those with any TAG); or an ENTITY, the"
         + " cell's or NAME, and what came of your runs with it",
         inspecting.show,
     ),
@@ -114,11 +114,6 @@ COMMANDS: dict[str, Command] = {
         (),
         "list the scorers, what each reads, and which the cell's output offers",
         scoring.scorers,
-    ),
-    "export": Command(
-        ("[DIRECTORY]",),
-        "write your runs of the cell as an inspect log, into DIRECTORY or ./logs",
-        exporting.export,
     ),
     "help": Command((), "list the commands", help_),
     "quit": Command((), "leave (or Ctrl-D)", None),
@@ -194,9 +189,11 @@ def complete(names: dict[str, list[str]], line: str) -> list[str]:
             entity = words[position - 1]
             candidates = names.get(entity, []) + ([NONE] if entity in OPTIONAL else [])
         case "[ENTITY]":
-            candidates = list(ENTITY_NAMES)
-        case "[NAME]":
-            candidates = names.get(words[position - 1], [])
+            candidates = ["tag", *ENTITY_NAMES]
+        case "[NAME...]" if words[0] == "tag":
+            candidates = names.get("batch:tag", [])
+        case "[NAME...]":
+            candidates = [] if given else names.get(words[0], [])
         case param:
             key = param.strip("[].").lower()
             candidates = names.get(f"{verb}:{key}", names.get(key, []))

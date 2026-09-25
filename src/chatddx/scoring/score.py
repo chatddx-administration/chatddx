@@ -22,7 +22,7 @@ from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import TargetKind
+from chatddx.repo.entities.case.pydantic import TargetKind, pattern_of
 from chatddx.repo.entities.output.pydantic import OutputTrailOut, View
 from chatddx.repo.entities.scorer.django import ScorerTrailModel
 from chatddx.repo.entities.scorer.pydantic import Metric, ScorerDetails
@@ -120,7 +120,7 @@ class Scoring:
 
         views = self.output_of(run).views
         case = self.case_of(run)
-        targets: dict[str, str | bool] = case.details.get("targets", {}) if case else {}
+        targets: dict[str, object] = case.details.get("targets", {}) if case else {}
         found: list[Applicable] = []
 
         for scorer in self.scorers:
@@ -131,9 +131,11 @@ class Scoring:
                 found.append((scorer, None, None))
             elif scorer.target_kind in targets:
                 target = targets[scorer.target_kind]
-                found.append(
-                    (scorer, target if isinstance(target, str) else None, case)
-                )
+
+                if target is False:
+                    found.append((scorer, None, case))
+                elif (pattern := pattern_of(target)) is not None:
+                    found.append((scorer, pattern, case))
 
         return found
 

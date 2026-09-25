@@ -10,7 +10,7 @@ from chatddx.history.models import RunModel
 from chatddx.repl.commands import complete
 from chatddx.repl.shell import Repl
 from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails
+from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Expected
 from chatddx.repo.store.branch import commit
 
 type Say = Callable[..., str]
@@ -31,7 +31,7 @@ def retarget() -> Callable[[], None]:
             CaseBranchDetails(
                 name="case-1",
                 owner="archive",
-                targets={"diagnosis": "fake & diagnosis & (a | 1)"},
+                targets={"diagnosis": Expected(pattern="fake & diagnosis & (a | 1)")},
             ),
         )
 

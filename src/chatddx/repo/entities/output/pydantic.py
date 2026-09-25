@@ -1,5 +1,5 @@
 """
-Output: a request-time slice (new-datamodel.md §2, §4).
+Output: a request-time slice.
 
 A variation is what is asked for: a JSON Schema, or none for free text; the
 guidance that fills the instruction's `output_guidance` slot, which says what
@@ -7,7 +7,8 @@ to produce and in what order; and the views it offers scorers.
 
 A scorer never reads an output, a mode or a transcript. It reads a view: a
 named, typed reading of the output. A structured output gives each view as a
-path into its schema, in a subset of JSONPath (names and `[*]`), and free
+path into its schema, in a subset of JSONPath (names, `[*]`, and a filter
+`[?(@.name)]` that keeps the items whose boolean `name` is true), and free
 text gives a parser. The path is proved against the schema here, when the
 output is committed, so pairing a scorer with an output is set membership:
 does the output offer the scorer's view? An output offers only what it
@@ -40,9 +41,10 @@ from chatddx.repo.families.fields import JsonSchema
 
 # The readings of an output a scorer can ask for, each offered by the
 # outputs that declare it. `text` is an answer as written, `differential`
-# the diagnoses, most likely first, and `warning` and `disposition` a
-# management plan's red flags and where the patient goes.
-type View = Literal["text", "differential", "warning", "disposition"]
+# the diagnoses, most likely first, `warning` and `disposition` a
+# management plan's red flags and where the patient goes, and `critical`
+# the diagnoses the answer marks critical.
+type View = Literal["text", "differential", "warning", "disposition", "critical"]
 VIEWS: tuple[View, ...] = get_args(View.__value__)
 
 # What each view yields one of: its items' JSON type, and whether a null
@@ -52,6 +54,7 @@ VIEW_ITEMS: dict[View, tuple[str, bool]] = {
     "differential": ("string", False),
     "warning": ("string", True),
     "disposition": ("string", False),
+    "critical": ("string", False),
 }
 
 # Free text's parsers, by the view each gives. `lines`: one item per
@@ -61,8 +64,9 @@ PARSERS: dict[str, View] = {"lines": "differential", "whole": "text"}
 # the instruction's variable the guidance fills
 SLOT = "output_guidance"
 
-_PATH = re.compile(r"\$(?:\.[A-Za-z_][A-Za-z0-9_]*|\[\*\])*")
-_STEP = re.compile(r"\.([A-Za-z_][A-Za-z0-9_]*)|\[\*\]")
+_NAME = r"[A-Za-z_][A-Za-z0-9_]*"
+_PATH = re.compile(rf"\$(?:\.{_NAME}|\[\*\]|\[\?\(@\.{_NAME}\)\])*")
+_STEP = re.compile(rf"\.({_NAME})|\[\*\]|\[\?\(@\.({_NAME})\)\]")
 
 
 # a list marker the `lines` parser strips: `-`, `*`, `•`, `1.` or `1)`
@@ -81,14 +85,19 @@ def read(document: JsonValue, path: str) -> list[JsonValue]:
     values: list[JsonValue] = [document]
 
     for step in _STEP.finditer(path, 1):
-        name = step.group(1)
+        name, flag = step.group(1), step.group(2)
         reached: list[JsonValue] = []
 
         for value in values:
             if name is not None and isinstance(value, dict) and name in value:
                 reached.append(value[name])
             elif name is None and isinstance(value, list):
-                reached.extend(value)
+                reached.extend(
+                    item
+                    for item in value
+                    if flag is None
+                    or (isinstance(item, dict) and item.get(flag) is True)
+                )
 
         values = reached
 
@@ -134,9 +143,22 @@ def prove(
             node = _resolve(schema, properties[name])
             here = f"{here}.{name}"
         else:
+            flag = step.group(2)
             _expect(node, "array", here)
             node = _resolve(schema, node.get("items"))
-            here = f"{here}[*]"
+
+            if flag is None:
+                here = f"{here}[*]"
+                continue
+
+            here = f"{here}[?(@.{flag})]"
+            _expect(node, "object", here)
+            properties = node.get("properties")
+
+            if not isinstance(properties, dict) or flag not in properties:
+                raise Unproved(f"{here} filters on '{flag}', which it doesn't declare")
+
+            _expect(_resolve(schema, properties[flag]), "boolean", f"{here}.{flag}")
 
     _expect(node, items, here, nullable)
 
@@ -232,8 +254,8 @@ class OutputTrailBase(BaseTrail):
 
             if not _PATH.fullmatch(reading):
                 raise ValueError(
-                    f"'{view}' reads {reading!r}, which is not a path of names and "
-                    + "[*] from $"
+                    f"'{view}' reads {reading!r}, which is not a path of names, "
+                    + "[*] and [?(@.name)] from $"
                 )
 
             try:

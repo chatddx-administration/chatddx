@@ -73,6 +73,7 @@ from chatddx.logs.messages import (
     usage,
 )
 from chatddx.repl.cell import NONE, SLICES
+from chatddx.repo.entities.case.pydantic import pattern_of
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
 from chatddx.repo.entities.output.pydantic import VIEWS, OutputTrailOut
 from chatddx.repo.entities.stack.django import StackTrailModel
@@ -313,7 +314,7 @@ def _sample(
     ]
     case = scoring.case_of(run)
     targets: dict[str, JsonValue] = case.details.get("targets", {}) if case else {}
-    target = targets.get(TARGET_KIND)
+    target = pattern_of(targets.get(TARGET_KIND))
     the_output = scoring.output_of(run)
     answered = output(served, responses[-1] if responses else None)
     answered.completion = _completion(the_output, run.answer) or answered.completion
@@ -323,7 +324,7 @@ def _sample(
         id=case_id,
         epoch=epoch,
         input=messages[: answers[0] if answers else len(messages)] or "",
-        target=target if isinstance(target, str) else "",
+        target=target or "",
         messages=messages,
         output=answered,
         metadata={

@@ -50,7 +50,7 @@ def log_of(**metadata: Any) -> EvalLog:
                 metadata={
                     "status": "completed",
                     "views": {"differential": DIFFERENTIAL},
-                    "targets": {"diagnosis": "biliary & (colic | stone*)"},
+                    "targets": {"diagnosis": {"pattern": "biliary & (colic | stone*)"}},
                     **metadata,
                 },
             )
@@ -116,7 +116,14 @@ def test_a_verdict_that_cant_be_read_leaves_the_sample_unscored(verdict: str):
     ("metadata", "reason"),
     [
         ({"status": "errored", "views": None}, "errored"),
-        ({"targets": {"warning": "shock"}}, "the case has no diagnosis target"),
+        (
+            {"targets": {"warning": {"pattern": "shock"}}},
+            "the case has no diagnosis target",
+        ),
+        (
+            {"targets": {"diagnosis": {"text": "Biliary colic"}}},
+            "the case has no diagnosis target",
+        ),
         ({"views": {"text": ["an answer"]}}, "the output offers no differential"),
     ],
 )

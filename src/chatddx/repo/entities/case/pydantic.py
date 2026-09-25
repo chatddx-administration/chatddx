@@ -5,17 +5,28 @@ A case: its vignette, as the LLM receives it through the instruction's
 The targets are details, not content: they change nothing the LLM reads,
 and the vignette is what the case's fingerprint names. Like an LLM's facts,
 they are versioned with the branch, and each score records the row whose
-targets it read (new-datamodel.md §11). inspect keeps a sample's target with
-the sample, and a case is chatddx's sample. Unlike inspect's one target per
-sample, a case has one per kind, and each scorer reads the kind it names.
+targets it read. inspect keeps a sample's target with the sample, and a case
+is chatddx's sample. Unlike inspect's one target per sample, a case has one
+per kind, and each scorer reads the kind it names.
+
+A target is what is expected in plain words, its `text`, and the pattern the
+pattern scorers find it by, its `pattern`. Either may be missing: the data
+is taken as intended, and what is missing is shown as missing.
 
 Its language is a detail too: the language its vignette is written in, and
-one day everything a run sends with it (new-datamodel.md §12).
+one day everything a run sends with it.
 """
 
-from typing import Annotated, Literal, get_args
+from typing import Annotated, Any, ClassVar, Literal, cast, get_args
 
-from pydantic import AfterValidator, Field, StringConstraints
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
@@ -33,7 +44,7 @@ from chatddx.repo.families import (
 )
 
 # What a case can be expected to yield, each read by the scorers that name it
-type TargetKind = Literal["diagnosis", "warning", "disposition"]
+type TargetKind = Literal["diagnosis", "warning", "disposition", "dont_miss"]
 TARGET_KINDS: tuple[TargetKind, ...] = get_args(TargetKind.__value__)
 
 # The kinds a case may expect none of: a plan that rightly raises no warning.
@@ -43,8 +54,36 @@ EXPECTS_NONE: frozenset[TargetKind] = frozenset({"warning"})
 # the languages a case can be written in
 type Language = Literal["en", "sv"]
 
-# text its scorers read, or false where the case expects none
-type Target = Annotated[str, StringConstraints(min_length=1)] | Literal[False]
+type Words = Annotated[str, StringConstraints(min_length=1)]
+
+
+class Expected(BaseModel):
+    """What a case expects of one kind: its plain words, and its pattern."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", frozen=True)
+
+    text: Words | None = None
+    pattern: Words | None = None
+
+    @model_validator(mode="after")
+    def _says_something(self) -> "Expected":
+        if self.text is None and self.pattern is None:
+            raise ValueError("a target gives its text, its pattern, or both")
+
+        return self
+
+
+# what the case expects of a kind, or false where it expects none
+type Target = Expected | Literal[False]
+
+
+def pattern_of(target: object) -> str | None:
+    """The pattern of a target as details keep it, or None where it has none."""
+    if not isinstance(target, dict):
+        return None
+
+    pattern = cast(dict[str, Any], target).get("pattern")
+    return pattern if isinstance(pattern, str) else None
 
 
 def _none_only_where_expected(

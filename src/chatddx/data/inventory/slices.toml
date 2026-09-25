@@ -46,8 +46,11 @@ variables = ["case", "schema_prompt"]
 # What is asked for: a schema (none for free text), the guidance that fills
 # `output_guidance`, and the views scorers read, each given as a path into
 # the schema or, for free text, as a parser: `text` is the answer as
-# written, `differential` a ranked list of diagnoses, and `warning` and
-# `disposition` a plan's red flags and where the patient goes.
+# written, `differential` a ranked list of diagnoses, `warning` and
+# `disposition` a plan's red flags and where the patient goes, and
+# `critical` the diagnoses the answer marks critical, which `dont_miss`
+# targets are to be held to. `[?(@.critical)]` keeps the items whose
+# boolean `critical` is true.
 
 # key order as authored: the DDXManagement model's own
 [output.management-plan]
@@ -56,6 +59,7 @@ guidance = "Fill in the management plan for the case."
 views.differential = "$.diagnoses[*].diagnosis"
 views.warning = "$.acute_warning"
 views.disposition = "$.management.disposition"
+views.critical = "$.diagnoses[?(@.critical)].diagnosis"
 
 [output.diagnoses]
 json_schema_path = "schemas/diagnoses.json"

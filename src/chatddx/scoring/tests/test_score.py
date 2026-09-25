@@ -20,7 +20,7 @@ from chatddx.dev.fake_vllm import FakeTransport, stream
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Target
+from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Expected
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
     ConfigurationTrailIn,
@@ -116,13 +116,23 @@ def applicable(run: RunModel, user: str = "alex") -> list[str]:
     return [scorer.name for scorer, _, _ in Scoring(user).applicable(run)]
 
 
-def retarget(case: str, owner: str = "archive", **targets: Target) -> None:
-    """Commit a version of `owner`'s branch of `case` that expects `targets`."""
+def retarget(case: str, owner: str = "archive", **targets: str | bool) -> None:
+    """
+    Commit a version of `owner`'s branch of `case` that expects `targets`,
+    each a pattern, or false.
+    """
     branch = CaseBranchModel.objects.filter(owner__name=owner, name=case).latest("pk")
     _ = commit(
         branch.trail,
         CaseBranchDetails.model_validate(
-            {"name": case, "owner": owner, "targets": targets}
+            {
+                "name": case,
+                "owner": owner,
+                "targets": {
+                    kind: {"pattern": target} if isinstance(target, str) else target
+                    for kind, target in targets.items()
+                },
+            }
         ),
     )
 
@@ -206,6 +216,23 @@ def test_a_score_keeps_what_it_was_made_with_and_who_made_it():
     assert rank.owner.name == "alex"
 
 
+def test_a_target_without_a_pattern_is_missing_for_the_pattern_scorers():
+    run = ran("free-text")
+    archive = CaseBranchModel.objects.get(owner__name="archive", name="case-1")
+    _ = commit(
+        archive.trail,
+        CaseBranchDetails.model_validate(
+            {
+                "name": "case-1",
+                "owner": "archive",
+                "targets": {"diagnosis": {"text": "Fake diagnosis B"}},
+            }
+        ),
+    )
+
+    assert applicable(run) == []
+
+
 def test_a_run_scored_is_outstanding_again_when_its_target_changes():
     run = ran("free-text")
     first = Scoring("alex").score(run)
@@ -238,7 +265,9 @@ def test_one_s_own_case_s_targets_shadow_the_archive_s():
     _ = commit(
         archive.trail,
         CaseBranchDetails(
-            name="my-case", owner="alex", targets={"diagnosis": "fake & diagnosis & a"}
+            name="my-case",
+            owner="alex",
+            targets={"diagnosis": Expected(pattern="fake & diagnosis & a")},
         ),
     )
 

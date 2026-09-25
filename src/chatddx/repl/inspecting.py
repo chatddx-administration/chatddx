@@ -1,7 +1,8 @@
 # pyright: basic
 """
 What the cell is, and how it resolves on its stack, before anything is sent;
-and what any branch is, and what came of the runs that used it.
+which cases each scorer can hold its runs to, and which are missing a
+target; and what any branch is, and what came of the runs that used it.
 """
 
 import json
@@ -18,7 +19,7 @@ from chatddx.repl.render import LABEL, LATER, REFUSED
 from chatddx.repl.scoring import summary
 from chatddx.repl.shell import Repl
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.case.pydantic import TARGET_KINDS
+from chatddx.repo.entities.case.pydantic import TARGET_KINDS, Expected, pattern_of
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
 from chatddx.repo.entities.output.pydantic import VIEWS
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchOut
@@ -42,6 +43,7 @@ from chatddx.runtime.resolution import (
 )
 from chatddx.runtime.run import FINAL_RESULT
 from chatddx.scoring.score import Scoring
+from chatddx.scoring.scorers.patterns import Pattern
 
 EFFORTS: tuple[Effort, ...] = get_args(Effort.__value__)
 
@@ -65,22 +67,39 @@ HELD_AT: dict[str, str] = {
 STACK_PARTS: tuple[EntityName, ...] = ("machine", "os", "llm", "serving")
 
 
-def show(repl: Repl, entity: str | None = None, name: str | None = None) -> None:
+def _missing() -> Text:
+    """What `show` says where a case has no target, or a target no text or pattern."""
+    return Text("missing", style=LATER)
+
+
+# the most cases a scorer's line names as missing a target
+NAMED = 10
+
+
+def show(repl: Repl, entity: str | None = None, *names: str) -> None:
     """
     The cell: each slice's variation beside what it resolves to on the stack,
-    whether or not the cell is refused, and the prompts it makes. Or ENTITY's
-    NAME, or the cell's ENTITY: what it is, and what came of your runs with
-    it.
+    whether or not the cell is refused, the prompts it makes, and for each
+    scorer the cases it can hold the cell's runs to; `tag TAG...` only the
+    cases with any of the tags. Or ENTITY's NAME, or the cell's ENTITY: what
+    it is, and what came of your runs with it.
     """
     if entity is None:
         _show_cell(repl)
+    elif entity == "tag":
+        if names:
+            _show_cell(repl, names)
+        else:
+            repl.error("usage: show tag TAG...")
     elif entity not in ENTITY_NAMES:
-        repl.error(f"no entity '{entity}': {', '.join(ENTITY_NAMES)}")
+        repl.error(f"no entity '{entity}': tag, {', '.join(ENTITY_NAMES)}")
+    elif len(names) > 1:
+        repl.error(f"usage: show {entity} [NAME]")
     else:
-        _show_branch(repl, cast(EntityName, entity), name)
+        _show_branch(repl, cast(EntityName, entity), names[0] if names else None)
 
 
-def _show_cell(repl: Repl) -> None:
+def _show_cell(repl: Repl, tags: tuple[str, ...] = ()) -> None:
     cell = repl.cell
 
     if not (cell.configuration or cell.stack):
@@ -137,6 +156,93 @@ def _show_cell(repl: Repl) -> None:
         repl.console.print(Text(_clipped(system) or "(none)"))
         repl.console.print("user", style="bold")
         repl.console.print(Text(user))
+
+    if cell.configuration:
+        _show_scorers(repl, tags)
+
+
+def _show_scorers(repl: Repl, tags: tuple[str, ...]) -> None:
+    """
+    Each scorer you see: whether the cell's output offers its view, and of
+    the cases (with any of `tags`) how many have its kind of target, and
+    which are missing one, or have one whose pattern doesn't parse. Two names
+    for one vignette are one case, as for `batch`.
+    """
+    distinct: dict[int, Any] = {}
+    chosen = repl.tagged("case", tags) if tags else repl.usable("case")
+
+    for case in sorted(chosen, key=lambda case: case.name):
+        _ = distinct.setdefault(case.trail_id, case)
+
+    cases = list(distinct.values())
+    views = repl.cell.slices.output.views
+    where = f" tagged {' or '.join(tags)}" if tags else ""
+    count = f"{len(cases)} case{'s' if len(cases) != 1 else ''}{where}"
+
+    if tags and not cases:
+        repl.error(f"no case tagged {' or '.join(tags)} for {repl.identity}")
+        return
+
+    table = Table(box=None, header_style="bold", title_justify="left")
+    table.add_column("scorer")
+    table.add_column("view")
+    table.add_column("target")
+    table.add_column(f"of {count}")
+
+    for scorer in Scoring(repl.identity).scorers:
+        kind = scorer.target_kind or "—"
+
+        if scorer.view not in views:
+            said = Text("the output offers no such view", style=REFUSED)
+            table.add_row(scorer.name, scorer.view, kind, said)
+            continue
+
+        if scorer.target_kind is None:
+            table.add_row(scorer.name, scorer.view, kind, f"all {len(cases)}")
+            continue
+
+        missing: list[str] = []
+        unread: list[str] = []
+
+        for case in cases:
+            target = case.details.get("targets", {}).get(scorer.target_kind)
+            pattern = pattern_of(target)
+
+            if target is False:
+                continue
+
+            if pattern is None:
+                missing.append(case.name)
+            elif _unread(pattern) is not None:
+                unread.append(case.name)
+
+        said = Text(f"{len(cases) - len(missing) - len(unread)} have it")
+
+        if missing:
+            said.append(f"; missing: {_some(missing)}", style=LATER)
+
+        if unread:
+            said.append(f"; doesn't parse: {_some(unread)}", style=REFUSED)
+
+        table.add_row(scorer.name, scorer.view, kind, said)
+
+    repl.console.print(table)
+
+
+def _some(names: list[str]) -> str:
+    """The first names, and how many more there are."""
+    more = len(names) - NAMED
+    return " ".join(names[:NAMED]) + (f" and {more} more" if more > 0 else "")
+
+
+def _unread(pattern: str) -> str | None:
+    """Why `pattern` doesn't parse, or None where it does."""
+    try:
+        _ = Pattern(pattern)
+    except ValueError as e:
+        return str(e)
+
+    return None
 
 
 def _show_branch(repl: Repl, entity: EntityName, name: str | None) -> None:
@@ -216,6 +322,10 @@ def _in_cell(repl: Repl, entity: EntityName) -> Any:
 
 def _add_rows(repl: Repl, table: Table, field: str, value: Any) -> None:
     """A field as rows: a flat mapping a row per key, anything else one."""
+    if field == "targets":
+        _add_targets(table, value)
+        return
+
     if isinstance(value, BaseModel) and not isinstance(value, TrailOut):
         value = value.model_dump(mode="json", exclude_none=True)
 
@@ -234,6 +344,25 @@ def _add_rows(repl: Repl, table: Table, field: str, value: Any) -> None:
         return
 
     table.add_row(field, _text(repl, value))
+
+
+def _add_targets(table: Table, targets: dict[str, Expected | bool]) -> None:
+    """A row per kind of target: its text and its pattern, or `missing`."""
+    for kind in TARGET_KINDS:
+        target = targets.get(kind)
+
+        if target is False:
+            table.add_row(f"targets.{kind}", Text("none expected"))
+        elif not isinstance(target, Expected):
+            table.add_row(f"targets.{kind}", _missing())
+        else:
+            table.add_row(f"targets.{kind}.text", target.text or _missing())
+            said = Text(target.pattern) if target.pattern else _missing()
+
+            if target.pattern and (why := _unread(target.pattern)) is not None:
+                said = Text.assemble(said, (f"  doesn't parse: {why}", REFUSED))
+
+            table.add_row(f"targets.{kind}.pattern", said)
 
 
 def _text(repl: Repl, value: Any) -> Text:

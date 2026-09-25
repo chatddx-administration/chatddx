@@ -125,7 +125,7 @@ class Repl:
     def tags(self, entity: EntityName) -> list[str]:
         """The tags of the branches of `entity` the identity can use."""
         return sorted(
-            {tag.name for model in self._usable(entity) for tag in model.tags.all()}
+            {tag.name for model in self.usable(entity) for tag in model.tags.all()}
         )
 
     def tagged(self, entity: EntityName, tags: Iterable[str]) -> list[BranchModel]:
@@ -134,11 +134,11 @@ class Repl:
 
         return [
             model
-            for model in self._usable(entity)
+            for model in self.usable(entity)
             if wanted & {tag.name for tag in model.tags.all()}
         ]
 
-    def _usable(self, entity: EntityName) -> list[BranchModel]:
+    def usable(self, entity: EntityName) -> list[BranchModel]:
         """The branches of `entity` the identity can use, their tags read at once."""
         models = select_visible_branch_models(
             entity, self.identity, SHARED_BY.get(entity)

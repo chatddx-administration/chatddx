@@ -1,6 +1,7 @@
 """
 What the cell is, and how it resolves on its stack, before anything is sent;
-and what a branch is, and what came of the runs that used it.
+which cases each scorer can hold its runs to; and what a branch is, and what
+came of the runs that used it.
 """
 
 from collections.abc import Callable
@@ -123,8 +124,11 @@ def test_show_case_says_its_text_and_its_targets(say: Say):
     assert "case case-1, archive's" in written
     assert "vignette" in line_of(written, "vignette")
     assert "case vignette 1" in written
-    assert "fake & diagnosis & (b | 2)" in line_of(written, "targets.diagnosis")
-    assert "admit*" in line_of(written, "targets.disposition")
+    assert "Fake diagnosis B" in line_of(written, "targets.diagnosis.text")
+    assert "fake & diagnosis & (b | 2)" in line_of(written, "targets.diagnosis.pattern")
+    assert "missing" in line_of(written, "targets.disposition.text")
+    assert "admit*" in line_of(written, "targets.disposition.pattern")
+    assert "missing" in line_of(written, "targets.dont_miss")
     assert "tag-1 tag-2" in line_of(written, "tags")
     assert "no runs of yours with this case" in written
 
@@ -181,3 +185,37 @@ def test_show_writes_what_is_json_as_json(say: Say):
 
     assert '"additionalProperties": false' in written
     assert "sentinel_op:sentinel_op" in line_of(written, "implementation.function")
+
+
+def test_show_case_says_missing_for_each_kind_it_has_no_target_of(say: Say):
+    written = say("show case case-2")
+
+    assert "nothing & listed" in line_of(written, "targets.diagnosis.pattern")
+
+    for kind in ("warning", "disposition", "dont_miss"):
+        assert line_of(written, f"targets.{kind}").split()[-1] == "missing"
+
+
+def test_show_says_which_cases_each_scorer_can_hold_the_cell_to(say: Say):
+    written = say("cell plan qwen3-8b-awq@fake", "show")
+
+    assert "of 2 cases" in written
+    assert "2 have it" in line_of(written, "reciprocal_rank")
+    assert "1 have it; missing: case-2" in line_of(written, "warning_mentions")
+    assert "the output offers no such view" in line_of(written, "first_mention")
+
+
+def test_show_tag_counts_only_the_cases_with_any_of_the_tags(say: Say):
+    written = say("cell plan qwen3-8b-awq@fake", "show tag tag-1")
+
+    assert "of 1 case tagged tag-1" in written
+    assert "1 have it" in line_of(written, "warning_mentions")
+    assert "missing" not in line_of(written, "warning_mentions")
+
+
+def test_show_tag_needs_a_tag_and_an_entity_one_name(say: Say):
+    assert "usage: show tag TAG..." in say("show tag")
+    assert "usage: show case [NAME]" in say("show case case-1 case-2")
+    assert "no case tagged nowhere" in say(
+        "cell plan qwen3-8b-awq@fake", "show tag nowhere"
+    )

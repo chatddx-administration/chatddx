@@ -83,5 +83,14 @@ def test_a_word_that_repeats_completes_each_time_but_as_it_was_given():
     assert complete(names, "batch edn openxddx d") == ["dutch-fall"]
 
 
+def test_show_completes_tags_after_tag_and_one_name_after_an_entity():
+    names = {"batch:tag": ["edn", "openxddx"], "case": ["case-1", "case-2"]}
+
+    assert complete(names, "show t") == ["tag", "tool", "toolset"]
+    assert complete(names, "show tag ") == ["edn", "openxddx"]
+    assert complete(names, "show tag edn ") == ["openxddx"]
+    assert complete(names, "show case case-1 ") == []
+
+
 def test_the_tags_complete_as_the_cases_have_them(repl: Repl):
     assert repl.completions()["batch:tag"] == ["tag-1", "tag-2"]

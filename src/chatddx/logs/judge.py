@@ -81,7 +81,8 @@ def diagnosis_judge(
             return Score.unscored(reason=f"the output offers no {view}")
 
         targets: dict[str, Any] = state.metadata.get("targets") or {}
-        wanted = targets.get(target_kind)
+        expected: dict[str, Any] | bool | None = targets.get(target_kind)
+        wanted = expected.get("pattern") if isinstance(expected, dict) else None
 
         if not isinstance(wanted, str):
             return Score.unscored(reason=f"the case has no {target_kind} target")

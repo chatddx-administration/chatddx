@@ -32,6 +32,7 @@ async def test_a_configuration_is_one_variation_of_each_slice(
         "differential": "$.diagnoses[*].diagnosis",
         "warning": "$.acute_warning",
         "disposition": "$.management.disposition",
+        "critical": "$.diagnoses[?(@.critical)].diagnosis",
     }
     assert plan.trail.coercion.mode == "native"
     assert plan.trail.reasoning.effort == "default"
