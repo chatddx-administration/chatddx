@@ -1,40 +1,46 @@
 # What clinicians provide, and where
 
 chatddx needs medical judgement in a few places, and nowhere else. This note
-names them, says what is expected in each, and settles how a clinician who
-edits the inventory's TOML files (a "hacker clinician") can tell what is
-done and what isn't. The portal will offer the same fields later, and is
-left out here.
+names them and says what is expected in each. A clinician who edits the
+inventory's TOML files (a "hacker clinician") works in the files
+themselves: editing them is the verification. The portal will offer the
+same fields later, and is left out here.
 
 Decided, as of this note:
 
+- **The data is taken as intended.** Whatever the inventory holds is what
+  is meant: nothing is signed, marked settled or held back, and nothing
+  reads the `# guessed` comments, which are notes for people. A result on
+  bad data is a result on bad data. How the idea of signing came and went
+  is in `post-endgame.md`.
+- **What is missing is shown as missing.** Running on incomplete data is
+  fine; `show` says where a target is missing, and the scores leave it out
+  (§4).
 - **A target says in plain words what is expected,** and its pattern is the
   machine's way of finding it. The words are the clinician's; the pattern
   follows them.
-- **Settling is signing:** a signature ties a branch row to the identity
-  that vouches for it, always the session's owner in the repl or the
-  portal, and the archive for what the inventory commits (§6). It is data,
-  not a `# guessed` comment, so `validate`, the exports and the portal see
-  it.
 - **Four kinds of target:** `diagnosis`, `warning`, `disposition`, and a new
-  `dont_miss`. What `warning` and `disposition` mean is proposed below, and
-  waits on clinical sign-off.
+  `dont_miss`. What `warning` and `disposition` mean is proposed below, for
+  clinicians to confirm.
 - **Beside the targets, four places are the clinicians',** in this order of
   priority: the judge's rules, the vignettes' provenance, the output's
   guidance and schema texts, and what each scorer measures.
+- **De-identification is not chatddx's to check.** A vignette that names a
+  patient must never enter chatddx at all.
 
 ## 1. The places, at a glance
 
-| What | File | Read by | Status today |
-|---|---|---|---|
-| a case's targets | `data/cases.toml` | the scorers, the judge, every export | 198 of 297 guessed (every warning and disposition); the 99 diagnoses unmarked, of unstated origin |
-| the vignette | `data/cases/<name>.txt` | the LLM, as the case | no source, translation or reviewer recorded |
-| the judge's rules | `logs/judge.py`, in code | the judge, in inspect | written by a non-clinician |
-| guidance, schema texts | `inventory/slices.toml`, `inventory/schemas/*.json` | the LLM, as its instructions | written by a non-clinician |
-| what a scorer measures | `inventory/scorers.toml` | the scorers | not described for clinicians |
+| What | File | Read by |
+|---|---|---|
+| a case's targets | `data/cases.toml` | the scorers, the judge, every export |
+| the vignette | `data/cases/<name>.txt` | the LLM, as the case |
+| the judge's rules | `logs/judge.py`, in code | the judge, in inspect |
+| guidance, schema texts | `inventory/slices.toml`, `inventory/schemas/*.json` | the LLM, as its instructions |
+| what a scorer measures | `inventory/scorers.toml` | the scorers |
 
 The rest of the inventory (machines, LLMs, sampling, reasoning, coercion,
-tools) is technical, and needs no clinician.
+tools) is technical, and needs no clinician. `inventory.md` describes every
+key as it is today.
 
 ## 2. How a change reaches a score
 
@@ -46,7 +52,8 @@ database:
 2. **Commit:** `chatddx init-data USER`. A changed target makes a new
    version of the case; a changed vignette makes a new case (its content is
    what the LLM reads, so its runs are a new trial's).
-3. **Check:** `validate` (below) lists what is still missing or unsettled.
+3. **Look:** `show case NAME` shows what the case holds, and what it
+   lacks (§4).
 4. **Score again:** every earlier run of the case is outstanding for its
    scorers once its target changes, and `score` holds them to it. Nothing
    is generated again.
@@ -60,15 +67,13 @@ database:
 
 ### The shape of a target
 
-Each kind has its plain words and its pattern, together; what the
-archive doesn't vouch for is named once per case, in `draft`:
+Each kind has its plain words and its pattern, together:
 
 ```toml
 [case.Dutchfall14w]
 tags = ["dutch-fall"]
 language = "en"
 source = "Dutch Fall, case 14w; translated from Dutch"
-draft = ["warning", "disposition", "dont_miss"]
 
 targets.diagnosis.text = "Acute exacerbation of COPD"
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
@@ -95,17 +100,14 @@ targets.dont_miss.pattern = "pulmonary & embolism | pe"
 - **A Swedish case's pattern names its words in both languages** (§12 of
   `new-datamodel.md`: what chatddx sends is still English, and the LLM may
   answer in either).
-- **`draft` names what isn't settled:** target kinds, `vignette` or
-  `deidentified`. The archive signs everything else it commits (§6). The
-  `# guessed` comments become `draft`: every case's warning and
-  disposition today. A clinician settles a part by taking it out of
-  `draft` in the inventory, or by signing it as themselves in the repl.
 - **`false` still says that none is expected,** where the kind allows it:
   `targets.warning = false`.
+- **A kind left out is missing,** not wrong: the case runs, and the
+  scorers of that kind leave it out.
 
 ### The kinds
 
-| Kind | Proposed meaning (awaits clinical sign-off) | Scored by |
+| Kind | Proposed meaning (for clinicians to confirm) | Scored by |
 |---|---|---|
 | `diagnosis` | the working diagnosis the case is known to have | `reciprocal_rank` (its rank in the differential), `first_mention` (how soon the text names it), the judge |
 | `warning` | the dangerous condition the clinician must act on or rule out now; `false` where there is none. The schema's `acute_warning` would ask for the same: conditions, not signs | `warning_mentions` |
@@ -121,23 +123,20 @@ targets.dont_miss.pattern = "pulmonary & embolism | pe"
   scale); how many `dont_miss` conditions a case may have; and whether a
   case with no `dont_miss` says `false`.
 
-## 4. `validate`
+## 4. What `show` tells a clinician
 
-The repl's `validate [CASE]` checks what can be checked before anything is
-sent, and `run` and `batch` call it first (`new-datamodel.md` §5). For a
-clinician it is the to-do list:
+There is no command of its own for checking the data: `show` shows what is
+there, and says `missing` where something is missing.
 
-- what no one has signed, or only the archive, and what the inventory
-  marks `draft`; a target missing for a kind a scorer reads;
-- a pattern that doesn't parse, or that doesn't find its own `text` (a
-  pattern should always match what its clinician wrote);
-- a Swedish case whose pattern names no Swedish word;
-- a case without a `source`;
-- for the cell in the repl: a case without a target for a scorer the
-  cell's output offers, and a slice the stack refuses.
-
-Without an argument it covers every case the identity sees, grouped by what
-is missing, so a clinician can work down it.
+- **`show case NAME`** lists the vignette and each kind of target, and
+  `missing` for a kind no target is given for; beside a pattern that
+  doesn't parse, it says why. Then the identity's scores on the case.
+- **`show`, of the cell,** adds what its dry run of a batch would meet:
+  for each scorer the cell's output offers, how many of the cases it would
+  run on have its kind of target, and which are missing it. With tags,
+  `show TAG...` narrows that to the cases `batch TAG...` would run.
+- **A batch's line** says `missing` in a scorer's column where the case has
+  no target for it, where it is blank today.
 
 ## 5. The other places, in order
 
@@ -148,10 +147,10 @@ abbreviation, another spelling, a more specific form, or the other language
 counts; a related diagnosis, a complication or a symptom doesn't. That is a
 clinical policy, and it is written in code (`logs/judge.py`).
 
-- **The rules move to data** a clinician edits, `inventory/judge.toml`:
-  what counts, what doesn't, with an example of each, in plain words. The
-  judge's prompt is built from them, and a log records which version
-  judged.
+- **The rules move to data** a clinician edits: what counts, what doesn't,
+  with an example of each, in plain words. The judge is registered as a
+  scorer, and the rules are its arguments, so a changed rule is a new
+  scorer and every score says which rules made it.
 - **The judge reads the target's `text`,** not its pattern, once targets
   have one.
 - **Open:** who adjudicates where the judge and the pattern disagree
@@ -160,14 +159,9 @@ clinical policy, and it is written in code (`logs/judge.py`).
 
 ### 5.2 The vignettes' provenance
 
-A vignette is a text file, and stays one. What the file can't say goes in
-its case's record:
-
-- `source`: the dataset and the case's number in it, and where it was
-  translated, from what;
-- whether a clinician has read the vignette as it is sent, translation
-  included, and that it names no patient, are signatures (§6), of the parts
-  `vignette` and `deidentified`.
+A vignette is a text file, and stays one. Where it came from goes in its
+case's record, as `source`: the dataset and the case's number in it, and
+what it was translated from, where it was.
 
 A changed vignette is a new case, so a correction is made in a new file, or
 an edited one committed again, and the runs of the old text stay the old
@@ -196,119 +190,21 @@ words ("the rank at which the differential first names the diagnosis, as
 1/rank"), and a clinician says whether it answers a clinical question.
 `first_mention`, which counts characters, may not.
 
-## 6. Signing
-
-### Where it lives
-
-A signature is not content, and not a detail either: it changes nothing a
-run or a score reads, and it says who vouches, which a branch row can't (a
-row has an owner, and no author). It is kept beside the registry, keyed by
-what was signed rather than by the row that holds it: the identity that
-signed, the part, when, the chatddx revision, and a fingerprint of what the
-part holds.
-
-- **What a part's fingerprint covers:** the case's trail fingerprint, the
-  part's name, and its value. For `vignette`, that is the trail; for a
-  target kind, its `text` and `pattern` too, which are details and in no
-  trail's fingerprint; for the whole row in step 1, the trail and every
-  detail a signature covers. A target signed on one case is not signed on
-  another that happens to share its words.
-- **The signer is the session's owner,** in the repl (`sign case NAME
-  [PART]`, `unsign`) or the portal. A signature changes nothing in a row,
-  so anyone who can see a case can sign it, the archive's included.
-- **An edit starts unsigned.** A changed target or vignette has a new
-  fingerprint, and no signature. Nothing has to remember to reset a flag.
-- **Signatures outlive their rows.** `wipe-data` and `init-data` remove
-  and remake branch rows, and a signature keyed by fingerprint holds for
-  the same content when it comes back: a dev cycle doesn't lose its
-  sign-offs.
-- **A score says what it was held to.** A score keeps the case row it read;
-  the row's parts' fingerprints then say whether it was signed when the
-  score was made, and whether it is now.
-- **It is generic:** an output's guidance and schema, a scorer's
-  description, the judge's rules can be signed the same way.
-
-### The archive signs the inventory
-
-`init-data` signs, as the archive, every part it commits but those the
-case's `draft` names. `draft` is the inventory's alone: it is read by
-`init-data` and kept nowhere, since what the database needs to know is who
-signed, not what the archive held back. An archive signature says "this
-came in through the curated inventory"; who wrote it is in git, and the
-signature keeps the revision it was committed from, so the one leads to
-the other. The archive never signs in a session, and a clinician's
-signature is never the archive's.
-
-### What signing by fingerprint leaves open
-
-- **The archive's signatures are a projection of the inventory,** not
-  events. `init-data` has to sign what is newly out of `draft` even where
-  nothing else changed, and a commit that changes nothing does nothing
-  today; and it has to take back the archive's signature of a part put
-  back in `draft`, which a signature that outlives its row would otherwise
-  keep.
-- **A value that comes back is signed again.** A target edited from A to B
-  and back to A finds A's signature, given before B existed. The
-  fingerprint says the content is the same; whether the signer's judgement
-  still holds is another matter. The signature's time says when.
-- **Signatures without rows.** A signature whose content no row holds any
-  longer lingers: harmless, but `validate` should count them, and
-  `wipe-data USER` must say whether a user's signatures go with their
-  runs, or stay, as a wipe for a test cycle would want.
-- **Copies share signatures.** A case the archive signed is signed in
-  alex's copy of it too, where the content is the same: right for the
-  content, but the signature then vouches for a row its signer never saw.
-- **The part's fingerprint is a new one.** Trails are fingerprinted, and
-  details aren't; a part's fingerprint needs a canonical form of its
-  details (`data-generation.md` §3.2), defined per part, and changed with
-  care, since a change of form unsigns everything.
-- **What `draft` doesn't say is lost.** The database knows a part is
-  unsigned, not whether the inventory meant to hold it back, forgot to, or
-  never had a clinician; `validate` reads the inventory to tell.
-
-### Granularity, in two steps
-
-1. **The whole row.** A signature covers everything in the row. The archive
-   signs a case only where its `draft` is empty; a clinician signs the
-   whole case. Today no case is archive-signed, since every one has guessed
-   targets: that is the truth.
-2. **The parts.** A signature names one part: a target kind, `vignette`
-   (read as sent, translation included), or `deidentified`. The archive
-   signs every part but those in `draft`.
-
-**Where step 2 ends is open.** A proposal, weighing complexity against
-clinical rigour, for a tool that is primarily for research:
-
-- one signature per part is enough for a part to count as settled;
-- a row may carry more than one signature, and `validate` and the exports
-  count them, so a second, independent reviewer is possible without being
-  required;
-- `diagnosis` asks for two clinicians before a study's results are
-  reported, the other kinds for one; the judge's disagreements with the
-  pattern (`chatddx agreement`) go to a clinician first;
-- no reasons, no adjudication records, no electronic-signature
-  guarantees: clinical-grade rigour (independent double review with
-  adjudication, a full audit trail) is probably not practically achievable
-  here, and the note doesn't pretend otherwise.
-
-## 7. Where each field goes
+## 6. Where each field goes
 
 | Field | Home | Why |
 |---|---|---|
 | `targets.<kind>.pattern` | case branch details (today's `targets`) | the pattern scorers read it; a change is a new version, and makes runs outstanding |
 | `targets.<kind>.text` | case branch details, beside the pattern | the judge and the exports read it; a change should make the judge's scores outstanding |
-| `draft` | the inventory's TOML only | what the archive doesn't sign; read by `init-data` and `validate`, kept nowhere |
-| signatures | a table beside the registry, keyed by the fingerprint of the part signed: identity, part, time, revision | who vouches, which no row records; outlives `wipe-data` and `init-data` for the same content |
 | `dont_miss` | a target kind (code vocabulary), a view of the output (the differential's items marked critical), and a scorer | as the other kinds |
 | the disposition scale | the arguments of the scorer that reads it (trail content) | it changes scores, so each score cites it |
 | the judge's rules | the judge registered as a scorer, its rules in its arguments | a changed rule is a new scorer trail; inspect gets them as options |
 | a scorer's `description` | scorer branch details | it changes no score; it is data, not a model's `help_text` |
 | `source` | case branch details | it describes the content without changing what the LLM reads; copies carry it |
-| guidance and schema texts | output trail content, as today; signed as rows | already fingerprinted |
+| guidance and schema texts | output trail content, as today | already fingerprinted |
 
-## 8. Open
+## 7. Open
 
-- Sign-off on §3's meanings, by whom.
-- Where step 2 of signing ends (§6).
+- Clinicians' confirmation of §3's meanings.
 - Where `false` is allowed: today only for `warning`; `dont_miss` may want
   it.

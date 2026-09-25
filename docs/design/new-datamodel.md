@@ -114,13 +114,9 @@ trail field that cannot take part in the fingerprint is not content", and
 - **Storage.** Relations stay many-to-many. Plain details go in one JSON
   column on the entity's branch model, validated by its details schema. A
   typed column is added only where something queries it.
-- **Signatures sit beside the branches** (`clinical-input.md` §6): who
-  vouches for a case, or a part of it, which a row can't say, since it has
-  an owner and no author. Like tags and collaborators, a signature changes
-  nothing resolution or scoring reads; unlike them, it is keyed by a
-  fingerprint of what it signed, not by a row, so an edit starts unsigned
-  and the same content keeps its signatures through `wipe-data` and
-  `init-data`. Whoever can see a case can sign it.
+- **Nothing records who vouches for a row.** The data is taken as
+  intended, and git says who wrote the inventory; signing was designed and
+  abandoned (`post-endgame.md`).
 
 ### Passthroughs are the router
 
@@ -800,7 +796,7 @@ These are the rules for when inspect scores with scorers of its own.
 chatddx's scorers keep theirs until then (below), in a log too.
 
 - **Refused before running.** A cell whose output lacks a view that a
-  scorer reads is refused for that scorer when it is validated (§5).
+  scorer reads is refused for that scorer when the cell is resolved (§5).
   If no scorer is left, the cell isn't generated.
 - **Unreadable at scoring.**
   - An output that isn't valid, or whose view yields a value that fails
@@ -956,7 +952,7 @@ A batch names:
 
 It is not a registry entity. Whether it is kept in history at all is
 deferred (below, What a batch is). The `plan` and `generate` of the old
-batch planner are gone: what `plan` showed is `validate`'s now (below).
+batch planner are gone: what `plan` showed, `show` shows now (below).
 
 | Field | Holds |
 |---|---|
@@ -996,27 +992,33 @@ went:
 |---|---|
 | cases with any of the tags | the same |
 | the owner's own cases only | their own and those shared with them: the corpus is the archive's now |
-| a case with no target for the chosen scorers left out, and named before anything was made | run, and named before anything is sent (`validate`, below); the scorers without a target leave its line blank |
+| a case with no target for the chosen scorers left out, and named before anything was made | run, and shown by `show` before anything is sent (below); its line says `missing` for the scorers without a target |
 | scorers named, or all where none were | the same; the repl's batch takes all the owner sees whose view the output offers |
 | one experiment per case and expectation | one run per case and seed, scored by each scorer that applies |
 | two cases of one content made once | the same |
-| `plan` before `generate` | `validate` before running |
+| `plan` before `generate` | `show` before running, as a dry run |
 | kept as an order, re-generatable | deferred (below) |
 | no seeds | `replicates`; the repl's batch has none yet (below) |
 
-### `validate` replaces `plan`
+### `show` replaces `plan`
 
-`validate [CASE]` checks, without sending anything, what the old `plan` and
-this section's report would have said, and `run` and `batch` call it first:
+There is no command for checking the data: `show` shows what is there, and
+says `missing` where something is missing. What the old `plan` and this
+section's report would have said, it says without sending anything:
 
-- for the cell held in the repl, a slice the stack refuses, with the facts
-  it rests on, and a scorer whose view the output doesn't offer;
-- for each case, a missing target for a scorer that applies, a target that
-  doesn't parse, and the targets and vignettes clinicians have yet to
-  settle (`clinical-input.md` §4).
+- `show`, of the cell held in the repl: a slice the stack refuses, with the
+  facts it rests on, and a scorer whose view the output doesn't offer; and,
+  as a dry run of a batch, for each scorer, the cases that have its kind
+  of target and those missing it. `show TAG...` narrows that to the cases
+  `batch TAG...` would run.
+- `show case NAME`: each kind of target, `missing` where none is given, and
+  why a pattern doesn't parse (`clinical-input.md` §4).
 
-Without a case it covers every case the owner sees. `run` and `batch` stop
-on what makes a run impossible and say the rest before the first run.
+The data is taken as intended: nothing is signed or held back, and
+`# guessed` comments are notes for people. Running on incomplete data is
+fine. `run` and `batch` stop only on what makes a run impossible (a refused
+cell, a pattern that doesn't parse), and a case missing a target is run,
+its line saying `missing` for the scorers of that kind.
 
 ### What a batch is
 
@@ -1085,7 +1087,7 @@ Learned in building it:
   unseen.
 - **Five digits read well and collide sooner:** two sessions drawing the
   same seed on the same cell and case make a repeat where a replicate was
-  meant, about one chance in 100,000 per pair. `validate` could say when a
+  meant, about one chance in 100,000 per pair. `show` could say when a
   batch's seed has run its cases before.
 - **Tests hold the seed:** the repl takes one, or none, so a test's
   output doesn't change with a draw. The fake vLLM reads a seed back in its
@@ -1138,7 +1140,7 @@ batches share one; whether a batch is kept as an order is still deferred
 
 ### The compatibility table is the batch's resolution report
 
-**Decision:** there is no authored compatibility table. `validate`
+**Decision:** there is no authored compatibility table. `show`
 resolves every cell against its stack, as a dry run (`data-generation.md`
 §2.4). Its report is the table.
 
@@ -1155,7 +1157,7 @@ resolves every cell against its stack, as a dry run (`data-generation.md`
   view.
 - **Per scorer and case,** it says whether the case has a target the scorer
   reads. A case without one is run, and left out for that scorer, and
-  `validate` says so before anything is sent.
+  `show` says `missing` before anything is sent.
 - **Pairwise tables are views of the report.** Stack × reasoning (§2) is
   the report projected onto two slices.
 - **Collapsed cells are shown and not run.** Refused cells are shown and
@@ -1177,7 +1179,7 @@ has a home now:
 | sampling params × connection (the provider settings an LLM honours) | reasoning × LLM: reasoning is an intent that the LLM's facts translate, and `provider_params` is dissolved | derived from facts |
 | sampling params × connection (settings never sent: `top_k`, `n`) | gone: `top_k` goes out in `extra_body`, and `n` is scrapped | none |
 | instruction × output type | the output's guidance fills the instruction's slot, and resolution checks that the slot is placed | derived |
-| scorer × expectation | scorer × case: does the case have a target the scorer reads, and does it parse? Both are checked by `validate`, not when the run is scored. | derived |
+| scorer × expectation | scorer × case: does the case have a target the scorer reads, and does it parse? Both are shown by `show`, not first found when the run is scored. | derived |
 
 ### What goes away
 
@@ -1779,10 +1781,9 @@ A case's targets are its details:
   reaches earlier runs of the same vignette, and a new vignette comes with
   targets of its own.
 - **A target is to become its plain words and its pattern,** with a fourth
-  kind, `dont_miss`, and a case's `draft` naming what the archive doesn't
-  sign (`clinical-input.md` §3, §7). The pattern stays what the pattern
-  scorers read; the words are what the judge reads and people see.
-  Whether a target is settled is a signature of the case row (§1).
+  kind, `dont_miss` (`clinical-input.md` §3, §6). The pattern stays what
+  the pattern scorers read; the words are what the judge reads and people
+  see. A kind left out is missing, and its scorers leave the case out.
 
 ### Scores
 
@@ -1909,13 +1910,14 @@ lockstep.
 Where this note and the code differ, the note is what was decided:
 
 - **Request hashes** (`data-generation.md` §3) aren't computed yet.
-- **`validate`** doesn't exist; `batch` refuses a cell up front, and says
-  nothing of a case's missing targets before it runs (§5).
+- **`show`** has no dry run and doesn't say `missing`; `batch` refuses a
+  cell up front, says nothing of a case's missing targets before it runs,
+  and leaves their columns blank (§5).
 - **`batch --seeds`** isn't built: a replicate is a `seed`, then a batch (§5).
 - **`export`** is the repl's, per cell, writing inspect logs only
   (`export.md`).
 - **Targets** are patterns alone, with `# guessed` in comments, and there
-  is no `dont_miss`; nothing is signed (`clinical-input.md`).
+  is no `dont_miss` (`clinical-input.md`).
 
 ## Sources
 
