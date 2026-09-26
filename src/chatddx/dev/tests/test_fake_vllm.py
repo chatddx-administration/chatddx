@@ -15,6 +15,7 @@ from jsonschema.validators import validator_for
 from chatddx.core import settings
 from chatddx.dev.fake_vllm import (
     ANSWER,
+    CONTEXT,
     FakeTransport,
     completion,
     instance,
@@ -290,6 +291,32 @@ def test_the_usage_comes_on_every_chunk_only_with_the_usage_at_the_end():
     assert ["usage" in chunk for chunk in chunks[-2:]] == [False, True]
 
 
+def test_running_away_it_answers_then_writes_newlines_till_max_tokens_run_out():
+    limited = body(max_tokens=100, stream_options={"include_usage": True})
+    chunks = events(stream(limited, runaway=True))
+    deltas = [c["choices"][0]["delta"] for c in chunks if c["choices"]]
+    newlines = sum(delta.get("content") == "\n" for delta in deltas)
+
+    assert newlines > 0
+    assert "".join(d.get("content", "") for d in deltas) == ANSWER + "\n" * newlines
+    assert chunks[-2]["choices"][0]["finish_reason"] == "length"
+    assert chunks[-1]["usage"]["completion_tokens"] == 100
+
+
+def test_running_away_with_no_max_tokens_it_writes_till_the_context_runs_out():
+    usage = completion(body(stream=False), runaway=True)["usage"]
+
+    assert usage["total_tokens"] == CONTEXT
+
+
+def test_a_call_or_an_answer_cut_short_doesn_t_run_away():
+    call = respond(body(tools=[function("lookup")]), runaway=True)
+    cut = respond(body(max_tokens=5), runaway=True)
+
+    assert (call.runaway, call.finish) == (0, "tool_calls")
+    assert (cut.runaway, cut.finish) == (0, "length")
+
+
 def test_it_answers_whole_when_asked_not_to_stream():
     response = completion(body(GPT_OSS, stream=False))
     message = response["choices"][0]["message"]
@@ -299,9 +326,9 @@ def test_it_answers_whole_when_asked_not_to_stream():
 
 
 @contextmanager
-def serving(delay: float = 0.0) -> Generator[tuple[str, int]]:
+def serving(delay: float = 0.0, runaway: bool = False) -> Generator[tuple[str, int]]:
     """The fake vLLM served, `delay` between its words, at a port of its own."""
-    fake = server("127.0.0.1", 0, delay)
+    fake = server("127.0.0.1", 0, delay, runaway=runaway)
     host, port = fake.server_address[:2]
     thread = threading.Thread(
         target=fake.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
@@ -328,6 +355,22 @@ def test_it_serves_chat_completions_over_http(fake_url: str):
 
     assert response.status_code == 200
     assert response.json()["choices"][0]["message"]["content"] == ANSWER
+
+
+def test_served_it_runs_away_when_told_to():
+    with serving(runaway=True) as (host, port):
+        response = httpx2.post(
+            f"http://{host}:{port}/v1/chat/completions",
+            json=body(stream=False, max_tokens=100),
+        )
+
+    [choice] = response.json()["choices"]
+    content = choice["message"]["content"]
+
+    assert choice["finish_reason"] == "length"
+    assert content.startswith(ANSWER)
+    assert content.removeprefix(ANSWER).strip("\n") == ""
+    assert content != ANSWER
 
 
 def test_it_serves_nothing_else(fake_url: str):

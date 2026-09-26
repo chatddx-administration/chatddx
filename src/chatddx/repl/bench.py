@@ -39,7 +39,7 @@ from chatddx.repo.store.branch import (
 )
 from chatddx.repo.store.trail import dump_trail
 from chatddx.runtime.resolution import Resolution, Sampling, resolve
-from chatddx.runtime.run import TOOL_ROUNDS, Run, cause_of, invalid
+from chatddx.runtime.run import TOOL_ROUNDS, Run, Runaway, cause_of, invalid
 from chatddx.scoring.score import Scoring, VisibleScorer
 from chatddx.scoring.scorers.patterns import Pattern
 
@@ -430,6 +430,8 @@ def failed(error: Exception, resolution: Resolution) -> Outcome:
         case UsageLimitExceeded():
             stopped = f"stopped: still calling tools after {TOOL_ROUNDS} rounds"
             return Outcome(RunStatus.COMPLETED, valid=unheld, error=stopped)
+        case Runaway():
+            return Outcome(RunStatus.COMPLETED, valid=unheld, error=f"stopped: {error}")
         case _:
             return Outcome(RunStatus.ERRORED, error=f"{type(error).__name__}: {error}")
 

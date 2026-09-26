@@ -18,6 +18,7 @@ from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.names import short_fingerprint
+from chatddx.runtime.run import RUNAWAY
 
 pytestmark = pytest.mark.django_db
 
@@ -204,6 +205,21 @@ def test_a_run_whose_server_fails_is_recorded_as_errored(
 
     assert messages[-1]["kind"] == "error"
     assert "no such model" in messages[-1]["payload"]["error"]
+
+
+def test_a_run_whose_llm_runs_away_is_stopped_and_recorded(
+    run: Run, through: Callable[[Any], None]
+):
+    fake = FakeTransport(runaway=True)
+    through(fake)
+    stopped = f"stopped: nothing but whitespace for {RUNAWAY} tokens"
+
+    events = run(**FREE_TEXT, case="case-1")
+    run_ = recorded(events)
+
+    assert of(events, "error")[0]["message"] == stopped
+    assert (run_["status"], run_["error"]) == ("completed", stopped)
+    assert fake.aborted == fake.requests
 
 
 def test_a_vignette_of_one_s_own_runs_as_a_case_without_a_branch(

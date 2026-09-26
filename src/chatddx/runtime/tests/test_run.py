@@ -1,6 +1,9 @@
+import asyncio
 import json
 import threading
-from collections.abc import Callable, Iterator
+import time
+from collections.abc import AsyncIterator, Callable, Generator, Iterator
+from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -11,6 +14,7 @@ from pydantic import JsonValue
 from pydantic_ai import (
     AgentRunResultEvent,
     AgentStreamEvent,
+    ModelResponse,
     PartStartEvent,
     TextPart,
     ThinkingPart,
@@ -22,7 +26,14 @@ from chatddx.dev.fake_vllm import ANSWER, FakeTransport, server, stream, thinkin
 from chatddx.runtime import tools
 from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import Resolution, Sampling
-from chatddx.runtime.run import TOOL_ROUNDS, Run, cause_of, invalid
+from chatddx.runtime.run import (
+    RUNAWAY,
+    TOOL_ROUNDS,
+    Run,
+    Runaway,
+    cause_of,
+    invalid,
+)
 
 type Cell = Callable[..., Resolution]
 
@@ -172,19 +183,26 @@ async def test_a_credential_goes_out_as_the_api_key(cell: Cell):
     assert headers == ["Bearer s3cret"]
 
 
-@pytest.fixture
-def fake_endpoint() -> Iterator[str]:
-    fake = server("127.0.0.1", 0)
+@contextmanager
+def serving(runaway: bool = False) -> Generator[str]:
+    fake = server("127.0.0.1", 0, runaway=runaway)
     host, port = fake.server_address[:2]
     thread = threading.Thread(
         target=fake.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
     )
     thread.start()
 
-    yield f"http://{host!s}:{port}/v1/"
+    try:
+        yield f"http://{host!s}:{port}/v1/"
+    finally:
+        fake.shutdown()
+        fake.server_close()
 
-    fake.shutdown()
-    fake.server_close()
+
+@pytest.fixture
+def fake_endpoint() -> Iterator[str]:
+    with serving() as endpoint:
+        yield endpoint
 
 
 @pytest.mark.asyncio
@@ -491,6 +509,99 @@ async def test_an_llm_still_calling_after_its_rounds_is_stopped(
     assert len(bodies) == TOOL_ROUNDS + 1
     assert len(run.messages) == 2 * (TOOL_ROUNDS + 1) + 1
     assert run.messages[-1].kind == "request"
+
+
+@pytest.mark.asyncio
+async def test_an_llm_that_goes_on_with_nothing_but_whitespace_is_stopped(cell: Cell):
+    fake = FakeTransport(runaway=True)
+    run = Run(cell("plan", "gpt-oss-20b@fake"), CASE, transport=fake)
+
+    with pytest.raises(Runaway, match=f"nothing but whitespace for {RUNAWAY} tokens"):
+        _ = await events_of(run)
+
+    [response] = run.responses
+    _, answered = run.messages
+
+    assert fake.aborted == fake.requests
+    assert bytes(response).count(b'"content": "\\n"') == RUNAWAY
+    assert isinstance(answered, ModelResponse)
+    assert answered.state == "interrupted"
+    assert '"acute_warning": "fake acute warning"' in str(answered.text)
+
+
+@pytest.mark.asyncio
+async def test_a_runaway_over_http_is_cut_off_and_the_server_hears_it(
+    cell: Cell, capsys: pytest.CaptureFixture[str]
+):
+    logged = ""
+
+    with serving(runaway=True) as endpoint:
+        resolved = replace(cell("free-text", "gpt-oss-20b@fake"), endpoint=endpoint)
+
+        with pytest.raises(Runaway):
+            _ = await events_of(Run(resolved, CASE))
+
+        cut = time.monotonic()
+
+        while "aborted" not in logged and time.monotonic() - cut < 2:
+            await asyncio.sleep(0.01)
+            logged += capsys.readouterr().err
+
+    assert "aborted: the client hung up after" in logged
+
+
+def writing(*tokens: str, field: str = "content") -> httpx2.MockTransport:
+    """A server that streams `tokens` in `field`, a chunk each, then an answer."""
+    deltas = [{field: token} for token in tokens] + [{"content": "A cough."}]
+
+    async def streamed() -> AsyncIterator[bytes]:
+        for n, delta in enumerate(deltas, 1):
+            finish = "stop" if n == len(deltas) else None
+            chunk = {
+                "id": "chatcmpl-test",
+                "object": "chat.completion.chunk",
+                "created": 0,
+                "model": "Qwen/Qwen3-8B-AWQ",
+                "choices": [{"index": 0, "delta": delta, "finish_reason": finish}],
+            }
+            yield f"data: {json.dumps(chunk)}\n\n".encode()
+
+        yield b"data: [DONE]\n\n"
+
+    def handler(_request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(
+            200, headers={"content-type": "text/event-stream"}, content=streamed()
+        )
+
+    return httpx2.MockTransport(handler)
+
+
+@pytest.mark.asyncio
+async def test_whitespace_short_of_a_runaway_is_written_as_it_comes(cell: Cell):
+    blank = "\n" * (RUNAWAY - 1)
+    run = Run(
+        cell("free-text", "qwen3-8b-awq@fake"),
+        CASE,
+        transport=writing("Fever.", *blank),
+    )
+
+    assert answer(await events_of(run)) == f"Fever.{blank}A cough."
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field", ["content", "reasoning"])
+async def test_whitespace_counts_before_the_answer_and_in_the_thinking(
+    cell: Cell, field: str
+):
+    # before the answer, pydantic-ai drops it as the LLM's profile asks
+    run = Run(
+        cell("free-text", "qwen3-8b-awq@fake"),
+        CASE,
+        transport=writing(*"\n" * RUNAWAY, field=field),
+    )
+
+    with pytest.raises(Runaway):
+        _ = await events_of(run)
 
 
 def test_a_tool_with_nothing_to_run_is_refused_before_anything_is_sent(cell: Cell):

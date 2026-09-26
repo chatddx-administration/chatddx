@@ -469,8 +469,9 @@ case and seed are runs of one trial, whoever made them.
 A **run** is one go at a trial. It records:
 
 - who ran it, when it started and finished, and whether it **completed**
-  (the model answered, even badly) or **errored** (the model or the server
-  failed, or it was stopped);
+  (the model answered, even badly, or went on till it was stopped: calling
+  tools round after round, or writing nothing but whitespace) or
+  **errored** (the model or the server failed, or someone stopped it);
 - the **client** it ran on, and that client's revision and package
   versions;
 - the **branch rows** whose details it read: the stack's, the model's, and

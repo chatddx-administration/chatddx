@@ -16,6 +16,7 @@ from chatddx.repl import bench
 from chatddx.repl.bench import SEEDS
 from chatddx.repl.shell import Repl
 from chatddx.repo.entities.tool.django import ToolBranchModel
+from chatddx.runtime.run import RUNAWAY
 
 pytestmark = pytest.mark.django_db
 
@@ -211,6 +212,30 @@ def test_an_llm_still_calling_tools_is_stopped(say_as: SayAs):
     assert "stopped: still calling tools after 5 rounds" in written
 
 
+RAN_AWAY = f"stopped: nothing but whitespace for {RUNAWAY} tokens"
+
+
+def test_an_llm_that_runs_away_is_stopped_and_the_run_recorded(say_as: SayAs):
+    fake = FakeTransport(runaway=True)
+    say = say_as(transport=fake)
+
+    written = say("cell plan qwen3-8b-awq@fake", "run case-1")
+
+    assert '"acute_warning": "fake acute warning"' in written
+    # no trail of blank lines between the answer and why it stopped
+    assert f"}}\n{RAN_AWAY}" in written
+    assert "recorded as run 1 of trial" in written
+    assert fake.aborted == fake.requests
+
+    [run] = RunModel.objects.all()
+    assert (run.status, run.valid, run.answer, run.error) == (
+        "completed",
+        False,
+        None,
+        RAN_AWAY,
+    )
+
+
 def test_a_tool_with_nothing_to_run_is_said_before_anything_is_sent(
     say: Say, fake: FakeTransport
 ):
@@ -373,6 +398,33 @@ def test_a_run_that_fails_is_said_on_its_line_and_the_batch_goes_on(
 
     assert [run.status for run in RunModel.objects.all()] == ["errored", "errored"]
     assert "stopped" not in written
+
+
+class RunningAway(FakeTransport):
+    """The fake vLLM, running away on case-1 alone."""
+
+    @override
+    def runs_away(self, body: dict[str, Any], /) -> bool:
+        return body["messages"][-1]["content"] == "case vignette 1"
+
+
+def test_a_run_that_runs_away_is_stopped_on_its_line_and_the_batch_goes_on(
+    say_as: SayAs,
+):
+    transport = RunningAway()
+    say = say_as(transport=transport)
+
+    written = say("cell plan qwen3-8b-awq@fake", "batch tag-2")
+
+    assert row(written, "case-1")[1].startswith("~")
+    assert row(written, "case-1")[2] == "invalid"
+    assert line_of(written, "case-1 ").endswith(RAN_AWAY)
+    assert row(written, "case-2")[2] == "valid"
+    assert "stopped after" not in written
+    assert transport.aborted == transport.requests[:1]
+    assert list(
+        RunModel.objects.order_by("started").values_list("error", flat=True)
+    ) == [RAN_AWAY, None]
 
 
 def test_ctrl_c_stops_a_run_as_it_streams_and_it_is_recorded_as_stopped(

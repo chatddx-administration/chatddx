@@ -312,6 +312,13 @@ diagnoses), the shell also says whether it did: `valid`, or `invalid` with
 what is wrong. A model that fails, a server that errors, or an answer that
 can't be read is said in red, and the run is recorded all the same.
 
+A model that runs away, writing nothing but whitespace token after token
+as gpt-oss can once its answer is done, is stopped after 100 tokens of it
+and said in red: `stopped: nothing but whitespace for 100 tokens`. The run
+is recorded with what came before, `invalid` where the answer should
+follow a structure. `chatddx fake-vllm --runaway` makes the fake model run
+away after every answer, to try it.
+
 Press Ctrl-C to stop a run while it streams. What came so far is recorded,
 as stopped.
 
@@ -337,7 +344,9 @@ casesfromedn10      44  completed  —              0
 - **Tags** say which set a case belongs to: `dutch-fall`, `edn` and
   `openxddx` in the inventory. `batch edn dutch-fall` runs both sets.
 - **The outcome** is `completed`, `valid` or `invalid` (for structured
-  answers), or `errored`, with the error at the end of the line.
+  answers), or `errored`, with the error at the end of the line. A case
+  whose model runs away is stopped, as `run` stops it, and the batch goes
+  on.
 - **A blank score** means the case has no target for that scorer; `—`
   means the scorer found nothing to score.
 - **The seed** is the shell's, the same for every case, and shown in the

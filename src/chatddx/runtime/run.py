@@ -1,3 +1,4 @@
+import json
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
@@ -46,6 +47,20 @@ OWN: OpenAIModelProfile = {
 FINAL_RESULT = "final_result"
 
 TOOL_ROUNDS = 5
+
+# tokens of nothing but whitespace in a row: an LLM that streams as many has
+# run away, as gpt-oss does on malborg at times, answering and then going on
+# with newlines till its context runs out
+RUNAWAY = 100
+
+# where vLLM's reasoning parser streams the thinking, as versions have it
+REASONING = ("reasoning", "reasoning_content")
+
+
+class Runaway(Exception):
+    def __init__(self, tokens: int):
+        super().__init__(f"nothing but whitespace for {tokens} tokens")
+        self.tokens: int = tokens
 
 
 class Run:
@@ -200,19 +215,67 @@ class Run:
 
 
 class _Copied(httpx2.AsyncByteStream):
+    """A response, copied as it is read, and cut off where the LLM runs away."""
+
     def __init__(self, stream: httpx2.AsyncByteStream, into: bytearray):
         self._stream: httpx2.AsyncByteStream = stream
         self._into: bytearray = into
+        self._unread: bytes = b""
+        self._blank: int = 0
 
     @override
     async def __aiter__(self) -> AsyncIterator[bytes]:
         async for chunk in self._stream:
             self._into.extend(chunk)
+            self._watch(chunk)
             yield chunk
 
     @override
     async def aclose(self) -> None:
         await self._stream.aclose()
+
+    def _watch(self, chunk: bytes) -> None:
+        *events, self._unread = (self._unread + chunk).split(b"\n\n")
+
+        for event in events:
+            text = _streamed(event)
+
+            if not text:
+                continue
+
+            self._blank = self._blank + 1 if text.isspace() else 0
+
+            if self._blank >= RUNAWAY:
+                raise Runaway(self._blank)
+
+
+def _streamed(event: bytes) -> str:
+    """What an event streams of the LLM's: content, thinking and arguments."""
+    data = b"\n".join(
+        line.removeprefix(b"data:").strip()
+        for line in event.splitlines()
+        if line.startswith(b"data:")
+    )
+
+    written: list[Any] = []
+
+    # anything but a chunk as vLLM sends one streams nothing
+    try:
+        chunk: dict[str, Any] = json.loads(data)
+        choices: list[dict[str, Any]] = chunk.get("choices") or []
+
+        for choice in choices:
+            delta: dict[str, Any] = choice.get("delta") or {}
+            calls: list[dict[str, Any]] = delta.get("tool_calls") or []
+            written += [delta.get(field) for field in ("content", *REASONING)]
+
+            for call in calls:
+                function: dict[str, Any] = call.get("function") or {}
+                written.append(function.get("arguments"))
+    except (ValueError, AttributeError, TypeError):
+        return ""
+
+    return "".join(text for text in written if isinstance(text, str))
 
 
 def _runner(

@@ -15,6 +15,9 @@ ANSWER = "Fake diagnosis A\nFake diagnosis B\nFake diagnosis C"
 
 FINAL_RESULT = "final_result"
 
+# where a runaway ends, with no max_tokens to end it sooner
+CONTEXT = 32768
+
 _TRANSPORT = frozenset({"messages", "model", "stream", "stream_options"})
 
 # a word and the space after it; a thinking tag is a token of its own, as it
@@ -53,9 +56,13 @@ class Reply:
     # a call to a tool: its name and its arguments, as JSON
     call: tuple[str, str] | None
     finish: str
+    # the newlines it goes on with after its answer, a token each
+    runaway: int = 0
 
 
-def respond(body: dict[str, Any], reasoning_parser: bool = True) -> Reply:
+def respond(
+    body: dict[str, Any], reasoning_parser: bool = True, runaway: bool = False
+) -> Reply:
     thought_text = None if _held(body, reasoning_parser) else thinking(body)
     thought = _words(thought_text or "")
     tool = _next_tool(body)
@@ -83,21 +90,38 @@ def respond(body: dict[str, Any], reasoning_parser: bool = True) -> Reply:
         thought = thought[:limit]
         answer = answer[: limit - len(thought)]
 
+    newlines = 0
+
+    if runaway and finish == "stop":
+        # as gpt-oss does on malborg at times: the answer ends, the tokens don't
+        room = limit if isinstance(limit, int) else CONTEXT - _prompt_tokens(body)
+        newlines = max(room - len(thought) - len(answer), 0)
+        finish = "length"
+
     reasoning = "".join(thought) if thought_text is not None else None
 
     if reasoning is not None and not reasoning_parser:
         # nothing takes the thinking out of the answer
         closed = "\n</think>\n\n" if finish != "length" or answer else ""
         return Reply(
-            None, f"<think>\n{reasoning}{closed}{''.join(answer)}", call, finish
+            None,
+            f"<think>\n{reasoning}{closed}{''.join(answer)}",
+            call,
+            finish,
+            newlines,
         )
 
-    return Reply(reasoning, "".join(answer), call, finish)
+    return Reply(reasoning, "".join(answer), call, finish, newlines)
 
 
-def completion(body: dict[str, Any], reasoning_parser: bool = True) -> dict[str, Any]:
-    reply = respond(body, reasoning_parser)
-    message: dict[str, Any] = {"role": "assistant", "content": reply.content}
+def completion(
+    body: dict[str, Any], reasoning_parser: bool = True, runaway: bool = False
+) -> dict[str, Any]:
+    reply = respond(body, reasoning_parser, runaway)
+    message: dict[str, Any] = {
+        "role": "assistant",
+        "content": reply.content + "\n" * reply.runaway,
+    }
 
     if reply.reasoning is not None:
         message["reasoning"] = reply.reasoning
@@ -122,8 +146,10 @@ def completion(body: dict[str, Any], reasoning_parser: bool = True) -> dict[str,
     }
 
 
-def stream(body: dict[str, Any], reasoning_parser: bool = True) -> Iterator[str]:
-    for event, _ in _stream(body, respond(body, reasoning_parser)):
+def stream(
+    body: dict[str, Any], reasoning_parser: bool = True, runaway: bool = False
+) -> Iterator[str]:
+    for event, _ in _stream(body, respond(body, reasoning_parser, runaway)):
         yield event
 
 
@@ -148,6 +174,10 @@ def _stream(body: dict[str, Any], reply: Reply) -> Iterator[tuple[str, int]]:
     for word in _words(reply.content):
         generated += len(word.split())
         yield event({"content": word})
+
+    for _ in range(reply.runaway):
+        generated += 1
+        yield event({"content": "\n"})
 
     if reply.call is not None:
         name, arguments = reply.call
@@ -247,10 +277,11 @@ def instance(
 
 
 class FakeTransport(httpx2.AsyncBaseTransport):
-    def __init__(self, reasoning_parser: bool = True):
+    def __init__(self, reasoning_parser: bool = True, runaway: bool = False):
         self.requests: list[dict[str, Any]] = []
         self.aborted: list[dict[str, Any]] = []
         self.reasoning_parser: bool = reasoning_parser
+        self.runaway: bool = runaway
 
     @override
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
@@ -264,7 +295,13 @@ class FakeTransport(httpx2.AsyncBaseTransport):
                 stream=_Streamed(self, body),
             )
 
-        return httpx2.Response(200, json=completion(body, self.reasoning_parser))
+        return httpx2.Response(
+            200,
+            json=completion(body, self.reasoning_parser, self.runs_away(body)),
+        )
+
+    def runs_away(self, _body: dict[str, Any], /) -> bool:
+        return self.runaway
 
     async def next_token(self, _generated: int, /) -> None:
         pass
@@ -278,15 +315,21 @@ class _Streamed(httpx2.AsyncByteStream):
 
     @override
     async def __aiter__(self) -> AsyncIterator[bytes]:
-        reply = respond(self._body, self._fake.reasoning_parser)
-        events = list(_stream(self._body, reply))
+        fake = self._fake
+        reply = respond(self._body, fake.reasoning_parser, fake.runs_away(self._body))
+        # one ahead, to know the last as it goes: a runaway is too long to list
+        events = enumerate(_stream(self._body, reply))
+        ahead = next(events, None)
         sent = 0
 
-        for i, (event, generated) in enumerate(events):
-            if i:
-                await self._fake.next_token(sent)
+        while ahead is not None:
+            i, (event, generated) = ahead
 
-            self._ended = i == len(events) - 1
+            if i:
+                await fake.next_token(sent)
+
+            ahead = next(events, None)
+            self._ended = ahead is None
             yield event.encode()
             sent = generated
 
@@ -300,6 +343,7 @@ class _Streamed(httpx2.AsyncByteStream):
 class _Handler(BaseHTTPRequestHandler):
     delay: float = 0.0
     reasoning_parser: bool = True
+    runaway: bool = False
 
     def do_POST(self) -> None:
         if self.path.rstrip("/") != "/v1/chat/completions":
@@ -314,7 +358,7 @@ class _Handler(BaseHTTPRequestHandler):
             return
 
         if not body.get("stream"):
-            self._json(200, completion(body, self.reasoning_parser))
+            self._json(200, completion(body, self.reasoning_parser, self.runaway))
             return
 
         self.send_response(200)
@@ -322,7 +366,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
 
-        reply = respond(body, self.reasoning_parser)
+        reply = respond(body, self.reasoning_parser, self.runaway)
         sent = 0
 
         for i, (event, generated) in enumerate(_stream(body, reply)):
@@ -365,10 +409,16 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def server(
-    host: str, port: int, delay: float = 0.0, reasoning_parser: bool = True
+    host: str,
+    port: int,
+    delay: float = 0.0,
+    reasoning_parser: bool = True,
+    runaway: bool = False,
 ) -> ThreadingHTTPServer:
     handler = type(
-        "Handler", (_Handler,), {"delay": delay, "reasoning_parser": reasoning_parser}
+        "Handler",
+        (_Handler,),
+        {"delay": delay, "reasoning_parser": reasoning_parser, "runaway": runaway},
     )
     return ThreadingHTTPServer((host, port), handler)
 
@@ -386,10 +436,18 @@ def fake_vllm(
             + "does; pelle serves without one"
         ),
     ] = True,
+    runaway: Annotated[
+        bool,
+        typer.Option(
+            help="after each answer, go on with newlines till max_tokens or the "
+            + "context runs out, as gpt-oss does on malborg at times"
+        ),
+    ] = False,
 ):
-    fake = server(host, port, delay, reasoning_parser)
+    fake = server(host, port, delay, reasoning_parser, runaway)
     without = "" if reasoning_parser else ", without a reasoning parser"
-    typer.echo(f"the fake vLLM, at http://{host}:{port}/v1/{without}")
+    running = ", running away after each answer" if runaway else ""
+    typer.echo(f"the fake vLLM, at http://{host}:{port}/v1/{without}{running}")
 
     try:
         fake.serve_forever()
@@ -433,7 +491,7 @@ def _usage(body: dict[str, Any], reply: Reply) -> dict[str, int]:
         len(text.split()) for text in (reply.reasoning or "", reply.content, arguments)
     )
 
-    return _counted(_prompt_tokens(body), completion_tokens)
+    return _counted(_prompt_tokens(body), completion_tokens + reply.runaway)
 
 
 def _prompt_tokens(body: dict[str, Any]) -> int:

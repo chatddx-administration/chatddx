@@ -51,17 +51,23 @@ class Transcript:
         self.console: Console = console
         self.at_start: bool = True
         self.labelled: bool = False
+        # whitespace, written once more comes: a runaway cut off in it leaves
+        # none behind
+        self.held: str = ""
 
     def write(self, text: str, style: str = "") -> None:
         if self.labelled:
             text = text.lstrip()
 
-        if text:
-            self.console.out(text, style=style or None, end="", highlight=False)
-            self.at_start = text.endswith("\n")
-            self.labelled = False
+        if text.isspace():
+            self.held += text
+        elif text:
+            self._out(self.held + text, style)
 
     def begin(self, label: str | None) -> None:
+        if self.held:
+            self._out(self.held)
+
         if not self.at_start:
             self.console.out("")
             self.at_start = True
@@ -81,6 +87,12 @@ class Transcript:
             style=LABEL,
             highlight=False,
         )
+
+    def _out(self, text: str, style: str = "") -> None:
+        self.console.out(text, style=style or None, end="", highlight=False)
+        self.held = ""
+        self.at_start = text.endswith("\n")
+        self.labelled = False
 
 
 async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed:
