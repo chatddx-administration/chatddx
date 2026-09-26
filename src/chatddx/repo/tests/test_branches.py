@@ -34,7 +34,7 @@ from chatddx.repo.store.branch import (
 )
 from chatddx.repo.store.trail import dump_trail
 
-pytestmark = pytest.mark.django_db(transaction=True)
+pytestmark = pytest.mark.django_db
 
 MACHINE = MachineTrailIn(machine_id="00000000-0000-4000-8000-000000000001")  # pyright: ignore[reportArgumentType]
 
@@ -240,6 +240,7 @@ def case(name: str, owner: str, *collaborators: str, vignette: str = "") -> None
     )
 
 
+@pytest.mark.usefixtures("unseeded")
 def test_an_identity_sees_its_own_branches_and_those_shared_with_it(
     owner: IdentityModel,
     other_owner: IdentityModel,
@@ -256,6 +257,7 @@ def test_an_identity_sees_its_own_branches_and_those_shared_with_it(
     ]
 
 
+@pytest.mark.usefixtures("unseeded")
 def test_its_own_branch_shadows_a_shared_one_of_the_same_name(
     owner: IdentityModel,
     other_owner: IdentityModel,
@@ -270,6 +272,7 @@ def test_its_own_branch_shadows_a_shared_one_of_the_same_name(
     assert found.owner.name == "alex"
 
 
+@pytest.mark.usefixtures("unseeded")
 def test_a_shared_branch_is_found_by_its_name_or_by_its_trail(
     owner: IdentityModel,
     other_owner: IdentityModel,
@@ -283,6 +286,7 @@ def test_a_shared_branch_is_found_by_its_name_or_by_its_trail(
     assert by_trail.pk == by_name.pk
 
 
+@pytest.mark.usefixtures("unseeded")
 def test_a_branch_not_shared_with_an_identity_isn_t_found(
     owner: IdentityModel,
     other_owner: IdentityModel,

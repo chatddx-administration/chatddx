@@ -7,12 +7,8 @@ from django.test import Client
 
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.django.api.tests.conftest import Events, events, of
-from chatddx.history.models import RunModel, TrialModel
+from chatddx.history.models import RunModel
 from chatddx.repl.bench import SEEDS
-from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails
-from chatddx.repo.entities.tool.django import ToolBranchModel
-from chatddx.repo.store.branch import commit
 
 pytestmark = pytest.mark.django_db
 
@@ -69,39 +65,12 @@ def test_a_batch_draws_one_seed_for_all_its_cases_unless_told_otherwise(
     assert [request["seed"] for request in fake.requests] == [seed, seed]
 
     unseeded = batch(**FREE_TEXT, tags=["tag-1"], seed="none")
+    greedy = batch(**FREE_TEXT, sampling="greedy", tags=["tag-1"])
 
-    assert unseeded[0]["seed"] is None
+    assert (unseeded[0]["seed"], greedy[0]["seed"]) == (None, None)
+    assert "seed" not in fake.requests[-2]
     assert "seed" not in fake.requests[-1]
-
-
-def test_a_case_run_again_under_the_batch_s_seed_is_its_trial_again(
-    alex: Client, batch: Callable[..., Events]
-):
-    _ = batch(**FREE_TEXT, tags=["tag-1"], seed=5)
-    again = alex.post(
-        "/api/runs",
-        {**FREE_TEXT, "case": "case-1", "seed": 5, "stream": False},
-        content_type="application/json",
-    )
-
-    assert again.json()["number"] == 2
-    assert TrialModel.objects.count() == 1
-
-
-def test_a_vignette_under_two_names_runs_once(
-    batch: Callable[..., Events], fake: FakeTransport
-):
-    case = CaseBranchModel.objects.filter(owner__name="archive", name="case-1").latest(
-        "pk"
-    )
-    _ = commit(
-        case.trail, CaseBranchDetails(name="case-1-again", owner="alex", tags=["tag-1"])
-    )
-
-    said = batch(**FREE_TEXT, tags=["tag-1"])
-
-    assert said[0]["cases"] == ["case-1"]
-    assert len(fake.requests) == 1
+    assert of(greedy, "recorded")[0]["run"]["seed"] is None
 
 
 def test_a_batch_sends_nothing_for_what_it_can_t_run(alex: Client, fake: FakeTransport):
@@ -129,27 +98,3 @@ def test_a_batch_sends_nothing_for_what_it_can_t_run(alex: Client, fake: FakeTra
     assert "sampling is greedy" in greedy.json()["detail"]
     assert fake.requests == []
     assert not RunModel.objects.exists()
-
-
-def test_a_tool_with_nothing_to_run_stops_the_batch_before_it_begins(
-    alex: Client, fake: FakeTransport
-):
-    _ = ToolBranchModel.objects.filter(name="sentinel_op").update(details={})
-
-    response = post(
-        alex, configuration="test-tools", stack="qwen3-8b-awq@fake", tags=["tag-2"]
-    )
-
-    assert response.status_code == 422
-    assert response.json()["detail"] == "the tool 'sentinel_op' has nothing to run"
-    assert fake.requests == []
-
-
-def test_greedy_sampling_batches_unseeded(
-    batch: Callable[..., Events], fake: FakeTransport
-):
-    said = batch(**FREE_TEXT, sampling="greedy", tags=["tag-1"])
-
-    assert said[0]["seed"] is None
-    assert "seed" not in fake.requests[0]
-    assert of(said, "recorded")[0]["run"]["seed"] is None

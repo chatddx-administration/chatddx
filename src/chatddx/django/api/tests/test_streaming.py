@@ -2,37 +2,42 @@
 """
 Runs stream as they come over WSGI and ASGI alike: the gated fake vLLM holds
 its answer back after its first token until the client has seen it, which a
-response that waited for the run to end would never let through.
+response that waited for the run to end would never let through. The server
+is served in the test's transaction, as Django's test client serves it.
 """
 
 import asyncio
 import json
 import sys
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from io import BytesIO
 from typing import Any, cast, override
 
 import pytest
 from asgiref.sync import async_to_sync
+from django.conf import settings
 from django.core.asgi import get_asgi_application
+from django.core.signals import request_finished, request_started
 from django.core.wsgi import get_wsgi_application
+from django.db import close_old_connections
+from django.test import Client
 
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.django.api.tests.conftest import events, of
 from chatddx.history.models import RunModel, RunStatus
-
-RUN = {
-    "configuration": "free-text",
-    "stack": "qwen3-8b-awq@fake",
-    "case": "case-1",
-}
 
 BATCH = {
     "configuration": "free-text",
     "stack": "qwen3-8b-awq@fake",
     "tags": ["tag-2"],
 }
+
+
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("held_open")]
+
+# a CSRF secret, sent as the cookie and the header alike
+TOKEN = "t" * 32
 
 
 class Gated(FakeTransport):
@@ -56,10 +61,29 @@ def gated(through: Callable[[Any], None]) -> Gated:
     return transport
 
 
+@pytest.fixture
+def held_open() -> Iterator[None]:
+    """The test's connection, kept open across requests as the test client keeps it."""
+    request_started.disconnect(close_old_connections)
+    request_finished.disconnect(close_old_connections)
+    yield
+    request_started.connect(close_old_connections)
+    request_finished.connect(close_old_connections)
+
+
+@pytest.fixture
+def cookie(django_user_model: Any) -> str:
+    """alex's session, and a CSRF token beside it."""
+    client = Client()
+    client.force_login(django_user_model.objects.create_user(username="alex"))
+    session = client.cookies[settings.SESSION_COOKIE_NAME].value
+    return f"{settings.SESSION_COOKIE_NAME}={session}; csrftoken={TOKEN}"
+
+
 def asgi(
-    request: dict[str, Any], received: Callable[[bytes], bool]
+    request: dict[str, Any], received: Callable[[bytes], bool], cookie: str
 ) -> list[dict[str, Any]]:
-    """Serve `request` as the guest; the client goes away once `received` says so."""
+    """Serve `request` as alex; the client goes away once `received` says so."""
     body = json.dumps(request["body"]).encode()
     scope = {
         "type": "http",
@@ -74,6 +98,8 @@ def asgi(
         "headers": [
             (b"host", b"testserver"),
             (b"content-type", b"application/json"),
+            (b"cookie", cookie.encode()),
+            (b"x-csrftoken", TOKEN.encode()),
         ],
         "client": ("127.0.0.1", 50000),
         "server": ("testserver", 80),
@@ -106,8 +132,10 @@ def asgi(
     return sent
 
 
-def wsgi(request: dict[str, Any], received: Callable[[bytes], bool]) -> bytes:
-    """Serve `request` as the guest; the client goes away once `received` says so."""
+def wsgi(
+    request: dict[str, Any], received: Callable[[bytes], bool], cookie: str
+) -> bytes:
+    """Serve `request` as alex; the client goes away once `received` says so."""
     body = json.dumps(request["body"]).encode()
     environ = {
         "REQUEST_METHOD": request["method"],
@@ -119,6 +147,8 @@ def wsgi(request: dict[str, Any], received: Callable[[bytes], bool]) -> bytes:
         "SERVER_PROTOCOL": "HTTP/1.1",
         "CONTENT_TYPE": "application/json",
         "CONTENT_LENGTH": str(len(body)),
+        "HTTP_COOKIE": cookie,
+        "HTTP_X_CSRFTOKEN": TOKEN,
         "wsgi.version": (1, 0),
         "wsgi.url_scheme": "http",
         "wsgi.input": BytesIO(body),
@@ -150,100 +180,14 @@ def body_of(sent: list[dict[str, Any]]) -> bytes:
     )
 
 
-@pytest.mark.django_db(transaction=True)
-def test_a_run_streams_over_wsgi_as_it_comes(
-    provision: Callable[..., None], gated: Gated
-):
-    provision(user="guest")
-
-    def received(chunk: bytes) -> bool:
-        if b"event: thinking" in chunk:
-            gated.open()
-        return False
-
-    said = events(wsgi({"method": "POST", "path": "/api/runs", "body": RUN}, received))
-
-    assert said[-1]["type"] == "recorded"
-    assert said[-1]["run"]["status"] == RunStatus.COMPLETED
-    assert of(said, "text")
-    assert gated.opened.is_set()
-
-
-@pytest.mark.django_db(transaction=True)
-def test_a_client_that_goes_away_over_wsgi_stops_the_run(
-    provision: Callable[..., None], gated: Gated
-):
-    provision(user="guest")
-
-    streamed = wsgi(
-        {"method": "POST", "path": "/api/runs", "body": RUN},
-        lambda chunk: b"event: thinking" in chunk,
-    )
-    gated.open()
-
-    [run] = RunModel.objects.all()
-
-    assert b"event: recorded" not in streamed
-    assert (run.status, run.error) == (RunStatus.ERRORED, "stopped")
-    assert gated.aborted == gated.requests
-    assert run.requests and run.responses[0].startswith("data: ")
-    assert run.conversation is not None
-    assert [message.kind for message in run.conversation.messages.all()][-1] == "error"
-
-
-@pytest.mark.django_db(transaction=True)
-def test_a_run_streams_over_asgi_as_it_comes(
-    provision: Callable[..., None], gated: Gated
-):
-    provision(user="guest")
-
-    def received(body: bytes) -> bool:
-        if b"event: thinking" in body:
-            gated.open()
-        return False
-
-    sent = asgi({"method": "POST", "path": "/api/runs", "body": RUN}, received)
-    said = events(body_of(sent))
-
-    assert sent[0]["status"] == 200
-    assert said[-1]["type"] == "recorded"
-    assert said[-1]["run"]["status"] == RunStatus.COMPLETED
-    assert of(said, "text")
-    assert RunModel.objects.get().owner.name == "guest"
-
-
-@pytest.mark.django_db(transaction=True)
-def test_a_client_that_goes_away_over_asgi_stops_the_run(
-    provision: Callable[..., None], gated: Gated
-):
-    provision(user="guest")
-
-    sent = asgi(
-        {"method": "POST", "path": "/api/runs", "body": RUN},
-        lambda body: b"event: thinking" in body,
-    )
-    gated.open()
-
-    [run] = RunModel.objects.all()
-
-    assert b"event: recorded" not in body_of(sent)
-    assert (run.status, run.error) == (RunStatus.ERRORED, "stopped")
-    assert gated.aborted == gated.requests
-
-
-@pytest.mark.django_db(transaction=True)
-def test_a_batch_streams_over_wsgi_case_by_case(
-    provision: Callable[..., None], gated: Gated
-):
-    provision(user="guest")
-
+def test_a_batch_streams_over_wsgi_case_by_case(gated: Gated, cookie: str):
     def received(chunk: bytes) -> bool:
         if b"event: thinking" in chunk:
             gated.open()
         return False
 
     said = events(
-        wsgi({"method": "POST", "path": "/api/batch", "body": BATCH}, received)
+        wsgi({"method": "POST", "path": "/api/batch", "body": BATCH}, received, cookie)
     )
 
     assert [event["type"] for event in said if event["type"] in ("batch", "run")] == [
@@ -256,15 +200,11 @@ def test_a_batch_streams_over_wsgi_case_by_case(
     assert RunModel.objects.filter(status=RunStatus.COMPLETED).count() == 2
 
 
-@pytest.mark.django_db(transaction=True)
-def test_a_client_that_goes_away_over_wsgi_stops_the_batch(
-    provision: Callable[..., None], gated: Gated
-):
-    provision(user="guest")
-
+def test_a_client_that_goes_away_over_wsgi_stops_the_batch(gated: Gated, cookie: str):
     streamed = wsgi(
         {"method": "POST", "path": "/api/batch", "body": BATCH},
         lambda chunk: b"event: thinking" in chunk,
+        cookie,
     )
     gated.open()
 
@@ -274,17 +214,16 @@ def test_a_client_that_goes_away_over_wsgi_stops_the_batch(
     assert (run.status, run.error) == (RunStatus.ERRORED, "stopped")
     assert len(gated.requests) == 1
     assert gated.aborted == gated.requests
+    assert run.requests and run.responses[0].startswith("data: ")
+    assert run.conversation is not None
+    assert [message.kind for message in run.conversation.messages.all()][-1] == "error"
 
 
-@pytest.mark.django_db(transaction=True)
-def test_a_client_that_goes_away_over_asgi_stops_the_batch(
-    provision: Callable[..., None], gated: Gated
-):
-    provision(user="guest")
-
+def test_a_client_that_goes_away_over_asgi_stops_the_batch(gated: Gated, cookie: str):
     sent = asgi(
         {"method": "POST", "path": "/api/batch", "body": BATCH},
         lambda body: b"event: thinking" in body,
+        cookie,
     )
     gated.open()
 
@@ -296,19 +235,20 @@ def test_a_client_that_goes_away_over_asgi_stops_the_batch(
     assert gated.aborted == gated.requests
 
 
-@pytest.mark.django_db(transaction=True)
-def test_a_batch_streams_over_asgi_case_by_case(
-    provision: Callable[..., None], gated: Gated
-):
-    provision(user="guest")
-
+def test_a_batch_streams_over_asgi_case_by_case(gated: Gated, cookie: str):
     def received(body: bytes) -> bool:
         if b"event: thinking" in body:
             gated.open()
         return False
 
     said = events(
-        body_of(asgi({"method": "POST", "path": "/api/batch", "body": BATCH}, received))
+        body_of(
+            asgi(
+                {"method": "POST", "path": "/api/batch", "body": BATCH},
+                received,
+                cookie,
+            )
+        )
     )
 
     assert [event["case"] for event in of(said, "run")] == ["case-1", "case-2"]

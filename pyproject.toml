@@ -64,6 +64,7 @@ addopts = ["--liveserver", "localhost:8082"]
 testpaths = ["src/chatddx"]
 markers = [
   "network: requires network access to hosts outside the sandbox. Deselect with -m 'not network'.",
+  "slow: provisions the live inventory, or runs inspect, end to end. Deselect with -m 'not slow'.",
 ]
 django_find_project = false
 

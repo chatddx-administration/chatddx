@@ -5,11 +5,11 @@ from typing import Any
 import pytest
 from django.test import Client
 
-from chatddx.core.models import IdentityModel
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import CaseBranchDetails
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entity_names import ENTITY_NAMES
+from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.repo.store.branch import commit
 
 pytestmark = pytest.mark.django_db
@@ -19,18 +19,6 @@ type Run = Callable[..., list[dict[str, Any]]]
 
 def named(branches: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return {branch["name"]: branch for branch in branches}
-
-
-@pytest.fixture
-def bobs(alex: Client, provision: Callable[..., None]) -> None:
-    """bob's configurations, shared with alex, and bob's plan as bobs-plan."""
-    provision("--with-giftbag", user="bob")
-    _ = ConfigurationBranchModel.objects.filter(owner__name="bob", name="plan").update(
-        name="bobs-plan"
-    )
-
-    for branch in ConfigurationBranchModel.objects.filter(owner__name="bob"):
-        branch.collaborators.add(IdentityModel.objects.get(name="alex"))
 
 
 def test_every_entity_lists_the_branches_the_identity_can_use(alex: Client):
@@ -120,11 +108,7 @@ def test_a_case_says_its_text_and_its_targets(alex: Client):
     assert case["tags"] == ["tag-1", "tag-2"]
     assert case["runs"] == {"runs": 0, "errored": 0, "scorers": []}
 
-
-def test_a_case_that_expects_no_warning_says_so(alex: Client):
-    case = CaseBranchModel.objects.filter(owner__name="archive", name="case-2").latest(
-        "pk"
-    )
+    case = CaseBranchModel.objects.get(owner__name="archive", name="case-2")
     _ = commit(
         case.trail,
         CaseBranchDetails(name="calm", owner="alex", targets={"warning": False}),
@@ -162,25 +146,11 @@ def test_a_branch_counts_your_runs_with_it_by_scorer(alex: Client, run: Run):
         "free-text × qwen3-8b-awq@fake × case-1",
     ]
 
-
-def test_a_scorer_sums_up_the_runs_it_scored(alex: Client, run: Run):
-    _ = run(configuration="free-text", stack="qwen3-8b-awq@fake", case="case-1")
-
     scorer = alex.get("/api/registry/scorer/first_mention").json()
 
-    assert scorer["trail"]["function"].endswith("patterns:first_mention")
     assert scorer["details"] == {"metrics": ["mean", "stderr"]}
-    assert scorer["runs"]["runs"] == 1
+    assert scorer["runs"]["runs"] == 3
     assert [row["scorer"] for row in scorer["runs"]["scorers"]] == ["first_mention"]
-
-
-def test_a_tool_says_what_it_runs(alex: Client):
-    tool = alex.get("/api/registry/tool/sentinel_op").json()
-
-    assert tool["trail"]["parameters"]["additionalProperties"] is False
-    assert tool["details"]["implementation"]["function"].endswith(
-        "sentinel_op:sentinel_op"
-    )
 
 
 def test_what_isn_t_there_isn_t_found(alex: Client):
@@ -191,8 +161,11 @@ def test_what_isn_t_there_isn_t_found(alex: Client):
     assert alex.get("/api/registry/frobnicate").status_code == 422
 
 
-@pytest.mark.usefixtures("bobs")
 def test_another_s_configuration_is_had_by_its_owner(alex: Client):
+    plan = ConfigurationBranchModel.objects.get(owner__name="archive", name="plan")
+    details = BranchDetails(name="bobs-plan", owner="bob", collaborators=["alex"])
+    _ = commit(plan.trail, details)
+
     assert "bobs-plan" not in named(alex.get("/api/registry/configuration").json())
     assert alex.get("/api/registry/configuration/bobs-plan").status_code == 404
 

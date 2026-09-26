@@ -26,7 +26,7 @@ from chatddx.repo.store.branch import (
 )
 from chatddx.repo.utils import trail_closure
 
-pytestmark = pytest.mark.django_db(transaction=True)
+pytestmark = pytest.mark.django_db
 
 
 def branches_on(trail: TrailModel, owner_name: str):

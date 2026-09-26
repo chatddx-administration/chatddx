@@ -9,23 +9,25 @@ from chatddx.repl.commands import handle
 from chatddx.repl.shell import Repl
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
+from chatddx.repo.families.pydantic import BranchDetails
+from chatddx.repo.store.branch import commit
 
 type Say = Callable[..., str]
-type Provision = Callable[..., None]
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def bobs(repl: Repl, provision: Provision) -> None:
-    provision("--with-giftbag", user="bob")
-    alex = IdentityModel.objects.get(name=repl.identity)
+def own(owner: str, name: str, called: str | None = None, *shared: str) -> None:
+    """A configuration of the archive's as `owner`'s own, shared with `shared`."""
+    archived = ConfigurationBranchModel.objects.get(owner__name="archive", name=name)
+    details = BranchDetails(name=called or name, owner=owner, collaborators=[*shared])
+    _ = commit(archived.trail, details)
 
-    _ = ConfigurationBranchModel.objects.filter(owner__name="bob", name="plan").update(
-        name="bobs-plan"
-    )
-    for branch in ConfigurationBranchModel.objects.filter(owner__name="bob"):
-        branch.collaborators.add(alex)
+
+@pytest.fixture
+def bobs(repl: Repl) -> None:
+    own("bob", "plan", "bobs-plan", repl.identity)
+    own("bob", "free-text", None, repl.identity)
 
 
 def test_set_puts_another_variation_in_the_cell(
@@ -142,8 +144,8 @@ def test_save_says_what_it_can_t_save(say: Say):
     assert "a name can't hold '/'" in say("use free-text", "save bob/mine")
 
 
-def test_a_configuration_of_one_s_own_shadows_the_archive_s(provision: Provision):
-    provision("--with-giftbag")
+def test_a_configuration_of_one_s_own_shadows_the_archive_s():
+    own("alex", "plan")
     repl = Repl("alex", Console(record=True, width=200), seed=None)
 
     assert handle(repl, "use plan")

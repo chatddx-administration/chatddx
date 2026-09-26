@@ -17,8 +17,7 @@ def fake() -> FakeTransport:
 
 
 @pytest.fixture
-def repl(provision: Callable[..., None], fake: FakeTransport) -> Repl:
-    provision()
+def repl(fake: FakeTransport) -> Repl:
     return Repl("alex", Console(record=True, width=200), transport=fake, seed=None)
 
 
@@ -28,9 +27,8 @@ def say(repl: Repl) -> Say:
 
 
 @pytest.fixture
-def say_through(provision: Callable[..., None]) -> Callable[[Any], Say]:
+def say_through() -> Callable[[Any], Say]:
     def say_through(transport: Any) -> Say:
-        provision()
         return _say_to(
             Repl("alex", Console(record=True, width=200), transport, seed=None)
         )

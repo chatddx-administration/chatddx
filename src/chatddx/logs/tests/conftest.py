@@ -13,7 +13,8 @@ type Run = Callable[..., None]
 
 @pytest.fixture
 def run_as(provision: Callable[..., None]) -> Callable[..., Run]:
-    provisioned: set[str] = set()
+    # alex's is seeded for the session
+    provisioned: set[str] = {"alex"}
 
     def run_as(identity: str, transport: Any = None) -> Run:
         if identity not in provisioned:

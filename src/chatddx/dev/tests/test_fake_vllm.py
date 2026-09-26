@@ -303,7 +303,9 @@ def serving(delay: float = 0.0) -> Generator[tuple[str, int]]:
     """The fake vLLM served, `delay` between its words, at a port of its own."""
     fake = server("127.0.0.1", 0, delay)
     host, port = fake.server_address[:2]
-    thread = threading.Thread(target=fake.serve_forever, daemon=True)
+    thread = threading.Thread(
+        target=fake.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+    )
     thread.start()
 
     try:

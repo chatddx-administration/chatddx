@@ -23,7 +23,7 @@ from chatddx.repo.names import short_fingerprint
 from chatddx.repo.parsers.inventory import parse
 from chatddx.repo.store.inventory import owned_inventory
 
-pytestmark = pytest.mark.django_db
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("unseeded")]
 
 ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
 INVENTORY = settings.INVENTORY_PATH / "inventory.toml"
@@ -87,7 +87,8 @@ def versions() -> dict[str, int]:
     }
 
 
-def test_init_data_archives_the_inventory_and_shares_it():
+@pytest.mark.slow
+def test_init_data_archives_the_inventory_and_shares_it_with_each_user():
     inventory = parse(INVENTORY)
 
     assert run("init-data", "alex") == receipts(inventory, "archive", "created")
@@ -104,27 +105,18 @@ def test_init_data_archives_the_inventory_and_shares_it():
     assert owned(ARCHIVE) == names(inventory)
     assert owned("alex") == NOTHING
 
-
-def test_init_data_again_changes_nothing():
-    inventory = parse(INVENTORY)
-    _ = run("init-data", "alex")
     before = versions()
 
     assert run("init-data", "alex") == receipts(inventory, "archive", "validated")
     assert versions() == before
-    assert shared_with("alex") == names(inventory)
 
-
-def test_init_data_shares_the_archive_with_each_user():
-    inventory = parse(INVENTORY)
-
-    _ = run("init-data", "alex")
     _ = run("init-data", "other")
 
     assert shared_with("alex") == names(inventory)
     assert shared_with("other") == names(inventory)
 
 
+@pytest.mark.slow
 def test_init_data_with_giftbag_gives_the_user_their_own():
     inventory = parse(INVENTORY)
     giftbag = parse(GIFTBAG)
@@ -189,7 +181,8 @@ def test_init_data_reads_both_inventories_before_writing(tmp_path: Path):
     assert not IdentityModel.objects.filter(name="alex").exists()
 
 
-def test_wipe_data_takes_back_what_init_data_gave():
+@pytest.mark.slow
+def test_wipe_data_takes_back_what_init_data_gave_and_init_data_gives_it_again():
     inventory = parse(INVENTORY)
     giftbag = parse(GIFTBAG)
     _ = run("init-data", "alex", "--with-giftbag")
@@ -207,13 +200,6 @@ def test_wipe_data_takes_back_what_init_data_gave():
     assert owned(ARCHIVE) == names(inventory)
     assert owned("other") == names(giftbag)
     assert shared_with("other") == names(inventory)
-
-
-def test_init_data_after_wipe_data_provisions_again():
-    inventory = parse(INVENTORY)
-    giftbag = parse(GIFTBAG)
-    _ = run("init-data", "alex", "--with-giftbag")
-    _ = run("wipe-data", "alex")
 
     assert run("init-data", "alex", "--with-giftbag") == (
         receipts(inventory, "archive", "validated")
@@ -242,6 +228,7 @@ def ran_test_tools(user: str) -> None:
     assert "recorded as run 1" in repl.console.export_text()
 
 
+@pytest.mark.slow
 def test_wipe_data_takes_back_the_user_s_history_too():
     _ = run("init-data", "alex", "--with-giftbag")
     ran_test_tools("alex")
@@ -258,6 +245,7 @@ def test_wipe_data_takes_back_the_user_s_history_too():
     assert owned("alex") == NOTHING
 
 
+@pytest.mark.slow
 def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read():
     giftbag = parse(GIFTBAG)
     _ = run("init-data", "alex", "--with-giftbag")

@@ -31,10 +31,7 @@ def test_a_user_s_identity_is_made_when_it_is_first_met(
     assert IdentityModel.objects.filter(name="sam").exists()
 
 
-def test_a_session_s_unsafe_requests_carry_its_csrf_token(
-    provision: Callable[..., None], django_user_model: Any
-):
-    provision()
+def test_a_session_s_unsafe_requests_carry_its_csrf_token(django_user_model: Any):
     browser = Client(enforce_csrf_checks=True)
     browser.force_login(django_user_model.objects.create_user(username="alex"))
     save = {"configuration": "free-text", "name": "mine"}

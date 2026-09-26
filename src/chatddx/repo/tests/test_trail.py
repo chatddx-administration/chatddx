@@ -72,7 +72,7 @@ def test_the_same_content_is_one_row(trails: InventoryTrailIn):
     second = dump_trail(model, stack.model_copy(deep=True))
 
     assert first.pk == second.pk
-    assert model.objects.count() == 1
+    assert model.objects.filter(fingerprint=first.fingerprint).count() == 1
 
 
 def test_a_trail_s_parts_are_shared_by_whatever_reaches_them(
@@ -101,9 +101,8 @@ def test_a_toolset_keeps_the_order_of_its_tools(trails: InventoryTrailIn):
 
 @pytest.mark.parametrize("change", ["save", "delete"])
 def test_a_trail_is_immutable(trails: InventoryTrailIn, change: str):
-    stored = dump_trail(
-        entity_of("configuration").trail_model, trails.configuration["plan"]
-    )
+    unheld = trails.output["free-text"].model_copy(update={"guidance": "no one's"})
+    stored = dump_trail(OutputTrailModel, unheld)
 
     with pytest.raises(ProgrammingError, match="immutable"), transaction.atomic():
         getattr(stored, change)()

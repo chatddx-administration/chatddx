@@ -1,5 +1,4 @@
 import asyncio
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -36,11 +35,6 @@ pytestmark = pytest.mark.django_db
 STACK = "qwen3-8b-awq@fake"
 
 SLICES = ("instruction", "output", "coercion", "reasoning", "sampling", "toolset")
-
-
-@pytest.fixture(autouse=True)
-def provisioned(provision: Callable[..., None]) -> None:
-    provision()
 
 
 async def outcome_of(run: Run) -> Outcome:

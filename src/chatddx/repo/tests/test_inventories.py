@@ -8,10 +8,7 @@ from chatddx.repo.inventories import (
     InventoryTrailIn,
 )
 
-pytestmark = [
-    pytest.mark.django_db(transaction=True),
-    pytest.mark.asyncio,
-]
+pytestmark = pytest.mark.django_db
 
 COUNTS = {
     "machine": 3,
@@ -33,15 +30,16 @@ COUNTS = {
 }
 
 
-async def test_trail_schema(inventory_fixture_ti: InventoryTrailIn):
+def test_trail_schema(inventory_fixture_ti: InventoryTrailIn):
     assert {e: len(getattr(inventory_fixture_ti, e)) for e in ENTITY_NAMES} == COUNTS
 
 
-async def test_branch_models(inventory_fixture_bm: InventoryBranchModel):
+def test_a_committed_inventory_reads_back_as_models_specs_and_form_data(
+    inventory_fixture_bm: InventoryBranchModel,
+    inventory_fixture_bo: InventoryBranchOut,
+    inventory_fixture_fdo: InventoryFormDataOut,
+):
     assert {e: len(inventory_fixture_bm[e]) for e in ENTITY_NAMES} == COUNTS
-
-
-async def test_branch_specs(inventory_fixture_bo: InventoryBranchOut):
     assert {e: len(getattr(inventory_fixture_bo, e)) for e in ENTITY_NAMES} == COUNTS
 
     stack = inventory_fixture_bo.stack["qwen3-8b-awq@malborg"]
@@ -49,9 +47,6 @@ async def test_branch_specs(inventory_fixture_bo: InventoryBranchOut):
     assert stack.details.served_name == "Qwen/Qwen3-8B-AWQ"
     assert stack.trail.host_os is not None
     assert stack.tags == ["rtx-5090"]
-
-
-async def test_form_data_out(inventory_fixture_fdo: InventoryFormDataOut):
     assert {e: len(getattr(inventory_fixture_fdo, e)) for e in ENTITY_NAMES} == COUNTS
 
     tool = inventory_fixture_fdo.tool["web_search"]

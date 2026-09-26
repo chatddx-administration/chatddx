@@ -23,12 +23,10 @@ STACK = "qwen3-8b-awq@fake"
 
 
 def test_a_run_takes_a_conversation_up_where_it_was_left(
-    provision: Callable[..., None],
     cell: Cell,
     ran: Ran,
     test_inventory: ParsedInventory,
 ):
-    provision()
     configuration, _ = test_inventory.configuration["baseline"]
     stack = get_visible_branch_model("stack", "alex", STACK)
     llm = get_visible_branch_model("llm", "alex", trail=stack.trail.llm_id)

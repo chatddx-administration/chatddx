@@ -31,11 +31,8 @@ def through(monkeypatch: pytest.MonkeyPatch) -> Callable[[Any], None]:
 
 
 @pytest.fixture
-def alex(
-    provision: Callable[..., None], client: Client, django_user_model: Any
-) -> Client:
+def alex(client: Client, django_user_model: Any) -> Client:
     """alex's session, on the test inventory: the archive's is shared with alex."""
-    provision()
     client.force_login(django_user_model.objects.create_user(username="alex"))
     return client
 

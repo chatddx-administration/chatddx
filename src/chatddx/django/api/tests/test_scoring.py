@@ -79,7 +79,9 @@ def test_score_holds_the_outstanding_runs_and_sums_them_up(
     assert score(alex).json()["runs"] == []
 
 
-def test_score_run_says_what_came_of_one_run(alex: Client, run: Run):
+def test_score_run_says_what_came_of_one_run(
+    alex: Client, run: Run, through: Callable[[Any], None]
+):
     first = run(**FREE_TEXT, case="case-1")[0]["run"]
     already = score(alex, first[:8]).json()
 
@@ -99,10 +101,6 @@ def test_score_run_says_what_came_of_one_run(alex: Client, run: Run):
     assert score(alex, "zzzz").status_code == 404
     assert score(alex, "").status_code == 409
 
-
-def test_score_says_an_errored_run_has_nothing_to_score(
-    alex: Client, run: Run, through: Callable[[Any], None]
-):
     def failing(_request: httpx2.Request) -> httpx2.Response:
         return httpx2.Response(400, json={"error": {"message": "no such model"}})
 
@@ -112,7 +110,9 @@ def test_score_says_an_errored_run_has_nothing_to_score(
     assert score(alex, errored).json()["runs"][0]["unscored"] == "errored"
 
 
-def test_a_trial_shows_your_runs_of_it(alex: Client, run: Run):
+def test_a_trial_shows_your_runs_of_it_to_you_alone(
+    alex: Client, run: Run, django_user_model: Any
+):
     first = run(**FREE_TEXT, case="case-1", seed=3)[-1]["run"]
     _ = run(**FREE_TEXT, case="case-1", seed=3)
 
@@ -129,14 +129,12 @@ def test_a_trial_shows_your_runs_of_it(alex: Client, run: Run):
     assert [row["id"] for row in trial["runs"]][-1] == first["id"]
     assert len(trial["runs"]) == 2
 
-
-def test_a_trial_is_had_only_by_those_who_ran_it(run: Run, django_user_model: Any):
-    trial = run(**FREE_TEXT, case="case-1")[-1]["run"]["trial"]
     stranger = Client()
     stranger.force_login(django_user_model.objects.create_user(username="sam"))
-
-    missing = stranger.get(f"/api/trials/{trial}")
+    missing = stranger.get(f"/api/trials/{first['trial']}")
 
     assert missing.status_code == 404
-    assert missing.json() == {"detail": f"sam has no runs of a trial '{trial}'"}
+    assert missing.json() == {
+        "detail": f"sam has no runs of a trial '{first['trial']}'"
+    }
     assert stranger.get("/api/runs").json() == []

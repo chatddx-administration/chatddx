@@ -23,8 +23,7 @@ def test_the_repl_needs_an_identity():
     assert "no identity 'nobody'" in result.stderr
 
 
-def test_a_session_can_be_piped_in(provision: Callable[..., None], tmp_path: Path):
-    provision()
+def test_a_session_can_be_piped_in(tmp_path: Path):
 
     result = CliRunner().invoke(
         app,
@@ -84,9 +83,8 @@ def test_a_dropped_connection_is_said_and_the_next_line_opens_another(
 
 
 def test_ctrl_c_ends_the_command_not_the_repl(
-    provision: Callable[..., None], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    provision()
 
     def pressed(_repl: Repl) -> None:
         raise KeyboardInterrupt

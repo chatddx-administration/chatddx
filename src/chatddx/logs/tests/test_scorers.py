@@ -31,6 +31,7 @@ def logs(identity: str = "alex") -> list[EvalLog]:
     ]
 
 
+@pytest.mark.slow
 def test_inspect_scores_each_sample_as_chatddx_scored_its_run(
     run_as: Callable[..., Run],
 ):
