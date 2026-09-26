@@ -123,6 +123,16 @@ class Pattern:
         return _Phrase(tuple(terms))
 
 
+def unread_pattern(pattern: str) -> str | None:
+    """Why a target's pattern doesn't parse, if it doesn't."""
+    try:
+        _ = Pattern(pattern)
+    except ValueError as e:
+        return str(e)
+
+    return None
+
+
 def _terms(token: str) -> list[_Term]:
     stem = token.endswith("*")
     words = [word.casefold() for word in _WORD.findall(token)]

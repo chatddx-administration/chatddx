@@ -9,6 +9,7 @@ from chatddx.repo.entities.case.pydantic import TargetKind, pattern_of
 from chatddx.repo.entities.output.pydantic import OutputTrailOut, View
 from chatddx.repo.entities.scorer.django import ScorerTrailModel
 from chatddx.repo.entities.scorer.pydantic import Metric, ScorerDetails
+from chatddx.repo.queries import live_first
 from chatddx.repo.store.branch import select_visible_branch_models
 from chatddx.repo.store.trail import load_trail
 from chatddx.runtime.implementation import (
@@ -17,6 +18,7 @@ from chatddx.runtime.implementation import (
     implementation,
 )
 from chatddx.scoring.metrics import METRICS
+from chatddx.scoring.scorers.patterns import Scored, unread_pattern
 
 ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
 
@@ -156,7 +158,13 @@ class Scoring:
                 else [str(item) for item in output.view(scorer.view, run.answer)]
             )
             ran = self.implementation_of(scorer)
-            scored = ran.function(items, target, **scorer.args)
+            # a pattern that doesn't parse is its scorer's to say, the run's
+            # other scorers scoring it all the same; why is the case's to say
+            scored = (
+                Scored(None, reason="the pattern doesn't parse")
+                if target is not None and unread_pattern(target) is not None
+                else ran.function(items, target, **scorer.args)
+            )
             made.append(
                 ScoreModel.objects.create(
                     run=run,
@@ -231,17 +239,25 @@ class Scoring:
         return self._outputs[output.pk]
 
     def case_of(self, run: RunModel) -> CaseBranchModel | None:
+        """
+        The version whose targets the run is held to: the newest holding its
+        vignette, the identity's own before the archive's shared with it, a
+        deleted case's where its owner has no other.
+        """
         case_id = run.trial.case_id
 
         if case_id not in self._cases:
             rows = CaseBranchModel.objects.filter(trail_id=case_id).order_by(
                 "-timestamp", "-pk"
             )
-            self._cases[case_id] = (
-                rows.filter(owner__name=self.identity).first()
-                or rows.filter(
-                    owner__name=ARCHIVE, collaborators__name=self.identity
-                ).first()
+            held = live_first(
+                [
+                    *rows.filter(owner__name=self.identity),
+                    *rows.filter(
+                        owner__name=ARCHIVE, collaborators__name=self.identity
+                    ),
+                ]
             )
+            self._cases[case_id] = next(iter(held), None)
 
         return self._cases[case_id]

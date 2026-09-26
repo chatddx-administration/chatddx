@@ -4,9 +4,9 @@ import pytest
 from pydantic import ValidationError
 
 from chatddx.core.models import IdentityModel, TagModel
-from chatddx.core.utils import ensure_tag
+from chatddx.core.utils import ensure_identity, ensure_tag
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.case.pydantic import CaseTrailIn
+from chatddx.repo.entities.case.pydantic import CaseBranchDetails, CaseTrailIn
 from chatddx.repo.entities.llm.pydantic import LLMBranchDetails, LLMBranchOut
 from chatddx.repo.entities.machine.pydantic import (
     MachineBranchDetails,
@@ -357,6 +357,73 @@ def test_an_owner_s_branch_not_shared_isn_t_found_by_the_owner(
 
     with pytest.raises(BranchNotFoundError, match="no case 'other/case-1' for alice"):
         _ = get_shared_branch_model("case", owner.name, other_owner.name, "case-1")
+
+
+def deleted_case(name: str, owner: str, deleted: bool = True) -> None:
+    """The owner's case taken out of sight, or brought back: its head again."""
+    head = get_branch_model("case", owner, name)
+    assert commit(
+        head.trail,
+        CaseBranchDetails.model_validate(
+            {**head.details, "name": name, "owner": owner, "deleted": deleted}
+        ),
+    )
+
+
+def test_a_deleted_branch_is_as_if_it_weren_t():
+    case("gone", "carol")
+    case("kept", "carol")
+    deleted_case("gone", "carol")
+
+    visible = select_visible_branch_models("case", "carol")
+
+    assert [m.name for m in visible] == ["kept"]
+
+    with pytest.raises(BranchNotFoundError):
+        _ = get_visible_branch_model("case", "carol", "gone")
+
+    with pytest.raises(BranchNotFoundError):
+        _ = get_shared_branch_model("case", "carol", "carol", "gone")
+
+
+def test_a_deleted_branch_of_one_s_own_shadows_nothing():
+    case("case-1", "dave", "carol")
+    case("case-1", "carol")
+    deleted_case("case-1", "carol")
+
+    visible = select_visible_branch_models("case", "carol")
+    found = get_visible_branch_model("case", "carol", "case-1")
+
+    assert [m.owner.name for m in visible] == ["dave"]
+    assert found.owner.name == "dave"
+
+
+def test_a_deleted_branch_holds_what_no_other_of_its_owner_s_holds():
+    case("gone", "carol", vignette="held")
+    deleted_case("gone", "carol")
+    trail = get_branch_model("case", "carol", "gone").trail_id
+
+    assert get_visible_branch_model("case", "carol", trail=trail).name == "gone"
+
+
+def test_a_deleted_branch_gives_way_to_a_live_one_of_its_owner_s():
+    case("old", "carol", vignette="held")
+    case("new", "carol", vignette="held")
+    deleted_case("old", "carol")
+    trail = get_branch_model("case", "carol", "new").trail_id
+
+    assert get_visible_branch_model("case", "carol", trail=trail).name == "new"
+
+
+def test_a_deleted_branch_comes_back_as_it_is_committed_again():
+    case("back", "carol")
+    deleted_case("back", "carol")
+    deleted_case("back", "carol", deleted=False)
+
+    visible = select_visible_branch_models("case", "carol")
+
+    assert [m.name for m in visible] == ["back"]
+    assert len(versions("case", ensure_identity("carol"), "back")) == 3
 
 
 SENTINEL = {

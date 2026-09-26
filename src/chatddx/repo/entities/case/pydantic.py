@@ -83,6 +83,10 @@ Targets = Annotated[dict[TargetKind, Target], AfterValidator(_none_only_where_ex
 class CaseDetails(Details):
     language: Language | None = None
     targets: Targets = Field(default_factory=dict)
+    # the case taken out of sight, its timeline kept: what lists cases, plans
+    # with them or looks them up passes it by, and the runs it held keep
+    # their name and targets by it where no other case holds their vignette
+    deleted: bool = False
 
 
 class CaseTrailBase(BaseTrail):

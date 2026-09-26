@@ -43,7 +43,7 @@ from chatddx.repo.store.trail import dump_trail
 from chatddx.runtime.resolution import Resolution, Sampling, resolve
 from chatddx.runtime.run import Run
 from chatddx.scoring.score import Scoring, VisibleScorer
-from chatddx.scoring.scorers.patterns import Pattern
+from chatddx.scoring.scorers.patterns import unread_pattern
 
 SHARED_BY: dict[str, str] = {"configuration": settings.ARCHIVE_IDENTITY_NAME}
 
@@ -545,13 +545,3 @@ class Bench:
             copied,
             cell.using(get_branch_model("configuration", self.identity, name), name),
         )
-
-
-def unread_pattern(pattern: str) -> str | None:
-    """Why a target's pattern doesn't parse, if it doesn't."""
-    try:
-        _ = Pattern(pattern)
-    except ValueError as e:
-        return str(e)
-
-    return None

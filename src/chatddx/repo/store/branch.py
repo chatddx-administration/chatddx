@@ -19,7 +19,14 @@ from chatddx.repo.families.pydantic import (
     relation_fields,
 )
 from chatddx.repo.names import closure_branch_name
-from chatddx.repo.queries import head_of, qs_head, qs_head_visible, qs_with_relations
+from chatddx.repo.queries import (
+    deleted,
+    head_of,
+    live_first,
+    qs_head,
+    qs_head_visible,
+    qs_with_relations,
+)
 from chatddx.repo.store.trail import dump_trail
 from chatddx.repo.utils import (
     resolve_trail,
@@ -108,11 +115,15 @@ def select_visible_branch_models(
     """
     The head of every branch of `entity_name` that `identity_name` can use,
     by name: its own, and those shared with it, by `shared_by` alone where
-    it is given. Its own shadows a shared one of the same name.
+    it is given. Its own shadows a shared one of the same name, and a
+    deleted one is as if it weren't.
     """
     model_cls = entity_of(entity_name).branch_model
     qs = _shared_by(model_cls.objects.all(), identity_name, shared_by)
-    visible = _prefer_own(list(qs_head_visible(qs, identity_name)), identity_name)
+    heads = [
+        model for model in qs_head_visible(qs, identity_name) if not deleted(model)
+    ]
+    visible = _prefer_own(heads, identity_name)
     models = sorted(visible, key=lambda model: (model.name, model.owner.name))
 
     _ = resolve_trails([model.trail for model in models])
@@ -129,8 +140,10 @@ def get_visible_branch_model(
 ) -> BranchModel:
     """
     The head of the branch of `entity_name` that `identity_name` means by
-    `branch_name`, or that holds `trail`: its own if it has one, else the
-    one shared with it, by `shared_by` alone where it is given.
+    `branch_name`, or the newest version holding `trail`: its own if it has
+    one, else the one shared with it, by `shared_by` alone where it is given.
+    A deleted branch is as if it weren't, but for holding a trail no other
+    branch of its owner's holds.
     """
     assert branch_name or trail
 
@@ -143,7 +156,17 @@ def get_visible_branch_model(
     if trail:
         qs = qs.filter(trail=trail)
 
-    candidates = _prefer_own(list(qs_head_visible(qs, identity_name)), identity_name)
+    found = list(qs_head_visible(qs, identity_name))
+
+    if trail:
+        # the newest version of each branch holding it, the head or not
+        held = live_first(found) if _deletable(entity_name) else found
+        candidates = _prefer_own(held, identity_name)
+    else:
+        candidates = _prefer_own(
+            [model for model in found if not deleted(model)], identity_name
+        )
+
     what = f"{entity_name} '{branch_name}'" if branch_name else f"{entity_name} branch"
 
     if not candidates:
@@ -174,7 +197,7 @@ def get_shared_branch_model(
     )
     model = qs_head_visible(qs, identity_name).first()
 
-    if model is None:
+    if model is None or deleted(model):
         raise BranchNotFoundError(
             f"no {entity_name} '{owner_name}/{branch_name}' for {identity_name}"
         )
@@ -191,6 +214,11 @@ def _shared_by(
         return qs
 
     return qs.filter(owner__name__in=(identity_name, shared_by))
+
+
+def _deletable(entity_name: EntityName) -> bool:
+    """Whether a branch of the kind can be deleted: taken out of sight, kept."""
+    return "deleted" in entity_of(entity_name).branch_details.model_fields
 
 
 def _prefer_own(models: list[BranchModel], identity_name: str) -> list[BranchModel]:

@@ -6,7 +6,7 @@ from typing import Any
 from django.db.models import prefetch_related_objects
 from pydantic import JsonValue
 
-from chatddx.bench.bench import Bench, unread_pattern
+from chatddx.bench.bench import Bench
 from chatddx.django.api.schemas import (
     BranchRow,
     ReadOut,
@@ -27,6 +27,7 @@ from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.utils import resolve_trail
 from chatddx.scoring.score import Scoring, Summed
+from chatddx.scoring.scorers.patterns import unread_pattern
 
 
 def detail_of(bench: Bench, entity: EntityName, model: BranchModel) -> dict[str, Any]:

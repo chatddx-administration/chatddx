@@ -359,9 +359,16 @@ says of targets.
 | `vignette` | content | the case as the model receives it, placed through the instruction's `case` variable |
 | `language` | detail | the vignette's language, `en` or `sv` |
 | `targets` | detail | what the case is expected to yield, by kind |
+| `deleted` | detail | true once the case is deleted: taken out of sight, its timeline kept |
 
 An edited vignette is a new case, since it is what the model reads. An
 edited target is a new version of the same case.
+
+A **deleted** case is out of sight, not out of the database. Lists of
+cases, plans and lookups by name pass it by, and a shared case of the
+same name shows again. The runs of its vignettes keep its name and are
+still scored against its targets, unless another of its owner's cases
+holds their vignette. Saving the case again brings it back.
 
 A **target** is what is expected of one kind, in two parts:
 
@@ -435,7 +442,8 @@ How scoring works:
   The latest score from each scorer is the one shown.
 - **A run with no answer** scores 0 (`no answer`), or no value for
   `first_mention`. An errored run isn't scored. A pattern that doesn't
-  parse is an error, and nothing is scored with it.
+  parse gets no value from its scorer (`the pattern doesn't parse`), and
+  the run's other scorers score it all the same.
 
 A **score** keeps: the run, who scored, the scorer (its trail, and the name
 it had), the case branch whose targets were read, the pattern it was held

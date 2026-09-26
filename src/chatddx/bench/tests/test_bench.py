@@ -127,3 +127,16 @@ def test_a_trial_is_a_ready_cell_on_a_case_with_a_seed(bench: Bench):
     assert trial.description == "free-text × qwen3-8b-awq@fake × case-1 (seed 42)"
     assert Trial.on(ready, case, None).description.endswith("× case-1")
     assert bench.made(trial).seed == 42
+
+
+def test_a_deleted_case_is_planned_with_by_no_one(bench: Bench, recommit: Recommit):
+    recommit("case", "case-2", owner="alice", tags=["tag-2", "mine"])
+    recommit("case", "case-2", owner="alice", deleted=True)
+
+    assert "mine" not in bench.tags("case")
+    assert bench.cases(["mine"]) == []
+    # the archive's of its name, shared, is no longer shadowed
+    assert [(case.name, case.owner.name) for case in bench.cases(["tag-2"])] == [
+        ("case-1", "archive"),
+        ("case-2", "archive"),
+    ]

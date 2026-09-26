@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Any
 
 from django.db.models import Count, OuterRef, Prefetch, Q, QuerySet, Subquery
@@ -25,6 +26,57 @@ def head_of[T: BranchModel](qs: QuerySet[T], owner_name: str, name: str) -> T | 
         .order_by("-timestamp", "-id")
         .first()
     )
+
+
+def deleted(model: BranchModel) -> bool:
+    """Whether the row says its timeline is deleted: as its head, it is."""
+    return model.details.get("deleted") is True
+
+
+def deleted_timelines(models: Sequence[BranchModel]) -> set[tuple[int, str]]:
+    """
+    The timelines, by owner and name, of those of `models` whose head is
+    deleted: a row goes with its timeline, head or not.
+    """
+    wanted = {(model.owner_id, model.name) for model in models}
+
+    if not wanted:
+        return set()
+
+    model_cls = type(models[0])
+    heads = (
+        model_cls.objects.filter(
+            owner_id__in={owner for owner, _ in wanted},
+            name__in={name for _, name in wanted},
+        )
+        .order_by("owner_id", "name", "-timestamp", "-id")
+        .distinct("owner_id", "name")
+        .values_list("owner_id", "name", "details")
+    )
+
+    return {
+        (owner, name)
+        for owner, name, details in heads
+        if (owner, name) in wanted and details.get("deleted") is True
+    }
+
+
+def live_first[T: BranchModel](models: Sequence[T]) -> list[T]:
+    """
+    `models`, less the rows of a deleted timeline whose owner has a live one
+    among them: a deleted branch gives way to a live one of its owner's, and
+    stands, for what it held, where its owner has no other.
+    """
+    gone = deleted_timelines(models)
+    live = {
+        model.owner_id for model in models if (model.owner_id, model.name) not in gone
+    }
+
+    return [
+        model
+        for model in models
+        if (model.owner_id, model.name) not in gone or model.owner_id not in live
+    ]
 
 
 def qs_head_visible[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:

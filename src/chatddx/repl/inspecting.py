@@ -5,7 +5,6 @@ from pydantic import BaseModel, JsonValue
 from rich.table import Table
 from rich.text import Text
 
-from chatddx.bench.bench import unread_pattern
 from chatddx.bench.cell import SLICES
 from chatddx.history.models import RunStatus
 from chatddx.repl.render import LABEL, LATER, REFUSED
@@ -36,6 +35,7 @@ from chatddx.runtime.resolution import (
 )
 from chatddx.runtime.run import FINAL_RESULT
 from chatddx.scoring.score import Scoring
+from chatddx.scoring.scorers.patterns import unread_pattern
 
 EFFORTS: tuple[Effort, ...] = get_args(Effort.__value__)
 
@@ -204,7 +204,9 @@ def _show_branch(repl: Repl, entity: EntityName, name: str | None) -> None:
             _add_rows(repl, table, field, getattr(branch.trail, field))
 
     for field in type(branch.details).model_fields:
-        _add_rows(repl, table, field, getattr(branch.details, field))
+        # a case shown is never deleted: a lookup passes a deleted one by
+        if field != "deleted":
+            _add_rows(repl, table, field, getattr(branch.details, field))
 
     _add_rows(repl, table, "tags", " ".join(branch.tags))
     repl.console.print(table)

@@ -256,6 +256,46 @@ def test_a_plan_that_rightly_raises_no_warning_is_held_to_none(recommit: Recommi
     assert ScoreModel.objects.get(scorer_name="warning_mentions").target is None
 
 
+def test_a_pattern_that_doesn_t_parse_is_its_scorer_s_to_say(recommit: Recommit):
+    recommit(
+        "case",
+        "case-1",
+        targets={
+            "diagnosis": {"pattern": "fake & (diagnosis"},
+            "warning": {"pattern": "acute & warning"},
+            "disposition": {"pattern": "admit*"},
+        },
+    )
+
+    scores = made(ran("plan"))
+
+    assert scores["reciprocal_rank"] == (None, None, "the pattern doesn't parse")
+    assert scores["warning_mentions"] == (1.0, "fake acute warning", None)
+
+
+def test_a_deleted_case_holds_its_runs_to_its_targets_till_its_owner_has_another(
+    recommit: Recommit,
+):
+    run = ran("free-text")
+    mine = {"name": "mine", "owner": "alice"}
+    a = {"diagnosis": {"pattern": "fake & diagnosis & a"}}
+    recommit("case", "case-1", **mine, targets=a)
+    recommit("case", "case-1", **mine, targets=a, deleted=True)
+
+    held = Scoring("alice").case_of(run)
+
+    assert held is not None
+    assert (held.name, held.details["targets"]) == (
+        "mine",
+        {"diagnosis": {"text": None, "pattern": "fake & diagnosis & a"}},
+    )
+
+    recommit("case", "case-1", name="again", owner="alice")
+    held = Scoring("alice").case_of(run)
+
+    assert held is not None and held.name == "again"
+
+
 def test_each_identity_holds_a_run_to_its_own_scores():
     _ = CaseBranchModel.objects.get(
         owner__name="archive", name="case-1"
