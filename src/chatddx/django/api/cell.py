@@ -7,6 +7,8 @@ from django.http import HttpRequest
 from ninja import Query, Router
 from ninja.errors import HttpError
 
+from chatddx.bench.bench import Bench, greedy
+from chatddx.bench.cell import NONE, SLICES, Cell
 from chatddx.django.api.identity import identity_of
 from chatddx.django.api.schemas import (
     CASE,
@@ -24,12 +26,9 @@ from chatddx.django.api.schemas import (
     StackRealizations,
 )
 from chatddx.django.api.showing import detail_of
-from chatddx.repl.bench import Bench, greedy
-from chatddx.repl.cell import NONE, SLICES
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchOut
 from chatddx.repo.entities.scorer.pydantic import ScorerTrailOut
-from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.store.branch import (
@@ -51,40 +50,20 @@ STACK_PARTS: tuple[EntityName, ...] = ("machine", "os", "llm", "serving")
 router = Router(tags=["cell"])
 
 
-def held(request: HttpRequest, cell: CellIn, transport: Any = None) -> Bench:
-    """A bench holding the cell, put together as `use`, `on` and `set` would."""
+def held(
+    request: HttpRequest, cell: CellIn, transport: Any = None
+) -> tuple[Bench, Cell]:
+    """The identity's bench, and the cell put together as `use`, `on` and `set` would."""
     bench = Bench(identity_of(request), transport)
 
-    if cell.configuration is not None:
-        bench.cell.put(
-            bench.configuration_named(cell.configuration),
-            bench.called(cell.configuration),
+    try:
+        return bench, bench.cell_of(
+            cell.configuration,
+            cell.stack,
+            {entity: getattr(cell, entity) for entity in SLICES},
         )
-
-    if cell.stack is not None:
-        bench.cell.stack = StackBranchOut.model_validate(
-            get_visible_branch_model("stack", bench.identity, cell.stack)
-        )
-
-    for entity in SLICES:
-        name = getattr(cell, entity)
-
-        if name is None:
-            continue
-
-        if not bench.cell.configuration:
-            raise HttpError(
-                400, f"the cell has no configuration to set its {entity} in"
-            )
-
-        variation = None if name == NONE else bench.variation_named(entity, name)
-
-        try:
-            bench.cell.set(entity, variation)
-        except ValueError as e:
-            raise HttpError(400, str(e)) from None
-
-    return bench
+    except ValueError as e:
+        raise HttpError(400, str(e)) from None
 
 
 @router.get("/cell", response=CellOut)
@@ -93,8 +72,7 @@ def show(request: HttpRequest, cell: Query[ShowIn]):
     The cell, how it resolves on its stack, and the cases each scorer can hold
     it to: those with any `tag`, or all.
     """
-    bench = held(request, cell)
-    held_cell = bench.cell
+    bench, held_cell = held(request, cell)
 
     if not (held_cell.configuration or held_cell.stack):
         raise HttpError(
@@ -111,11 +89,9 @@ def show(request: HttpRequest, cell: Query[ShowIn]):
     return CellOut(
         label=held_cell.label or None,
         configuration=held_cell.configuration,
-        set=held_cell.variations,
+        set=dict(held_cell.variations),
         stack=held_cell.stack,
-        resolution=(
-            _resolved(bench) if held_cell.configuration and held_cell.stack else None
-        ),
+        resolution=_resolved(bench, held_cell) if held_cell.complete else None,
         cases=None if cases is None else len(cases),
         tags=cell.tag,
         scorers=(
@@ -131,17 +107,17 @@ def show(request: HttpRequest, cell: Query[ShowIn]):
                     missing=held.missing,
                     unread=held.unread,
                 )
-                for held in bench.held_to(cases)
+                for held in bench.held_to(held_cell, cases)
             ]
         ),
     )
 
 
-def _resolved(bench: Bench) -> Resolved:
+def _resolved(bench: Bench, cell: Cell) -> Resolved:
     resolution: Resolution | None = None
 
     try:
-        resolution = bench.resolve()
+        resolution = bench.resolve(cell)
         parts: Any = resolution
         refusals: list[SliceRefusal] = []
     except CellRefused as e:
@@ -166,9 +142,9 @@ def _resolved(bench: Bench) -> Resolved:
 @router.get("/reasoning", response=ReasoningTable)
 def reasoning(request: HttpRequest, cell: Query[CellIn]):
     """What each reasoning variation does on each stack, with the cell's sampling."""
-    bench = held(request, cell)
+    bench, held_cell = held(request, cell)
     # the cell's trails, as the repo's schemas have them
-    slices: Any = bench.cell.slices if bench.cell.configuration else None
+    slices: Any = held_cell.slices if held_cell.configuration else None
     variations = sorted(
         (
             ReasoningBranchOut.model_validate(model)
@@ -184,8 +160,8 @@ def reasoning(request: HttpRequest, cell: Query[CellIn]):
         stacks=[
             StackRealizations(
                 stack=stack.name,
-                current=bench.cell.stack is not None
-                and bench.cell.stack.name == stack.name,
+                current=held_cell.stack is not None
+                and held_cell.stack.name == stack.name,
                 realizations=[
                     _realization(
                         realize(
@@ -211,8 +187,8 @@ def _realization(realized: Any) -> Realization:
 @router.get("/scorers", response=list[ScorerOut])
 def scorers(request: HttpRequest, cell: Query[CellIn]):
     """The scorers, what each reads, and whether the cell's output offers it."""
-    bench = held(request, cell)
-    offered = bench.cell.slices.output.views if bench.cell.configuration else None
+    bench, held_cell = held(request, cell)
+    offered = held_cell.slices.output.views if held_cell.configuration else None
 
     return [
         ScorerOut(
@@ -229,25 +205,26 @@ def scorers(request: HttpRequest, cell: Query[CellIn]):
 @router.post("/cell/save", response=Saved)
 def save(request: HttpRequest, cell: SaveIn):
     """Save the cell's configuration as the identity's own; what it reaches too."""
-    bench = held(request, cell)
+    bench, held_cell = held(request, cell)
 
-    if not bench.cell.configuration:
+    if not held_cell.configuration:
         raise HttpError(400, "the cell has no configuration to save")
 
     try:
-        saved = bench.save(cell.name)
+        saved = bench.save(held_cell, cell.name)
     except ValueError as e:
         raise HttpError(400, str(e)) from None
 
-    return Saved(
-        what=saved.what, copied=saved.copied, configuration=bench.cell.configuration
-    )
+    configuration = saved.cell.configuration
+    assert configuration
+
+    return Saved(what=saved.what, copied=saved.copied, configuration=configuration)
 
 
 def _part(entity: EntityName):
     def part(request: HttpRequest, cell: Query[CellIn]):
-        bench = held(request, cell)
-        return detail_of(bench, entity, _in_cell(bench, cell, entity))
+        bench, held_cell = held(request, cell)
+        return detail_of(bench, entity, _in_cell(bench, held_cell, cell, entity))
 
     return part
 
@@ -264,11 +241,13 @@ for _entity in ("configuration", "stack", *SLICES, *STACK_PARTS):
     )
 
 
-def _in_cell(bench: Bench, cell: CellIn, entity: EntityName) -> BranchModel:
+def _in_cell(
+    bench: Bench, held_cell: Cell, cell: CellIn, entity: EntityName
+) -> BranchModel:
     trail: Any = None
 
     if entity == "configuration" or entity in SLICES:
-        if cell.configuration is None or bench.cell.configuration is None:
+        if cell.configuration is None or held_cell.configuration is None:
             raise HttpError(400, "the cell has no configuration")
 
         if entity == "configuration":
@@ -279,15 +258,15 @@ def _in_cell(bench: Bench, cell: CellIn, entity: EntityName) -> BranchModel:
         if name is not None and name != NONE:
             return get_visible_branch_model(entity, bench.identity, name)
 
-        trail = None if name == NONE else bench.cell.variation(entity)
+        trail = None if name == NONE else held_cell.variation(entity)
     else:
-        if cell.stack is None or bench.cell.stack is None:
+        if cell.stack is None or held_cell.stack is None:
             raise HttpError(400, "the cell has no stack")
 
         if entity == "stack":
-            return get_visible_branch_model("stack", bench.identity, cell.stack)
+            return bench.stack_named(cell.stack)
 
-        trail = getattr(bench.cell.stack.trail, entity)
+        trail = getattr(held_cell.stack.trail, entity)
 
     if trail is None:
         raise HttpError(404, f"the cell has no {entity}")

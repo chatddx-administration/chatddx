@@ -10,6 +10,7 @@ from django.http import HttpRequest
 from ninja import Query, Router
 from ninja.errors import HttpError
 
+from chatddx.bench.bench import Ambiguous, Bench, NotFound
 from chatddx.django.api.cell import held
 from chatddx.django.api.identity import identity_of
 from chatddx.django.api.schemas import (
@@ -28,7 +29,6 @@ from chatddx.django.api.schemas import (
 from chatddx.django.api.sending import Batch, EventStream, Sending
 from chatddx.django.api.showing import run_of, scores_of, summary_of, sums_of
 from chatddx.history.models import MessageModel, RunModel, RunStatus, TrialModel
-from chatddx.repl.bench import Ambiguous, Bench, NotFound
 from chatddx.repo.entities.case.pydantic import CaseTrailOut
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailOut
 from chatddx.repo.entities.stack.pydantic import StackTrailOut
@@ -57,7 +57,7 @@ BATCHED = {"responses": {200: {"description": "the runs' events", "content": EVE
 @router.post("/runs", response=RunOut, openapi_extra=STREAMED)
 def run(request: HttpRequest, spec: RunIn):
     """Run the cell on a case or a vignette, stream it, record it and score it."""
-    sending = Sending.of(held(request, spec, TRANSPORT), spec)
+    sending = Sending.of(*held(request, spec, TRANSPORT), spec)
 
     if spec.stream:
         return EventStream([sending])
@@ -68,7 +68,7 @@ def run(request: HttpRequest, spec: RunIn):
 @router.post("/batch", openapi_extra=BATCHED)
 def batch(request: HttpRequest, spec: BatchIn):
     """Run the cell on each case with any of the tags, then sum up the scores."""
-    batched = Batch(held(request, spec, TRANSPORT), spec)
+    batched = Batch(*held(request, spec, TRANSPORT), spec)
     return EventStream(batched.sendings, [batched.batched], batched.summarized)
 
 

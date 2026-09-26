@@ -5,10 +5,10 @@ from typing import Any
 import pytest
 from django.test import Client
 
+from chatddx.bench.bench import SEEDS
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.django.api.tests.conftest import Events, events, of
 from chatddx.history.models import RunModel
-from chatddx.repl.bench import SEEDS
 
 pytestmark = pytest.mark.django_db
 

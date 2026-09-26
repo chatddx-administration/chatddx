@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from django import db
 from rich.table import Table
 
+from chatddx.bench.bench import NotFound
+from chatddx.bench.cell import NONE, OPTIONAL, SLICES
 from chatddx.repl import (
     choosing,
     inspecting,
@@ -13,8 +15,6 @@ from chatddx.repl import (
     running,
     scoring,
 )
-from chatddx.repl.bench import NotFound
-from chatddx.repl.cell import NONE, OPTIONAL, SLICES
 from chatddx.repl.shell import Repl
 from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError

@@ -5,10 +5,10 @@ from django.db.models import prefetch_related_objects
 from django.http import HttpRequest
 from ninja import Query, Router
 
+from chatddx.bench.bench import Bench
 from chatddx.django.api.identity import identity_of
 from chatddx.django.api.schemas import Detail, Page, RunSummary
 from chatddx.django.api.showing import detail_of, summary_of
-from chatddx.repl.bench import Bench
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
 from chatddx.repo.families.django import BranchModel

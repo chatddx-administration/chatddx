@@ -9,7 +9,7 @@ from ninja import Schema
 from pydantic import Field, JsonValue, StringConstraints, model_validator
 from pydantic_ai.usage import RunUsage
 
-from chatddx.repl.bench import MAX_SEED
+from chatddx.bench.bench import MAX_SEED
 from chatddx.repo.entities.case.pydantic import CaseTrailOut, TargetKind
 from chatddx.repo.entities.client.pydantic import ClientTrailOut
 from chatddx.repo.entities.configuration.pydantic import (

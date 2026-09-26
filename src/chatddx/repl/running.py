@@ -10,20 +10,20 @@ from django.utils import timezone
 from pydantic_ai import UnexpectedModelBehavior
 from rich.text import Text
 
+from chatddx.bench.bench import (
+    MAX_SEED,
+    Incomplete,
+    NotOwn,
+    NotReady,
+    Ready,
+    Trial,
+    drawn_seed,
+)
+from chatddx.bench.cell import NONE
+from chatddx.bench.outcome import STOPPED, failed, holds, unheeded
+from chatddx.bench.plan import Plan, Planned
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.history.record import Outcome
-from chatddx.repl.bench import (
-    MAX_SEED,
-    SHARED_BY,
-    STOPPED,
-    Ready,
-    drawn_seed,
-    failed,
-    greedy,
-    holds,
-    unheeded,
-)
-from chatddx.repl.cell import NONE
 from chatddx.repl.render import (
     LABEL,
     LATER,
@@ -38,11 +38,16 @@ from chatddx.repl.render import (
 )
 from chatddx.repl.scoring import summary
 from chatddx.repl.shell import Repl
-from chatddx.repo.families.django import BranchModel
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import CellRefused, Resolution
 from chatddx.runtime.run import Run, Runaway, invalid
 from chatddx.scoring.score import Scoring
+
+# the command that clears what stands in a cell's way
+HINTS: dict[type[NotReady], str] = {
+    Incomplete: "cell CONFIGURATION STACK",
+    NotOwn: "save NAME",
+}
 
 
 def seed(repl: Repl, word: str | None = None) -> None:
@@ -74,12 +79,13 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
         return
 
     case = get_visible_branch_model("case", repl.identity, name)
-    run = _made(repl, ready, case, chosen)
+    trial = Trial.on(ready, case, chosen)
+    run = _made(repl, trial)
 
     if run is None:
         return
 
-    repl.console.print(f"trial: {repl.described(case.name, run.seed)}", style="bold")
+    repl.console.print(f"trial: {trial.description}", style="bold")
 
     started = timezone.now()
 
@@ -103,7 +109,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     finished = timezone.now()
 
     with _held():
-        recorded = _recorded(repl, ready, case, run, outcome, started, finished)
+        recorded = _recorded(repl, trial, run, outcome, started, finished)
 
         if recorded is None:
             return
@@ -122,46 +128,42 @@ def batch(repl: Repl, *tags: str) -> None:
     if ready is None or not _seedable(repl, ready, repl.seed):
         return
 
-    tagged = " or ".join(tags)
-    cases = repl.cases(tags)
+    plan = Plan([Planned(ready.cell, ready)], repl.cases(tags), tags, repl.seed)
 
-    if not cases:
-        repl.error(f"no case tagged {tagged} for {repl.identity}")
+    if not plan.cases:
+        repl.error(f"no case tagged {plan.tagged} for {repl.identity}")
         return
 
-    cell = repl.cell
-    assert cell.stack
     scoring = Scoring(repl.identity)
     views = ready.resolution.output.views
     columns = Columns(
-        (case.name for case in cases),
+        (case.name for case in plan.cases),
         (scorer.name for scorer in scoring.scorers if scorer.view in views),
     )
-    many = "s" if len(cases) > 1 else ""
 
     repl.console.print(
-        f"batch: {cell.label} × {cell.stack.name} × {len(cases)} case{many}"
-        + f" tagged {tagged}, "
+        f"batch: {plan.description}, "
         + (f"seed {repl.seed}" if repl.seed is not None else "unseeded"),
         style="bold",
     )
     repl.console.print(columns.header())
 
+    trials = plan.trials
     made: list[ScoreModel] = []
     ran = 0
 
     with _Stopping() as stopping:
         try:
-            for case in cases:
+            for trial in trials:
                 if stopping.asked:
                     break
 
-                run = _made(repl, ready, case, repl.seed)
+                run = _made(repl, trial)
 
                 if run is None:
                     break
 
-                with Tally(repl.console, columns, case.name) as tally:
+                with Tally(repl.console, columns, trial.called) as tally:
                     stopping.tally = tally
                     started = timezone.now()
 
@@ -179,9 +181,7 @@ def batch(repl: Repl, *tags: str) -> None:
                         )
 
                     finished = timezone.now()
-                    recorded = _recorded(
-                        repl, ready, case, run, outcome, started, finished
-                    )
+                    recorded = _recorded(repl, trial, run, outcome, started, finished)
                     scores = (
                         [] if recorded is None else _scored(repl, recorded, scoring)
                     )
@@ -196,38 +196,20 @@ def batch(repl: Repl, *tags: str) -> None:
     if made:
         summary(repl, scoring, made)
 
-    if ran < len(cases):
-        repl.console.print(f"stopped after {ran} of {len(cases)} cases", style=LABEL)
+    if ran < len(trials):
+        repl.console.print(f"stopped after {ran} of {len(trials)} cases", style=LABEL)
 
 
 def _ready(repl: Repl) -> Ready | None:
-    cell = repl.cell
-
-    if not (cell.configuration and cell.stack):
-        repl.error(
-            "the cell needs a configuration and a stack: cell CONFIGURATION STACK"
-        )
-        return None
-
-    owner = cell.configuration.owner.name
-
-    if owner not in (repl.identity, SHARED_BY["configuration"]):
-        repl.error(f"{cell.name} is {owner}'s: save it as your own first: save NAME")
-        return None
-
     try:
-        resolution = repl.resolve()
+        return repl.ready(repl.cell)
     except CellRefused as e:
         repl.say_refusals(e.refusals)
-        return None
+    except NotReady as e:
+        hint = HINTS.get(type(e))
+        repl.error(f"{e}: {hint}" if hint else str(e))
 
-    api_key = repl.secret(resolution.credential)
-
-    if resolution.credential and api_key is None:
-        repl.error(f"{repl.identity} has no secret '{resolution.credential}'")
-        return None
-
-    return Ready(resolution, api_key, repl.tools())
+    return None
 
 
 def _seed_of(repl: Repl, word: str) -> int | None:
@@ -239,7 +221,7 @@ def _seed_of(repl: Repl, word: str) -> int | None:
 
 
 def _seedable(repl: Repl, ready: Ready, seed: int | None) -> bool:
-    if seed is None or not greedy(ready.resolution.sampling):
+    if seed is None or not ready.greedy:
         return True
 
     repl.error(
@@ -249,9 +231,9 @@ def _seedable(repl: Repl, ready: Ready, seed: int | None) -> bool:
     return False
 
 
-def _made(repl: Repl, ready: Ready, case: BranchModel, seed: int | None) -> Run | None:
+def _made(repl: Repl, trial: Trial) -> Run | None:
     try:
-        return repl.made(ready, case.trail.vignette, seed)
+        return repl.made(trial)
     except ValueError as e:
         repl.error(str(e))
         return None
@@ -296,23 +278,14 @@ def _shown(repl: Repl, resolution: Resolution, answer: Any) -> bool | None:
 
 def _recorded(
     repl: Repl,
-    ready: Ready,
-    case: BranchModel,
+    trial: Trial,
     run: Run,
     outcome: Outcome,
     started: datetime,
     finished: datetime,
 ) -> RunModel | None:
     try:
-        return repl.recorded(
-            ready,
-            case.trail_id,
-            run,
-            outcome,
-            started,
-            finished,
-            repl.described(case.name, run.seed),
-        )
+        return repl.recorded(trial, run, outcome, started, finished)
     except Exception as e:  # noqa: BLE001
         repl.error(f"not recorded: {type(e).__name__}: {e}")
         return None

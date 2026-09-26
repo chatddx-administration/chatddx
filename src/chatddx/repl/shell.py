@@ -4,8 +4,9 @@ from typing import Any, override
 from rich.console import Console
 from rich.text import Text
 
+from chatddx.bench.bench import Bench, drawn_seed
+from chatddx.bench.cell import Cell
 from chatddx.history.models import RunModel
-from chatddx.repl.bench import Bench, drawn_seed
 from chatddx.repl.render import LATER, REFUSED
 from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.runtime.resolution import SliceRefusal
@@ -24,6 +25,8 @@ class Repl(Bench):
     ):
         super().__init__(identity_name, transport)
         self.console: Console = console
+        # what use, on, cell and set put together, for run and batch to run
+        self.cell: Cell = Cell()
         self.seed: int | None = drawn_seed() if seed is DRAWN else seed
 
         self._completions: dict[str, list[str]] | None = None

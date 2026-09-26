@@ -8,12 +8,12 @@ import httpx2
 import pytest
 from rich.console import Console
 
+from chatddx.bench import bench
+from chatddx.bench.bench import SEEDS
 from chatddx.conftest import Recommit, Say, SayAs
 from chatddx.dev.fake_vllm import FakeTransport, completion, stream
 from chatddx.history.models import RunModel, TrialModel
 from chatddx.history.record import record
-from chatddx.repl import bench
-from chatddx.repl.bench import SEEDS
 from chatddx.repl.shell import Repl
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.runtime.run import RUNAWAY

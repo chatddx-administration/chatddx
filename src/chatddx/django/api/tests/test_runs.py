@@ -8,12 +8,12 @@ import httpx2
 import pytest
 from django.test import Client
 
+from chatddx.bench.bench import MAX_SEED, SEEDS
 from chatddx.conftest import Recommit
 from chatddx.core.models import IdentityModel
 from chatddx.dev.fake_vllm import FakeTransport, stream
 from chatddx.django.api.tests.conftest import Events, of, written
 from chatddx.history.models import ConversationContext, RunModel
-from chatddx.repl.bench import MAX_SEED, SEEDS
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel

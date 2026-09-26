@@ -37,6 +37,7 @@ from pydantic_ai import (
     ModelResponse,
 )
 
+from chatddx.bench.cell import NONE, SLICES
 from chatddx.history.models import (
     MessageKind,
     MessageModel,
@@ -51,7 +52,6 @@ from chatddx.logs.messages import (
     output,
     usage,
 )
-from chatddx.repl.cell import NONE, SLICES
 from chatddx.repo.entities.case.pydantic import pattern_of
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
 from chatddx.repo.entities.output.pydantic import VIEWS, OutputTrailOut

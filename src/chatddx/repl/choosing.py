@@ -1,31 +1,24 @@
 from rich.text import Text
 
-from chatddx.repl.cell import NONE, SLICES
+from chatddx.bench.cell import NONE, SLICES
 from chatddx.repl.render import LABEL
 from chatddx.repl.shell import Repl
-from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.names import short_fingerprint
-from chatddx.repo.store.branch import get_visible_branch_model
 
 
 def use(repl: Repl, name: str) -> None:
-    repl.cell.put(repl.configuration_named(name), repl.called(name))
+    repl.cell = repl.cell.using(repl.configuration_named(name), repl.called(name))
     repl.say_cell()
 
 
 def on(repl: Repl, name: str) -> None:
-    model = get_visible_branch_model("stack", repl.identity, name)
-    repl.cell.stack = StackBranchOut.model_validate(model)
+    repl.cell = repl.cell.on(repl.stack_named(name))
     repl.say_cell()
 
 
 def cell(repl: Repl, configuration: str, stack: str) -> None:
     """Both, each looked up before either is put in the cell."""
-    configuration_model = repl.configuration_named(configuration)
-    stack_model = get_visible_branch_model("stack", repl.identity, stack)
-
-    repl.cell.put(configuration_model, repl.called(configuration))
-    repl.cell.stack = StackBranchOut.model_validate(stack_model)
+    repl.cell = repl.cell_of(configuration, stack)
     repl.say_cell()
 
 
@@ -41,7 +34,9 @@ def set_(repl: Repl, entity: str, name: str) -> None:
         return
 
     try:
-        cell.set(entity, None if name == NONE else repl.variation_named(entity, name))
+        repl.cell = cell.set(
+            entity, None if name == NONE else repl.variation_named(entity, name)
+        )
     except ValueError as e:
         repl.error(str(e))
         return
@@ -55,11 +50,12 @@ def save(repl: Repl, name: str) -> None:
         return
 
     try:
-        saved = repl.save(name)
+        saved = repl.save(repl.cell, name)
     except ValueError as e:
         repl.error(str(e))
         return
 
+    repl.cell = saved.cell
     repl.console.print(
         f"saved as {name}: {saved.what} {short_fingerprint(saved.fingerprint)}"
     )

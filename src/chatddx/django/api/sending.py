@@ -33,6 +33,10 @@ from pydantic_ai import (
     ThinkingPartDelta,
 )
 
+from chatddx.bench.bench import Bench, Ready, Trial, drawn_seed
+from chatddx.bench.cell import NONE, Cell
+from chatddx.bench.outcome import STOPPED, failed, holds, unheeded
+from chatddx.bench.plan import Plan, Planned
 from chatddx.django.api.schemas import (
     Answered,
     Batched,
@@ -50,18 +54,6 @@ from chatddx.django.api.schemas import (
 from chatddx.django.api.showing import run_of, scores_of, sums_of, views_of
 from chatddx.history.models import ConversationContext, RunModel, RunStatus, ScoreModel
 from chatddx.history.record import Outcome
-from chatddx.repl.bench import (
-    SHARED_BY,
-    STOPPED,
-    Bench,
-    Ready,
-    drawn_seed,
-    failed,
-    greedy,
-    holds,
-    unheeded,
-)
-from chatddx.repl.cell import NONE
 from chatddx.repo.entities.case.django import CaseTrailModel
 from chatddx.repo.entities.case.pydantic import CaseTrailIn
 from chatddx.repo.store.branch import get_visible_branch_model
@@ -75,36 +67,12 @@ logger = logging.getLogger(__name__)
 STREAMED: TypeAdapter[Any] = TypeAdapter(AgentStreamEvent)
 
 
-def ready_of(bench: Bench) -> Ready:
-    """What stands in the way of a run of the cell, as the error it is answered with."""
-    cell = bench.cell
-
-    if not (cell.configuration and cell.stack):
-        raise HttpError(400, "the cell needs a configuration and a stack")
-
-    owner = cell.configuration.owner.name
-
-    if owner not in (bench.identity, SHARED_BY["configuration"]):
-        raise HttpError(403, f"{cell.name} is {owner}'s: save it as your own first")
-
-    # a refused cell is answered with its refusals
-    resolution = bench.resolve()
-    api_key = bench.secret(resolution.credential)
-
-    if resolution.credential and api_key is None:
-        raise HttpError(
-            409, f"{bench.identity} has no secret '{resolution.credential}'"
-        )
-
-    return Ready(resolution, api_key, bench.tools())
-
-
 def seed_of(ready: Ready, seed: Seed) -> int | None:
     """The seed given, or one drawn where none is and sampling isn't greedy."""
     if seed == NONE:
         return None
 
-    if not greedy(ready.resolution.sampling):
+    if not ready.greedy:
         return drawn_seed() if seed is None else seed
 
     if seed is None:
@@ -118,22 +86,10 @@ def seed_of(ready: Ready, seed: Seed) -> int | None:
 
 
 class Sending:
-    def __init__(
-        self,
-        bench: Bench,
-        ready: Ready,
-        case: int,
-        called: str,
-        vignette: str,
-        seed: int | None,
-        scoring: Scoring | None = None,
-    ):
+    def __init__(self, bench: Bench, trial: Trial, scoring: Scoring | None = None):
         self.bench: Bench = bench
-        self.ready: Ready = ready
-        self.case: int = case
-        self.called: str = called
-        self.run: Run = bench.made(ready, vignette, seed)
-        self.description: str = bench.described(called, seed)
+        self.trial: Trial = trial
+        self.run: Run = bench.made(trial)
         self.scoring: Scoring | None = scoring
 
         self.outcome: Outcome | None = None
@@ -146,30 +102,31 @@ class Sending:
         self._written: bool = False
 
     @classmethod
-    def of(cls, bench: Bench, spec: RunIn) -> "Sending":
-        ready = ready_of(bench)
+    def of(cls, bench: Bench, cell: Cell, spec: RunIn) -> "Sending":
+        # what stands in the way is answered with its error
+        ready = bench.ready(cell)
         seed = seed_of(ready, spec.seed)
 
         if spec.case is not None:
             case = get_visible_branch_model("case", bench.identity, spec.case)
-            trail, called, vignette = case.trail_id, case.name, case.trail.vignette
+            trial = Trial.on(ready, case, seed)
         else:
             assert spec.vignette is not None
-            vignette = spec.vignette
             # a vignette of the client's own is a case without a branch
-            model = dump_trail(CaseTrailModel, CaseTrailIn(vignette=vignette))
-            trail, called = model.pk, bench.name_of("case", model)
+            model = dump_trail(CaseTrailModel, CaseTrailIn(vignette=spec.vignette))
+            called = bench.name_of("case", model)
+            trial = Trial(ready, model.pk, called, spec.vignette, seed)
 
         try:
-            return cls(bench, ready, trail, called, vignette, seed)
+            return cls(bench, trial)
         except ValueError as e:
             raise HttpError(422, str(e)) from None
 
     def began(self) -> Began:
         return Began(
             run=UUID(self.run.run_id),
-            description=self.description,
-            case=self.called,
+            description=self.trial.description,
+            case=self.trial.called,
             seed=self.run.seed,
         )
 
@@ -202,7 +159,7 @@ class Sending:
             self.outcome = failed(e, self.run)
             yield Failed(message=self.outcome.error or type(e).__name__)
         else:
-            resolution = self.ready.resolution
+            resolution = self.trial.ready.resolution
             self.outcome = Outcome(
                 RunStatus.COMPLETED,
                 answer=self._answer,
@@ -213,7 +170,7 @@ class Sending:
             self.finished = timezone.now()
 
     def _judged(self, outcome: Outcome, stopped: str | None = None) -> Judged:
-        resolution = self.ready.resolution
+        resolution = self.trial.ready.resolution
         coercion = resolution.coercion
         answer = outcome.answer
 
@@ -235,13 +192,11 @@ class Sending:
 
         try:
             recorded = bench.recorded(
-                self.ready,
-                self.case,
+                self.trial,
                 self.run,
                 self.outcome,
                 self.started or timezone.now(),
                 self.finished or timezone.now(),
-                self.description,
                 ConversationContext.API,
             )
         except Exception as e:
@@ -287,40 +242,29 @@ class Sending:
 
 
 class Batch:
-    def __init__(self, bench: Bench, spec: BatchIn):
-        ready = ready_of(bench)
+    def __init__(self, bench: Bench, cell: Cell, spec: BatchIn):
+        # what stands in the way is answered with its error
+        ready = bench.ready(cell)
         seed = seed_of(ready, spec.seed)
-        tagged = " or ".join(spec.tags)
-        cases = bench.cases(spec.tags)
+        plan = Plan(
+            [Planned(cell, ready)], bench.cases(spec.tags), tuple(spec.tags), seed
+        )
 
-        if not cases:
-            raise HttpError(404, f"no case tagged {tagged} for {bench.identity}")
+        if not plan.cases:
+            raise HttpError(404, f"no case tagged {plan.tagged} for {bench.identity}")
 
-        cell = bench.cell
-        assert cell.stack
         self.scoring: Scoring = Scoring(bench.identity)
 
         try:
             self.sendings: list[Sending] = [
-                Sending(
-                    bench,
-                    ready,
-                    case.trail_id,
-                    case.name,
-                    case.trail.vignette,
-                    seed,
-                    self.scoring,
-                )
-                for case in cases
+                Sending(bench, trial, self.scoring) for trial in plan.trials
             ]
         except ValueError as e:
             raise HttpError(422, str(e)) from None
 
-        many = "s" if len(cases) > 1 else ""
         self.batched: Batched = Batched(
-            description=f"{cell.label} × {cell.stack.name} × {len(cases)} case{many}"
-            + f" tagged {tagged}",
-            cases=[case.name for case in cases],
+            description=plan.description,
+            cases=[case.name for case in plan.cases],
             seed=seed,
         )
 

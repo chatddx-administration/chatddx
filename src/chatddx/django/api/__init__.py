@@ -9,10 +9,17 @@ from django.middleware.csrf import get_token
 from ninja import NinjaAPI
 from pydantic import TypeAdapter
 
+from chatddx.bench.bench import (
+    Ambiguous,
+    Incomplete,
+    NoSecret,
+    NotFound,
+    NotOwn,
+    NotReady,
+)
 from chatddx.django.api import cell, registry, runs
 from chatddx.django.api.identity import Identified, identity_of
 from chatddx.django.api.schemas import Event, Me
-from chatddx.repl.bench import Ambiguous, NotFound
 from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 from chatddx.runtime.resolution import CellRefused
 
@@ -61,6 +68,17 @@ def not_found(request: HttpRequest, error: Exception):
 @api.exception_handler(Ambiguous)
 def ambiguous(request: HttpRequest, error: Exception):
     return api.create_response(request, {"detail": str(error)}, status=409)
+
+
+# what stands in the way of a run, said before anything is sent
+NOT_READY: dict[type[NotReady], int] = {Incomplete: 400, NotOwn: 403, NoSecret: 409}
+
+
+@api.exception_handler(NotReady)
+def not_ready(request: HttpRequest, error: NotReady):
+    return api.create_response(
+        request, {"detail": str(error)}, status=NOT_READY[type(error)]
+    )
 
 
 @api.exception_handler(CellRefused)

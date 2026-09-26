@@ -6,6 +6,7 @@ from typing import Any
 from django.db.models import prefetch_related_objects
 from pydantic import JsonValue
 
+from chatddx.bench.bench import Bench, unread_pattern
 from chatddx.django.api.schemas import (
     BranchRow,
     ReadOut,
@@ -17,7 +18,6 @@ from chatddx.django.api.schemas import (
     ToolRan,
 )
 from chatddx.history.models import RunModel, RunStatus, RunToolBranchModel, ScoreModel
-from chatddx.repl.bench import Bench, unread_pattern
 from chatddx.repo.entities.case.pydantic import CaseTrailOut, pattern_of
 from chatddx.repo.entities.client.pydantic import ClientTrailOut
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailOut

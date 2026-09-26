@@ -5,9 +5,9 @@ from pydantic import BaseModel, JsonValue
 from rich.table import Table
 from rich.text import Text
 
+from chatddx.bench.bench import unread_pattern
+from chatddx.bench.cell import SLICES
 from chatddx.history.models import RunStatus
-from chatddx.repl.bench import unread_pattern
-from chatddx.repl.cell import SLICES
 from chatddx.repl.render import LABEL, LATER, REFUSED
 from chatddx.repl.scoring import summary
 from chatddx.repl.shell import Repl
@@ -86,7 +86,7 @@ def _show_cell(repl: Repl, tags: tuple[str, ...] = ()) -> None:
 
     if cell.configuration and cell.stack:
         try:
-            resolution = repl.resolve()
+            resolution = repl.resolve(cell)
             parts = (
                 resolution.reasoning,
                 resolution.sampling,
@@ -148,7 +148,7 @@ def _show_scorers(repl: Repl, tags: tuple[str, ...]) -> None:
     table.add_column("target")
     table.add_column(f"of {count}")
 
-    for held in repl.held_to(cases):
+    for held in repl.held_to(repl.cell, cases):
         scorer = held.scorer
         kind = scorer.target_kind or "—"
 
