@@ -1,16 +1,9 @@
-extends = ["chatddx/medical-assistant.toml", "cases.toml"]
-
-[tool.web_search]
-command = "web_search"
-type = "function"
-description = "Search the web for up-to-date information"
-
-[tool_group.web]
-instructions = "You have access to a web_search tool. Use it whenever you need current facts, documentation, or anything you're not confident about from memory, instead of guessing."
-tools = ["web_search"]
-
-[scorer.exact_match]
-command = "exact_match"
-
-[scorer.regex_match]
-command = "regex_match"
+# What `chatddx init-data --with-giftbag` gives a new owner as their own,
+# before they start: what is asked (datamodel.md §1), the configurations and
+# every variation they name. The rest is the archive's, shared with them:
+# what answers (machines, LLMs, stacks and their parts), a different class
+# of record that no owner is given, and the cases and scorers.
+extends = [
+  "inventory/slices.toml",
+  "inventory/configurations.toml",
+]

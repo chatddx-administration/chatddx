@@ -1,144 +1,137 @@
 # pyright: basic
+"""
+A ledger of everything.
+All models are immutable and append-only.
+"""
+
 from __future__ import annotations
 
 import uuid
+from enum import StrEnum
 from typing import Any
 
+from django.contrib.postgres.fields import ArrayField
 from django.db.models import (
+    CASCADE,
     PROTECT,
-    SET_DEFAULT,
+    BigIntegerField,
+    BooleanField,
     CharField,
     DateTimeField,
+    FloatField,
     ForeignKey,
     JSONField,
     ManyToManyField,
     Model,
     QuerySet,
+    TextField,
+    UniqueConstraint,
     UUIDField,
 )
 
-from chatddx.core.choices import (
-    MessageKindChoices,
-    RoleChoices,
-    RunStatusChoices,
-    SessionContextChoices,
-)
-from chatddx.core.models import IdentityModel, TagModel
-from chatddx.repo.entities.agent.django import AgentBranchModel, AgentTrailModel
-from chatddx.repo.entities.case.django import CaseTrailModel
-from chatddx.repo.entities.expect.django import ExpectTrailModel
-from chatddx.repo.entities.scorer.django import ScorerBranchModel
+from chatddx.core.models import IdentityModel
+from chatddx.repo.entities.case.django import CaseBranchModel, CaseTrailModel
+from chatddx.repo.entities.client.django import ClientTrailModel
+from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
+from chatddx.repo.entities.llm.django import LLMBranchModel
+from chatddx.repo.entities.scorer.django import ScorerTrailModel
+from chatddx.repo.entities.stack.django import StackBranchModel, StackTrailModel
+from chatddx.repo.entities.tool.django import ToolBranchModel
+from chatddx.repo.families.django import OrderedJSONField
+
+__all__ = [
+    "ConversationModel",
+    "MessageModel",
+    "RunModel",
+    "RunToolBranchModel",
+    "ScoreModel",
+    "TrialModel",
+]
 
 
-class BatchModel(Model):
-    """
-    One standing order for experiments: an agent, the case tags to draw cases
-    from, and the scorers to score them with.
+class RunStatus(StrEnum):
+    ERRORED = "errored"
+    COMPLETED = "completed"
 
-    The order is kept, not its outcome, so the same batch can be generated
-    from more than once (see `chatddx.history.batches`) and every experiment
-    it ever made points back at it through `ExperimentModel.batch`.
-    """
 
+class ConversationContext(StrEnum):
+    """Where a conversation was held."""
+
+    API = "api"
+    CHAT = "chat"
+    REPL = "repl"
+    WORKER = "worker"
+
+
+class Role(StrEnum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    TOOL = "tool"
+    UNKNOWN = "unknown"
+
+
+class MessageKind(StrEnum):
+    REQUEST = "request"
+    RESPONSE = "response"
+    ERROR = "error"
+
+
+class TrialModel(Model):
     class Meta:
-        app_label = "orm"
-        db_table = "agents_batch"
+        app_label = "history"
+        db_table = "history_trial"
+        constraints = (
+            UniqueConstraint(
+                fields=("configuration", "stack", "case", "seed"),
+                nulls_distinct=False,
+                name="one_trial_per_cell_case_and_seed",
+            ),
+        )
 
     uuid = UUIDField(
         default=uuid.uuid4,
         editable=False,
+        unique=True,
     )
     timestamp = DateTimeField(auto_now_add=True)
-    owner = ForeignKey(
-        IdentityModel,
+
+    configuration = ForeignKey(
+        ConfigurationTrailModel,
         on_delete=PROTECT,
+        related_name="trials",
     )
-    owner_id: int
-
-    agent = ForeignKey(
-        AgentTrailModel,
+    configuration_id: int
+    stack = ForeignKey(
+        StackTrailModel,
         on_delete=PROTECT,
-        related_name="batches",
+        related_name="trials",
     )
-    agent_id: int
-
-    case_tags = ManyToManyField(
-        TagModel,
-        related_name="batches",
-    )
-
-    # An empty set is not "no scorers" but "every scorer the cases carry";
-    # see `chatddx.history.batches.plan`.
-    scorers = ManyToManyField(
-        ScorerBranchModel,
-        blank=True,
-        related_name="batches",
-    )
-
-    experiments: QuerySet[ExperimentModel]
-
-
-class ExperimentModel(Model):
-    class Meta:
-        app_label = "orm"
-        db_table = "agents_experiment"
-
-    uuid = UUIDField(
-        default=uuid.uuid4,
-        editable=False,
-    )
-    timestamp = DateTimeField(auto_now_add=True)
-    owner = ForeignKey(
-        IdentityModel,
-        on_delete=PROTECT,
-    )
-    owner_id: int
-    collaborators = ManyToManyField(
-        IdentityModel,
-        blank=True,
-        related_name="shared_experiments",
-    )
-
-    agent = ForeignKey(
-        AgentTrailModel,
-        on_delete=PROTECT,
-        related_name="experiments",
-    )
-    agent_id: int
+    stack_id: int
     case = ForeignKey(
         CaseTrailModel,
         on_delete=PROTECT,
-        related_name="experiments",
+        related_name="trials",
     )
     case_id: int
-    expect = ForeignKey(
-        ExpectTrailModel,
-        on_delete=PROTECT,
-        related_name="experiments",
-    )
-    expect_id: int
-
-    # The batch that generated this experiment, where one did: an experiment
-    # added by hand has none.
-    batch = ForeignKey(
-        BatchModel,
-        default=None,
+    seed = BigIntegerField(
         null=True,
         blank=True,
-        on_delete=PROTECT,
-        related_name="experiments",
+        default=None,
     )
-    batch_id: int | None
+
+    runs: QuerySet[RunModel]
 
 
-class SessionModel(Model):
+class ConversationModel(Model):
     class Meta:
-        app_label = "orm"
-        db_table = "agents_session"
+        app_label = "history"
+        db_table = "history_conversation"
 
     uuid = UUIDField(
         default=uuid.uuid4,
         editable=False,
+        unique=True,
     )
     description = CharField(
         max_length=255,
@@ -147,97 +140,242 @@ class SessionModel(Model):
         blank=True,
     )
     timestamp = DateTimeField(auto_now_add=True)
-    context = CharField(
-        max_length=255,
-        choices=SessionContextChoices.choices,
-    )
-    owner = ForeignKey(
-        IdentityModel,
-        on_delete=PROTECT,
-    )
-    default_agent = ForeignKey(
-        AgentBranchModel,
-        default=None,
-        null=True,
-        on_delete=SET_DEFAULT,
-    )
-    collaborators = ManyToManyField(
-        IdentityModel,
-        blank=True,
-        related_name="shared_sessions",
-    )
-
-    messages: QuerySet[MessageModel]
-
-
-class RunModel(Model):
-    class Meta:
-        app_label = "orm"
-        db_table = "agents_run"
-
-    uuid = UUIDField(
-        default=uuid.uuid4,
-        editable=False,
-    )
-    timestamp = DateTimeField(auto_now_add=True)
-    status = CharField(
-        max_length=255,
-        choices=RunStatusChoices.choices,
-        default=RunStatusChoices.STORED,
-    )
+    context = CharField(max_length=16)
     owner = ForeignKey(
         IdentityModel,
         on_delete=PROTECT,
     )
     owner_id: int
-    collaborators = ManyToManyField(
+    collaborators: ManyToManyField[IdentityModel, Any] = ManyToManyField(
+        IdentityModel,
+        blank=True,
+        related_name="shared_conversations",
+    )
+
+    messages: QuerySet[MessageModel]
+    runs: QuerySet[RunModel]
+
+
+class RunModel(Model):
+    class Meta:
+        app_label = "history"
+        db_table = "history_run"
+
+    uuid = UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+    )
+    timestamp = DateTimeField(auto_now_add=True)
+    status = CharField(max_length=16)
+    owner = ForeignKey(
+        IdentityModel,
+        on_delete=PROTECT,
+    )
+    owner_id: int
+    collaborators: ManyToManyField[IdentityModel, Any] = ManyToManyField(
         IdentityModel,
         blank=True,
         related_name="shared_runs",
     )
 
-    experiment = ForeignKey(
-        ExperimentModel,
+    trial = ForeignKey(
+        TrialModel,
         on_delete=PROTECT,
         related_name="runs",
     )
-    experiment_id: int
-
-    session = ForeignKey(
-        SessionModel,
+    trial_id: int
+    conversation = ForeignKey(
+        ConversationModel,
         default=None,
         null=True,
         blank=True,
         on_delete=PROTECT,
         related_name="runs",
     )
-    session_id: int | None
+    conversation_id: int | None
 
-    result: JSONField[Any | None] = JSONField(
+    stack_branch = ForeignKey(
+        StackBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    stack_branch_id: int | None
+    llm_branch = ForeignKey(
+        LLMBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    llm_branch_id: int | None
+    scores: QuerySet[ScoreModel]
+    tool_branches: ManyToManyField[ToolBranchModel, Any] = ManyToManyField(
+        ToolBranchModel,
+        through="RunToolBranchModel",
+        blank=True,
+        related_name="runs",
+    )
+
+    client = ForeignKey(
+        ClientTrailModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    client_id: int | None
+    client_rev = CharField(
+        max_length=64,
         default=None,
         null=True,
         blank=True,
     )
+    client_packages: JSONField[dict[str, str]] = JSONField(
+        default=dict,
+        blank=True,
+    )
+
+    started = DateTimeField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    finished = DateTimeField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+
+    requests = ArrayField(
+        TextField(),
+        default=list,
+        blank=True,
+    )
+    responses = ArrayField(
+        TextField(),
+        default=list,
+        blank=True,
+    )
+
+    answer = OrderedJSONField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    valid = BooleanField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    finish_reason = CharField(
+        max_length=32,
+        default=None,
+        null=True,
+        blank=True,
+    )
+    error = TextField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+
+
+class RunToolBranchModel(Model):
+    class Meta:
+        app_label = "history"
+        db_table = "history_run_tool_branch"
+
+    run = ForeignKey(
+        RunModel,
+        on_delete=CASCADE,
+    )
+    tool_branch = ForeignKey(
+        ToolBranchModel,
+        on_delete=PROTECT,
+    )
+    blob = CharField(max_length=64)
+
+
+class ScoreModel(Model):
+    class Meta:
+        app_label = "history"
+        db_table = "history_score"
+        ordering = ("pk",)
+
+    run = ForeignKey(
+        RunModel,
+        related_name="scores",
+        on_delete=CASCADE,
+    )
+    run_id: int
+    owner = ForeignKey(
+        IdentityModel,
+        on_delete=PROTECT,
+    )
+    owner_id: int
+    scorer = ForeignKey(
+        ScorerTrailModel,
+        on_delete=PROTECT,
+        related_name="scores",
+    )
+    scorer_id: int
+    scorer_name = CharField(max_length=255)
+    # none for a scorer that needs no target
+    case_branch = ForeignKey(
+        CaseBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="scores",
+    )
+    case_branch_id: int | None
+    # none where the case expects none, or the scorer needs none
+    target = TextField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    blob = CharField(max_length=64)
+    value = FloatField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    answer = TextField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    reason = CharField(
+        max_length=64,
+        default=None,
+        null=True,
+        blank=True,
+    )
+    timestamp = DateTimeField(auto_now_add=True)
 
 
 class MessageModel(Model):
     class Meta:
-        app_label = "orm"
-        db_table = "agents_message"
+        app_label = "history"
+        db_table = "history_message"
         ordering = ("pk",)
 
-    role = CharField(max_length=255, choices=RoleChoices.choices)
-    kind = CharField(max_length=255, choices=MessageKindChoices.choices)
-    run_id = UUIDField(db_index=True)
-    payload: JSONField[dict[str, Any]] = JSONField()
-    timestamp = DateTimeField()
-
-    agent = ForeignKey(
-        AgentTrailModel,
-        on_delete=PROTECT,
-    )
-    session = ForeignKey(
-        SessionModel,
+    conversation = ForeignKey(
+        ConversationModel,
         related_name="messages",
         on_delete=PROTECT,
     )
+    conversation_id: int
+    run_uuid = UUIDField(db_index=True)
+    role = CharField(max_length=16)
+    kind = CharField(max_length=16)
+    payload: JSONField[dict[str, Any]] = JSONField()
+    timestamp = DateTimeField()

@@ -1,0 +1,31 @@
+# Scorers: what a run's answer comes to (datamodel.md §7). A scorer is a
+# function in one of chatddx's own scorer files, the view of the output it
+# reads, and the kind of target it holds that view to: a case's target of
+# that kind (cases.toml). Its metrics say how its values are summed up.
+#
+# It is inspect's scorer spec: the function is its name, and the view, the
+# target kind and any arguments are its options.
+
+[scorer.reciprocal_rank]
+function = "chatddx.scoring.scorers.patterns:reciprocal_rank"
+view = "differential"
+target_kind = "diagnosis"
+metrics = ["mean", "stderr"]
+
+[scorer.first_mention]
+function = "chatddx.scoring.scorers.patterns:first_mention"
+view = "text"
+target_kind = "diagnosis"
+metrics = ["mean", "stderr"]
+
+[scorer.warning_mentions]
+function = "chatddx.scoring.scorers.patterns:mentions"
+view = "warning"
+target_kind = "warning"
+metrics = ["mean", "stderr"]
+
+[scorer.disposition_mentions]
+function = "chatddx.scoring.scorers.patterns:mentions"
+view = "disposition"
+target_kind = "disposition"
+metrics = ["mean", "stderr"]

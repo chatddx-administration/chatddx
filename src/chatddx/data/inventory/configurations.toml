@@ -1,0 +1,90 @@
+# Configurations: one variation of each request-time slice, and optionally a
+# toolset. A configuration holds no LLM. The stack is chosen per trial, so
+# one configuration runs on every LLM; where an LLM can't honour a
+# variation, the cell is refused with the reason (datamodel.md §2).
+#
+# Today's agents paired an LLM with a reasoning switch written for it
+# (`disable-thinking` for Qwen3, `low-reasoning` for gpt-oss). Here reasoning
+# is `default`, the LLM's own, and a batch varies it across LLMs.
+
+# ------------------------------------------------------------------ clinical
+
+# the management plan, as the medical-assistant agents ask for it
+[configuration.plan]
+instruction = "ddx"
+output = "management-plan"
+coercion = "native"
+reasoning = "default"
+sampling = "recommended"
+tags = ["ddx"]
+
+# the same, with the schema shown to the LLM through its slot
+[configuration.plan-shown]
+extends = "plan"
+coercion = "native-shown"
+
+# the same, with the schema shown and nothing enforcing it
+[configuration.plan-prompted]
+extends = "plan"
+coercion = "prompted"
+
+# the same, with web search at hand
+[configuration.plan-web]
+extends = "plan"
+toolset = "web"
+
+# the differential alone, as the medical-assistant agents ask for it
+[configuration.diagnoses]
+instruction = "ddx"
+output = "diagnoses"
+coercion = "native"
+reasoning = "default"
+sampling = "recommended"
+tags = ["ddx"]
+
+# the same, answered through the final-result tool
+[configuration.diagnoses-tool]
+extends = "diagnoses"
+coercion = "tool"
+
+# the differential as plain lines; every coercion collapses here
+[configuration.free-text]
+instruction = "ddx"
+output = "free-text"
+coercion = "auto"
+reasoning = "default"
+sampling = "recommended"
+tags = ["ddx"]
+
+# --------------------------------------------------------------------- tests
+#
+# From chatddx/test-inventory.toml: the case alone, tools the answer can't be
+# known without, and an instruction that fights the answer's format.
+
+[configuration.baseline]
+instruction = "bare"
+output = "raw"
+coercion = "native"
+reasoning = "default"
+sampling = "generation-config"
+tags = ["test"]
+
+[configuration.test-tools]
+extends = "baseline"
+toolset = "sentinel"
+
+[configuration.challenge-coercion-native]
+instruction = "challenge-coercion"
+output = "type-check"
+coercion = "native"
+reasoning = "default"
+sampling = "generation-config"
+tags = ["test"]
+
+[configuration.challenge-coercion-prompted]
+extends = "challenge-coercion-native"
+coercion = "prompted"
+
+[configuration.challenge-coercion-tool]
+extends = "challenge-coercion-native"
+coercion = "tool"

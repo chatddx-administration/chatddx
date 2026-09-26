@@ -1,61 +1,95 @@
-from typing import Annotated
+from typing import Annotated, ClassVar
 
-from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, JsonValue
-
-from chatddx.core.choices import ToolChoices
-from chatddx.core.fields import TomlString, parse_toml_or_dict, validate_json_schema
-from chatddx.repo.families import (
-    BranchSchema,
-    BranchSpec,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+from pydantic import (
+    AliasChoices,
+    AliasPath,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
 )
-from chatddx.repo.families.pydantic import BaseFormDataIn, BaseFormDataOut, BaseTrail
+
+from chatddx.core.fields import CoercedStr
+from chatddx.repo.families import (
+    ORDERED,
+    BaseBranch,
+    BaseFormDataIn,
+    BaseFormDataOut,
+    BaseTrail,
+    BranchDetails,
+    BranchDetailsPatch,
+    BranchOut,
+    Details,
+    TrailIn,
+    TrailOut,
+    TrailRef,
+)
+from chatddx.repo.families.fields import EntryPoint, JsonSchema
+
+type ToolName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
 
 
-class ToolBasePrimitives(BaseModel):
-    command: str
-    type: ToolChoices
+class ToolImplementation(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    function: EntryPoint
+
+
+class ToolDetails(Details):
+    implementation: ToolImplementation | None = None
+
+
+class ToolTrailBase(BaseTrail):
+    name: ToolName
     description: str = ""
+    parameters: JsonSchema = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+        json_schema_extra={ORDERED: True},
+    )
 
 
-class ToolTrailBase(ToolBasePrimitives, BaseTrail):
-    parameters: Annotated[
-        dict[str, JsonValue],
-        AfterValidator(validate_json_schema),
-    ] = Field(default_factory=dict)
-
-
-class ToolTrailSchema(ToolTrailBase, TrailSchema):
+class ToolTrailIn(ToolTrailBase, TrailIn):
     pass
 
 
-class ToolTrailSchemaRef(
-    TrailSchemaRef,
-    ToolTrailBase,
-):
+class ToolTrailRef(TrailRef, ToolTrailBase):
     pass
 
 
-class ToolTrailSpec(ToolTrailBase, TrailSpec):
+class ToolTrailOut(ToolTrailBase, TrailOut):
     pass
 
 
-class ToolBranchSchema(BranchSchema[ToolTrailSchema]):
+class ToolBranchDetails(BranchDetails, ToolDetails):
     pass
 
 
-class ToolBranchSpec(BranchSpec[ToolTrailSpec]):
+class ToolBranchDetailsPatch(BranchDetailsPatch, ToolDetails):
     pass
 
 
-class ToolFormDataIn(ToolTrailBase, BaseFormDataIn):
-    parameters: Annotated[
-        dict[str, JsonValue],
-        BeforeValidator(parse_toml_or_dict),
-    ] = Field(default_factory=dict)
+class ToolBranchIn(BaseBranch[ToolTrailIn], ToolBranchDetails):
+    pass
 
 
-class ToolFormDataOut(ToolBasePrimitives, BaseFormDataOut):
-    parameters: TomlString
+class ToolBranchOut(BranchOut[ToolTrailOut, ToolDetails]):
+    pass
+
+
+class ToolFormDataIn(BaseFormDataIn):
+    tool_name: ToolName
+    description: str = ""
+    parameters: JsonSchema = Field(
+        default_factory=lambda: {"type": "object", "properties": {}},
+    )
+    implementation: ToolImplementation | None = None
+
+
+class ToolFormDataOut(BaseFormDataOut):
+    id: CoercedStr = Field(serialization_alias="template")
+    tool_name: str = Field(
+        validation_alias=AliasChoices("tool_name", AliasPath("trail", "name"))
+    )
+    description: str
+    parameters: dict[str, object]
+    implementation: ToolImplementation | None

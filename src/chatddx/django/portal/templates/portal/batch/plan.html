@@ -1,0 +1,82 @@
+{% load i18n %}
+
+<div class="portal-plan flex flex-col gap-6">
+    <section>
+        <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+            {% blocktranslate count counter=shown.cells|length %}{{ counter }} cell to run{% plural %}{{ counter }} cells to run{% endblocktranslate %}
+        </h2>
+
+        {% if shown.cells %}
+            <table class="portal-table">
+                <thead>
+                    <tr>
+                        <th>{% translate "Cell" %}</th>
+                        <th>{% translate "Seed" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cell in shown.cells %}
+                        <tr>
+                            <td>
+                                <span class="font-medium">{{ shown.configuration }}</span>
+                                {% for slice, name in cell.set.items %}
+                                    <span class="portal-chip portal-chip-set">{{ slice }}={{ name }}</span>
+                                {% endfor %}
+                            </td>
+                            <td class="whitespace-nowrap">
+                                {% if cell.seed is not None %}
+                                    #{{ cell.seed }}
+                                {% elif cell.greedy %}
+                                    {% translate "unseeded: sampling is greedy" %}
+                                {% else %}
+                                    {% translate "unseeded" %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-sm">{% translate "Nothing to run: every cell is held back." %}</p>
+        {% endif %}
+    </section>
+
+    {% if shown.held_back %}
+        <section>
+            <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+                {% blocktranslate count counter=shown.held_back|length %}{{ counter }} cell held back{% plural %}{{ counter }} cells held back{% endblocktranslate %}
+            </h2>
+
+            <table class="portal-table">
+                <thead>
+                    <tr>
+                        <th>{% translate "Cell" %}</th>
+                        <th>{% translate "Why" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cell in shown.held_back %}
+                        <tr>
+                            <td class="font-medium">{{ cell.label }}</td>
+                            <td class="portal-refused">
+                                {% for reason in cell.why %}
+                                    <div>{{ reason }}</div>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    {% endif %}
+
+    <section>
+        <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+            {% blocktranslate count counter=shown.case_count %}{{ counter }} case{% plural %}{{ counter }} cases{% endblocktranslate %}
+        </h2>
+
+        <p class="leading-relaxed text-sm">
+            {{ shown.cases.shown|join:", " }}{% if shown.cases.more %}, {% blocktranslate count counter=shown.cases.more %}and {{ counter }} more{% plural %}and {{ counter }} more{% endblocktranslate %}{% endif %}
+        </p>
+    </section>
+</div>

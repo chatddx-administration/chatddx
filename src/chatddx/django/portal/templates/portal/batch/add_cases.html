@@ -1,0 +1,28 @@
+{% load i18n unfold %}
+
+{# the only input a kept batch takes: more cases, for its cells to run on #}
+<section class="border border-base-200 mt-6 p-4 rounded-default shadow-xs dark:border-base-800">
+    <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+        {% translate "More cases" %}
+    </h2>
+
+    <div class="portal-cases">
+        {% for field in cases_form %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block font-semibold mb-2 text-font-important-light text-sm dark:text-font-important-dark">
+                    {{ field.label }}
+                </label>
+
+                {{ field }}
+            </div>
+        {% endfor %}
+
+        {% component "unfold/components/button.html" with submit=1 form=cases_form_id variant="default" icon="add" %}
+            {% translate "Add them" %}
+        {% endcomponent %}
+    </div>
+
+    <p class="mt-2 text-xs">
+        {% translate "The batch's cells run on them: queued behind its trials while it runs, and stored till it is run otherwise." %}
+    </p>
+</section>

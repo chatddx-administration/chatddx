@@ -16,10 +16,6 @@ else:
     TypedArrayField = ArrayField
 
 
-class JSONSchemaField(TypedJSONField):
-    pass
-
-
 class RelatedArrayField(TypedArrayField):
     def __init__(
         self,

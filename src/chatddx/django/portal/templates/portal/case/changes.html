@@ -1,0 +1,19 @@
+{% load i18n %}
+
+{# what changed of a case, part by part: the vignette word by word #}
+<dl class="portal-changes">
+    {% for change in changes %}
+        <dt>{{ change.label }}</dt>
+        <dd>
+            {% if change.whole %}
+                {% translate "rewritten altogether" %}
+            {% elif change.words %}
+                <div class="portal-words">{% for kind, text in change.words %}<span class="portal-word-{{ kind }}">{{ text }}</span>{% endfor %}</div>
+            {% else %}
+                {% if change.before %}<span class="portal-word-gone">{{ change.before }}</span>{% else %}<span class="portal-missing">—</span>{% endif %}
+                <span class="portal-missing">→</span>
+                {% if change.after %}<span class="portal-word-new">{{ change.after }}</span>{% else %}<span class="portal-missing">—</span>{% endif %}
+            {% endif %}
+        </dd>
+    {% endfor %}
+</dl>

@@ -8,34 +8,45 @@ class RegistryCollisionError(Exception):
 
 
 ALL_ENTITIES: tuple[AnyEntity, ...] = (
-    AGENT,
-    INSTRUCTION,
-    CONNECTION,
-    SAMPLING_PARAMS,
-    OUTPUT_TYPE,
+    MACHINE,
+    OS,
+    LLM,
+    SERVING,
+    CLIENT,
+    STACK,
     TOOL,
-    TOOL_GROUP,
-    SCORER,
-    EXPECT,
+    TOOLSET,
+    INSTRUCTION,
+    OUTPUT,
+    COERCION,
+    REASONING,
+    SAMPLING,
+    CONFIGURATION,
     CASE,
+    SCORER,
 )
 
-ALL_VIEWS: tuple[AnyView, ...] = (
-    AGENT_VIEW,
-    SUPER_AGENT_VIEW,
-    INSTRUCTION_VIEW,
-    CONNECTION_VIEW,
-    SAMPLING_PARAMS_VIEW,
-    OUTPUT_TYPE_VIEW,
-    TOOL_VIEW,
-    TOOL_GROUP_VIEW,
-    SCORER_VIEW,
-    EXPECT_VIEW,
-    CASE_VIEW,
+ALL_PRESENTATIONS: tuple[AnyPresentation, ...] = (
+    MACHINE_PRESENTATION,
+    OS_PRESENTATION,
+    LLM_PRESENTATION,
+    SERVING_PRESENTATION,
+    CLIENT_PRESENTATION,
+    STACK_PRESENTATION,
+    TOOL_PRESENTATION,
+    TOOLSET_PRESENTATION,
+    INSTRUCTION_PRESENTATION,
+    OUTPUT_PRESENTATION,
+    COERCION_PRESENTATION,
+    REASONING_PRESENTATION,
+    SAMPLING_PRESENTATION,
+    CONFIGURATION_PRESENTATION,
+    CASE_PRESENTATION,
+    SCORER_PRESENTATION,
 )
 
 
-def _index_by_class[T: AnyEntity | AnyView](
+def _index_by_class[T: AnyEntity | AnyPresentation](
     owners: tuple[T, ...],
     members: str,
     label: str,
@@ -66,14 +77,18 @@ _ENTITY_BY_CLASS: dict[type, AnyEntity] = _index_by_class(
     ALL_ENTITIES, "members", "entity"
 )
 
-_VIEW_BY_NAME: dict[ViewName, AnyView] = {v.name: v for v in ALL_VIEWS}
-_VIEW_BY_CLASS: dict[type, AnyView] = _index_by_class(ALL_VIEWS, "proxies", "view")
+_PRESENTATION_BY_NAME: dict[PresentationName, AnyPresentation] = {
+    v.name: v for v in ALL_PRESENTATIONS
+}
+_PRESENTATION_BY_CLASS: dict[type, AnyPresentation] = _index_by_class(
+    ALL_PRESENTATIONS, "proxies", "presentation"
+)
 
 
-# Every entity is presented through a view of its own name, so an
-# `EntityName` is always a `ViewName`.
 for _entity in ALL_ENTITIES:
-    assert _entity.name in _VIEW_BY_NAME, f"'{_entity.name}' has no view of its name"
+    assert _entity.name in _PRESENTATION_BY_NAME, (
+        f"'{_entity.name}' has no presentation of its name"
+    )
 
 
 def _by_mro[T](index: dict[type, T], x: object) -> T | None:
@@ -89,32 +104,38 @@ def _by_mro[T](index: dict[type, T], x: object) -> T | None:
 
 @overload
 def entity_of(
-    x: AgentMember | type[AgentMember] | Literal["agent"],
-) -> AgentEntity: ...
+    x: MachineMember | type[MachineMember] | Literal["machine"],
+) -> MachineEntity: ...
 
 
 @overload
 def entity_of(
-    x: InstructionMember | type[InstructionMember] | Literal["instruction"],
-) -> InstructionEntity: ...
+    x: OsMember | type[OsMember] | Literal["os"],
+) -> OsEntity: ...
 
 
 @overload
 def entity_of(
-    x: ConnectionMember | type[ConnectionMember] | Literal["connection"],
-) -> ConnectionEntity: ...
+    x: LLMMember | type[LLMMember] | Literal["llm"],
+) -> LLMEntity: ...
 
 
 @overload
 def entity_of(
-    x: SamplingParamsMember | type[SamplingParamsMember] | Literal["sampling_params"],
-) -> SamplingParamsEntity: ...
+    x: ServingMember | type[ServingMember] | Literal["serving"],
+) -> ServingEntity: ...
 
 
 @overload
 def entity_of(
-    x: OutputTypeMember | type[OutputTypeMember] | Literal["output_type"],
-) -> OutputTypeEntity: ...
+    x: ClientMember | type[ClientMember] | Literal["client"],
+) -> ClientEntity: ...
+
+
+@overload
+def entity_of(
+    x: StackMember | type[StackMember] | Literal["stack"],
+) -> StackEntity: ...
 
 
 @overload
@@ -125,26 +146,56 @@ def entity_of(
 
 @overload
 def entity_of(
-    x: ToolGroupMember | type[ToolGroupMember] | Literal["tool_group"],
-) -> ToolGroupEntity: ...
+    x: ToolsetMember | type[ToolsetMember] | Literal["toolset"],
+) -> ToolsetEntity: ...
 
 
 @overload
 def entity_of(
-    x: ScorerMember | type[ScorerMember] | Literal["scorer"],
-) -> ScorerEntity: ...
+    x: InstructionMember | type[InstructionMember] | Literal["instruction"],
+) -> InstructionEntity: ...
 
 
 @overload
 def entity_of(
-    x: ExpectMember | type[ExpectMember] | Literal["expect"],
-) -> ExpectEntity: ...
+    x: OutputMember | type[OutputMember] | Literal["output"],
+) -> OutputEntity: ...
+
+
+@overload
+def entity_of(
+    x: CoercionMember | type[CoercionMember] | Literal["coercion"],
+) -> CoercionEntity: ...
+
+
+@overload
+def entity_of(
+    x: ReasoningMember | type[ReasoningMember] | Literal["reasoning"],
+) -> ReasoningEntity: ...
+
+
+@overload
+def entity_of(
+    x: SamplingMember | type[SamplingMember] | Literal["sampling"],
+) -> SamplingEntity: ...
+
+
+@overload
+def entity_of(
+    x: ConfigurationMember | type[ConfigurationMember] | Literal["configuration"],
+) -> ConfigurationEntity: ...
 
 
 @overload
 def entity_of(
     x: CaseMember | type[CaseMember] | Literal["case"],
 ) -> CaseEntity: ...
+
+
+@overload
+def entity_of(
+    x: ScorerMember | type[ScorerMember] | Literal["scorer"],
+) -> ScorerEntity: ...
 
 
 @overload
@@ -156,12 +207,6 @@ def entity_of(
 def entity_of(
     x: AnyEntityMember | type[AnyEntityMember] | EntityName,
 ) -> AnyEntity:
-    """
-    The entity a name, class or instance belongs to.
-
-    A proxy resolves through its branch model, so `entity_of(SuperAgent(...))`
-    and `entity_of(SharedSuperAgent(...))` both answer `agent`.
-    """
     if isinstance(x, str):
         return _ENTITY_BY_NAME[x]
 
@@ -174,25 +219,18 @@ def entity_of(
     return entity
 
 
-def view_of(
-    x: BranchProxy | AnyEntityMember | type[BranchProxy | AnyEntityMember] | ViewName,
-) -> AnyView:
-    """
-    The view a name, proxy or branch is rendered through.
-
-    Every entity has a view of its own name, so an `EntityName` is a
-    `ViewName` and reaches the entity's default view. A proxy is rendered
-    through the view that registered it -- which is how `SuperAgent` gets
-    the flat agent form while a plain `AgentBranchModel` gets the default
-    one -- and anything else falls back to its entity's default view.
-    """
+def presentation_of(
+    x: BranchProxy
+    | AnyEntityMember
+    | type[BranchProxy | AnyEntityMember]
+    | PresentationName,
+) -> AnyPresentation:
     if isinstance(x, str):
-        return _VIEW_BY_NAME[x]
+        return _PRESENTATION_BY_NAME[x]
 
-    view = _by_mro(_VIEW_BY_CLASS, x)
+    presentation = _by_mro(_PRESENTATION_BY_CLASS, x)
 
-    if view is not None:
-        return view
+    if presentation is not None:
+        return presentation
 
-    # not a registered proxy, so it is an entity class and has a default view
-    return _VIEW_BY_NAME[entity_of(cast(AnyEntityMember, x)).name]
+    return _PRESENTATION_BY_NAME[entity_of(cast(AnyEntityMember, x)).name]

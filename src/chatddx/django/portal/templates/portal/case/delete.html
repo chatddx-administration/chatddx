@@ -1,0 +1,65 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n unfold %}
+
+{% block content %}
+    <div class="portal-box mt-0">
+        {% if not can %}
+            <p class="font-semibold text-font-important-light dark:text-font-important-dark">
+                {% blocktranslate with number=version.number name=timeline.name %}Version {{ number }} of {{ name }} can't be deleted:{% endblocktranslate %}
+            </p>
+
+            <ul class="list-disc mt-2 pl-6 text-sm">
+                {% if held.scores %}
+                    <li>{% blocktranslate count counter=held.scores %}{{ counter }} score was held to its targets;{% plural %}{{ counter }} scores were held to its targets;{% endblocktranslate %}</li>
+                {% endif %}
+
+                {% if held.runs or held.trials %}
+                    <li>
+                        {% blocktranslate count counter=held.runs %}{{ counter }} run{% plural %}{{ counter }} runs{% endblocktranslate %}
+                        {% blocktranslate count counter=held.trials %}and {{ counter }} trial of your batches read its vignette, which no other version of the case has.{% plural %}and {{ counter }} trials of your batches read its vignette, which no other version of the case has.{% endblocktranslate %}
+                    </li>
+                {% endif %}
+            </ul>
+
+            <p class="mt-4 text-sm">
+                {% translate "Saving makes a new version of the case instead, and deleting the case from the list of cases takes it out of sight, kept for what reads it." %}
+            </p>
+        {% elif only and held %}
+            <p class="font-semibold text-font-important-light dark:text-font-important-dark">
+                {% blocktranslate with name=timeline.name %}This is the only version of {{ name }}: deleting it takes {{ name }} out of sight.{% endblocktranslate %}
+            </p>
+
+            <p class="mt-2 text-sm">
+                {% blocktranslate count counter=held.runs %}{{ counter }} run reads it, and keeps its name and targets;{% plural %}{{ counter }} runs read it, and keep its name and targets;{% endblocktranslate %}
+                {% blocktranslate count counter=held.trials %}so does {{ counter }} trial of your batches.{% plural %}so do {{ counter }} trials of your batches.{% endblocktranslate %}
+                {% translate "Saving a case under its name brings it back." %}
+            </p>
+        {% elif only %}
+            <p class="font-semibold text-font-important-light dark:text-font-important-dark">
+                {% blocktranslate with name=timeline.name %}This is the only version of {{ name }}, and nothing has read it: deleting it deletes {{ name }} for good.{% endblocktranslate %}
+            </p>
+        {% else %}
+            <p class="font-semibold text-font-important-light dark:text-font-important-dark">
+                {% blocktranslate with number=version.number name=timeline.name %}Version {{ number }} of {{ name }} goes for good.{% endblocktranslate %}
+                {% if version.is_head %}
+                    {% blocktranslate with number=version.number|add:"-1" %}Version {{ number }} is its head again.{% endblocktranslate %}
+                {% endif %}
+            </p>
+        {% endif %}
+    </div>
+
+    <form method="post" class="portal-actions">
+        {% csrf_token %}
+
+        {% component "unfold/components/button.html" with href=back_url variant="default" %}
+            {% translate "Back to the case" %}
+        {% endcomponent %}
+
+        {% if can %}
+            {% component "unfold/components/button.html" with submit=1 variant="danger" icon="delete" class="lg:ml-auto" %}
+                {% if only and held %}{% translate "Take it out of sight" %}{% else %}{% translate "Delete it" %}{% endif %}
+            {% endcomponent %}
+        {% endif %}
+    </form>
+{% endblock %}

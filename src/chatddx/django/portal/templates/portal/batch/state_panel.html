@@ -1,0 +1,25 @@
+{% load i18n unfold %}
+
+{# how the batch stands; while it is on its way, asked for again every few seconds #}
+<section id="batch-state" class="border border-base-200 flex flex-col gap-4 mt-6 p-4 rounded-default shadow-xs dark:border-base-800"{% if batch_shown.counts.under_way %} hx-get="{{ state_url }}" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <p class="font-semibold text-font-important-light dark:text-font-important-dark">
+            {{ batch_shown.said }}
+        </p>
+
+        {% if batch_shown.counts.under_way %}
+            {% url "admin:portal_batch_status" as status_url %}
+            {% component "unfold/components/button.html" with href=status_url variant="default" icon="monitoring" class="lg:ml-auto" %}
+                {% translate "Follow it on the status page" %}
+            {% endcomponent %}
+        {% elif can_run and batch_shown.action %}
+            {% component "unfold/components/button.html" with submit=1 form=run_form_id name="action" value=batch_shown.action.0 icon="play_arrow" class="lg:ml-auto" %}
+                {{ batch_shown.action.1 }}
+            {% endcomponent %}
+        {% endif %}
+    </div>
+
+    {% if batch_shown.counts.total %}
+        {% include "portal/batch/progress.html" with progress=batch_shown.progress %}
+    {% endif %}
+</section>

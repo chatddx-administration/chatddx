@@ -1,91 +1,78 @@
-"""
-What an agent is told to do, as a bundle of its own.
+from typing import Literal, get_args
 
-The text used to sit on the agent as its one primitive field. It is a
-bundle now, so an agent is nothing but the things it points at, and the
-same instruction can be pointed at twice.
-
-A bundle of one field is still carried flat wherever a person meets it --
-a textarea on the agent forms, `instructions = "..."` in an inventory --
-so `as_definition` and `definition_text` are the two directions between
-the text and the bundle it stands for.
-"""
-
-from typing import Annotated, Any
-
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import Field, model_validator
 
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BranchSchema,
-    BranchSpec,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    BaseFormDataIn,
+    BaseFormDataOut,
+    BaseTrail,
+    BranchIn,
+    BranchOut,
+    Details,
+    TrailIn,
+    TrailOut,
+    TrailRef,
 )
-from chatddx.repo.families.pydantic import BaseFormDataIn, BaseFormDataOut, BaseTrail
+from chatddx.repo.templates import placements
 
+type Variable = Literal["case", "output_guidance", "schema_prompt", "tool_guidance"]
 
-def as_definition(v: Any) -> Any:
-    """
-    The bundle a bare string stands for.
-
-    Whatever hands over an instruction as text -- a form field, an
-    inventory record that named it inline -- says the same thing as a
-    bundle with that text as its definition.
-    """
-    match v:
-        case str():
-            return {"definition": v}
-        case _:
-            return v
-
-
-def definition_text(v: Any) -> Any:
-    """
-    The text of an instruction, from the bundle or from the text itself.
-
-    The other direction of `as_definition`: what a flat form puts in its
-    one field, whether it is handed the bundle or the text.
-    """
-    match v:
-        case {"definition": definition}:
-            return definition
-        case BaseModel():
-            return v.definition  # pyright: ignore[reportAttributeAccessIssue]
-        case _:
-            return v
-
-
-# An instruction where the text is what is carried: the agent forms and the
-# template registry they read from.
-DefinitionText = Annotated[str, BeforeValidator(definition_text)]
+VARIABLES: tuple[Variable, ...] = get_args(Variable.__value__)
 
 
 class InstructionTrailBase(BaseTrail):
-    definition: str
+    system: str = ""
+    # `{{case}}` sends the case as it is, as chatddx always has
+    user: str
+    variables: list[Variable]
+
+    @model_validator(mode="after")
+    def _declared_is_placed(self):
+        placed = placements(self.system) | placements(self.user)
+        declared = set(self.variables)
+
+        if len(declared) != len(self.variables):
+            raise ValueError("a variable is declared twice")
+
+        if "case" not in declared:
+            raise ValueError("an instruction places the case: declare `case`")
+
+        if "case" in placed.conditions:
+            raise ValueError("the case is a value, never a condition")
+
+        undeclared = sorted(placed.names - declared)
+
+        if undeclared:
+            raise ValueError(f"{undeclared} placed but not declared")
+
+        unplaced = sorted(declared - placed.values)
+
+        if unplaced:
+            raise ValueError(f"{unplaced} declared but never placed")
+
+        self.variables = sorted(self.variables, key=VARIABLES.index)
+
+        return self
 
 
-class InstructionTrailSchema(InstructionTrailBase, TrailSchema):
+class InstructionTrailIn(InstructionTrailBase, TrailIn):
     pass
 
 
-class InstructionTrailSchemaRef(
-    TrailSchemaRef,
-    InstructionTrailBase,
-):
+class InstructionTrailRef(TrailRef, InstructionTrailBase):
     pass
 
 
-class InstructionTrailSpec(InstructionTrailBase, TrailSpec):
+class InstructionTrailOut(InstructionTrailBase, TrailOut):
     pass
 
 
-class InstructionBranchSchema(BranchSchema[InstructionTrailSchema]):
+class InstructionBranchIn(BranchIn[InstructionTrailIn]):
     pass
 
 
-class InstructionBranchSpec(BranchSpec[InstructionTrailSpec]):
+class InstructionBranchOut(BranchOut[InstructionTrailOut, Details]):
     pass
 
 
@@ -93,6 +80,5 @@ class InstructionFormDataIn(InstructionTrailBase, BaseFormDataIn):
     pass
 
 
-class InstructionFormDataOut(BaseFormDataOut):
+class InstructionFormDataOut(InstructionTrailBase, BaseFormDataOut):
     id: CoercedStr = Field(serialization_alias="template")
-    definition: str

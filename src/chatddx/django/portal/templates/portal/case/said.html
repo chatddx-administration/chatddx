@@ -1,0 +1,46 @@
+{% load i18n %}
+
+{# what saving the page would do, and what else holds its vignette: as it is typed #}
+<p class="portal-said">{{ said.line }}</p>
+
+{% if said.capitals %}
+    <p class="portal-said-warning">
+        {% blocktranslate with names=said.capitals|join:", " %}Named so, it differs in capitals alone from {{ names }}, another case of yours.{% endblocktranslate %}
+    </p>
+{% endif %}
+
+{% if vignette_changed %}
+    <p class="portal-said-note">
+        {% translate "A changed vignette is another case to the runs: those of the vignette before keep the targets they had." %}
+    </p>
+{% endif %}
+
+{% for sharer in sharers %}
+    {% if sharer.own %}
+        <div class="portal-said-warning">
+            {% blocktranslate with name=sharer.name %}{{ name }}, a case of yours, has this vignette too: while both do, their runs go by neither name, and a batch by tag runs the vignette once.{% endblocktranslate %}
+
+            <a class="font-semibold underline" href="{% url 'admin:portal_case_change' sharer.pk %}">{% translate "Open it" %}</a>
+
+            {% if sharer.tagged %}
+                <button class="font-semibold underline" type="submit" formaction="{% url 'admin:portal_case_untag' sharer.pk %}" formnovalidate hx-post="{% url 'admin:portal_case_untag' sharer.pk %}" hx-target="#case-said">
+                    {% translate "Take its tags off" %}
+                </button>
+            {% else %}
+                <span>{% translate "It has no tags: batches by tag pass it by." %}</span>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="portal-said-note">
+            {% blocktranslate with owner=sharer.owner name=sharer.name %}{{ owner }}'s {{ name }} has this vignette: named {{ name }}, yours takes its place for you, and the vignette's runs go by that name.{% endblocktranslate %}
+
+            <button class="font-semibold underline" type="button" data-name="{{ sharer.name }}" onclick="portalCaseName(this.dataset.name)">
+                {% blocktranslate with name=sharer.name %}Name it {{ name }}{% endblocktranslate %}
+            </button>
+        </div>
+    {% endif %}
+{% endfor %}
+
+{% if oob %}
+    <span id="case-save-label" hx-swap-oob="true">{{ said.button }}</span>
+{% endif %}

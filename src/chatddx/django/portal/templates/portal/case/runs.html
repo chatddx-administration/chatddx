@@ -1,0 +1,61 @@
+{% load i18n %}
+
+{# the runs of the version's vignette, with the scores for the targets they are held to now #}
+<section class="portal-box">
+    <div class="portal-box-head">
+        <h2 class="portal-heading">{% translate "Runs of this vignette" %}</h2>
+
+        {% if runs.outstanding and can_change %}
+            <form class="lg:ml-auto" method="post" action="{% url 'admin:portal_case_score' version.row.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <button type="submit" class="border border-base-200 cursor-pointer font-medium gap-1 hover:bg-base-100/80 inline-flex items-center px-3 py-2 rounded-default shadow-xs dark:border-base-700 dark:hover:bg-base-800/80">
+                    <span class="material-symbols-outlined -ml-0.5">scoreboard</span>
+                    {% blocktranslate count counter=runs.outstanding %}Score again: {{ counter }} run is outstanding{% plural %}Score again: {{ counter }} runs are outstanding{% endblocktranslate %}
+                </button>
+            </form>
+        {% endif %}
+    </div>
+
+    {% if runs.rows %}
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th>{% translate "When" %}</th>
+                    <th>{% translate "Trial" %}</th>
+                    <th>{% translate "Run" %}</th>
+                    {% for scorer in runs.scorers %}
+                        <th>{{ scorer }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in runs.rows %}
+                    <tr>
+                        <td class="whitespace-nowrap">{{ row.run.timestamp|date:"Y-m-d H:i" }}</td>
+                        <td>{{ row.cell }}</td>
+                        <td{% if row.run.status != "completed" %} class="portal-refused"{% endif %}>{{ row.run.status }}</td>
+                        {% for value in row.scores %}
+                            <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if runs.total > runs.rows|length %}
+            <p class="portal-missing mt-2 text-sm">
+                {% blocktranslate count counter=runs.total %}The latest of {{ counter }} run.{% plural %}The latest of {{ counter }} runs.{% endblocktranslate %}
+            </p>
+        {% endif %}
+    {% else %}
+        <p class="portal-missing text-sm">{% translate "No run of yours has this vignette yet." %}</p>
+    {% endif %}
+
+    {% if runs.earlier %}
+        <p class="portal-missing mt-2 text-sm">
+            {% blocktranslate count counter=runs.earlier %}{{ counter }} run of the case's other vignettes keeps the targets it had.{% plural %}{{ counter }} runs of the case's other vignettes keep the targets they had.{% endblocktranslate %}
+        </p>
+    {% endif %}
+</section>

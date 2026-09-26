@@ -1,0 +1,57 @@
+# fake: the fake vLLM, `chatddx fake-vllm`, on whichever machine runs it. It
+# thinks aloud about the request it was sent and answers every case alike,
+# so a cell can be tried end to end without a GPU. It serves both LLMs
+# under their served names, with their servings' parsers, so a cell resolves
+# on it as it would on pelle or malborg.
+
+# a machine of its own, so no trial on it passes for one on pelle or malborg
+[machine.fake]
+machine_id = "58f4de13-fba7-4b15-a70e-33355081c606"
+tags = ["fake"]
+
+# the fake ships in the chatddx build
+[serving."qwen3-8b-awq@fake"]
+engine = "/nix/store/2ggzfi36z2c9gckn3fp4mgij41wyf7la-chatddx-django-b585cec"  # guessed
+
+[serving."qwen3-8b-awq@fake".args]
+reasoning-parser = "qwen3"
+enable-auto-tool-choice = true
+tool-call-parser = "hermes"
+
+[serving."qwen3-8b-awq@fake".performance]
+host = "127.0.0.1"
+port = 12099
+
+[serving."gpt-oss-20b@fake"]
+engine = "/nix/store/2ggzfi36z2c9gckn3fp4mgij41wyf7la-chatddx-django-b585cec"  # guessed
+
+[serving."gpt-oss-20b@fake".args]
+reasoning-parser = "openai_gptoss"
+enable-auto-tool-choice = true
+tool-call-parser = "openai"
+
+[serving."gpt-oss-20b@fake".performance]
+host = "127.0.0.1"
+port = 12099
+
+[stack."qwen3-8b-awq@fake"]
+machine = "fake"
+llm = "qwen3-8b-awq"
+serving = "qwen3-8b-awq@fake"
+endpoint = "http://localhost:12099/v1/"
+served_name = "Qwen/Qwen3-8B-AWQ"
+api = "vllm"
+# the fake takes whatever it is sent at once: four, to see them run side by side
+max_jobs = 4
+tags = ["fake"]
+
+[stack."gpt-oss-20b@fake"]
+machine = "fake"
+llm = "gpt-oss-20b"
+serving = "gpt-oss-20b@fake"
+endpoint = "http://localhost:12099/v1/"
+served_name = "openai/gpt-oss-20b"
+api = "vllm"
+# the fake takes whatever it is sent at once: four, to see them run side by side
+max_jobs = 4
+tags = ["fake"]

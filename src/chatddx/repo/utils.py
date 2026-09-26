@@ -53,8 +53,6 @@ def _resolve_array(
         value: list[Any] = list(getattr(row, field.name) or [])
 
         if all(isinstance(item, TrailModel) for item in value):
-            # already in hand -- a second pass over the same rows, or a page
-            # `resolve_trails` has been over once, so nothing to fetch
             setattr(row, field.name, value)
             resolved += value
             continue

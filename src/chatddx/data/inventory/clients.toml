@@ -1,0 +1,25 @@
+# Clients: the chatddx build that turns a configuration into a request. Its
+# store path pins pydantic-ai, openai and inspect-ai, whose profiles, schema
+# transformers and default prompt text all live in library code. A client is
+# not part of a stack: it changes with every deploy while the servers don't,
+# and a trial joins the two.
+
+# the worker as deployed: `packages.<system>.django-app` from flake.nix
+[client.chatddx]
+build = "/nix/store/2ggzfi36z2c9gckn3fp4mgij41wyf7la-chatddx-django-b585cec"  # guessed
+rev = "b585cece795f7f3eb8424c4f031e73922d4c7b8a"  # guessed
+
+# as pinned in uv.lock
+[client.chatddx.packages]
+pydantic-ai-slim = "2.41.0"
+openai = "3.10.0"
+inspect-ai = "0.3.263"
+
+# a run from a dev shell has no build, and is recorded as such
+[client.chatddx-dev]
+rev = "b585cece795f7f3eb8424c4f031e73922d4c7b8a"  # guessed
+
+[client.chatddx-dev.packages]
+pydantic-ai-slim = "2.41.0"
+openai = "3.10.0"
+inspect-ai = "0.3.263"

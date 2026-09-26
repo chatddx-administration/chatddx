@@ -1,0 +1,109 @@
+# malborg: one RTX 5090 (32 GB). It serves gpt-oss-20b at
+# http://malborg.km:12009/v1, the endpoint chatddx uses today, and Qwen3-8B-AWQ
+# from a NixOS container beside it, so the one LLM can be compared across
+# pelle's card and this one.
+#
+# Everything marked "# guessed" waits for the script that collects it from
+# the machine: /etc/machine-id, `nvidia-smi -L`, /run/current-system and
+# the manifest the NixOS module writes beside the `vllm serve` unit.
+
+[machine.malborg]
+machine_id = "ce634da7-f312-4b47-b70a-862c83a30e5e"  # guessed
+unreliable = false
+tags = ["rtx-5090"]
+
+[machine.malborg.specs]
+cpu = "AMD Ryzen 9 9950X 16-Core Processor"  # guessed
+ram_gib = 64  # guessed
+location = "Stockholm"  # guessed
+
+[[machine.malborg.specs.gpus]]
+model = "NVIDIA GeForce RTX 5090"
+memory_mib = 32607  # guessed
+uuid = "GPU-14b57228-d31b-4484-9898-31ce04efa3cb"  # guessed
+
+[os.malborg]
+toplevel = "/nix/store/9bww4scghgra5g4whl1jjd0y3hvv6240-nixos-system-malborg-26.11.20260519.c09727c"  # guessed
+flake_rev = "c067699436f8692b395d1d7e6a297b6524e32f20"  # guessed
+
+[os.malborg.specs]
+hostname = "malborg"
+kernel = "6.18.12"  # guessed
+nvidia_driver = "580.95.05"  # guessed
+nixpkgs_rev = "c09727c23bd83e81248764ed6e2dd41aa3113972"  # guessed: the nixpkgs chatddx's own flake pins
+
+# A NixOS container has a system of its own, but runs on its host's kernel
+# and NVIDIA driver: its stack points at both (see `host_os` below).
+[os.vllm-qwen3]
+toplevel = "/nix/store/7ij2xxpr3hbxhdyn2n74rn699v21pj7v-nixos-system-vllm-qwen3-26.11.20260519.c09727c"  # guessed
+flake_rev = "c067699436f8692b395d1d7e6a297b6524e32f20"  # guessed
+
+[os.vllm-qwen3.specs]
+hostname = "vllm-qwen3"  # guessed
+nixpkgs_rev = "c09727c23bd83e81248764ed6e2dd41aa3113972"  # guessed
+
+[serving."gpt-oss-20b@malborg"]
+engine = "/nix/store/5nxjf9n4gzgajv67rd4fb1kdssql7g51-python3.13-vllm-0.13.0"  # guessed
+
+# arguments that change what the LLM reads or the numbers: fingerprinted
+[serving."gpt-oss-20b@malborg".args]
+max-model-len = 131072  # guessed
+reasoning-parser = "openai_gptoss"  # guessed
+enable-auto-tool-choice = true  # guessed
+tool-call-parser = "openai"  # guessed
+
+[serving."gpt-oss-20b@malborg".env]
+VLLM_BATCH_INVARIANT = "1"  # guessed
+# vLLM writes the current date into every gpt-oss system message unless this
+# pins it
+VLLM_SYSTEM_START_DATE = "2026-01-01"  # guessed
+
+# arguments that only change speed: recorded, not fingerprinted
+[serving."gpt-oss-20b@malborg".performance]
+gpu-memory-utilization = 0.6  # guessed: leaves room for vllm-qwen3
+max-num-seqs = 32  # guessed
+async-scheduling = true  # guessed
+host = "0.0.0.0"  # guessed
+port = 12009
+
+[serving."qwen3-8b-awq@malborg"]
+engine = "/nix/store/5nxjf9n4gzgajv67rd4fb1kdssql7g51-python3.13-vllm-0.13.0"  # guessed
+
+[serving."qwen3-8b-awq@malborg".args]
+max-model-len = 32768  # guessed: Qwen3's native context
+reasoning-parser = "qwen3"  # guessed
+enable-auto-tool-choice = true  # guessed
+tool-call-parser = "hermes"  # guessed
+
+[serving."qwen3-8b-awq@malborg".env]
+VLLM_BATCH_INVARIANT = "1"  # guessed
+
+[serving."qwen3-8b-awq@malborg".performance]
+gpu-memory-utilization = 0.3  # guessed
+max-num-seqs = 16  # guessed
+enable-prefix-caching = true  # guessed
+host = "0.0.0.0"  # guessed
+port = 12010  # guessed
+
+[stack."gpt-oss-20b@malborg"]
+machine = "malborg"
+os = "malborg"
+llm = "gpt-oss-20b"
+serving = "gpt-oss-20b@malborg"
+endpoint = "http://malborg.km:12009/v1"
+served_name = "openai/gpt-oss-20b"
+api = "vllm"
+# no credential: vLLM runs without --api-key  # guessed
+tags = ["rtx-5090"]
+
+[stack."qwen3-8b-awq@malborg"]
+machine = "malborg"
+os = "vllm-qwen3"  # guessed
+host_os = "malborg"  # guessed
+llm = "qwen3-8b-awq"
+serving = "qwen3-8b-awq@malborg"
+endpoint = "http://malborg.km:12010/v1/"  # guessed
+served_name = "Qwen/Qwen3-8B-AWQ"
+api = "vllm"
+# no credential: vLLM runs without --api-key  # guessed
+tags = ["rtx-5090"]

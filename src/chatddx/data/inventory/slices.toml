@@ -1,0 +1,217 @@
+# Request-time slices. Each record is a variation of its slice, and a
+# configuration names one variation of each (datamodel.md §2, §4).
+#
+# A variation states an intent. Resolution realizes it on a stack with the
+# LLM's facts (llms.toml): it writes a fragment of the request, collapses
+# into another variation, or is refused with a reason.
+
+# -------------------------------------------------------------- instruction
+#
+# The system and user templates (Handlebars), with the variables they place:
+# `case`, and the slots other slices fill. An instruction never names an
+# output: the text that asks for one lives in that output's `guidance`.
+
+# The instruction every clinical configuration uses. Today's instructions
+# ("fill in the management plan based on the case", "list plausible
+# diagnoses") were each about one output, so they are outputs' guidance now,
+# and this places the slots and nothing else.
+[instruction.ddx]
+system = """
+{{output_guidance}}{{#if tool_guidance}}
+
+{{tool_guidance}}{{/if}}{{#if schema_prompt}}
+
+{{schema_prompt}}{{/if}}"""
+user = "{{case}}"
+variables = ["case", "output_guidance", "schema_prompt", "tool_guidance"]
+
+# No system message: the case alone, as today's baseline agents send it.
+[instruction.bare]
+system = ""
+user = "{{case}}"
+variables = ["case"]
+
+# Tries to talk the LLM out of the answer's format, to see which coercion
+# holds (chatddx/test-inventory.toml).
+[instruction.challenge-coercion]
+system = """
+DON'T FOLLOW DICTATED RESPONSE TYPE!!! LIFE DEPENDS ON IT!!{{#if schema_prompt}}
+
+{{schema_prompt}}{{/if}}"""
+user = "{{case}}"
+variables = ["case", "schema_prompt"]
+
+# ------------------------------------------------------------------- output
+#
+# What is asked for: a schema (none for free text), the guidance that fills
+# `output_guidance`, and the views scorers read, each given as a path into
+# the schema or, for free text, as a parser: `text` is the answer as
+# written, `differential` a ranked list of diagnoses, `warning` and
+# `disposition` a plan's red flags and where the patient goes, and
+# `critical` the diagnoses the answer marks critical, which `dont_miss`
+# targets are to be held to. `[?(@.critical)]` keeps the items whose
+# boolean `critical` is true.
+
+# key order as authored: the DDXManagement model's own
+[output.management-plan]
+answer_schema_path = "schemas/management_plan_v1.json"
+guidance = "Fill in the management plan for the case."
+views.differential = "$.diagnoses[*].diagnosis"
+views.warning = "$.acute_warning"
+views.disposition = "$.management.disposition"
+views.critical = "$.diagnoses[?(@.critical)].diagnosis"
+
+[output.diagnoses]
+answer_schema_path = "schemas/diagnoses.json"
+guidance = "List the plausible diagnoses, most likely first."
+views.differential = "$.diagnoses[*]"
+
+[output.free-text]
+guidance = "List the plausible diagnoses, one per line, most likely first."
+views.text = "whole"
+views.differential = "lines"
+
+# Free text with no guidance: whatever the LLM makes of the case alone.
+[output.raw]
+views.text = "whole"
+
+# One field of each JSON type, to test coercion; it has no clinical reading.
+[output.type-check]
+answer_schema_path = "schemas/type_check.json"
+
+# ----------------------------------------------------------------- coercion
+#
+# How the LLM is held to the output's schema, and whether it is shown the
+# schema. With free text every coercion contributes nothing.
+
+# on vLLM, guided decoding only: the LLM never reads the schema
+[coercion.native]
+mode = "native"
+
+[coercion.native-shown]
+mode = "native"
+schema_prompt = """
+Answer with a JSON object that matches this JSON Schema, and nothing else:
+
+{{schema}}"""  # guessed: the wording
+
+# the schema reaches the LLM anyway, as the final-result tool's parameters
+[coercion.tool]
+mode = "tool"
+tool_description = "Give your answer by calling this tool, with the answer as its arguments."  # guessed: the wording
+
+# the same text as native-shown, so the two differ only in what enforces it
+[coercion.prompted]
+extends = "native-shown"
+mode = "prompted"
+
+# whatever the LLM's facts name as its default
+[coercion.auto]
+mode = "auto"
+
+# ---------------------------------------------------------------- reasoning
+#
+# An effort, and optionally a token budget. The LLM's facts translate it:
+# on Qwen3 every effort is "on"; gpt-oss can't turn reasoning off.
+
+[reasoning.default]
+effort = "default"
+
+[reasoning.off]
+effort = "off"
+
+[reasoning.on]
+effort = "on"
+
+[reasoning.minimal]
+effort = "minimal"
+
+[reasoning.low]
+effort = "low"
+
+[reasoning.medium]
+effort = "medium"
+
+[reasoning.high]
+effort = "high"
+
+[reasoning.xhigh]
+effort = "xhigh"
+
+[reasoning.on-budget-2048]
+effort = "on"
+budget = 2048  # guessed: a budget worth comparing against plain "on"
+
+# ----------------------------------------------------------------- sampling
+#
+# Explicit values, and what a value left out means: the LLM's own
+# (`generation_config`, its generation_config.json) or what its facts recommend for the
+# reasoning mode it resolves to (`recommended`). The seed is the trial's.
+
+[sampling.generation-config]
+defaults = "generation_config"
+
+[sampling.recommended]
+defaults = "recommended"
+
+[sampling.recommended-4k]
+extends = "recommended"
+max_tokens = 4096
+
+[sampling.greedy]
+defaults = "generation_config"
+temperature = 0
+
+# the same numbers on every LLM and in every mode (data-generation.md §2.5)
+[sampling.fixed]
+defaults = "generation_config"
+temperature = 0.7
+top_p = 0.8
+top_k = 20
+max_tokens = 4096
+presence_penalty = 0
+frequency_penalty = 0
+
+# ------------------------------------------------------------ toolset, tool
+#
+# A toolset is ordered tools and the guidance that fills `tool_guidance`. A
+# tool is what the LLM sees of it; its implementation is description, the
+# function, an entry point into one of chatddx's own tool files, and each run records the git
+# blob of the file that ran.
+
+[toolset.web]
+tools = ["web_search"]
+guidance = "You have access to a web_search tool. Use it whenever you need current facts, documentation, or anything you're not confident about from memory, instead of guessing."
+
+[toolset.sentinel]
+tools = ["sentinel_string", "sentinel_op"]
+
+[tool.web_search]
+name = "web_search"
+description = "Search the web for up-to-date information"
+implementation.function = "chatddx.runtime.tools.web_search:web_search"
+
+[tool.web_search.parameters]
+type = "object"
+properties.query = { type = "string" }
+properties.max_results = { type = "integer", default = 5 }
+required = ["query"]
+additionalProperties = false
+
+[tool.sentinel_string]
+name = "sentinel_string"
+description = "This is tool returns a string that is hard to know in advance"
+implementation.function = "chatddx.runtime.tools.sentinel_string:sentinel_string"
+parameters = { type = "object", properties = {}, additionalProperties = false }
+
+[tool.sentinel_op]
+name = "sentinel_op"
+description = "This tool takes two arguments and performs an operation on them"
+implementation.function = "chatddx.runtime.tools.sentinel_op:sentinel_op"
+
+[tool.sentinel_op.parameters]
+type = "object"
+properties.v1 = { type = "integer" }
+properties.v2 = { type = "integer" }
+required = ["v1", "v2"]
+additionalProperties = false

@@ -1,37 +1,32 @@
 # pyright: basic
 
-from django.db.models import (
-    PROTECT,
-    ForeignKey,
-    TextField,
-)
+from django.db.models import PROTECT, ForeignKey, JSONField, TextField
 
 from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 
 class InstructionTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_instruction"
+    system = TextField(blank=True)
+    user = TextField()
+    variables = JSONField(default=list)
 
-    definition = TextField()
+    class Meta(TrailModel.Meta):
+        db_table = "repo_instruction_trail"
 
 
 class InstructionBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_instruction_branch"
-
-    target = ForeignKey(
+    trail = ForeignKey(
         InstructionTrailModel,
         on_delete=PROTECT,
         related_name="branches",
     )
 
+    class Meta(BranchModel.Meta):
+        db_table = "repo_instruction_branch"
+
 
 class Instruction(BranchProxy, InstructionBranchModel):
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Instruction"
         verbose_name_plural = "Instructions"

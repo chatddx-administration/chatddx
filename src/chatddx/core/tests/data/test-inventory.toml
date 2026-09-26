@@ -1,8 +1,0 @@
-extends = ["../../../data/test/test-inventory.toml"]
-
-[scorer.regex_match]
-command = "regex_match"
-
-[case.scored-case]
-payload = "a patient presents with a cough"
-expects.regex_match = "pneumonia\ncopd | (exacerbation & pulmonary)"

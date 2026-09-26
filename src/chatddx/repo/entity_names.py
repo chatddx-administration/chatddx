@@ -1,16 +1,24 @@
-from typing import Literal
+from typing import Literal, get_args
 
 type EntityName = Literal[
-    "instruction",
-    "connection",
-    "sampling_params",
-    "output_type",
+    "machine",
+    "os",
+    "llm",
+    "serving",
+    "client",
+    "stack",
     "tool",
-    "tool_group",
-    "agent",
-    "scorer",
-    "expect",
+    "toolset",
+    "instruction",
+    "output",
+    "coercion",
+    "reasoning",
+    "sampling",
+    "configuration",
     "case",
+    "scorer",
 ]
 
-type ViewName = EntityName | Literal["super_agent"]
+ENTITY_NAMES: tuple[EntityName, ...] = get_args(EntityName.__value__)
+
+type PresentationName = EntityName

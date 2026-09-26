@@ -1,19 +1,27 @@
-extends = ["cases.toml", "chatddx/test-inventory.toml"]
-
-[scorer.regex_match]
-command = "regex_match"
-
-[scorer.exact_match]
-command = "exact_match"
-
-[output_type.free-text]
-# unstructured free text
-
-[tool.web_search]
-command = "web_search"
-type = "function"
-description = "Search the web for up-to-date information"
-
-[tool_group.web]
-instructions = "You have access to a web_search tool. Use it whenever you need current facts, documentation, or anything you're not confident about from memory, instead of guessing."
-tools = ["web_search"]
+# The inventory `chatddx init-data` commits to the archive: every entity of
+# the registry, per docs/datamodel.md.
+#
+#   inventory/pelle.toml           pelle, an RTX 3070 serving Qwen3-8B-AWQ
+#   inventory/malborg.toml         malborg, an RTX 5090 serving gpt-oss-20b
+#                                  and, from a container, Qwen3-8B-AWQ
+#   inventory/fake.toml            the fake vLLM, serving both without a GPU
+#   inventory/llms.toml            the LLMs, and the facts resolution reads
+#   inventory/clients.toml         the chatddx builds that compose requests
+#   inventory/slices.toml          every request-time slice and its variations
+#   inventory/configurations.toml  one variation of each slice, named
+#   inventory/scorers.toml         what a run's answer comes to
+#   cases.toml                     the case corpus, and its targets
+#
+# "# guessed" marks every value not yet collected from the machines
+# themselves, or not yet settled.
+extends = [
+  "inventory/pelle.toml",
+  "inventory/malborg.toml",
+  "inventory/fake.toml",
+  "inventory/llms.toml",
+  "inventory/clients.toml",
+  "inventory/slices.toml",
+  "inventory/configurations.toml",
+  "inventory/scorers.toml",
+  "cases.toml",
+]

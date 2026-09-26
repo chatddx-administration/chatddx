@@ -15,7 +15,7 @@ def auth_check(request: HttpRequest):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/", api.urls),
     path("api/auth/", auth_check, name="auth_check"),
+    path("api/", api.urls),
 ]
 urlpatterns += staticfiles_urlpatterns()

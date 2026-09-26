@@ -1,0 +1,2 @@
+# The giftbag the tests give an owner: the live one, which holds no cases.
+extends = ["giftbag-inventory.toml"]

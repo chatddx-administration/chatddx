@@ -1,47 +1,27 @@
+# pyright: basic
 import os
-from pathlib import Path
 
-from django.utils.translation import gettext_lazy as _
-
-STATE_DIR = Path(os.environ["STATE_DIR"])
-SCHEME = os.environ["SCHEME"]
-CSRF_TRUSTED_ORIGINS = os.environ["TRUSTED_ORIGINS"].split(",")
-CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
-CORS_ALLOW_CREDENTIALS = True
-
-MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-]
-
+SALT_KEY = SECRET_KEY = "insecure-key"
 ROOT_URLCONF = "chatddx.django.urls"
+# the lab's, for the times the repl shows and the worker logs; Django's own
+# default is America/Chicago
+TIME_ZONE = "Europe/Stockholm"
+STATIC_ROOT = os.environ["STATIC_ROOT"]
+STATIC_URL = os.environ["STATIC_URL"]
 
-
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [Path(__file__).parent.parent / "portal/admin"],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
-            ],
-        },
-    },
+INSTALLED_APPS = [
+    "chatddx.django.core",
+    "chatddx.django.repo",
+    "chatddx.django.history",
+    "chatddx.django.worker",
+    "django.contrib.contenttypes",
+    "django.contrib.auth",
+    "django.contrib.sessions",
+    "django.contrib.admin",
+    "django.contrib.messages",
+    "django.contrib.postgres",
+    "django.contrib.staticfiles",
 ]
-
-WSGI_APPLICATION = "chatddx.django.wsgi.application"
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -50,53 +30,22 @@ DATABASES = {
         "HOST": os.environ["DB_HOST"],
     },
 }
-
-CHATDDX_LOG_LEVEL = os.environ.get("CHATDDX_LOG_LEVEL", "INFO")
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+]
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.request",
+            ],
         },
     },
-    "root": {
-        "handlers": ["console"],
-        "level": CHATDDX_LOG_LEVEL,
-    },
-}
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
 ]
-
-LANGUAGE_CODE = "en-us"
-LANGUAGES = [
-    ("en", _("English")),
-    ("sv", _("Swedish")),
-]
-
-TIME_ZONE = "Europe/Stockholm"
-
-USE_I18N = True
-
-USE_TZ = True
-FORMAT_MODULE_PATH = [
-    "chatddx.django.settings.formats",
-]
-
-CRISPY_TEMPLATE_PACK = "unfold_crispy"
-
-CRISPY_ALLOWED_TEMPLATE_PACKS = ["unfold_crispy"]

@@ -1,0 +1,102 @@
+# pyright: basic
+import logging
+from typing import Any
+
+from crispy_forms.helper import FormHelper
+from django.forms import ModelForm
+from django.http import HttpRequest
+from pydantic import ValidationError as PydanticValidationError
+from unfold.contrib.inlines.forms import NonrelatedInlineModelFormSet
+
+from chatddx.core import settings
+from chatddx.core.utils import ensure_identity
+from chatddx.dev.error_handling import print_pydantic_errors
+from chatddx.django.portal.utils import load_form_data, template_choices
+from chatddx.repo.bundles import entity_of, presentation_of
+from chatddx.repo.entity_names import EntityName
+from chatddx.repo.families.django import BranchModel, TrailModel
+from chatddx.repo.families.pydantic import BaseFormDataIn
+from chatddx.repo.store.trail import load_trail
+
+logger = logging.getLogger(__name__)
+
+
+class BranchFormSet(NonrelatedInlineModelFormSet):
+    pass
+
+
+class BranchForm(ModelForm):
+    class Meta:
+        fields = ("name",)
+
+    entity_name: EntityName
+    helper: FormHelper
+
+    validated_data: BaseFormDataIn | None
+    request: HttpRequest
+
+    def __init__(self, *args: Any, **kwargs: Any):
+
+        instance = kwargs.get("instance")
+
+        self.request = kwargs.pop("request")
+        self.validated_data = None
+
+        fingerprint = self.request.GET.get(f"{self.entity_name}_fingerprint")
+        owner = self.request.user.username
+
+        if instance:
+            kwargs["initial"] = self.get_initial(instance)
+        elif fingerprint:
+            new_branch = entity_of(self.entity_name).branch_model(
+                id=0,
+                name=fingerprint[:6],
+                target=load_trail(self.entity_name, fingerprint, TrailModel),
+                owner=ensure_identity(owner),
+            )
+            kwargs["initial"] = self.get_initial(new_branch)
+
+        super().__init__(*args, **kwargs)
+
+        model_cls = self._meta.model
+
+        assert model_cls is not None and issubclass(model_cls, BranchModel)
+
+        self.fields["template"].choices = template_choices(model_cls, owner)
+
+        if self.data:
+            self.data = self.data.copy()
+            self.data.pop("template", None)
+
+    def validate(self, data: dict[str, Any]):
+        try:
+            validated_data = presentation_of(
+                self.entity_name
+            ).form_data_in.model_validate(data)
+            return validated_data
+        except PydanticValidationError as e:
+            if settings.MODE == "dev":
+                logger.warning("Django Admin form validation failed fyi")
+                print_pydantic_errors(e, logger)
+
+            for error in e.errors():
+                field_name = str(error["loc"][0])
+                if field_name in self.errors:
+                    continue
+                self.add_error(field_name, error["msg"])
+
+    def clean(self):
+        cleaned = super().clean()
+
+        if not cleaned.get("owner"):
+            cleaned["owner"] = ensure_identity(self.request.user.username)
+
+        self.validated_data = self.validate(cleaned)
+        return cleaned
+
+    def save(self, commit) -> Any:
+        super().save(commit=False)
+        return self.cleaned_data
+
+    def get_initial(self, instance: BranchModel):
+        return load_form_data(instance)

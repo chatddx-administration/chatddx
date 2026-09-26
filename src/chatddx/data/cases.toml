@@ -1,395 +1,708 @@
+# The case corpus. A case is its vignette, read from cases/<name>.txt next
+# to this file, tags that say which dataset it came from, the language it is
+# written in (EDN's cases are Swedish, the rest English, Dutch Fall's by
+# translation), and its targets: what it is expected to yield, by kind.
+# `diagnosis` is read by `reciprocal_rank` and `first_mention`, and `warning`
+# and `disposition` by their `mentions` scorers (inventory/scorers.toml);
+# `dont_miss` has no scorer yet.
+#
+# A target is its plain words, `text`, and the pattern the scorers find it
+# by, `pattern`: whole words, `*` ending a stem, `&` both, `|` either
+# (`chatddx.scoring.scorers.patterns`). Either may be left out, and is then
+# shown as missing. `targets.warning = false` says that the case should
+# raise no warning. `# guessed` marks a target guessed from the case's text,
+# for people: nothing reads it. The Swedish cases' patterns name their words
+# in both languages, since what chatddx sends with them is English.
+
 [case.DutchFall10w]
 tags = ["dutch-fall"]
-expects.regex_match = "biliary & (colic | stone)"
+language = "en"
+targets.diagnosis.pattern = "biliary & (colic | stone*)"
+targets.warning.pattern = "dissection | cholangitis | cholecystitis | pancreatitis | perforat*"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient | observation"  # guessed
 
 [case.Dutchfall11w]
 tags = ["dutch-fall"]
-expects.regex_match = "aaa | (abdominal | aortic) & aneurysm | dissection"
+language = "en"
+targets.diagnosis.pattern = "aaa | (abdominal | aortic) & aneurysm | dissection"
+targets.warning.pattern = "rupture* | dissection | shock | aneurysm*"  # guessed
+targets.disposition.pattern = "surg* | operat* | vascular | icu | intensive & care"  # guessed
 
 [case.Dutchfall12w]
 tags = ["dutch-fall"]
-expects.regex_match = "pancreatitis"
+language = "en"
+targets.diagnosis.pattern = "pancreatitis"
+targets.warning.pattern = "necro* | organ & failure | shock | acute & coronary | myocardial & infarction"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall13w]
 tags = ["dutch-fall"]
-expects.regex_match = "torsion | ovarian & torsion"
+language = "en"
+targets.diagnosis.pattern = "torsion | ovarian & torsion"
+targets.warning.pattern = "torsion | ischemi* | ischaemi* | necro* | rupture*"  # guessed
+targets.disposition.pattern = "surg* | operat* | laparoscop* | gynecolog* | gynaecolog*"  # guessed
 
 [case.Dutchfall14w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+language = "en"
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
+targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall15w]
 tags = ["dutch-fall"]
-expects.regex_match = "gastroenteritis"
+language = "en"
+targets.diagnosis.pattern = "gastroenteritis"
+targets.warning.pattern = "appendicitis | perforat* | peritonitis | sepsis | dehydrat*"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient | observation"  # guessed
 
 [case.Dutchfall16w]
 tags = ["dutch-fall"]
-expects.regex_match = "chf | (congestive | failure) & heart"
+language = "en"
+targets.diagnosis.pattern = "chf | (congestive | failure) & heart"
+targets.warning.pattern = "hypoxi* | respiratory & failure | pulmonary & (edema | oedema) | acute & coronary | myocardial & infarction"  # guessed
+targets.disposition.pattern = "icu | intensive & care | ccu | coronary & care | admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall17w]
 tags = ["dutch-fall"]
-expects.regex_match = "liver & failure | cirrosis | cirrhosis"
+language = "en"
+targets.diagnosis.pattern = "liver & failure | cirrosis | cirrhosis"
+targets.warning.pattern = "bleed* | variceal | varices | peritonitis | encephalopath* | hepatorenal"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall18w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+language = "en"
+targets.diagnosis.pattern = "pneumonia"
+targets.warning.pattern = "sepsis | septic | hypoxi* | respiratory & failure"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall19w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+language = "en"
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
+targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall1w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+language = "en"
+targets.diagnosis.pattern = "pneumonia"
+targets.warning.pattern = "pulmonary & embolism | pe | hypoxi* | sepsis"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall20w]
 tags = ["dutch-fall"]
-expects.regex_match = "vasculitis"
+language = "en"
+targets.diagnosis.pattern = "vasculitis"
+targets.warning.pattern = "renal | kidney | glomerulonephritis | hemorrhag* | haemorrhag* | sepsis"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall21w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+language = "en"
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
+targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [case.Dutchfall22w]
 tags = ["dutch-fall"]
-expects.regex_match = "uti | urinary & infection | cystitis | urosepsis"
+language = "en"
+targets.diagnosis.pattern = "uti | urinary & infection* | cystitis | urosepsis"
+targets.warning.pattern = "sepsis | septic | urosepsis | pyelonephritis"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall23w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+language = "en"
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
+targets.warning.pattern = "pulmonary & embolism | pe | dvt | deep & vein & thrombosis | hypoxi* | respiratory & failure"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall24w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+language = "en"
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
+targets.warning.pattern = "respiratory & failure | hypercapni* | hypoxi* | sepsis | exhaust*"  # guessed
+targets.disposition.pattern = "icu | intensive & care | high & dependency | hdu | niv"  # guessed
 
 [case.Dutchfall25w]
 tags = ["dutch-fall"]
-expects.regex_match = "pancreatitis"
+language = "en"
+targets.diagnosis.pattern = "pancreatitis"
+targets.warning.pattern = "necro* | shock | organ & failure | bradycard* | cholangitis"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [case.Dutchfall26w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+language = "en"
+targets.diagnosis.pattern = "pneumonia"
+targets.warning.pattern = "pulmonary & embolism | pe | pneumothorax | sepsis"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient"  # guessed
 
 [case.Dutchfall27w]
 tags = ["dutch-fall"]
-expects.regex_match = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+language = "en"
+targets.diagnosis.pattern = "(renal | kidney) & (colic | stone*) | nephrolithiasis | urolithiasis"
+targets.warning.pattern = "sepsis | urosepsis | pyelonephritis | infect*"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient"  # guessed
 
 [case.Dutchfall28w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+language = "en"
+targets.diagnosis.pattern = "pneumonia"
+targets.warning.pattern = "sepsis | respiratory & failure | hypoxi* | hypercapni*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall29w]
 tags = ["dutch-fall"]
-expects.regex_match = "(renal | kidney) & (colic | stone) | nephrolithiasis | urolithiasis"
+language = "en"
+targets.diagnosis.pattern = "(renal | kidney) & (colic | stone*) | nephrolithiasis | urolithiasis"
+targets.warning.pattern = "pyelonephritis | urosepsis | sepsis | hydronephros* | kidney & injury"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | urolog*"  # guessed
 
 [case.Dutchfall2w]
 tags = ["dutch-fall"]
-expects.regex_match = "(diverticular | (gastro & intestinal) | gi) & bleed"
+language = "en"
+targets.diagnosis.pattern = "(diverticular | gastrointestinal | (gastro & intestinal) | gi) & bleed*"
+targets.warning.pattern = "shock | hypovolem* | hemorrhag* | haemorrhag* | massive & bleed*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | gastroenterolog* | colonoscop*"  # guessed
 
 [case.Dutchfall30w]
 tags = ["dutch-fall"]
-expects.regex_match = "pneumonia"
+language = "en"
+targets.diagnosis.pattern = "pneumonia"
+targets.warning.pattern = "sepsis | septic | respiratory & failure | hypoxi* | heart & failure"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall3w]
 tags = ["dutch-fall"]
-expects.regex_match = "diverticulitis | (gastro & intestinal | gi) & inflammation"
+language = "en"
+targets.diagnosis.pattern = "diverticulitis | (gastro & intestinal | gi) & inflammation"
+targets.warning.pattern = "perforat* | abscess | peritonitis | sepsis"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall4w]
 tags = ["dutch-fall"]
-expects.regex_match = "pancreatitis"
+language = "en"
+targets.diagnosis.pattern = "pancreatitis"
+targets.warning.pattern = "necro* | cholangitis | shock | organ & failure | sepsis"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall5w]
 tags = ["dutch-fall"]
-expects.regex_match = "uti | urinary & infection | cystitis | urosepsis"
+language = "en"
+targets.diagnosis.pattern = "uti | urinary & infection* | cystitis | urosepsis"
+targets.warning.pattern = "sepsis | septic | urosepsis | shock"  # guessed
+targets.disposition.pattern = "icu | intensive & care | admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall6w]
 tags = ["dutch-fall"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+language = "en"
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
+targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure | sepsis"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall7w]
 tags = ["dutch-fall"]
-expects.regex_match = "hernia"
+language = "en"
+targets.diagnosis.pattern = "hernia"
+targets.warning.pattern = "incarcerat* | strangulat* | ischemi* | ischaemi* | perforat* | appendicitis"  # guessed
+targets.disposition.pattern = "surg* | operat* | admit* | admission | hospital* | observation"  # guessed
 
 [case.Dutchfall8w]
 tags = ["dutch-fall"]
-expects.regex_match = "chf | (congestive | failure) & heart"
+language = "en"
+targets.diagnosis.pattern = "chf | (congestive | failure) & heart"
+targets.warning.pattern = "pneumothorax | tamponade | pulmonary & embolism | pe"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 
 [case.Dutchfall9w]
 tags = ["dutch-fall"]
-expects.regex_match = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
+language = "en"
+targets.diagnosis.pattern = "cholangitis | (obstructive & jaundice) | choledocholithiasis"
+targets.warning.pattern = "cholangitis | sepsis | septic"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | ercp"  # guessed
 
 [case.casesfromedn1]
 tags = ["edn"]
-expects.regex_match = "copd | (exacerbation | obstructive) & pulmonary"
+language = "sv"
+targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
+targets.warning.pattern = "respiratory & failure | hypercapni* | airway | intubat* | andningssvikt | intuber*"  # guessed
+targets.disposition.pattern = "icu | intensive & care | iva | intensivvård*"  # guessed
 
 [case.casesfromedn10]
 tags = ["edn"]
-expects.regex_match = "scad | dissection | dissektion"
+language = "sv"
+targets.diagnosis.pattern = "scad | dissection | dissektion"
+targets.warning.pattern = "stemi | st & elevation | myocardial & infarction | dissection | hjärtinfarkt"  # guessed
+targets.disposition.pattern = "cath* | pci | angiograph* | angiografi | ccu | coronary & care | hia | hjärtintensiv*"  # guessed
 
 [case.casesfromedn11]
 tags = ["edn"]
-expects.regex_match = "delirium | abstinens"
+language = "sv"
+targets.diagnosis.pattern = "delirium | abstinens"
+targets.warning.pattern = "delirium & tremens | withdrawal | seizure* | dissection | abstinens | kramp*"  # guessed
+targets.disposition.pattern = "icu | intensive & care | iva | intensivvård* | admit* | admission | hospital*"  # guessed
 
 [case.casesfromedn12]
 tags = ["edn"]
-expects.regex_match = "depression"
+language = "sv"
+targets.diagnosis.pattern = "depression"
+targets.warning.pattern = "suicid* | självmord* | postpartum | psychos* | psykos"  # guessed
+targets.disposition.pattern = "outpatient | primary & care | follow* | psychiatr* | vårdcentral* | öppenvård*"  # guessed
 
 [case.casesfromedn13]
 tags = ["edn"]
-expects.regex_match = "leptospirosis"
+language = "sv"
+targets.diagnosis.pattern = "leptospirosis"
+targets.warning.pattern = "kidney & failure | renal & failure | kidney & injury | hemorrhag* | haemorrhag* | sepsis | meningit* | weil*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care | infect*"  # guessed
 
 [case.casesfromedn14]
 tags = ["edn"]
-expects.regex_match = "ektopisk & graviditet | ektopisk"
+language = "sv"
+targets.diagnosis.pattern = "ektopisk & graviditet | ektopisk"
+targets.warning.pattern = "rupture* | hemorrhag* | haemorrhag* | shock | hypovolem* | blödning | chock"  # guessed
+targets.disposition.pattern = "surg* | operat* | laparo* | gyn* | kirurg* | operation"  # guessed
 
 [case.casesfromedn15]
 tags = ["edn"]
-expects.regex_match = "hematom | hematoma"
+language = "sv"
+targets.diagnosis.pattern = "hematom | hematoma"
+targets.warning.pattern = "bleed* | hemorrhag* | haemorrhag* | blödning | anticoag*"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient | observation | hemgång"  # guessed
 
 [case.casesfromedn16]
 tags = ["edn"]
-expects.regex_match = "tarmperforation | perforation"
+language = "sv"
+targets.diagnosis.pattern = "tarmperforation | perforation"
+targets.warning.pattern = "perforat* | peritonitis | free & (air | gas) | sepsis | shock | fri & gas"  # guessed
+targets.disposition.pattern = "surg* | operat* | laparotom* | kirurg* | operation"  # guessed
 
 [case.casesfromedn17]
 tags = ["edn"]
-expects.regex_match = "porfyri"
+language = "sv"
+targets.diagnosis.pattern = "porfyri"
+targets.warning.pattern = "paralys* | respiratory & failure | seizure* | hyponatrem* | neuropath* | förlamning"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn18]
 tags = ["edn"]
-expects.regex_match = "malaria"
+language = "sv"
+targets.diagnosis.pattern = "malaria"
+targets.warning.pattern = "falciparum | severe & malaria | cerebral & malaria | allvarlig & malaria"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | infect* | infektion* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn19]
 tags = ["edn"]
-expects.regex_match = "meningit"
+language = "sv"
+targets.diagnosis.pattern = "meningit*"
+targets.warning.pattern = "meningit* | encephalit* | sepsis | septic | herniat*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care | iva | intensivvård* | infekt*"  # guessed
 
 [case.casesfromedn2]
 tags = ["edn"]
-expects.regex_match = "psychosis | psychotic | psykos | psykotisk"
+language = "sv"
+targets.diagnosis.pattern = "psychosis | psychotic | psykos | psykotisk"
+targets.warning.pattern = "encephalit* | autoimmune | nmda | suicid* | catatoni*"  # guessed
+targets.disposition.pattern = "psychiatr* | psykiatri* | neurolog* | admit* | admission | hospital*"  # guessed
 
 [case.casesfromedn20]
 tags = ["edn"]
-expects.regex_match = "viral & meningit | meningit"
+language = "sv"
+targets.diagnosis.pattern = "viral & meningit* | meningit*"
+targets.warning.pattern = "encephalit* | herpes | hsv | bacterial & meningit*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | infect* | infekt* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn3]
 tags = ["edn"]
-expects.regex_match = "psychosis | psychotic | psykos | psykotisk"
+language = "sv"
+targets.diagnosis.pattern = "psychosis | psychotic | psykos | psykotisk"
+targets.warning.pattern = "organic | delirium | encephalit* | tumo* | stroke | suicid*"  # guessed
+targets.disposition.pattern = "psychiatr* | psykiatri* | involuntary | compulsory | tvångsvård* | lpt"  # guessed
 
 [case.casesfromedn4]
 tags = ["edn"]
-expects.regex_match = "sepsis | septic"
+language = "sv"
+targets.diagnosis.pattern = "sepsis | septic"
+targets.warning.pattern = "septic & shock | shock | sepsis | multi* & organ | hyperkal* | hypoglyc*"  # guessed
+targets.disposition.pattern = "icu | intensive & care | iva | intensivvård*"  # guessed
 
 [case.casesfromedn5]
 tags = ["edn"]
-expects.regex_match = "acl | (cruciate | ligament) & (tear | injury)"
+language = "sv"
+targets.diagnosis.pattern = "acl | (cruciate | ligament) & (tear* | injur*)"
+targets.warning.pattern = "fracture* | dislocat* | popliteal | compartment & syndrome"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient | orthop* | physio* | follow*"  # guessed
 
 [case.casesfromedn6]
 tags = ["edn"]
-expects.regex_match = "lungbleeding | bleeding | lungblödning | blödning"
+language = "sv"
+targets.diagnosis.pattern = "lungbleeding | bleeding | lungblödning | blödning"
+targets.warning.pattern = "hemoptys* | haemoptys* | massive | sepsis | pulmonary & embolism | lungblödning | blödning"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn7]
 tags = ["edn"]
-expects.regex_match = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
+language = "sv"
+targets.diagnosis.pattern = "epidural & abscess | abscess | compression | discitis | epiduralabscess"
+targets.warning.pattern = "cord & compression | compression | paralys* | cauda | sepsis | ryggmärgskompression"  # guessed
+targets.disposition.pattern = "surg* | operat* | neurosurg* | decompress* | neurokirurg*"  # guessed
 
 [case.casesfromedn8]
 tags = ["edn"]
-expects.regex_match = "hjärntumör | tumör| brain & (tumour | tumor)"
+language = "sv"
+targets.diagnosis.pattern = "hjärntumör | tumör| brain & (tumour | tumor)"
+targets.warning.pattern = "intracranial & pressure | icp | herniat* | tumo* | hydroceph* | tumör"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | neurosurg* | neurokirurg* | neurolog* | inlägg* | vårdavdelning"  # guessed
 
 [case.casesfromedn9]
 tags = ["edn"]
-expects.regex_match = "ileus | tarmvred | obstruction | obstruktion"
+language = "sv"
+targets.diagnosis.pattern = "ileus | tarmvred | obstruction | obstruktion"
+targets.warning.pattern = "ischemi* | ischaemi* | strangulat* | perforat* | volvulus | necro*"  # guessed
+targets.disposition.pattern = "surg* | operat* | laparotom* | kirurg* | operation"  # guessed
 
 [case.openxddx-case_1]
 tags = ["openxddx"]
-expects.regex_match = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
+language = "en"
+targets.diagnosis.pattern = "acute & kidney & injury | aki | acute & kidney & failure | acute & renal & failure"
+targets.warning.pattern = "hyperkal* | dialys* | renal & failure | kidney & failure | uremi*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | nephrolog*"  # guessed
 
 [case.openxddx-case_10]
 tags = ["openxddx"]
-expects.regex_match = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
+language = "en"
+targets.diagnosis.pattern = "myocardial & infarction | mi | acs | acute & coronary & syndrome"
+targets.warning.pattern = "tamponade | arrhythmi* | shock | contusion | aortic & injury"  # guessed
+targets.disposition.pattern = "icu | intensive & care | ccu | telemetry | trauma | admit* | admission | hospital*"  # guessed
 
 [case.openxddx-case_11]
 tags = ["openxddx"]
-expects.regex_match = "osteoarthritis | arthritis"
+language = "en"
+targets.diagnosis.pattern = "osteoarthritis | arthritis"
+targets.warning.pattern = "cirrhosis | cardiomyopath* | hepatocellular & carcinoma | liver"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | rheumatolog* | hepatolog* | gastroenterolog*"  # guessed
 
 [case.openxddx-case_12]
 tags = ["openxddx"]
-expects.regex_match = "endometriosis"
+language = "en"
+targets.diagnosis.pattern = "endometriosis"
+targets.warning.pattern = "ectopic | torsion | rupture*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | gynecolog* | gynaecolog* | laparoscop* | fertility"  # guessed
 
 [case.openxddx-case_13]
 tags = ["openxddx"]
-expects.regex_match = "tension & pneumothorax"
+language = "en"
+targets.diagnosis.pattern = "tension & pneumothorax"
+targets.warning.pattern = "tension & pneumothorax | hemothorax | haemothorax | aortic & (rupture | injury) | shock"  # guessed
+targets.disposition.pattern = "surg* | operat* | trauma | icu | intensive & care"  # guessed
 
 [case.openxddx-case_14]
 tags = ["openxddx"]
-expects.regex_match = "physiological & jaundice | neonatal & jaundice"
+language = "en"
+targets.diagnosis.pattern = "physiological & jaundice | neonatal & jaundice"
+targets.warning.pattern = "kernicterus | bilirubin & encephalopath* | hemoly* | haemoly* | exchange & transfusion"  # guessed
+targets.disposition.pattern = "phototherap* | nicu | neonatal & intensive | admit* | admission | hospital*"  # guessed
 
 [case.openxddx-case_15]
 tags = ["openxddx"]
-expects.regex_match = "aortic & stenosis | valve & dysfunction"
+language = "en"
+targets.diagnosis.pattern = "aortic & stenosis | valve & dysfunction"
+targets.warning.pattern = "heart & failure | endocardit* | dissection"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | cardiolog* | echocardiogra*"  # guessed
 
 [case.openxddx-case_16]
 tags = ["openxddx"]
-expects.regex_match = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
+language = "en"
+targets.diagnosis.pattern = "personality & disorder | eips | borderline | emotional & instability & personality & disorder"
+targets.warning.pattern = "suicid* | self & harm"  # guessed
+targets.disposition.pattern = "psychiatr* | dialectical | dbt"  # guessed
 
 [case.openxddx-case_17]
 tags = ["openxddx"]
-expects.regex_match = "(liver & failure) | cirrosis | cirrhosis"
+language = "en"
+targets.diagnosis.pattern = "(liver & failure) | cirrosis | cirrhosis"
+targets.warning.pattern = "peritonitis | sbp | encephalopath* | sepsis | hepatorenal"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care"  # guessed
 
 [case.openxddx-case_18]
 tags = ["openxddx"]
-expects.regex_match = "toxoplasma & gondi | toxoplasmosis"
+language = "en"
+targets.diagnosis.pattern = "toxoplasma & gondi* | toxoplasmosis"
+targets.warning.pattern = "microcephal* | congenital & infection | zika | fetal & anomal*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | obstetric* | maternal & fetal | perinatolog*"  # guessed
 
 [case.openxddx-case_19]
 tags = ["openxddx"]
-expects.regex_match = "stroke | cvl"
+language = "en"
+targets.diagnosis.pattern = "stroke | cvl"
+targets.warning.pattern = "respiratory & failure | paralys* | botulism | airway"  # guessed
+targets.disposition.pattern = "icu | intensive & care | admit* | admission | hospital*"  # guessed
 
 [case.openxddx-case_2]
 tags = ["openxddx"]
-expects.regex_match = "pneumonia"
+language = "en"
+targets.diagnosis.pattern = "pneumonia"
+targets.warning.pattern = "disseminat* | respiratory & failure | immunocompromis*"  # guessed
+targets.disposition.pattern = "outpatient | home | discharge* | follow*"  # guessed
 
 [case.openxddx-case_20]
 tags = ["openxddx"]
-expects.regex_match = "physiological & jaundice | neonatal & jaundice"
+language = "en"
+targets.diagnosis.pattern = "physiological & jaundice | neonatal & jaundice"
+targets.warning.pattern = "biliary & atresia | cirrhosis | liver & failure | cholesta*"  # guessed
+targets.disposition.pattern = "surg* | kasai | referr* | admit* | admission"  # guessed
 
 [case.openxddx-case_21]
 tags = ["openxddx"]
-expects.regex_match = "vascular & insufficency | vascular & disease"
+language = "en"
+targets.diagnosis.pattern = "vascular & insufficiency | vascular & disease"
+targets.warning.pattern = "limb & ischemi* | critical & limb | gangren* | amputat*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | vascular"  # guessed
 
 [case.openxddx-case_22]
 tags = ["openxddx"]
-expects.regex_match = "dementia | alzheimer"
+language = "en"
+targets.diagnosis.pattern = "dementia | alzheimer"
+targets.warning.pattern = "tumo* | hydroceph* | safety | capacity"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | neurolog* | memory & clinic"  # guessed
 
 [case.openxddx-case_23]
 tags = ["openxddx"]
-expects.regex_match = "measles | rubeola"
+language = "en"
+targets.diagnosis.pattern = "measles | rubeola"
+targets.warning.pattern = "encephalit* | pneumonia | superinfect* | secondary & infection | immunocompromis*"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient | isolat*"  # guessed
 
 [case.openxddx-case_24]
 tags = ["openxddx"]
-expects.regex_match = "takutsubo | cardiomyopathy"
+language = "en"
+targets.diagnosis.pattern = "takotsubo | cardiomyopathy"
+targets.warning.pattern = "cardiogenic & shock | shock | heart & failure | arrhythmi* | thromb*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | ccu | coronary & care | cardiolog* | telemetry | icu"  # guessed
 
 [case.openxddx-case_25]
 tags = ["openxddx"]
-expects.regex_match = "osteoarthritis | arthritis"
+language = "en"
+targets.diagnosis.pattern = "osteoarthritis | arthritis"
+targets.warning.pattern = "septic & arthritis | fracture* | infect*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | physio* | physical & therap* | rheumatolog* | home"  # guessed
 
 [case.openxddx-case_26]
 tags = ["openxddx"]
-expects.regex_match = "testicular & torsion"
+language = "en"
+targets.diagnosis.pattern = "testicular & torsion"
+targets.warning.pattern = "torsion | abscess | orchitis | infarct*"  # guessed
+targets.disposition.pattern = "outpatient | home | discharge* | follow* | urolog*"  # guessed
 
 [case.openxddx-case_27]
 tags = ["openxddx"]
-expects.regex_match = "gynecomastia | hormonal & imbalance"
+language = "en"
+targets.diagnosis.pattern = "gynecomastia | hormonal & imbalance"
+targets.warning.pattern = "tumo* | malignan* | cancer"  # guessed
+targets.disposition.pattern = "reassur* | follow* | outpatient | home"  # guessed
 
 [case.openxddx-case_28]
 tags = ["openxddx"]
-expects.regex_match = "cholecystitis"
+language = "en"
+targets.diagnosis.pattern = "cholecystitis"
+targets.warning.pattern = "sepsis | septic | perforat* | gangren* | empyema"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | cholecystostom* | palliat* | hospice"  # guessed
 
 [case.openxddx-case_29]
 tags = ["openxddx"]
-expects.regex_match = "insulinoma"
+language = "en"
+targets.diagnosis.pattern = "insulinoma"
+targets.warning.pattern = "hypoglyc* | seizure* | coma | factitious"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | observation | endocrinolog* | monitor*"  # guessed
 
 [case.openxddx-case_3]
 tags = ["openxddx"]
-expects.regex_match = "osteoarthritis | arthritis"
+language = "en"
+targets.diagnosis.pattern = "osteoarthritis | arthritis"
+targets.warning.pattern = "septic & arthritis | infect*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | rheumatolog*"  # guessed
 
 [case.openxddx-case_30]
 tags = ["openxddx"]
-expects.regex_match = "dysmenorrhea"
+language = "en"
+targets.diagnosis.pattern = "dysmenorrhea"
+targets.warning.pattern = "ectopic | pregnan* | pelvic & inflammatory | pid"  # guessed
+targets.disposition.pattern = "outpatient | home | follow* | discharge*"  # guessed
 
 [case.openxddx-case_31]
 tags = ["openxddx"]
-expects.regex_match = "hiv"
+language = "en"
+targets.diagnosis.pattern = "hiv"
+targets.warning.pattern = "dengue | hemorrhag* | haemorrhag* | shock | meningit*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | infectious & disease* | infect*"  # guessed
 
 [case.openxddx-case_32]
 tags = ["openxddx"]
-expects.regex_match = "hernia"
+language = "en"
+targets.diagnosis.pattern = "hernia"
+targets.warning.pattern = "testicular & (tumo* | cancer) | malignan* | torsion"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | urolog* | elective"  # guessed
 
 [case.openxddx-case_33]
 tags = ["openxddx"]
-expects.regex_match = "gastroenteritis"
+language = "en"
+targets.diagnosis.pattern = "gastroenteritis"
+targets.warning.pattern = "dehydrat* | hypovolem*"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient"  # guessed
 
 [case.openxddx-case_34]
 tags = ["openxddx"]
-expects.regex_match = "basal & cell & carcinoma | bcc"
+language = "en"
+targets.diagnosis.pattern = "basal & cell & carcinoma | bcc"
+targets.warning.pattern = "squamous & cell & carcinoma | scc | malignan* | melanoma"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | dermatolog* | excision"  # guessed
 
 [case.openxddx-case_35]
 tags = ["openxddx"]
-expects.regex_match = "pneumonia"
+language = "en"
+targets.diagnosis.pattern = "pneumonia"
+targets.warning.pattern = "sepsis | septic | respiratory & failure | empyema | necrotiz*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | ward | icu | intensive & care"  # guessed
 
 [case.openxddx-case_36]
 tags = ["openxddx"]
-expects.regex_match = "precocious & puberty"
+language = "en"
+targets.diagnosis.pattern = "precocious & puberty"
+targets.warning.pattern = "abuse | fracture* | malignan* | tumo*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | endocrinolog*"  # guessed
 
 [case.openxddx-case_37]
 tags = ["openxddx"]
-expects.regex_match = "(liver & failure) | cirrosis | cirrhosis"
+language = "en"
+targets.diagnosis.pattern = "(liver & failure) | cirrosis | cirrhosis"
+targets.warning.pattern = "encephalopath* | bleed* | variceal | sepsis | hypokal* | dehydrat*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | ward"  # guessed
 
 [case.openxddx-case_38]
 tags = ["openxddx"]
-expects.regex_match = "bleeding | hypovolemic & shock | postpartum & bleeding"
+language = "en"
+targets.diagnosis.pattern = "bleeding | hypovolemic & shock | postpartum & bleeding"
+targets.warning.pattern = "hypotens* | shock | fetal & distress | bradycard* | hemorrhag* | haemorrhag*"  # guessed
+targets.disposition.pattern = "labor | labour | delivery | obstetric* | monitor*"  # guessed
 
 [case.openxddx-case_39]
 tags = ["openxddx"]
-expects.regex_match = "parkinson | parkinson's & disease"
+language = "en"
+targets.diagnosis.pattern = "parkinson | parkinson's & disease"
+targets.warning.pattern = "stroke | tumo* | demyelinat* | multiple & sclerosis"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | neurolog* | mri"  # guessed
 
 [case.openxddx-case_4]
 tags = ["openxddx"]
-expects.regex_match = "hirschsprung & disease | intestinal & disease"
+language = "en"
+targets.diagnosis.pattern = "hirschsprung & disease | intestinal & disease"
+targets.warning.pattern = "volvulus | malrotation | enterocolitis | perforat* | shock | sepsis"  # guessed
+targets.disposition.pattern = "nicu | neonatal & intensive | surg* | pediatric & surg* | paediatric & surg*"  # guessed
 
 [case.openxddx-case_40]
 tags = ["openxddx"]
-expects.regex_match = "overdose | drug & use | intoxication"
+language = "en"
+targets.diagnosis.pattern = "overdose | drug & use | intoxication"
+targets.warning.pattern = "respiratory & (failure | depression) | hypoventilat* | airway | overdose"  # guessed
+targets.disposition.pattern = "icu | intensive & care | admit* | admission | hospital* | monitor*"  # guessed
 
 [case.openxddx-case_41]
 tags = ["openxddx"]
-expects.regex_match = "myopathy"
+language = "en"
+targets.diagnosis.pattern = "myopathy"
+targets.warning.pattern = "respiratory & (failure | insufficiency) | aspirat* | feeding"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | referr* | neurolog*"  # guessed
 
 [case.openxddx-case_42]
 tags = ["openxddx"]
-expects.regex_match = "thyroid & cyst | benign & thyroid & nodules"
+language = "en"
+targets.diagnosis.pattern = "thyroid & cyst* | benign & thyroid & nodule*"
+targets.warning.pattern = "malignan* | carcinoma | cancer | papillary"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | biopsy | fna | endocrin* | surg*"  # guessed
 
 [case.openxddx-case_44]
 tags = ["openxddx"]
-expects.regex_match = "(liver & failure) | cirrosis | cirrhosis"
+language = "en"
+targets.diagnosis.pattern = "(liver & failure) | cirrosis | cirrhosis"
+targets.warning.pattern = "liver & failure | hepatic & failure | encephalopath* | coagulopath* | fetal | hepatitis e"  # guessed
+targets.disposition.pattern = "icu | intensive & care | admit* | admission | hospital* | transplant*"  # guessed
 
 [case.openxddx-case_45]
 tags = ["openxddx"]
-expects.regex_match = "copd | ((exacerbation | obstructive) & pulmonary)"
+language = "en"
+targets.diagnosis.pattern = "copd | ((exacerbation | obstructive) & pulmonary)"
+targets.warning.pattern = "lung & cancer | malignan* | hypoxi*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | home | pulmonolog* | pulmonary & rehab* | smoking & cessation"  # guessed
 
 [case.openxddx-case_46]
 tags = ["openxddx"]
-expects.regex_match = "dermatitis"
+language = "en"
+targets.diagnosis.pattern = "dermatitis"
+targets.warning.pattern = "lymphoma | malignan* | malabsor*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | dermatolog* | gastroenterolog* | gluten | diet*"  # guessed
 
 [case.openxddx-case_47]
 tags = ["openxddx"]
-expects.regex_match = "gastroenteritis"
+language = "en"
+targets.diagnosis.pattern = "gastroenteritis"
+targets.warning.pattern = "dehydrat* | hypovolem* | electrolyte*"  # guessed
+targets.disposition.pattern = "discharge* | home | outpatient"  # guessed
 
 [case.openxddx-case_48]
 tags = ["openxddx"]
-expects.regex_match = "hypocalcemia"
+language = "en"
+targets.diagnosis.pattern = "hypocalcemia"
+targets.warning.pattern = "tetany | laryngospasm | seizure* | arrhythmi* | qt"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | monitor* | ward"  # guessed
 
 [case.openxddx-case_49]
 tags = ["openxddx"]
-expects.regex_match = "gynecomastia | hormonal & imbalance"
+language = "en"
+targets.diagnosis.pattern = "gynecomastia | hormonal & imbalance"
+targets.warning.pattern = "tumo* | cancer | malignan* | leydig"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | urolog* | ultrasound | orchiectom*"  # guessed
 
 [case.openxddx-case_5]
 tags = ["openxddx"]
-expects.regex_match = "peripheral & artery & disease | arterial & insufficency | peripheral & arterial & disease"
+language = "en"
+targets.diagnosis.pattern = "peripheral & artery & disease | arterial & insufficiency | peripheral & arterial & disease"
+targets.warning.pattern = "critical & limb | limb & ischemi* | gangren* | amputat* | ulcer*"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | vascular | exercise"  # guessed
 
 [case.openxddx-case_50]
 tags = ["openxddx"]
-expects.regex_match = "spontaneous & abortion | miscarriage"
+language = "en"
+targets.diagnosis.pattern = "spontaneous & abortion | miscarriage"
+targets.warning.pattern = "hemorrhag* | haemorrhag* | bleed* | shock | sepsis | ectopic"  # guessed
+targets.disposition.pattern = "home | discharge* | follow* | gynecolog* | gynaecolog* | obstetric* | evacuat* | curettage"  # guessed
 
 [case.openxddx-case_6]
 tags = ["openxddx"]
-expects.regex_match = "hypertension"
+language = "en"
+targets.diagnosis.pattern = "hypertension"
+targets.warning.pattern = "hypokal* | arrhythmi* | hypertensive & (crisis | emergency | urgency)"  # guessed
+targets.disposition.pattern = "outpatient | follow* | referr* | endocrinolog*"  # guessed
 
 [case.openxddx-case_7]
 tags = ["openxddx"]
-expects.regex_match = "tardive & dyskinesia | dyskinesia"
+language = "en"
+targets.diagnosis.pattern = "tardive & dyskinesia | dyskinesia"
+targets.warning.pattern = "neuroleptic & malignant | nms"  # guessed
+targets.disposition.pattern = "psychiatr* | follow* | medication & review"  # guessed
 
 [case.openxddx-case_8]
 tags = ["openxddx"]
-expects.regex_match = "hemolytic & uremic & syndrome | hus"
+language = "en"
+targets.diagnosis.pattern = "hemolytic & uremic & syndrome | hus"
+targets.warning.pattern = "kidney & injury | renal & failure | anuri* | oliguri* | dialys* | seizure*"  # guessed
+targets.disposition.pattern = "admit* | admission | hospital* | picu | (pediatric | paediatric) & intensive | nephrolog* | dialys*"  # guessed
 
 [case.openxddx-case_9]
 tags = ["openxddx"]
-expects.regex_match = "hyperthyroidism | graves & disease"
+language = "en"
+targets.diagnosis.pattern = "hyperthyroidism | graves & disease"
+targets.warning.pattern = "heart & failure | cardiac & failure | arrhythmi* | tachyarrhythmi* | thyroid & storm"  # guessed
+targets.disposition.pattern = "nicu | neonatal & intensive | admit* | admission | hospital*"  # guessed

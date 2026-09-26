@@ -1,52 +1,37 @@
 # pyright: basic
 
-from django.db.models import (
-    PROTECT,
-    CharField,
-    ForeignKey,
-    TextField,
-)
+from django.db.models import PROTECT, CharField, ForeignKey, TextField
 
-from chatddx.core.choices import ToolChoices
-from chatddx.core.django_fields import JSONSchemaField
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import (
+    BranchModel,
+    BranchProxy,
+    OrderedJSONField,
+    TrailModel,
+)
 
 
 class ToolTrailModel(TrailModel):
-    class Meta(TrailModel.Meta):
-        app_label = "orm"
-        db_table = "agents_tool"
+    name = CharField(max_length=64)
+    description = TextField(blank=True)
+    parameters = OrderedJSONField()
 
-    command = CharField(
-        max_length=255,
-        db_index=True,
-        help_text="Command the tool invoces",
-    )
-    type = CharField(
-        max_length=50,
-        choices=ToolChoices.choices,
-        default=ToolChoices.FUNCTION,
-        help_text="The type of tool.",
-    )
-    description = TextField()
-    parameters = JSONSchemaField()
+    class Meta(TrailModel.Meta):
+        db_table = "repo_tool_trail"
 
 
 class ToolBranchModel(BranchModel):
-    class Meta(BranchModel.Meta):
-        app_label = "orm"
-        db_table = "agents_tool_branch"
-
-    target = ForeignKey(
+    trail = ForeignKey(
         ToolTrailModel,
         on_delete=PROTECT,
         related_name="branches",
     )
 
+    class Meta(BranchModel.Meta):
+        db_table = "repo_tool_branch"
+
 
 class Tool(BranchProxy, ToolBranchModel):
-    class Meta:
+    class Meta(BranchProxy.Meta):
         proxy = True
-        app_label = "orm"
         verbose_name = "Tool"
         verbose_name_plural = "Tools"

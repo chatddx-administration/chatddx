@@ -1,132 +1,205 @@
-# src/chatddx/repo/inventories.py
-
 from typing import TypedDict
 
 from pydantic import BaseModel
 
-from chatddx.repo.entities.agent.django import AgentBranchModel
-from chatddx.repo.entities.agent.pydantic import (
-    AgentBranchSpec,
-    AgentFormDataOut,
-    AgentTrailSchema,
-)
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import (
-    CaseBranchSpec,
+    CaseBranchDetailsPatch,
+    CaseBranchOut,
     CaseFormDataOut,
-    CaseTrailSchema,
+    CaseTrailIn,
 )
-from chatddx.repo.entities.connection.django import ConnectionBranchModel
-from chatddx.repo.entities.connection.pydantic import (
-    ConnectionBranchSpec,
-    ConnectionFormDataOut,
-    ConnectionTrailSchema,
+from chatddx.repo.entities.client.django import ClientBranchModel
+from chatddx.repo.entities.client.pydantic import (
+    ClientBranchDetailsPatch,
+    ClientBranchOut,
+    ClientFormDataOut,
+    ClientTrailIn,
 )
-from chatddx.repo.entities.expect.django import ExpectBranchModel
-from chatddx.repo.entities.expect.pydantic import (
-    ExpectBranchSpec,
-    ExpectFormDataOut,
-    ExpectTrailSchema,
+from chatddx.repo.entities.coercion.django import CoercionBranchModel
+from chatddx.repo.entities.coercion.pydantic import (
+    CoercionBranchOut,
+    CoercionFormDataOut,
+    CoercionTrailIn,
+)
+from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
+from chatddx.repo.entities.configuration.pydantic import (
+    ConfigurationBranchOut,
+    ConfigurationFormDataOut,
+    ConfigurationTrailIn,
 )
 from chatddx.repo.entities.instruction.django import InstructionBranchModel
 from chatddx.repo.entities.instruction.pydantic import (
-    InstructionBranchSpec,
+    InstructionBranchOut,
     InstructionFormDataOut,
-    InstructionTrailSchema,
+    InstructionTrailIn,
 )
-from chatddx.repo.entities.output_type.django import OutputTypeBranchModel
-from chatddx.repo.entities.output_type.pydantic import (
-    OutputTypeBranchSpec,
-    OutputTypeFormDataOut,
-    OutputTypeTrailSchema,
+from chatddx.repo.entities.llm.django import LLMBranchModel
+from chatddx.repo.entities.llm.pydantic import (
+    LLMBranchDetailsPatch,
+    LLMBranchOut,
+    LLMFormDataOut,
+    LLMTrailIn,
 )
-from chatddx.repo.entities.sampling_params.django import SamplingParamsBranchModel
-from chatddx.repo.entities.sampling_params.pydantic import (
-    SamplingParamsBranchSpec,
-    SamplingParamsFormDataOut,
-    SamplingParamsTrailSchema,
+from chatddx.repo.entities.machine.django import MachineBranchModel
+from chatddx.repo.entities.machine.pydantic import (
+    MachineBranchDetailsPatch,
+    MachineBranchOut,
+    MachineFormDataOut,
+    MachineTrailIn,
+)
+from chatddx.repo.entities.os.django import OsBranchModel
+from chatddx.repo.entities.os.pydantic import (
+    OsBranchDetailsPatch,
+    OsBranchOut,
+    OsFormDataOut,
+    OsTrailIn,
+)
+from chatddx.repo.entities.output.django import OutputBranchModel
+from chatddx.repo.entities.output.pydantic import (
+    OutputBranchOut,
+    OutputFormDataOut,
+    OutputTrailIn,
+)
+from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
+from chatddx.repo.entities.reasoning.pydantic import (
+    ReasoningBranchOut,
+    ReasoningFormDataOut,
+    ReasoningTrailIn,
+)
+from chatddx.repo.entities.sampling.django import SamplingBranchModel
+from chatddx.repo.entities.sampling.pydantic import (
+    SamplingBranchOut,
+    SamplingFormDataOut,
+    SamplingTrailIn,
 )
 from chatddx.repo.entities.scorer.django import ScorerBranchModel
 from chatddx.repo.entities.scorer.pydantic import (
-    ScorerBranchSpec,
+    ScorerBranchDetailsPatch,
+    ScorerBranchOut,
     ScorerFormDataOut,
-    ScorerTrailSchema,
+    ScorerTrailIn,
+)
+from chatddx.repo.entities.serving.django import ServingBranchModel
+from chatddx.repo.entities.serving.pydantic import (
+    ServingBranchDetailsPatch,
+    ServingBranchOut,
+    ServingFormDataOut,
+    ServingTrailIn,
+)
+from chatddx.repo.entities.stack.django import StackBranchModel
+from chatddx.repo.entities.stack.pydantic import (
+    StackBranchDetailsPatch,
+    StackBranchOut,
+    StackFormDataOut,
+    StackTrailIn,
 )
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.entities.tool.pydantic import (
-    ToolBranchSpec,
+    ToolBranchDetailsPatch,
+    ToolBranchOut,
     ToolFormDataOut,
-    ToolTrailSchema,
+    ToolTrailIn,
 )
-from chatddx.repo.entities.tool_group.django import ToolGroupBranchModel
-from chatddx.repo.entities.tool_group.pydantic import (
-    ToolGroupBranchSpec,
-    ToolGroupFormDataOut,
-    ToolGroupTrailSchema,
+from chatddx.repo.entities.toolset.django import ToolsetBranchModel
+from chatddx.repo.entities.toolset.pydantic import (
+    ToolsetBranchOut,
+    ToolsetFormDataOut,
+    ToolsetTrailIn,
 )
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 
 
 class ParsedInventory(BaseModel):
-    agent: dict[str, tuple[AgentTrailSchema, BranchDetailsPatch]]
-    instruction: dict[str, tuple[InstructionTrailSchema, BranchDetailsPatch]]
-    connection: dict[str, tuple[ConnectionTrailSchema, BranchDetailsPatch]]
-    sampling_params: dict[str, tuple[SamplingParamsTrailSchema, BranchDetailsPatch]]
-    tool_group: dict[str, tuple[ToolGroupTrailSchema, BranchDetailsPatch]]
-    tool: dict[str, tuple[ToolTrailSchema, BranchDetailsPatch]]
-    output_type: dict[str, tuple[OutputTypeTrailSchema, BranchDetailsPatch]]
-    case: dict[str, tuple[CaseTrailSchema, BranchDetailsPatch]]
-    scorer: dict[str, tuple[ScorerTrailSchema, BranchDetailsPatch]]
-    expect: dict[str, tuple[ExpectTrailSchema, BranchDetailsPatch]]
+    machine: dict[str, tuple[MachineTrailIn, MachineBranchDetailsPatch]]
+    os: dict[str, tuple[OsTrailIn, OsBranchDetailsPatch]]
+    llm: dict[str, tuple[LLMTrailIn, LLMBranchDetailsPatch]]
+    serving: dict[str, tuple[ServingTrailIn, ServingBranchDetailsPatch]]
+    client: dict[str, tuple[ClientTrailIn, ClientBranchDetailsPatch]]
+    stack: dict[str, tuple[StackTrailIn, StackBranchDetailsPatch]]
+    tool: dict[str, tuple[ToolTrailIn, ToolBranchDetailsPatch]]
+    toolset: dict[str, tuple[ToolsetTrailIn, BranchDetailsPatch]]
+    instruction: dict[str, tuple[InstructionTrailIn, BranchDetailsPatch]]
+    output: dict[str, tuple[OutputTrailIn, BranchDetailsPatch]]
+    coercion: dict[str, tuple[CoercionTrailIn, BranchDetailsPatch]]
+    reasoning: dict[str, tuple[ReasoningTrailIn, BranchDetailsPatch]]
+    sampling: dict[str, tuple[SamplingTrailIn, BranchDetailsPatch]]
+    configuration: dict[str, tuple[ConfigurationTrailIn, BranchDetailsPatch]]
+    case: dict[str, tuple[CaseTrailIn, CaseBranchDetailsPatch]]
+    scorer: dict[str, tuple[ScorerTrailIn, ScorerBranchDetailsPatch]]
 
 
-class InventoryTrailSchema(BaseModel):
-    agent: dict[str, AgentTrailSchema]
-    instruction: dict[str, InstructionTrailSchema]
-    connection: dict[str, ConnectionTrailSchema]
-    sampling_params: dict[str, SamplingParamsTrailSchema]
-    tool_group: dict[str, ToolGroupTrailSchema]
-    tool: dict[str, ToolTrailSchema]
-    output_type: dict[str, OutputTypeTrailSchema]
-    case: dict[str, CaseTrailSchema]
-    scorer: dict[str, ScorerTrailSchema]
-    expect: dict[str, ExpectTrailSchema]
+class InventoryTrailIn(BaseModel):
+    machine: dict[str, MachineTrailIn]
+    os: dict[str, OsTrailIn]
+    llm: dict[str, LLMTrailIn]
+    serving: dict[str, ServingTrailIn]
+    client: dict[str, ClientTrailIn]
+    stack: dict[str, StackTrailIn]
+    tool: dict[str, ToolTrailIn]
+    toolset: dict[str, ToolsetTrailIn]
+    instruction: dict[str, InstructionTrailIn]
+    output: dict[str, OutputTrailIn]
+    coercion: dict[str, CoercionTrailIn]
+    reasoning: dict[str, ReasoningTrailIn]
+    sampling: dict[str, SamplingTrailIn]
+    configuration: dict[str, ConfigurationTrailIn]
+    case: dict[str, CaseTrailIn]
+    scorer: dict[str, ScorerTrailIn]
 
 
 class InventoryFormDataOut(BaseModel):
-    agent: dict[str, AgentFormDataOut]
-    instruction: dict[str, InstructionFormDataOut]
-    connection: dict[str, ConnectionFormDataOut]
-    sampling_params: dict[str, SamplingParamsFormDataOut]
-    output_type: dict[str, OutputTypeFormDataOut]
-    tool_group: dict[str, ToolGroupFormDataOut]
+    machine: dict[str, MachineFormDataOut]
+    os: dict[str, OsFormDataOut]
+    llm: dict[str, LLMFormDataOut]
+    serving: dict[str, ServingFormDataOut]
+    client: dict[str, ClientFormDataOut]
+    stack: dict[str, StackFormDataOut]
     tool: dict[str, ToolFormDataOut]
+    toolset: dict[str, ToolsetFormDataOut]
+    instruction: dict[str, InstructionFormDataOut]
+    output: dict[str, OutputFormDataOut]
+    coercion: dict[str, CoercionFormDataOut]
+    reasoning: dict[str, ReasoningFormDataOut]
+    sampling: dict[str, SamplingFormDataOut]
+    configuration: dict[str, ConfigurationFormDataOut]
     case: dict[str, CaseFormDataOut]
     scorer: dict[str, ScorerFormDataOut]
-    expect: dict[str, ExpectFormDataOut]
 
 
-class InventoryBranchSpec(BaseModel):
-    agent: dict[str, AgentBranchSpec]
-    instruction: dict[str, InstructionBranchSpec]
-    connection: dict[str, ConnectionBranchSpec]
-    sampling_params: dict[str, SamplingParamsBranchSpec]
-    output_type: dict[str, OutputTypeBranchSpec]
-    tool_group: dict[str, ToolGroupBranchSpec]
-    tool: dict[str, ToolBranchSpec]
-    case: dict[str, CaseBranchSpec]
-    scorer: dict[str, ScorerBranchSpec]
-    expect: dict[str, ExpectBranchSpec]
+class InventoryBranchOut(BaseModel):
+    machine: dict[str, MachineBranchOut]
+    os: dict[str, OsBranchOut]
+    llm: dict[str, LLMBranchOut]
+    serving: dict[str, ServingBranchOut]
+    client: dict[str, ClientBranchOut]
+    stack: dict[str, StackBranchOut]
+    tool: dict[str, ToolBranchOut]
+    toolset: dict[str, ToolsetBranchOut]
+    instruction: dict[str, InstructionBranchOut]
+    output: dict[str, OutputBranchOut]
+    coercion: dict[str, CoercionBranchOut]
+    reasoning: dict[str, ReasoningBranchOut]
+    sampling: dict[str, SamplingBranchOut]
+    configuration: dict[str, ConfigurationBranchOut]
+    case: dict[str, CaseBranchOut]
+    scorer: dict[str, ScorerBranchOut]
 
 
 class InventoryBranchModel(TypedDict):
-    agent: dict[str, AgentBranchModel]
-    instruction: dict[str, InstructionBranchModel]
-    connection: dict[str, ConnectionBranchModel]
-    sampling_params: dict[str, SamplingParamsBranchModel]
-    output_type: dict[str, OutputTypeBranchModel]
-    tool_group: dict[str, ToolGroupBranchModel]
+    machine: dict[str, MachineBranchModel]
+    os: dict[str, OsBranchModel]
+    llm: dict[str, LLMBranchModel]
+    serving: dict[str, ServingBranchModel]
+    client: dict[str, ClientBranchModel]
+    stack: dict[str, StackBranchModel]
     tool: dict[str, ToolBranchModel]
+    toolset: dict[str, ToolsetBranchModel]
+    instruction: dict[str, InstructionBranchModel]
+    output: dict[str, OutputBranchModel]
+    coercion: dict[str, CoercionBranchModel]
+    reasoning: dict[str, ReasoningBranchModel]
+    sampling: dict[str, SamplingBranchModel]
+    configuration: dict[str, ConfigurationBranchModel]
     case: dict[str, CaseBranchModel]
     scorer: dict[str, ScorerBranchModel]
-    expect: dict[str, ExpectBranchModel]
