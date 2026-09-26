@@ -30,6 +30,10 @@ PORTAL = Path(__file__).parent / "django" / "portal"
 
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
 TEST_GIFTBAG = settings.INVENTORY_PATH / "test-giftbag-inventory.toml"
+# the test inventory less its cases, and the test inventory as the archive
+# has it later: for what seeding an owner with the registry comes to
+TEST_REGISTRY = settings.INVENTORY_PATH / "test-registry-inventory.toml"
+TEST_LATER = settings.INVENTORY_PATH / "test-later-inventory.toml"
 
 # The tests' people come on in alphabetical order: alice, whom the seed is
 # for and a repl or a client speaks as unless told otherwise, then bob, carol,
