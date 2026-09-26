@@ -20,8 +20,8 @@ from chatddx.repo.parsers.inventory import parse
 from chatddx.repo.queries import head_of
 from chatddx.repo.store.branch import commit
 
-# the portal's tests still speak the old datamodel
-collect_ignore = ["django-old-ref/tests"]
+# the old portal and its worker, kept for reference: nothing runs them
+collect_ignore = ["django-old-ref"]
 
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
 TEST_GIFTBAG = settings.INVENTORY_PATH / "test-giftbag-inventory.toml"
