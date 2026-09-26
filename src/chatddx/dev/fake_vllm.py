@@ -18,6 +18,17 @@ FINAL_RESULT = "final_result"
 # where a runaway ends, with no max_tokens to end it sooner
 CONTEXT = 32768
 
+# the LLMs it serves, by their served names, each with the context it takes
+# (inventory/llms.toml), as vLLM lists a model it serves whole: loaded by
+# its name, as `vllm serve NAME` loads one
+SERVED: dict[str, int] = {
+    "Qwen/Qwen3-8B-AWQ": 32768,
+    "openai/gpt-oss-20b": 131072,
+}
+
+# what it says it is, asked for its version
+VERSION = "fake"
+
 _TRANSPORT = frozenset({"messages", "model", "stream", "stream_options"})
 
 # a word and the space after it; a thinking tag is a token of its own, as it
@@ -295,6 +306,36 @@ def instance(
             return None
 
 
+def models() -> dict[str, Any]:
+    """The LLMs it serves, as vLLM lists them at GET /v1/models."""
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": name,
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": "vllm",
+                "root": name,
+                "parent": None,
+                "max_model_len": context,
+            }
+            for name, context in SERVED.items()
+        ],
+    }
+
+
+def got(path: str) -> tuple[int, dict[str, Any]]:
+    """What a GET of `path` gets: the LLMs it serves, its version, or nothing."""
+    match path.rstrip("/"):
+        case "/v1/models":
+            return 200, models()
+        case "/version":
+            return 200, {"version": VERSION}
+        case _:
+            return 404, {"error": {"message": f"no route for {path}"}}
+
+
 class FakeTransport(httpx2.AsyncBaseTransport):
     def __init__(self, reasoning_parser: bool = True, runaway: bool = False):
         self.requests: list[dict[str, Any]] = []
@@ -304,6 +345,10 @@ class FakeTransport(httpx2.AsyncBaseTransport):
 
     @override
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        if request.method == "GET":
+            status, answer = got(request.url.path)
+            return httpx2.Response(status, json=answer)
+
         body = json.loads(request.content)
         self.requests.append(body)
 
@@ -363,6 +408,9 @@ class _Handler(BaseHTTPRequestHandler):
     delay: float = 0.0
     reasoning_parser: bool = True
     runaway: bool = False
+
+    def do_GET(self) -> None:
+        self._json(*got(self.path))
 
     def do_POST(self) -> None:
         if self.path.rstrip("/") != "/v1/chat/completions":

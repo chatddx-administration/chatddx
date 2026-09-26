@@ -16,6 +16,8 @@ from chatddx.core import settings
 from chatddx.dev.fake_vllm import (
     ANSWER,
     CONTEXT,
+    SERVED,
+    VERSION,
     Call,
     FakeTransport,
     Reply,
@@ -408,8 +410,32 @@ def test_served_it_runs_away_when_told_to():
     assert content != ANSWER
 
 
+def test_it_lists_the_llms_it_serves_as_vllm_does(fake_url: str):
+    listed = httpx2.get(f"{fake_url}/v1/models").json()["data"]
+
+    # each loaded by its name, with the context its LLM takes
+    assert {model["id"]: model["max_model_len"] for model in listed} == SERVED
+    assert [model["root"] for model in listed] == list(SERVED)
+
+
+def test_it_says_what_it_is_asked_for_its_version(fake_url: str):
+    assert httpx2.get(f"{fake_url}/version").json() == {"version": VERSION}
+
+
+def test_in_process_it_lists_the_llms_and_says_its_version_too():
+    async def got(path: str) -> Any:
+        async with httpx2.AsyncClient(transport=FakeTransport()) as client:
+            return (await client.get(f"http://localhost:12099{path}")).json()
+
+    assert [model["id"] for model in asyncio.run(got("/v1/models"))["data"]] == list(
+        SERVED
+    )
+    assert asyncio.run(got("/version")) == {"version": VERSION}
+
+
 def test_it_serves_nothing_else(fake_url: str):
     assert httpx2.post(f"{fake_url}/v1/completions", json={}).status_code == 404
+    assert httpx2.get(f"{fake_url}/v1/completions").status_code == 404
 
 
 def test_a_client_that_hangs_up_is_heard_at_once_and_its_request_aborted(
