@@ -46,6 +46,19 @@ def crossed(cell: Cell, variations: Mapping[str, Sequence[Any]]) -> list[Cell]:
     return list(cells.values())
 
 
+def reasons(error: NotReady | CellRefused) -> list[str]:
+    """What stands in a cell's way, each refusal with its slice."""
+    match error:
+        case CellRefused(refusals=refusals):
+            return [
+                f"{'not yet' if refusal.kind == 'later' else 'refused'}: "
+                + f"{refusal.slice}: {refusal.reason}"
+                for refusal in refusals
+            ]
+        case _:
+            return [str(error)]
+
+
 @dataclass(frozen=True)
 class Planned:
     """A cell of a plan: ready, or held back by what stands in its way."""
@@ -53,6 +66,10 @@ class Planned:
     cell: Cell
     ready: Ready | None = None
     held_back: NotReady | CellRefused | None = None
+
+    @property
+    def why(self) -> list[str]:
+        return [] if self.held_back is None else reasons(self.held_back)
 
 
 @dataclass(frozen=True)

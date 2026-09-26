@@ -9,34 +9,24 @@ as stopped, and the batch.
 
 import asyncio
 import json
-import logging
-import queue
-import threading
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
-from datetime import datetime
+from contextlib import aclosing
 from typing import Any, cast
 from uuid import UUID
 
 from asgiref.sync import sync_to_async
 from django.http import StreamingHttpResponse
-from django.utils import timezone
 from ninja import Schema
 from ninja.errors import HttpError
 from ninja.responses import NinjaJSONEncoder
 from pydantic import TypeAdapter
-from pydantic_ai import (
-    AgentRunResultEvent,
-    AgentStreamEvent,
-    PartDeltaEvent,
-    PartStartEvent,
-    ThinkingPart,
-    ThinkingPartDelta,
-)
+from pydantic_ai import AgentRunResultEvent, AgentStreamEvent
 
 from chatddx.bench.bench import Bench, Ready, Trial, drawn_seed
 from chatddx.bench.cell import NONE, Cell
-from chatddx.bench.outcome import STOPPED, failed, holds, unheeded
+from chatddx.bench.outcome import unheeded
 from chatddx.bench.plan import Plan, Planned
+from chatddx.bench.sending import Handed, Sending as BenchSending
 from chatddx.django.api.schemas import (
     Answered,
     Batched,
@@ -52,16 +42,14 @@ from chatddx.django.api.schemas import (
     Summarized,
 )
 from chatddx.django.api.showing import run_of, scores_of, sums_of, views_of
-from chatddx.history.models import ConversationContext, RunModel, RunStatus, ScoreModel
+from chatddx.history.models import ConversationContext, RunModel
 from chatddx.history.record import Outcome
 from chatddx.repo.entities.case.django import CaseTrailModel
 from chatddx.repo.entities.case.pydantic import CaseTrailIn
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.repo.store.trail import dump_trail
-from chatddx.runtime.run import Run, Runaway, invalid
+from chatddx.runtime.run import Runaway, invalid
 from chatddx.scoring.score import Scoring
-
-logger = logging.getLogger(__name__)
 
 # pydantic-ai's events, streamed as they come
 STREAMED: TypeAdapter[Any] = TypeAdapter(AgentStreamEvent)
@@ -85,21 +73,12 @@ def seed_of(ready: Ready, seed: Seed) -> int | None:
     )
 
 
-class Sending:
+class Sending(BenchSending):
+    """A trial on its way, told in the API's events."""
+
     def __init__(self, bench: Bench, trial: Trial, scoring: Scoring | None = None):
-        self.bench: Bench = bench
-        self.trial: Trial = trial
-        self.run: Run = bench.made(trial)
-        self.scoring: Scoring | None = scoring
-
-        self.outcome: Outcome | None = None
-        self.started: datetime | None = None
-        self.finished: datetime | None = None
-        self.made: list[ScoreModel] = []
-
-        self._thought: bool = False
-        self._answer: Any = None
-        self._written: bool = False
+        super().__init__(bench, trial, ConversationContext.API, scoring)
+        self._told: bool = False
 
     @classmethod
     def of(cls, bench: Bench, cell: Cell, spec: RunIn) -> "Sending":
@@ -130,44 +109,28 @@ class Sending:
             seed=self.run.seed,
         )
 
-    async def events(self) -> AsyncGenerator[Any]:
+    async def told(
+        self,
+    ) -> AsyncGenerator[AgentStreamEvent | Answered | Judged | Failed]:
         """What the LLM sends back, then what its answer comes to: no database."""
-        self.started = timezone.now()
+        async with aclosing(self.events()) as events:
+            async for event in events:
+                match event:
+                    case AgentRunResultEvent(result=result):
+                        yield Answered(answer=result.output, usage=result.usage)
+                    case _:
+                        yield event
 
-        try:
-            async with self.run.stream() as stream:
-                async for event in stream:
-                    match event:
-                        case AgentRunResultEvent(result=result):
-                            self._answer = result.output
-                            yield Answered(answer=result.output, usage=result.usage)
-                        case (
-                            PartStartEvent(part=ThinkingPart())
-                            | PartDeltaEvent(delta=ThinkingPartDelta())
-                        ):
-                            self._thought = True
-                            yield event
-                        case _:
-                            yield event
-        except (asyncio.CancelledError, GeneratorExit):
-            self.outcome = STOPPED
-            raise
-        except Runaway as e:
-            self.outcome = failed(e, self.run)
-            yield self._judged(self.outcome, self.outcome.error)
-        except Exception as e:  # noqa: BLE001
-            self.outcome = failed(e, self.run)
-            yield Failed(message=self.outcome.error or type(e).__name__)
-        else:
-            resolution = self.trial.ready.resolution
-            self.outcome = Outcome(
-                RunStatus.COMPLETED,
-                answer=self._answer,
-                valid=holds(resolution, self._answer),
-            )
-            yield self._judged(self.outcome)
-        finally:
-            self.finished = timezone.now()
+        outcome = self.outcome
+        assert outcome is not None
+
+        match self.error:
+            case None:
+                yield self._judged(outcome)
+            case Runaway():
+                yield self._judged(outcome, outcome.error)
+            case error:
+                yield Failed(message=outcome.error or type(error).__name__)
 
     def _judged(self, outcome: Outcome, stopped: str | None = None) -> Judged:
         resolution = self.trial.ready.resolution
@@ -175,7 +138,7 @@ class Sending:
         answer = outcome.answer
 
         return Judged(
-            warning=unheeded(resolution.reasoning.intent, self._thought),
+            warning=unheeded(resolution.reasoning.intent, self.thought),
             valid=outcome.valid,
             problem=None if coercion is None else invalid(coercion.schema, answer),
             views=views_of(resolution.output, answer),
@@ -183,40 +146,25 @@ class Sending:
         )
 
     def recorded(self) -> list[Event]:
-        """Write the run down, once, and score it; a run that never began isn't."""
-        if self.outcome is None or self._written:
+        """The run written down, once, and scored, as the API tells it."""
+        if self.outcome is None or self._told:
             return []
 
-        self._written = True
-        bench = self.bench
+        self._told = True
+        written = self.written()
 
-        try:
-            recorded = bench.recorded(
-                self.trial,
-                self.run,
-                self.outcome,
-                self.started or timezone.now(),
-                self.finished or timezone.now(),
-                ConversationContext.API,
-            )
-        except Exception as e:
-            logger.exception("a run of %s's was not recorded", bench.identity)
-            return [Failed(message=f"not recorded: {type(e).__name__}: {e}")]
+        if written.run is None:
+            return [Failed(message=written.unrecorded)] if written.unrecorded else []
 
-        said: list[Event] = []
-        scoring = self.scoring or Scoring(bench.identity)
-
-        try:
-            self.made = scoring.score(recorded)
-            said.append(Scored(scores=scores_of(self.made)))
-        except Exception as e:
-            logger.exception("run %s was not scored", recorded.uuid)
-            said.append(Failed(message=f"not scored: {type(e).__name__}: {e}"))
-
+        said: list[Event] = [
+            Failed(message=written.unscored)
+            if written.unscored
+            else Scored(scores=scores_of(written.scores))
+        ]
         run = RunModel.objects.select_related(
             "trial__configuration__output", "conversation", "client"
-        ).get(pk=recorded.pk)
-        said.append(Recorded(run=run_of(run, scoring)))
+        ).get(pk=written.run.pk)
+        said.append(Recorded(run=run_of(run, self.scoring)))
 
         return said
 
@@ -224,7 +172,7 @@ class Sending:
         """Sent and recorded in one go, from a loop of its own."""
 
         async def sent() -> None:
-            async for _ in self.events():
+            async for _ in self.told():
                 pass
 
         try:
@@ -269,7 +217,9 @@ class Batch:
         )
 
     def summarized(self) -> list[Event]:
-        made = [score for sending in self.sendings for score in sending.made]
+        made = [
+            score for sending in self.sendings for score in sending.written().scores
+        ]
 
         return [
             Summarized(
@@ -301,7 +251,7 @@ class EventStream(StreamingHttpResponse):
 
         for sending in self._sendings:
             yield self.make_bytes(sse(sending.began()))
-            events = sending.events()
+            events = sending.told()
 
             try:
                 async for event in events:
@@ -326,62 +276,20 @@ class EventStream(StreamingHttpResponse):
         for sending in self._sendings:
             yield self.make_bytes(sse(sending.began()))
 
-            handed: queue.Queue[Any] = queue.Queue()
-            loop = asyncio.new_event_loop()
-            task = loop.create_task(_hand_over(sending, handed))
-            thread = threading.Thread(target=_send, args=(loop, task), daemon=True)
-            thread.start()
-
             try:
-                while (event := handed.get()) is not _DONE:
-                    if isinstance(event, BaseException):
-                        raise event
-
-                    yield self.make_bytes(sse(event))
+                with Handed(sending.told()) as handed:
+                    for event in handed:
+                        yield self.make_bytes(sse(event))
             except BaseException:
                 # the client went away: the run stops, written down as stopped
-                try:
-                    loop.call_soon_threadsafe(task.cancel)
-                except RuntimeError:
-                    pass  # it had ended, and its loop is closed
-
-                thread.join()
                 _ = sending.recorded()
                 raise
-
-            thread.join()
 
             for event in sending.recorded():
                 yield self.make_bytes(sse(event))
 
         for event in self._closing():
             yield self.make_bytes(sse(event))
-
-
-# what a run's thread hands over last
-_DONE = object()
-
-
-async def _hand_over(sending: Sending, handed: queue.Queue[Any]) -> None:
-    try:
-        async for event in sending.events():
-            handed.put(event)
-    except asyncio.CancelledError:
-        pass
-    except Exception as e:  # noqa: BLE001
-        handed.put(e)
-    finally:
-        handed.put(_DONE)
-
-
-def _send(loop: asyncio.AbstractEventLoop, task: asyncio.Task[None]) -> None:
-    try:
-        loop.run_until_complete(task)
-    except asyncio.CancelledError:
-        pass  # stopped before it began: nothing was sent
-    finally:
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
 
 
 def sse(event: Any) -> str:

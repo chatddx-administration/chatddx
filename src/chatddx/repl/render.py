@@ -1,11 +1,11 @@
 import json
-from collections.abc import Iterable
+from collections.abc import AsyncIterable, Iterable
 from dataclasses import dataclass
 from typing import Any, Self
 
 from pydantic_ai import (
-    AgentRunEvents,
     AgentRunResultEvent,
+    AgentStreamEvent,
     FunctionToolResultEvent,
     ModelMessage,
     ModelRequest,
@@ -38,6 +38,9 @@ LATER = "yellow"
 
 TOKENS = len("tokens")
 OUTCOME = len("completed")
+
+# what a run streams back, as pydantic-ai has it, and what it came to
+type Events = AsyncIterable[AgentStreamEvent | AgentRunResultEvent[Any]]
 
 
 @dataclass(frozen=True)
@@ -95,7 +98,7 @@ class Transcript:
         self.labelled = False
 
 
-async def show_events(console: Console, events: AgentRunEvents[Any]) -> Streamed:
+async def show_events(console: Console, events: Events) -> Streamed:
     out = Transcript(console)
     answer: Any = None
     thought = False
@@ -223,7 +226,7 @@ class Tally:
         return line
 
 
-async def tally_events(events: AgentRunEvents[Any], tally: Tally) -> Streamed:
+async def tally_events(events: Events, tally: Tally) -> Streamed:
     answer: Any = None
     thought = False
 

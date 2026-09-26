@@ -2,11 +2,9 @@ import asyncio
 import signal
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from datetime import datetime
 from types import FrameType
 from typing import Any, Self
 
-from django.utils import timezone
 from pydantic_ai import UnexpectedModelBehavior
 from rich.text import Text
 
@@ -20,10 +18,10 @@ from chatddx.bench.bench import (
     drawn_seed,
 )
 from chatddx.bench.cell import NONE
-from chatddx.bench.outcome import STOPPED, failed, holds, unheeded
+from chatddx.bench.outcome import unheeded
 from chatddx.bench.plan import Plan, Planned
-from chatddx.history.models import RunModel, RunStatus, ScoreModel
-from chatddx.history.record import Outcome
+from chatddx.bench.sending import Sending, Written
+from chatddx.history.models import ConversationContext, ScoreModel
 from chatddx.repl.render import (
     LABEL,
     LATER,
@@ -40,7 +38,7 @@ from chatddx.repl.scoring import summary
 from chatddx.repl.shell import Repl
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import CellRefused, Resolution
-from chatddx.runtime.run import Run, Runaway, invalid
+from chatddx.runtime.run import Runaway, invalid
 from chatddx.scoring.score import Scoring
 
 # the command that clears what stands in a cell's way
@@ -80,44 +78,31 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
 
     case = get_visible_branch_model("case", repl.identity, name)
     trial = Trial.on(ready, case, chosen)
-    run = _made(repl, trial)
+    sending = _sending(repl, trial)
 
-    if run is None:
+    if sending is None:
         return
 
     repl.console.print(f"trial: {trial.description}", style="bold")
 
-    started = timezone.now()
-
     try:
-        streamed = asyncio.run(_stream(repl, run))
+        streamed = asyncio.run(_stream(repl, sending))
     except KeyboardInterrupt:
         repl.console.print("\n(stopped)", style=LABEL)
-        outcome = STOPPED
-    except Runaway as e:
-        outcome = failed(e, run)
-        repl.error(f"\n{outcome.error}")
-        _ = _shown(repl, ready.resolution, outcome.answer)
-    except Exception as e:  # noqa: BLE001
-        outcome = failed(e, run)
-        unparsed = isinstance(e, UnexpectedModelBehavior)
-        repl.error(f"invalid: {outcome.error}" if unparsed else f"\n{outcome.error}")
+        sending.stop()
     else:
-        valid = _judge(repl, ready.resolution, streamed)
-        outcome = Outcome(RunStatus.COMPLETED, answer=streamed.answer, valid=valid)
-
-    finished = timezone.now()
+        _said(repl, sending, streamed)
 
     with _held():
-        recorded = _recorded(repl, trial, run, outcome, started, finished)
+        written = _written(repl, sending)
 
-        if recorded is None:
+        if written.run is None:
             return
 
-        show_scores(repl.console, _scored(repl, recorded))
+        show_scores(repl.console, written.scores)
         repl.console.print(
-            f"recorded as run {recorded.trial.runs.count()} of trial "
-            + str(recorded.trial.uuid)[:8],
+            f"recorded as run {written.run.trial.runs.count()} of trial "
+            + str(written.run.trial.uuid)[:8],
             style=LABEL,
         )
 
@@ -158,37 +143,25 @@ def batch(repl: Repl, *tags: str) -> None:
                 if stopping.asked:
                     break
 
-                run = _made(repl, trial)
+                sending = _sending(repl, trial, scoring)
 
-                if run is None:
+                if sending is None:
                     break
 
                 with Tally(repl.console, columns, trial.called) as tally:
                     stopping.tally = tally
-                    started = timezone.now()
 
                     try:
-                        streamed = asyncio.run(_tally(run, tally, stopping))
+                        _ = asyncio.run(_tally(sending, tally, stopping))
                     except asyncio.CancelledError:
-                        outcome = STOPPED
-                    except Exception as e:  # noqa: BLE001
-                        outcome = failed(e, run)
-                    else:
-                        outcome = Outcome(
-                            RunStatus.COMPLETED,
-                            answer=streamed.answer,
-                            valid=holds(ready.resolution, streamed.answer),
-                        )
+                        sending.stop()
 
-                    finished = timezone.now()
-                    recorded = _recorded(repl, trial, run, outcome, started, finished)
-                    scores = (
-                        [] if recorded is None else _scored(repl, recorded, scoring)
-                    )
-                    tally.end(outcome, scores)
+                    written = _written(repl, sending)
+                    assert sending.outcome is not None
+                    tally.end(sending.outcome, written.scores)
                     stopping.tally = None
 
-                made += scores
+                made += written.scores
                 ran += 1
         except KeyboardInterrupt:
             pass
@@ -231,27 +204,45 @@ def _seedable(repl: Repl, ready: Ready, seed: int | None) -> bool:
     return False
 
 
-def _made(repl: Repl, trial: Trial) -> Run | None:
+def _sending(
+    repl: Repl, trial: Trial, scoring: Scoring | None = None
+) -> Sending | None:
     try:
-        return repl.made(trial)
+        return Sending(repl, trial, ConversationContext.REPL, scoring)
     except ValueError as e:
         repl.error(str(e))
         return None
 
 
-async def _stream(repl: Repl, run: Run) -> Streamed:
-    async with run.stream() as events:
-        return await show_events(repl.console, events)
+async def _stream(repl: Repl, sending: Sending) -> Streamed:
+    return await show_events(repl.console, sending.events())
 
 
-async def _tally(run: Run, tally: Tally, stopping: "_Stopping") -> Streamed:
+async def _tally(sending: Sending, tally: Tally, stopping: "_Stopping") -> Streamed:
     stopping.streaming = (asyncio.get_running_loop(), asyncio.current_task())
 
     try:
-        async with run.stream() as events:
-            return await tally_events(events, tally)
+        return await tally_events(sending.events(), tally)
     finally:
         stopping.streaming = None
+
+
+def _said(repl: Repl, sending: Sending, streamed: Streamed) -> None:
+    """What the run came to, where it didn't come to an answer as asked."""
+    outcome = sending.outcome
+    resolution = sending.trial.ready.resolution
+    assert outcome is not None
+
+    match sending.error:
+        case None:
+            _ = _judge(repl, resolution, streamed)
+        case Runaway():
+            repl.error(f"\n{outcome.error}")
+            _ = _shown(repl, resolution, outcome.answer)
+        case UnexpectedModelBehavior():
+            repl.error(f"invalid: {outcome.error}")
+        case _:
+            repl.error(f"\n{outcome.error}")
 
 
 def _judge(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | None:
@@ -276,29 +267,14 @@ def _shown(repl: Repl, resolution: Resolution, answer: Any) -> bool | None:
     return valid
 
 
-def _recorded(
-    repl: Repl,
-    trial: Trial,
-    run: Run,
-    outcome: Outcome,
-    started: datetime,
-    finished: datetime,
-) -> RunModel | None:
-    try:
-        return repl.recorded(trial, run, outcome, started, finished)
-    except Exception as e:  # noqa: BLE001
-        repl.error(f"not recorded: {type(e).__name__}: {e}")
-        return None
+def _written(repl: Repl, sending: Sending) -> Written:
+    written = sending.written()
 
+    for unwritten in (written.unrecorded, written.unscored):
+        if unwritten is not None:
+            repl.error(unwritten)
 
-def _scored(
-    repl: Repl, recorded: RunModel, scoring: Scoring | None = None
-) -> list[ScoreModel]:
-    try:
-        return (scoring or Scoring(repl.identity)).score(recorded)
-    except Exception as e:  # noqa: BLE001
-        repl.error(f"not scored: {type(e).__name__}: {e}")
-        return []
+    return written
 
 
 @contextmanager

@@ -67,6 +67,15 @@ class Cell:
         variation = self.variations[entity]
         return NONE if variation is None else variation.name
 
+    @property
+    def set_names(self) -> dict[str, str]:
+        """What is set in the cell in place of the configuration's, by name."""
+        return {
+            entity: self.set_name(entity)
+            for entity in SLICES
+            if entity in self.variations
+        }
+
     def holds(self, entity: str, variation: Any) -> bool:
         """Whether `variation` is the configuration's own; None, no toolset."""
         assert self.configuration

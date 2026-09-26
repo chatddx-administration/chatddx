@@ -8,36 +8,13 @@ saved batch's alike.
 from dataclasses import dataclass
 from typing import Any
 
-from chatddx.bench.bench import Bench, HeldTo, NotReady
-from chatddx.bench.cell import SLICES, Cell
-from chatddx.bench.plan import Plan, Planned
-from chatddx.runtime.resolution import CellRefused
+from chatddx.bench.bench import Bench, HeldTo
+from chatddx.bench.cell import SLICES
+from chatddx.bench.plan import Plan
 from chatddx.scoring.score import Scoring
 
 # the most names a list on a page shows before it says how many more
 SHOWN = 12
-
-
-def set_of(cell: Cell) -> dict[str, str]:
-    """The variations held in the cell in place of its configuration's, by name."""
-    return {
-        entity: cell.set_name(entity) for entity in SLICES if entity in cell.variations
-    }
-
-
-def why(planned: Planned) -> list[str]:
-    """What holds a cell back, each refusal with its slice."""
-    match planned.held_back:
-        case CellRefused(refusals=refusals):
-            return [
-                f"{'not yet' if refusal.kind == 'later' else 'refused'}: "
-                + f"{refusal.slice}: {refusal.reason}"
-                for refusal in refusals
-            ]
-        case NotReady() as held_back:
-            return [str(held_back)]
-        case _:
-            return []
 
 
 def cells_of(plan: Plan) -> list[dict[str, Any]]:
@@ -45,7 +22,7 @@ def cells_of(plan: Plan) -> list[dict[str, Any]]:
     return [
         {
             "label": ready.cell.label,
-            "set": set_of(ready.cell),
+            "set": ready.cell.set_names,
             "fingerprint": ready.cell.fingerprint,
             "seed": plan.seed_of(ready),
         }
@@ -55,7 +32,11 @@ def cells_of(plan: Plan) -> list[dict[str, Any]]:
 
 def held_back_of(plan: Plan) -> list[dict[str, Any]]:
     return [
-        {"label": planned.cell.label, "set": set_of(planned.cell), "why": why(planned)}
+        {
+            "label": planned.cell.label,
+            "set": planned.cell.set_names,
+            "why": planned.why,
+        }
         for planned in plan.held_back
     ]
 

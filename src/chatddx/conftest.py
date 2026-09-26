@@ -1,8 +1,9 @@
 # pyright: basic
 
+import asyncio
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, override
 
 import pytest
 from django.apps import apps
@@ -119,6 +120,27 @@ def _init_data(*options: str, user: str = "alice") -> list[str]:
 def fake() -> FakeTransport:
     """The fake vLLM: it answers what a run sends it, as vLLM would."""
     return FakeTransport()
+
+
+class Stalling(FakeTransport):
+    """The fake vLLM, stalling after a few tokens as a busy server can."""
+
+    def __init__(self, after: int = 3):
+        super().__init__()
+        self.after: int = after
+        self.stalled: bool = False
+
+    @override
+    async def next_token(self, generated: int, /) -> None:
+        if generated >= self.after and not self.stalled:
+            self.stalled = True
+            await asyncio.sleep(10)
+
+
+@pytest.fixture
+def stalling() -> Stalling:
+    """The fake vLLM, stalling mid-answer: a run is still on its way when stopped."""
+    return Stalling()
 
 
 @pytest.fixture
