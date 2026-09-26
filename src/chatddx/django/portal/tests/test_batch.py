@@ -197,7 +197,7 @@ def test_confirming_keeps_the_batch_and_shows_it(alice: Client):
     assert batch.held_back == []
     assert batch.trials == 4
     assert any(
-        f"Batch {str(batch.uuid)[:8]} is kept: 4 trials" in str(message)
+        f"Batch {str(batch.uuid)[:8]} is kept, and its 4 trials queued" in str(message)
         for message in response.context["messages"]
     )
 

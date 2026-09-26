@@ -27,6 +27,7 @@ from chatddx.repo.names import short_fingerprint
 from chatddx.repo.parsers.inventory import ParseError, parse
 from chatddx.repo.queries import qs_head
 from chatddx.repo.store import inventory
+from chatddx.worker.models import QueuedModel
 
 receipt_text = {
     True: "created",
@@ -53,10 +54,12 @@ def wipe_data(
 
 def _wipe_history(user_name: str) -> list[str]:
     """
-    The user's scores and runs, the conversations their messages were in,
-    and the trials no one else's run is left of.
+    The trials the user put in the worker's queue, their scores and runs, the
+    conversations their messages were in, and the trials no one else's run
+    is left of.
     """
     # what refers to a row goes before the row
+    queued = _removed(QueuedModel.objects.filter(owner__name=user_name))
     scores = _removed(ScoreModel.objects.filter(owner__name=user_name))
     runs = _removed(RunModel.objects.filter(owner__name=user_name))
     messages = _removed(
@@ -66,6 +69,7 @@ def _wipe_history(user_name: str) -> list[str]:
     trials = _removed(TrialModel.objects.filter(runs__isnull=True))
 
     return [
+        f"[queued]: removed {queued}",
         f"[score]: removed {scores}",
         f"[run]: removed {runs}, unshared {_unshared(RunModel, user_name)}",
         f"[message]: removed {messages}",

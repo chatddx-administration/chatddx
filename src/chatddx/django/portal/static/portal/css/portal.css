@@ -89,3 +89,69 @@
 .portal-missing {
     color: var(--color-base-500);
 }
+
+/* The worker's status: a big bar of the drain, its counts across it. */
+.portal-progress {
+    background-color: var(--color-base-100);
+    border-radius: 6px;
+    display: flex;
+    height: 3rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.dark .portal-progress {
+    background-color: var(--color-base-800);
+}
+
+.portal-progress-finished {
+    background-color: var(--color-primary-600);
+}
+
+.portal-progress-running {
+    background-color: var(--color-primary-300);
+}
+
+/* what a stop took out of the queue: at the far end, where it never got to */
+.portal-progress-cancelled {
+    background-color: var(--color-base-300);
+    margin-left: auto;
+}
+
+.dark .portal-progress-cancelled {
+    background-color: var(--color-base-600);
+}
+
+.portal-progress-label {
+    align-items: center;
+    display: flex;
+    font-weight: 600;
+    inset: 0;
+    justify-content: center;
+    position: absolute;
+}
+
+.portal-progress-label span {
+    background-color: rgb(255 255 255 / 0.85);
+    border-radius: 9999px;
+    color: var(--color-base-900);
+    padding: 0.125rem 0.75rem;
+}
+
+.dark .portal-progress-label span {
+    background-color: rgb(0 0 0 / 0.6);
+    color: var(--color-base-100);
+}
+
+/* the case running: what it is, and its tally as it grows */
+.portal-running {
+    align-items: baseline;
+    column-gap: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+}
+
+.portal-tally {
+    font-variant-numeric: tabular-nums;
+}

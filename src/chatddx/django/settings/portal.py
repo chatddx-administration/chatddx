@@ -53,7 +53,6 @@ LANGUAGES = [
     ("sv", _("Swedish")),
 ]
 USE_I18N = True
-TIME_ZONE = "Europe/Stockholm"
 USE_TZ = True
 FORMAT_MODULE_PATH = ["chatddx.django.settings.formats"]
 
@@ -95,6 +94,12 @@ match os.environ.get("DJANGO_MODE", "dev"):
         SECURE_CONTENT_TYPE_NOSNIFF = True
     case mode:
         raise ImproperlyConfigured(f"DJANGO_MODE is dev or main, not {mode}")
+
+
+def _at(url_name: str):
+    """Whether a request is at the page of `url_name`: a tab of its own."""
+    return lambda request: request.resolver_match.url_name == url_name
+
 
 UNFOLD = {
     "SITE_TITLE": "chatddx",
@@ -176,4 +181,22 @@ UNFOLD = {
             },
         ],
     },
+    # the Batches' own pages: the batches, and the worker at their queue
+    "TABS": [
+        {
+            "models": ["portal.batch"],
+            "items": [
+                {
+                    "title": _("Batches"),
+                    "link": reverse_lazy("admin:portal_batch_changelist"),
+                    "active": _at("portal_batch_changelist"),
+                },
+                {
+                    "title": _("Status"),
+                    "link": reverse_lazy("admin:portal_batch_status"),
+                    "active": _at("portal_batch_status"),
+                },
+            ],
+        },
+    ],
 }

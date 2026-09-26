@@ -3,6 +3,9 @@ import os
 
 SALT_KEY = SECRET_KEY = "insecure-key"
 ROOT_URLCONF = "chatddx.django.urls"
+# the lab's, for the times the repl shows and the worker logs; Django's own
+# default is America/Chicago
+TIME_ZONE = "Europe/Stockholm"
 STATIC_ROOT = os.environ["STATIC_ROOT"]
 STATIC_URL = os.environ["STATIC_URL"]
 
@@ -10,6 +13,7 @@ INSTALLED_APPS = [
     "chatddx.django.core",
     "chatddx.django.repo",
     "chatddx.django.history",
+    "chatddx.django.worker",
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "django.contrib.sessions",

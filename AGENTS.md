@@ -9,7 +9,9 @@ Settings: `chatddx.django.settings` is minimal, for the CLI, the repl, the API a
 
 Baseline, in two runs: `pytest -m "not network"` under the minimal settings, and `pytest -m "not network" --ds chatddx.django.settings.portal`, which runs the portal's tests alone, on a test database of their own; quick: add `and not slow` to either; `--reuse-db` keeps the test database between runs (`--create-db` once a migration changes)
 
-The repl, the API and the portal's Batch plan and run cells through one internal API, `chatddx.bench`: a Bench (the registry as an identity sees it), a Cell, and a Plan.
+The repl, the API, the portal's Batch and the worker plan and run cells through one internal API, `chatddx.bench`: a Bench (the registry as an identity sees it), a Cell, a Plan, and a Sending (a trial on its way, written down once).
+
+The worker (src/chatddx/worker) runs the queue the portal's batches fill, on the minimal settings: `chatddx worker serve` is the host's service, `chatddx worker run` drains the queue once.
 
 Use `pyright: basic` for django code
 
