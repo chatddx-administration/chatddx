@@ -75,5 +75,3 @@ Start by writing logs, then add a judge beside the patterns and validate it; the
 3. **Then the batch.** Decide who runs a batch: inspect's eval sets, with chatddx still sending each request, or an executor of our own.
 
 Keep the patterns as a cheap, repeatable baseline beside the judge. inspect puts both in one log, comparable answer by answer.
-
-Open question: which cases do clinicians label to validate the judge, and what agreement is good enough?

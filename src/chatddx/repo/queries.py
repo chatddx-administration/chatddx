@@ -1,11 +1,3 @@
-"""
-The queries the registry answers itself: an owner's heads, and a branch with
-what it carries.
-
-`chatddx.django.portal.qs` builds the portal's pages on these; the registry
-doesn't reach up for them, so it stands without the pages.
-"""
-
 from typing import Any
 
 from django.db.models import Count, OuterRef, Prefetch, Q, QuerySet, Subquery
@@ -21,7 +13,6 @@ def qs_owned[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
 
 
 def qs_head[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    """The newest version of each of `owner_name`'s branches."""
     return _head(qs, qs_owned(qs, owner_name))
 
 
@@ -37,7 +28,6 @@ def head_of[T: BranchModel](qs: QuerySet[T], owner_name: str, name: str) -> T | 
 
 
 def qs_head_visible[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    """As `qs_head`, with the branches `owner_name` collaborates on."""
     return _head(
         qs,
         qs.filter(Q(owner__name=owner_name) | Q(collaborators__name=owner_name)),

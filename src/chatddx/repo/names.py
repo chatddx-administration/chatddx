@@ -5,7 +5,6 @@ SHORT_FINGERPRINT_LENGTH = 6
 
 
 def short_fingerprint(fingerprint: str) -> str:
-    """The first hex digits of a fingerprint, past its scheme."""
     return fingerprint_digest(fingerprint)[:SHORT_FINGERPRINT_LENGTH]
 
 

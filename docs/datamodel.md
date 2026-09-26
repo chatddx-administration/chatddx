@@ -3,69 +3,64 @@
 chatddx asks language models clinical questions and scores their answers.
 This note describes what it keeps to do that: what a model is asked and how,
 which model on which machine answered, the cases, what came back, and what
-the scorers made of it. It describes chatddx as it is.
+the scorers made of it.
 
 For using it, see `repl.md` (the shell) and `inventory.md` (the files that
 seed the database).
 
 ## 1. Content and versions
 
-Everything chatddx keeps about the things it works with has two layers.
+ChatDDX have two classes of content, both immutable and append-only:
+Configuration and History.
 
-### Content: trails
+### Configuration (repo)
+Configuration are versioned structured data divided in two layers:
+Branches and Trails.
 
-A **trail** is a piece of content that can't change: a vignette, a JSON
-schema, a sampling setting, a model's snapshot. Each trail is named by a
-**fingerprint**, a hash of its content, such as
-`cddx-trail/1:sha256:3f9a1c…`. The first part names the scheme and its
-version, so a new way of hashing can be added without breaking old
-fingerprints. The short form, `3f9a1c`, is what the shell shows.
+#### Trail contains what matters
 
-- **The same content is one trail,** whoever writes it. Two people who
-  write the same sampling setting share one row.
-- **A trail can't be edited or deleted.** The database refuses it. A
-  change is a new trail.
-- **Order is kept where a model reads it.** A JSON schema's properties are
-  hashed and stored in the order they were written, since a constrained
-  decoder emits them in that order.
-- **A trail holds only what changes a request, what the model reads, or how
-  an answer is read for scoring.** Everything else goes in the branch.
+A **trail** is a structured piece of data named by its **fingerprint**,
+a hash of its content that looks like `cddx-trail/1:sha256:3f9a1c…`.
+The short form, `3f9a1c`, is what the users see.
 
-### Names and descriptions: branches
+- **Identical content shares trail,** whoever writes it, it's called
+  de-duplication and it's used to reduce noice, bandwidth and storage.
+- **Trails are meticulous.** Sub-structures, like a JSON schema, are hashed and
+  stored in the order they were written, so a seemingly negligible difference
+  between two pieces of data can still produce a different trail.
+- **A trail holds only what might affect outcome.** Everything else goes in the
+  branch.
 
-A **branch** is someone's named version of a trail: alice's
-`management-plan`, the archive's `qwen3-8b-awq`. A branch has:
+#### Names and descriptions: branches
+
+A **branch** is like an envelope for a trail, adding properties to it
+that doesn't affect its fingerprint, like:
 
 - an **owner** and a **name**;
-- the **trail** it points at;
 - its **details**: what describes the content without being part of it,
   such as a machine's specs, a model's facts, a stack's address, or a
   case's targets;
 - **tags** and **collaborators**.
 
-How versions work:
+A change to the trail or the details makes a new branch row under the same owner
+and name. The newest row is the current one, and the older rows are its timeline.
 
-- **A change to the trail or the details makes a new version:** a new
-  branch row under the same owner and name. The newest row is the current
-  one, and the older rows are its history. A run records the rows it read,
-  so it can always say which version it ran with.
-- **A change to tags or collaborators doesn't make a new version.** They
-  are set on the current row.
-- **Committing what is already current changes nothing.**
-- **A composition brings its parts along.** Committing a stack or a
-  configuration gives the owner a branch of every part it reaches that
-  they have none of, named after the kind and short fingerprint
-  (`machine 3f9a1c`). When the shell saves a configuration (`save`), those
-  parts are copies of the archive's branches instead, names and details
-  included, where the archive has them.
+A change to tags or collaborators doesn't make a new version, they are simply
+attached to the current row and passed on to the next when the user expects it
+should do so.
 
-Who can see what:
+Committing a stack or a configuration gives the owner a branch of every part it
+reaches that they have none of, named after the kind and short fingerprint, like
+`machine 3f9a1c`. When the user saves a configuration (`save`), those parts are
+copies of the archive's branches instead, names and details included.
 
-- **Everyone sees their own branches, and those they collaborate on.** A
-  branch of one's own shadows a shared one of the same name.
-- **The archive** is the identity that owns the curated inventory.
-  `chatddx init-data USER` commits the inventory as the archive's, and
-  makes USER a collaborator on everything it committed.
+Everyone sees their own branches, and those they collaborate on.
+A branch of one's own shadows a shared one of the same name.
+A special user `archive` owns the initial inventory and adds new users as
+collaborators.
+
+The command `chatddx init-data USER` commits the inventory as the archive's, and
+makes USER a collaborator on everything it committed.
 
 ### Kinds of record
 
