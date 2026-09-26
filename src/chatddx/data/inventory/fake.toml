@@ -41,6 +41,8 @@ serving = "qwen3-8b-awq@fake"
 endpoint = "http://localhost:12099/v1/"
 served_name = "Qwen/Qwen3-8B-AWQ"
 api = "vllm"
+# the fake takes whatever it is sent at once: four, to see them run side by side
+max_jobs = 4
 tags = ["fake"]
 
 [stack."gpt-oss-20b@fake"]
@@ -50,4 +52,6 @@ serving = "gpt-oss-20b@fake"
 endpoint = "http://localhost:12099/v1/"
 served_name = "openai/gpt-oss-20b"
 api = "vllm"
+# the fake takes whatever it is sent at once: four, to see them run side by side
+max_jobs = 4
 tags = ["fake"]

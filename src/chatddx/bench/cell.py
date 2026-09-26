@@ -23,6 +23,22 @@ OPTIONAL: tuple[EntityName, ...] = ("toolset",)
 NONE = "none"
 
 
+@dataclass(frozen=True)
+class Kept:
+    """
+    A cell as a batch keeps it: by the names it was put together from, with
+    what it came to and the seed its trials take. The bench puts it together
+    again, as it was or not at all (Bench.cell_as_kept).
+    """
+
+    configuration: str
+    stack: str
+    set: Mapping[str, str]
+    label: str
+    fingerprint: str
+    seed: int | None
+
+
 @dataclass(frozen=True, eq=False)
 class Cell:
     """
@@ -122,6 +138,19 @@ class Cell:
             return None if variation is None else variation.trail
 
         return getattr(self.configuration.trail, entity)
+
+    def kept(self, seed: int | None) -> Kept:
+        """The cell as a batch keeps it, its trials under `seed`."""
+        assert self.configuration and self.stack
+
+        return Kept(
+            self.name,
+            self.stack.name,
+            self.set_names,
+            self.label,
+            self.fingerprint,
+            seed,
+        )
 
     def described(self, case: str, seed: int | None) -> str:
         """What runs, as a run's conversation is described."""

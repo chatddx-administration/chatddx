@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from chatddx.bench.bench import Bench, Trial
-from chatddx.bench.sending import TICK, Handed, Sending, Tokens
+from chatddx.bench.sending import ENDED, TICK, Handed, Relay, Sending, Tokens
 from chatddx.conftest import Stalling
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.history.models import ConversationContext, RunModel
@@ -106,3 +106,54 @@ def test_a_handed_stream_stopped_before_it_began_just_ends():
 
     with handed:
         assert list(handed) == []
+
+
+async def said(*words: str) -> AsyncGenerator[str]:
+    for word in words:
+        await asyncio.sleep(0.01)
+        yield word
+
+
+def relayed(relay: Relay[str], streams: int) -> dict[str, list[Any]]:
+    """What the relay hands over, by stream, till `streams` have ended."""
+    heard: dict[str, list[Any]] = {}
+    ended = 0
+
+    while ended < streams:
+        for key, event in relay.taken(timeout=5):
+            heard.setdefault(key, []).append(event)
+            ended += event is ENDED
+
+    return heard
+
+
+def test_a_relay_hands_its_streams_over_as_they_come_each_with_its_key():
+    with Relay[str]() as relay:
+        relay.start("first", said("one", "two", "three"))
+        relay.start("second", said("four"))
+
+        heard = relayed(relay, 2)
+
+    assert heard == {
+        "first": ["one", "two", "three", ENDED],
+        "second": ["four", ENDED],
+    }
+
+
+def test_a_stream_of_a_relay_stopped_ends_where_it_is_and_the_rest_go_on():
+    with Relay[str]() as relay:
+        relay.start("stopped", quiet_then("never"))
+        relay.start("going", said("on"))
+        relay.stop("stopped")
+
+        heard = relayed(relay, 2)
+
+    assert heard == {"stopped": [ENDED], "going": ["on", ENDED]}
+
+
+def test_a_relay_closed_stops_what_it_relays():
+    relay = Relay[str]()
+    relay.start("unheard", quiet_then("never"))
+    relay.close()
+
+    assert relay.taken(timeout=0) == [("unheard", ENDED)]

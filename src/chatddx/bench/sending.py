@@ -9,7 +9,7 @@ import asyncio
 import logging
 import queue
 import threading
-from collections.abc import AsyncGenerator, AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, AsyncIterator, Hashable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Self, override
@@ -186,40 +186,122 @@ class Sending:
 # what comes of a handed stream in place of an event where none came a while
 TICK: Any = object()
 
-# what a stream's thread hands over last
-_DONE: Any = object()
+# what a relay hands over for a stream last, once its task has ended
+ENDED: Any = object()
+
+
+class Relay[K: Hashable]:
+    """
+    Async streams, each a task of one loop in a thread of its own, their
+    events handed over to the caller's thread as they come, each with its
+    stream's key, so that the caller's database stays its own: over WSGI, to
+    Django's test client, and to the worker, a stream a job it runs. A
+    stream's last is ENDED, once its task is done: stopped, it has gone its
+    way by then, written down its outcome included.
+    """
+
+    def __init__(self) -> None:
+        self._loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+        self._handed: queue.Queue[tuple[K, Any]] = queue.Queue()
+        # touched in the loop's thread alone
+        self._tasks: dict[K, asyncio.Task[None]] = {}
+        self._thread: threading.Thread = threading.Thread(
+            target=_serve, args=(self._loop,), daemon=True
+        )
+        self._thread.start()
+
+    def start(self, key: K, events: AsyncIterator[Any]) -> None:
+        """`events` relayed as they come, each with `key`."""
+        _ = self._loop.call_soon_threadsafe(self._begin, key, events)
+
+    def stop(self, key: K) -> None:
+        """The stream of `key` stopped where it is: its events end with what came."""
+        try:
+            _ = self._loop.call_soon_threadsafe(self._cancel, key)
+        except RuntimeError:
+            pass  # the relay was closed, and every stream with it
+
+    def next(self, timeout: float | None = None) -> tuple[K, Any] | None:
+        """Any stream's next event, with its key; None where none came in time."""
+        try:
+            return self._handed.get(timeout=timeout)
+        except queue.Empty:
+            return None
+
+    def taken(self, timeout: float | None = None) -> list[tuple[K, Any]]:
+        """What came, waiting `timeout` seconds at most for the first of it."""
+        first = self.next(timeout)
+        taken = [] if first is None else [first]
+
+        while first is not None:
+            try:
+                taken.append(self._handed.get_nowait())
+            except queue.Empty:
+                break
+
+        return taken
+
+    def close(self) -> None:
+        """Every stream stopped, and ended, and the loop's thread let go."""
+        if not self._thread.is_alive():
+            return
+
+        asyncio.run_coroutine_threadsafe(self._wound_down(), self._loop).result()
+        _ = self._loop.call_soon_threadsafe(self._loop.stop)
+        self._thread.join()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    def _begin(self, key: K, events: AsyncIterator[Any]) -> None:
+        task = self._loop.create_task(_relayed(key, events, self._handed))
+        self._tasks[key] = task
+        task.add_done_callback(lambda _: self._ended(key))
+
+    def _ended(self, key: K) -> None:
+        del self._tasks[key]
+        self._handed.put((key, ENDED))
+
+    def _cancel(self, key: K) -> None:
+        # a stream that ended before its stop came has nothing to stop
+        if key in self._tasks:
+            _ = self._tasks[key].cancel()
+
+    async def _wound_down(self) -> None:
+        tasks = list(self._tasks.values())
+
+        for task in tasks:
+            _ = task.cancel()
+
+        _ = await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class Handed:
     """
-    An async stream taken in a thread and a loop of its own, its events
-    handed over to the caller's thread as they come, so that the caller's
-    database stays its own: over WSGI, to Django's test client, and to the
-    worker. Where nothing came for `tick` seconds, a TICK comes instead.
+    One stream relayed, its events as they come, and a TICK where nothing
+    came for `tick` seconds, till it ends.
     """
 
     def __init__(self, events: AsyncIterator[Any], tick: float | None = None):
         self._tick: float | None = tick
-        self._handed: queue.Queue[Any] = queue.Queue()
         self._done: bool = False
-        self._loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
-        self._task: asyncio.Task[None] = self._loop.create_task(
-            _hand_over(events, self._handed)
-        )
-        self._thread: threading.Thread = threading.Thread(
-            target=_send, args=(self._loop, self._task, self._handed), daemon=True
-        )
-        self._thread.start()
+        self._relay: Relay[int] = Relay()
+        self._relay.start(0, events)
 
     def __iter__(self) -> Iterator[Any]:
         while not self._done:
-            try:
-                event = self._handed.get(timeout=self._tick)
-            except queue.Empty:
+            handed = self._relay.next(self._tick)
+
+            if handed is None:
                 yield TICK
                 continue
 
-            if event is _DONE:
+            _, event = handed
+
+            if event is ENDED:
                 self._done = True
             elif isinstance(event, BaseException):
                 raise event
@@ -228,42 +310,33 @@ class Handed:
 
     def stop(self) -> None:
         """Stop the stream where it is: its events end with what came."""
-        try:
-            _ = self._loop.call_soon_threadsafe(self._task.cancel)
-        except RuntimeError:
-            pass  # it had ended, and its loop is closed
+        self._relay.stop(0)
 
     def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> None:
         # a caller that goes away before the stream ends takes it along
-        if not self._done:
-            self.stop()
-
-        self._thread.join()
+        self._relay.close()
 
 
-async def _hand_over(events: AsyncIterator[Any], handed: queue.Queue[Any]) -> None:
+def _serve(loop: asyncio.AbstractEventLoop) -> None:
+    asyncio.set_event_loop(loop)
+
     try:
-        async for event in events:
-            handed.put(event)
-    except asyncio.CancelledError:
-        pass
-    except Exception as e:  # noqa: BLE001
-        handed.put(e)
-
-
-def _send(
-    loop: asyncio.AbstractEventLoop,
-    task: asyncio.Task[None],
-    handed: queue.Queue[Any],
-) -> None:
-    try:
-        loop.run_until_complete(task)
-    except asyncio.CancelledError:
-        pass  # stopped before it began: nothing was sent
+        loop.run_forever()
     finally:
         loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
-        handed.put(_DONE)
+
+
+async def _relayed(
+    key: Any, events: AsyncIterator[Any], handed: queue.Queue[Any]
+) -> None:
+    try:
+        async for event in events:
+            handed.put((key, event))
+    except asyncio.CancelledError:
+        pass  # stopped: its events end with what came
+    except Exception as e:  # noqa: BLE001
+        handed.put((key, e))

@@ -1,6 +1,8 @@
+from dataclasses import replace
+
 import pytest
 
-from chatddx.bench.bench import Bench, Incomplete, NoSecret, NotOwn, Trial
+from chatddx.bench.bench import Bench, Drifted, Incomplete, NoSecret, NotOwn, Trial
 from chatddx.bench.cell import Cell
 from chatddx.conftest import Recommit
 from chatddx.core.models import IdentityModel
@@ -49,6 +51,28 @@ def test_a_cell_never_changes_each_change_is_another(bench: Bench):
         "plan",
     )
     assert plan.fingerprint == back.fingerprint != off.fingerprint
+
+
+def test_a_kept_cell_comes_back_as_it_was_or_not_at_all(bench: Bench):
+    cell = bench.cell_of("plan", "qwen3-8b-awq@fake", {"reasoning": "off"})
+    kept = cell.kept(42)
+
+    assert (kept.configuration, kept.stack, dict(kept.set), kept.label) == (
+        "plan",
+        "qwen3-8b-awq@fake",
+        {"reasoning": "off"},
+        "plan+reasoning=off",
+    )
+    assert (kept.fingerprint, kept.seed) == (cell.fingerprint, 42)
+    assert bench.cell_as_kept(kept).fingerprint == cell.fingerprint
+
+    with pytest.raises(Drifted, match=r"plan\+reasoning=off is another configuration"):
+        _ = bench.cell_as_kept(replace(kept, fingerprint="cddx-trail/1:sha256:0"))
+
+
+def test_a_stack_takes_as_many_jobs_at_once_as_its_details_say(bench: Bench):
+    assert bench.max_jobs("qwen3-8b-awq@fake") == 4
+    assert bench.max_jobs("qwen3-8b-awq@pelle") == 1
 
 
 def test_a_ready_cell_is_resolved_with_its_tools(bench: Bench):

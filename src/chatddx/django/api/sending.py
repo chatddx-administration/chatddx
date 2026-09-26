@@ -94,7 +94,7 @@ class Sending(BenchSending):
             # a vignette of the client's own is a case without a branch
             model = dump_trail(CaseTrailModel, CaseTrailIn(vignette=spec.vignette))
             called = bench.name_of("case", model)
-            trial = Trial(ready, model.pk, called, spec.vignette, seed)
+            trial = Trial.of(ready, model, called, seed)
 
         try:
             return cls(bench, trial)

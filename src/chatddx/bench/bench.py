@@ -13,7 +13,7 @@ from typing import Any, Literal
 from django.db import transaction
 from django.db.models import Q, prefetch_related_objects
 
-from chatddx.bench.cell import NONE, SLICES, Cell
+from chatddx.bench.cell import NONE, SLICES, Cell, Kept
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import ConversationContext, RunModel
@@ -96,6 +96,10 @@ class NoSecret(NotReady):
     pass
 
 
+class Drifted(NotReady):
+    """A cell kept on a configuration that comes to another since."""
+
+
 @dataclass(frozen=True)
 class Ready:
     """A cell nothing stands in the way of: resolved, its secret at hand."""
@@ -122,8 +126,14 @@ class Trial:
     seed: int | None
 
     @classmethod
+    def of(cls, ready: Ready, case: Any, called: str, seed: int | None) -> "Trial":
+        """The cell on a case's trail, the case as `called`."""
+        return cls(ready, case.pk, called, case.vignette, seed)
+
+    @classmethod
     def on(cls, ready: Ready, case: BranchModel, seed: int | None) -> "Trial":
-        return cls(ready, case.trail_id, case.name, case.trail.vignette, seed)
+        """The cell on a case's branch, as its name calls it."""
+        return cls.of(ready, case.trail, case.name, seed)
 
     @property
     def description(self) -> str:
@@ -266,6 +276,10 @@ class Bench:
     def stack_named(self, name: str) -> BranchModel:
         return get_visible_branch_model("stack", self.identity, name)
 
+    def max_jobs(self, stack: str) -> int:
+        """How many jobs the stack takes at once, as the identity's branch says."""
+        return StackBranchOut.model_validate(self.stack_named(stack)).details.max_jobs
+
     def cell_of(
         self,
         configuration: str | None = None,
@@ -303,11 +317,20 @@ class Bench:
 
         return cell
 
+    def cell_as_kept(self, kept: Kept) -> Cell:
+        """
+        The cell put together again as a batch kept it, or Drifted where its
+        configuration, or what is set in it, comes to another since.
+        """
+        cell = self.cell_of(kept.configuration, kept.stack, kept.set)
+
+        if cell.fingerprint != kept.fingerprint:
+            raise Drifted(f"{kept.label} is another configuration than was planned")
+
+        return cell
+
     def stacks(self) -> list[StackBranchOut]:
-        return [
-            StackBranchOut.model_validate(model)
-            for model in select_visible_branch_models("stack", self.identity)
-        ]
+        return [StackBranchOut.model_validate(model) for model in self.visible("stack")]
 
     def facts_of(self, stack: StackBranchOut) -> LLMFacts:
         """The facts of the stack's LLM, as the identity's branch has them."""

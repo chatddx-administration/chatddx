@@ -338,6 +338,9 @@ api = "vllm"
 - **`api`:** how to talk to it; `vllm` is the one the shell uses.
 - **`credential`:** the name of the identity's secret that holds the API
   key, where the server wants one.
+- **`max_jobs`:** how many of the worker's jobs run on it at once, its
+  slots: 1 unless it says more. A detail, like the rest of these, so it
+  changes no trial.
 
 ### Models (`llm`)
 

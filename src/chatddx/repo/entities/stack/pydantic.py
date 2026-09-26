@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import Field, HttpUrl, model_validator
+from pydantic import Field, HttpUrl, PositiveInt, model_validator
 
 from chatddx.core.fields import CoercedStr
 from chatddx.repo.entities.llm import (
@@ -43,6 +43,8 @@ class StackDetails(Details):
     served_name: str | None = None
     api: Api | None = None
     credential: str | None = None
+    # how many of the worker's jobs run on the stack at once: its slots
+    max_jobs: PositiveInt = 1
 
 
 class StackTrailBase(BaseTrail):
@@ -113,6 +115,7 @@ class StackFormDataIn(StackTrailBase, BaseFormDataIn):
     served_name: str | None = None
     api: Api | None = None
     credential: str | None = None
+    max_jobs: PositiveInt = 1
 
 
 class StackFormDataOut(BaseFormDataOut):

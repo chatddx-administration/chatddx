@@ -145,7 +145,7 @@ def test_the_request_time_slices_have_no_details():
         "llm": ["source", "specs", "facts"],
         "serving": ["performance"],
         "client": ["rev", "packages"],
-        "stack": ["endpoint", "served_name", "api", "credential"],
+        "stack": ["endpoint", "served_name", "api", "credential", "max_jobs"],
         "tool": ["implementation"],
         "case": ["language", "targets"],
         "scorer": ["metrics"],
