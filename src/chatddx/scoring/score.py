@@ -16,6 +16,7 @@ from chatddx.runtime.implementation import (
     Implementation,
     implementation,
 )
+from chatddx.scoring.metrics import METRICS
 
 ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
 
@@ -41,6 +42,14 @@ class VisibleScorer:
 
 
 type Applicable = tuple[VisibleScorer, str | None, CaseBranchModel | None]
+
+
+@dataclass(frozen=True)
+class Summed:
+    scorer: VisibleScorer
+    scores: int
+    metrics: dict[Metric, float | None]
+    without: int
 
 
 class Scoring:
@@ -164,6 +173,33 @@ class Scoring:
             )
 
         return made
+
+    def summed(self, made: list[ScoreModel]) -> list[Summed]:
+        """Each scorer's scores among `made`, and its metrics of their values."""
+        found: list[Summed] = []
+
+        for scorer in self.scorers:
+            values = [
+                score.value for score in made if score.scorer_id == scorer.trail.pk
+            ]
+
+            if not values:
+                continue
+
+            counted = [value for value in values if value is not None]
+            found.append(
+                Summed(
+                    scorer,
+                    len(values),
+                    {
+                        metric: METRICS[metric](counted) if counted else None
+                        for metric in scorer.metrics
+                    },
+                    len(values) - len(counted),
+                )
+            )
+
+        return found
 
     def latest(self, run: RunModel) -> list[ScoreModel]:
         found = {

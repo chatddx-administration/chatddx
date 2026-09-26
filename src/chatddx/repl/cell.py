@@ -46,6 +46,27 @@ class Cell:
         variation = self.variations[entity]
         return NONE if variation is None else variation.name
 
+    def set(self, entity: str, variation: Any) -> None:
+        """Hold `variation` in place of the configuration's; None takes it out."""
+        assert self.configuration
+
+        if variation is None and entity not in OPTIONAL:
+            raise ValueError(
+                f"a configuration always has a {entity}: only a toolset can be none"
+            )
+
+        own = getattr(self.configuration.trail, entity)
+        same = (
+            own is None
+            if variation is None
+            else own is not None and own.fingerprint == variation.trail.fingerprint
+        )
+
+        if same:
+            _ = self.variations.pop(entity, None)
+        else:
+            self.variations[entity] = variation
+
     @property
     def slices(self) -> Slices:
         return Slices(**{entity: self.variation(entity) for entity in SLICES})

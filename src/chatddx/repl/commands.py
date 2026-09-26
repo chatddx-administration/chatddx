@@ -13,8 +13,9 @@ from chatddx.repl import (
     running,
     scoring,
 )
+from chatddx.repl.bench import NotFound
 from chatddx.repl.cell import NONE, OPTIONAL, SLICES
-from chatddx.repl.shell import NotFound, Repl
+from chatddx.repl.shell import Repl
 from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 

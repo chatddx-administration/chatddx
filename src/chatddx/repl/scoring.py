@@ -86,23 +86,15 @@ def summary(repl: Repl, scoring: Scoring, made: list[ScoreModel]) -> None:
     for column in ("scorer", "runs", *metrics, "without a value"):
         table.add_column(column)
 
-    for scorer in scoring.scorers:
-        values = [score.value for score in made if score.scorer_id == scorer.trail.pk]
-
-        if not values:
-            continue
-
-        counted = [value for value in values if value is not None]
+    for summed in scoring.summed(made):
         table.add_row(
-            scorer.name,
-            str(len(values)),
+            summed.scorer.name,
+            str(summed.scores),
             *(
-                value_of(METRICS[metric](counted) if counted else None)
-                if metric in scorer.metrics
-                else ""
+                value_of(summed.metrics[metric]) if metric in summed.metrics else ""
                 for metric in metrics
             ),
-            str(len(values) - len(counted)) if len(counted) < len(values) else "",
+            str(summed.without) if summed.without else "",
         )
 
     repl.console.print(table)

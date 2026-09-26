@@ -22,7 +22,7 @@ from chatddx.repo.parsers.inventory import parse
 from chatddx.repo.store import inventory
 from chatddx.utils import make_async
 
-# the portal's and the API's tests still speak the old datamodel
+# the portal's tests still speak the old datamodel
 collect_ignore = ["django/tests"]
 
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"

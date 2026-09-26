@@ -1,5 +1,5 @@
 NOTE:
-The project is under a heavy refactor. src/chatddx/django (the portal and the API) still relies on remnants from the past, and the baseline leaves it out.
+The project is under a heavy refactor. The portal (src/chatddx/django/portal) still relies on remnants from the past, and the baseline leaves its tests (src/chatddx/django/tests) out. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
 
 Devenv in flake.nix devShell
 

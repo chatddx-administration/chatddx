@@ -12,8 +12,9 @@ from rich.console import Console
 from chatddx.dev.fake_vllm import FakeTransport, completion, stream
 from chatddx.history.models import RunModel, TrialModel
 from chatddx.history.record import record
-from chatddx.repl import running
-from chatddx.repl.shell import SEEDS, Repl
+from chatddx.repl import bench
+from chatddx.repl.bench import SEEDS
+from chatddx.repl.shell import Repl
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import CaseBranchDetails
 from chatddx.repo.entities.tool.django import ToolBranchModel
@@ -443,7 +444,7 @@ def test_ctrl_c_waits_for_a_run_to_be_written_down_then_stops_the_batch(
         signal.raise_signal(signal.SIGINT)
         return record(*args, **kwargs)
 
-    monkeypatch.setattr(running, "record", pressed)
+    monkeypatch.setattr(bench, "record", pressed)
 
     written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
 
@@ -467,7 +468,7 @@ def test_ctrl_c_again_is_let_through_to_a_run_being_written_down(
         signal.raise_signal(signal.SIGINT)
         return record(*args, **kwargs)
 
-    monkeypatch.setattr(running, "record", pressed_twice)
+    monkeypatch.setattr(bench, "record", pressed_twice)
 
     written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
 

@@ -1,26 +1,15 @@
-from django.db import transaction
 from rich.text import Text
 
-from chatddx.core import settings
-from chatddx.repl.cell import NONE, OPTIONAL, SLICES
+from chatddx.repl.cell import NONE, SLICES
 from chatddx.repl.render import LABEL
 from chatddx.repl.shell import Repl
-from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.names import short_fingerprint
-from chatddx.repo.store.branch import (
-    commit,
-    commit_copies,
-    get_branch_model,
-    get_visible_branch_model,
-)
-from chatddx.repo.store.trail import dump_trail
+from chatddx.repo.store.branch import get_visible_branch_model
 
 
 def use(repl: Repl, name: str) -> None:
-    repl.cell.put(repl.configuration_named(name), _called(repl, name))
+    repl.cell.put(repl.configuration_named(name), repl.called(name))
     repl.say_cell()
 
 
@@ -35,7 +24,7 @@ def cell(repl: Repl, configuration: str, stack: str) -> None:
     configuration_model = repl.configuration_named(configuration)
     stack_model = get_visible_branch_model("stack", repl.identity, stack)
 
-    repl.cell.put(configuration_model, _called(repl, configuration))
+    repl.cell.put(configuration_model, repl.called(configuration))
     repl.cell.stack = StackBranchOut.model_validate(stack_model)
     repl.say_cell()
 
@@ -51,79 +40,33 @@ def set_(repl: Repl, entity: str, name: str) -> None:
         repl.error("the cell has no configuration to set it in: use CONFIGURATION")
         return
 
-    own = getattr(cell.configuration.trail, entity)
-
-    if name == NONE:
-        if entity not in OPTIONAL:
-            repl.error(
-                f"a configuration always has a {entity}: only a toolset can be none"
-            )
-            return
-
-        if own is None:
-            _ = cell.variations.pop(entity, None)
-        else:
-            cell.variations[entity] = None
-
-        repl.say_cell()
+    try:
+        cell.set(entity, None if name == NONE else repl.variation_named(entity, name))
+    except ValueError as e:
+        repl.error(str(e))
         return
-
-    model = get_visible_branch_model(entity, repl.identity, name)
-    spec = entity_of(entity).branch_out.model_validate(model)
-
-    if own is not None and own.fingerprint == spec.trail.fingerprint:
-        _ = cell.variations.pop(entity, None)
-    else:
-        cell.variations[entity] = spec
 
     repl.say_cell()
 
 
 def save(repl: Repl, name: str) -> None:
-    """
-    Keep the cell's configuration, what is set in it included, as the
-    identity's own. What it reaches becomes the identity's too, as the
-    archive has it: a tool keeps what it runs.
-    """
-    cell = repl.cell
-
-    if not cell.configuration:
+    if not repl.cell.configuration:
         repl.error("the cell has no configuration to save: use CONFIGURATION")
         return
 
-    if "/" in name:
-        repl.error(f"a name can't hold '/', which parts an owner from a name: {name}")
+    try:
+        saved = repl.save(name)
+    except ValueError as e:
+        repl.error(str(e))
         return
 
-    entity = entity_of("configuration")
-    schema = ConfigurationTrailIn.model_validate(cell.slices, from_attributes=True)
-    had = entity.branch_model.objects.filter(
-        owner__name=repl.identity, name=name
-    ).exists()
-
-    with transaction.atomic():
-        trail = dump_trail(ConfigurationTrailModel, schema)
-        copied = commit_copies(trail, repl.identity, settings.ARCHIVE_IDENTITY_NAME)
-        changed = commit(
-            trail,
-            entity.branch_details.model_validate(
-                {"name": name, "owner": repl.identity, "tags": cell.configuration.tags}
-            ),
-        )
-
-    what = "a new version" if had and changed else "unchanged" if had else "created"
     repl.console.print(
-        f"saved as {name}: {what} {short_fingerprint(trail.fingerprint)}"
+        f"saved as {name}: {saved.what} {short_fingerprint(saved.fingerprint)}"
     )
 
-    if copied:
-        repl.console.print(Text(f"yours now too: {', '.join(copied)}", style=LABEL))
+    if saved.copied:
+        repl.console.print(
+            Text(f"yours now too: {', '.join(saved.copied)}", style=LABEL)
+        )
 
-    repl.forget()
-    cell.put(get_branch_model("configuration", repl.identity, name), name)
     repl.say_cell()
-
-
-def _called(repl: Repl, name: str) -> str:
-    """What the cell calls a configuration: what it was named, one's own bare."""
-    return name.removeprefix(f"{repl.identity}/")

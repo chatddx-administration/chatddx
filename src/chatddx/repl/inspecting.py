@@ -1,18 +1,18 @@
 import json
 from typing import Any, cast, get_args
 
-from django.db.models import Q
 from pydantic import BaseModel, JsonValue
 from rich.table import Table
 from rich.text import Text
 
-from chatddx.history.models import RunModel, RunStatus
+from chatddx.history.models import RunStatus
+from chatddx.repl.bench import unread_pattern
 from chatddx.repl.cell import SLICES
 from chatddx.repl.render import LABEL, LATER, REFUSED
 from chatddx.repl.scoring import summary
 from chatddx.repl.shell import Repl
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.case.pydantic import TARGET_KINDS, Expected, pattern_of
+from chatddx.repo.entities.case.pydantic import TARGET_KINDS, Expected
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
 from chatddx.repo.entities.output.pydantic import VIEWS
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchOut
@@ -36,7 +36,6 @@ from chatddx.runtime.resolution import (
 )
 from chatddx.runtime.run import FINAL_RESULT
 from chatddx.scoring.score import Scoring
-from chatddx.scoring.scorers.patterns import Pattern
 
 EFFORTS: tuple[Effort, ...] = get_args(Effort.__value__)
 
@@ -44,17 +43,6 @@ type Parts = tuple[
     Reasoning | None, Sampling | None, Coercion | None, list[Tool], dict[str, str]
 ]
 
-
-HELD_AT: dict[str, str] = {
-    "case": "trial__case",
-    "configuration": "trial__configuration",
-    "stack": "trial__stack",
-    "client": "client",
-    "machine": "trial__stack__machine",
-    "llm": "trial__stack__llm",
-    "serving": "trial__stack__serving",
-    **{entity: f"trial__configuration__{entity}" for entity in SLICES},
-}
 
 STACK_PARTS: tuple[EntityName, ...] = ("machine", "os", "llm", "serving")
 
@@ -146,14 +134,7 @@ def _show_cell(repl: Repl, tags: tuple[str, ...] = ()) -> None:
 
 
 def _show_scorers(repl: Repl, tags: tuple[str, ...]) -> None:
-    distinct: dict[int, Any] = {}
-    chosen = repl.tagged("case", tags) if tags else repl.usable("case")
-
-    for case in sorted(chosen, key=lambda case: case.name):
-        _ = distinct.setdefault(case.trail_id, case)
-
-    cases = list(distinct.values())
-    views = repl.cell.slices.output.views
+    cases = repl.cases(tags)
     where = f" tagged {' or '.join(tags)}" if tags else ""
     count = f"{len(cases)} case{'s' if len(cases) != 1 else ''}{where}"
 
@@ -167,10 +148,11 @@ def _show_scorers(repl: Repl, tags: tuple[str, ...]) -> None:
     table.add_column("target")
     table.add_column(f"of {count}")
 
-    for scorer in Scoring(repl.identity).scorers:
+    for held in repl.held_to(cases):
+        scorer = held.scorer
         kind = scorer.target_kind or "—"
 
-        if scorer.view not in views:
+        if not held.offered:
             said = Text("the output offers no such view", style=REFUSED)
             table.add_row(scorer.name, scorer.view, kind, said)
             continue
@@ -179,28 +161,13 @@ def _show_scorers(repl: Repl, tags: tuple[str, ...]) -> None:
             table.add_row(scorer.name, scorer.view, kind, f"all {len(cases)}")
             continue
 
-        missing: list[str] = []
-        unread: list[str] = []
+        said = Text(f"{held.have} have it")
 
-        for case in cases:
-            target = case.details.get("targets", {}).get(scorer.target_kind)
-            pattern = pattern_of(target)
+        if held.missing:
+            said.append(f"; missing: {_some(held.missing)}", style=LATER)
 
-            if target is False:
-                continue
-
-            if pattern is None:
-                missing.append(case.name)
-            elif _unread(pattern) is not None:
-                unread.append(case.name)
-
-        said = Text(f"{len(cases) - len(missing) - len(unread)} have it")
-
-        if missing:
-            said.append(f"; missing: {_some(missing)}", style=LATER)
-
-        if unread:
-            said.append(f"; doesn't parse: {_some(unread)}", style=REFUSED)
+        if held.unread:
+            said.append(f"; doesn't parse: {_some(held.unread)}", style=REFUSED)
 
         table.add_row(scorer.name, scorer.view, kind, said)
 
@@ -210,15 +177,6 @@ def _show_scorers(repl: Repl, tags: tuple[str, ...]) -> None:
 def _some(names: list[str]) -> str:
     more = len(names) - NAMED
     return " ".join(names[:NAMED]) + (f" and {more} more" if more > 0 else "")
-
-
-def _unread(pattern: str) -> str | None:
-    try:
-        _ = Pattern(pattern)
-    except ValueError as e:
-        return str(e)
-
-    return None
 
 
 def _show_branch(repl: Repl, entity: EntityName, name: str | None) -> None:
@@ -332,7 +290,7 @@ def _add_targets(table: Table, targets: dict[str, Expected | bool]) -> None:
             table.add_row(f"targets.{kind}.text", target.text or _missing())
             said = Text(target.pattern) if target.pattern else _missing()
 
-            if target.pattern and (why := _unread(target.pattern)) is not None:
+            if target.pattern and (why := unread_pattern(target.pattern)) is not None:
                 said = Text.assemble(said, (f"  doesn't parse: {why}", REFUSED))
 
             table.add_row(f"targets.{kind}.pattern", said)
@@ -361,21 +319,7 @@ def _text(repl: Repl, value: Any) -> Text:
 
 def _show_runs(repl: Repl, entity: EntityName, trail: int) -> None:
     """Your runs with the trail, and each scorer's latest scores of them."""
-    match entity:
-        case "os":
-            with_it = Q(trial__stack__os=trail) | Q(trial__stack__host_os=trail)
-        case "tool":
-            with_it = Q(trial__configuration__toolset__tools__contains=[trail])
-        case "scorer":
-            with_it = Q(scores__scorer=trail, scores__owner__name=repl.identity)
-        case _:
-            with_it = Q(**{HELD_AT[entity]: trail})
-
-    runs = list(
-        RunModel.objects.filter(with_it, owner__name=repl.identity)
-        .distinct()
-        .prefetch_related("scores")
-    )
+    runs = repl.runs_with(entity, trail)
 
     if not runs:
         repl.console.print(f"no runs of yours with this {entity}", style=LABEL)

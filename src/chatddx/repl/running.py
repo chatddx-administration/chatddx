@@ -2,17 +2,27 @@ import asyncio
 import signal
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from dataclasses import dataclass
 from datetime import datetime
 from types import FrameType
 from typing import Any, Self
 
 from django.utils import timezone
-from pydantic_ai import UnexpectedModelBehavior, UsageLimitExceeded
+from pydantic_ai import UnexpectedModelBehavior
 from rich.text import Text
 
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
-from chatddx.history.record import Branches, Outcome, record
+from chatddx.history.record import Outcome
+from chatddx.repl.bench import (
+    MAX_SEED,
+    SHARED_BY,
+    STOPPED,
+    Ready,
+    drawn_seed,
+    failed,
+    greedy,
+    holds,
+    unheeded,
+)
 from chatddx.repl.cell import NONE
 from chatddx.repl.render import (
     LABEL,
@@ -27,25 +37,12 @@ from chatddx.repl.render import (
     tally_events,
 )
 from chatddx.repl.scoring import summary
-from chatddx.repl.shell import SHARED_BY, Repl, drawn_seed
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
-from chatddx.repo.entities.tool.pydantic import ToolBranchOut
+from chatddx.repl.shell import Repl
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import CellRefused, Resolution
-from chatddx.runtime.run import TOOL_ROUNDS, Run, cause_of, invalid
+from chatddx.runtime.run import Run, invalid
 from chatddx.scoring.score import Scoring
-
-STOPPED = Outcome(RunStatus.ERRORED, error="stopped")
-
-MAX_SEED = 2**63 - 1
-
-
-@dataclass(frozen=True)
-class Ready:
-    resolution: Resolution
-    api_key: str | None
-    tools: dict[str, ToolBranchOut]
 
 
 def seed(repl: Repl, word: str | None = None) -> None:
@@ -82,7 +79,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     if run is None:
         return
 
-    repl.console.print(f"trial: {_described(repl, case, run)}", style="bold")
+    repl.console.print(f"trial: {repl.described(case.name, run.seed)}", style="bold")
 
     started = timezone.now()
 
@@ -92,7 +89,7 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
         repl.console.print("\n(stopped)", style=LABEL)
         outcome = STOPPED
     except Exception as e:  # noqa: BLE001
-        outcome = _failed(e, ready.resolution)
+        outcome = failed(e, ready.resolution)
         unparsed = isinstance(e, UnexpectedModelBehavior)
         repl.error(f"invalid: {outcome.error}" if unparsed else f"\n{outcome.error}")
     else:
@@ -122,12 +119,7 @@ def batch(repl: Repl, *tags: str) -> None:
         return
 
     tagged = " or ".join(tags)
-    distinct: dict[int, BranchModel] = {}
-
-    for case in repl.tagged("case", tags):
-        _ = distinct.setdefault(case.trail_id, case)
-
-    cases = list(distinct.values())
+    cases = repl.cases(tags)
 
     if not cases:
         repl.error(f"no case tagged {tagged} for {repl.identity}")
@@ -174,12 +166,12 @@ def batch(repl: Repl, *tags: str) -> None:
                     except asyncio.CancelledError:
                         outcome = STOPPED
                     except Exception as e:  # noqa: BLE001
-                        outcome = _failed(e, ready.resolution)
+                        outcome = failed(e, ready.resolution)
                     else:
                         outcome = Outcome(
                             RunStatus.COMPLETED,
                             answer=streamed.answer,
-                            valid=_holds(ready.resolution, streamed.answer),
+                            valid=holds(ready.resolution, streamed.answer),
                         )
 
                     finished = timezone.now()
@@ -243,7 +235,7 @@ def _seed_of(repl: Repl, word: str) -> int | None:
 
 
 def _seedable(repl: Repl, ready: Ready, seed: int | None) -> bool:
-    if seed is None or not _greedy(ready.resolution):
+    if seed is None or not greedy(ready.resolution.sampling):
         return True
 
     repl.error(
@@ -253,36 +245,12 @@ def _seedable(repl: Repl, ready: Ready, seed: int | None) -> bool:
     return False
 
 
-def _greedy(resolution: Resolution) -> bool:
-    writes = resolution.sampling.writes
-    return writes.get("temperature") == 0 or writes.get("top_k") == 1
-
-
 def _made(repl: Repl, ready: Ready, case: BranchModel, seed: int | None) -> Run | None:
     try:
-        return Run(
-            ready.resolution,
-            case.trail.vignette,
-            api_key=ready.api_key,
-            transport=repl.transport,
-            seed=seed,
-            implementations={
-                tool: branch.details.implementation.function
-                for tool, branch in ready.tools.items()
-                if branch.details.implementation is not None
-            },
-        )
+        return repl.made(ready, case.trail.vignette, seed)
     except ValueError as e:
         repl.error(str(e))
         return None
-
-
-def _described(repl: Repl, case: BranchModel, run: Run) -> str:
-    cell = repl.cell
-    assert cell.stack
-    seeded = f" (seed {run.seed})" if run.seed is not None else ""
-
-    return f"{cell.label} × {cell.stack.name} × {case.name}{seeded}"
 
 
 async def _stream(repl: Repl, run: Run) -> Streamed:
@@ -300,44 +268,11 @@ async def _tally(run: Run, tally: Tally, stopping: "_Stopping") -> Streamed:
         stopping.streaming = None
 
 
-def _failed(error: Exception, resolution: Resolution) -> Outcome:
-    unheld = False if resolution.coercion is not None else None
-
-    match error:
-        case UnexpectedModelBehavior():
-            unparsed = f"the answer doesn't parse: {cause_of(error)}"
-            return Outcome(RunStatus.COMPLETED, valid=unheld, error=unparsed)
-        case UsageLimitExceeded():
-            stopped = f"stopped: still calling tools after {TOOL_ROUNDS} rounds"
-            return Outcome(RunStatus.COMPLETED, valid=unheld, error=stopped)
-        case _:
-            return Outcome(RunStatus.ERRORED, error=f"{type(error).__name__}: {error}")
-
-
-def _holds(resolution: Resolution, answer: Any) -> bool | None:
-    if resolution.coercion is None:
-        return None
-
-    return invalid(resolution.coercion.schema, answer) is None
-
-
 def _judge(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | None:
-    intent = resolution.reasoning.intent
+    warning = unheeded(resolution.reasoning.intent, streamed.thought)
 
-    if intent != "off" and not streamed.thought:
-        repl.console.print(
-            Text(
-                f"no thinking came back, though reasoning resolved to '{intent}'",
-                style=LATER,
-            )
-        )
-    elif intent == "off" and streamed.thought:
-        repl.console.print(
-            Text(
-                "thinking came back, though reasoning resolved to 'off'",
-                style=LATER,
-            )
-        )
+    if warning is not None:
+        repl.console.print(Text(warning, style=LATER))
 
     answer = streamed.answer
     valid: bool | None = None
@@ -361,27 +296,15 @@ def _recorded(
     started: datetime,
     finished: datetime,
 ) -> RunModel | None:
-    cell = repl.cell
-    assert cell.stack
-
     try:
-        return record(
-            repl.identity,
-            ConfigurationTrailIn.model_validate(cell.slices, from_attributes=True),
-            Branches(
-                stack=cell.stack.id,
-                llm=repl.llm_of(cell.stack)[1],
-                tools={
-                    ready.tools[tool].id: ran.blob
-                    for tool, ran in run.implementations.items()
-                },
-            ),
+        return repl.recorded(
+            ready,
             case.trail_id,
             run,
             outcome,
             started,
             finished,
-            description=_described(repl, case, run),
+            repl.described(case.name, run.seed),
         )
     except Exception as e:  # noqa: BLE001
         repl.error(f"not recorded: {type(e).__name__}: {e}")

@@ -3,9 +3,10 @@ from typing import Any
 from rich.table import Table
 from rich.text import Text
 
+from chatddx.repl.bench import SHARED_BY
 from chatddx.repl.cell import SLICES
 from chatddx.repl.render import LABEL
-from chatddx.repl.shell import SHARED_BY, Repl
+from chatddx.repl.shell import Repl
 from chatddx.repo.store.branch import select_visible_branch_models
 
 
