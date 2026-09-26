@@ -164,9 +164,17 @@ class Saved:
 
 
 class Bench:
-    def __init__(self, identity_name: str, transport: Any = None):
+    def __init__(
+        self,
+        identity_name: str,
+        transport: Any = None,
+        own: Iterable[EntityName] = (),
+    ):
         self.identity: str = identity_name
         self.transport: Any = transport
+        # the kinds the identity lists and plans with its own of alone, as
+        # the portal does; others' it shares still name what it ran
+        self.own: frozenset[EntityName] = frozenset(own)
 
         self._names: dict[tuple[EntityName, int], str] = {}
         self._llms: dict[int, tuple[LLMFacts, int | None]] = {}
@@ -175,10 +183,18 @@ class Bench:
         self._names.clear()
 
     def visible(self, entity: EntityName) -> list[BranchModel]:
-        """The heads of `entity` the identity can use, its own shadowing a shared name."""
-        return select_visible_branch_models(
+        """
+        The heads of `entity` the identity can use, its own shadowing a shared
+        name; of a kind it keeps to its own of, those alone.
+        """
+        models = select_visible_branch_models(
             entity, self.identity, SHARED_BY.get(entity)
         )
+
+        if entity in self.own:
+            return [model for model in models if model.owner.name == self.identity]
+
+        return models
 
     def names(self, entity: EntityName) -> list[str]:
         return sorted({model.name for model in self.visible(entity)})

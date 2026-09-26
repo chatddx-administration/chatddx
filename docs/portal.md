@@ -36,13 +36,20 @@ plans a new one.
 
 ### Planning
 
-The form begins as the repl's cell does:
+The form begins as the repl's cell does, on what is yours: the portal
+shows you your own configurations, variations and cases, and the
+archive's stacks, what answers being a class of record the archive keeps
+for everyone.
 
-- **Use:** a configuration, yours or the archive's.
+- **Use:** a configuration of yours.
 - **On:** a stack.
-- **Case tags:** the cases to run, those with any of the tags. A vignette
-  under two names runs once.
+- **Case tags:** the cases of yours to run, those with any of the tags. A
+  vignette under two names runs once.
 - **Seed:** drawn as the repl draws one. Empty, the trials go unseeded.
+
+`chatddx init-data USER --with-giftbag` gives a new owner the archive's
+configurations and variations to start from; their cases they add under
+**Cases**.
 
 Once there are case tags, the slices come in: instruction, output,
 coercion, reasoning, sampling and toolset, each a row of your variations of
@@ -104,8 +111,8 @@ batch stands, and follows it every few seconds while it is on its way:
 A trial queued again goes behind what is in the queue, and its runs are
 new ones: the runs it had stay in the history.
 
-Its only input is **More cases**: the cases with any of the case tags
-picked, or the cases picked, that the batch doesn't hold. The batch's cells
+Its only input is **More cases**: the cases of yours with any of the case
+tags picked, or the cases picked, that the batch doesn't hold. The batch's cells
 run on them, queued behind its trials while it is on its way, and stored
 till it is run otherwise.
 

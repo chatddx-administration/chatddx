@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from chatddx.bench.bench import SEEDS, Bench
 from chatddx.bench.cell import SLICES
+from chatddx.conftest import Provision, Recommit
 from chatddx.django.portal.admin import CONFIRM, RUN
 from chatddx.django.portal.forms import MOST_CELLS
 from chatddx.django.portal.models import BatchModel
@@ -68,6 +69,34 @@ def test_the_form_offers_what_the_repl_can_use(alice: Client):
     ]
     # a seed drawn, as the repl draws one
     assert 0 <= form.initial["seed"] < SEEDS
+
+
+def test_the_form_offers_the_owner_s_own_and_the_archive_s_stacks(
+    alice: Client, recommit: Recommit
+):
+    # the archive's, shared with alice, and not hers
+    recommit("configuration", "plan", name="archive-plan", collaborators=["alice"])
+    recommit(
+        "case",
+        "case-1",
+        name="archive-case",
+        collaborators=["alice"],
+        tags=["archive-tag"],
+    )
+    form = alice.get(ADD).context["adminform"].form
+
+    assert "archive-plan" not in dict(form.fields["configuration"].choices)
+    assert "archive-tag" not in dict(form.fields["case_tags"].choices)
+    # what answers is the archive's, for everyone
+    assert [name for name, _ in form.fields["stack"].choices if name] == [
+        stack.name for stack in Bench("archive").stacks()
+    ]
+
+
+def test_a_batch_runs_the_owner_s_own_cases(alice: Client):
+    response = alice.post(ADD, FREE_TEXT)
+
+    assert {case.owner.name for case in response.context["plan"].cases} == {"alice"}
 
 
 def test_the_slices_come_in_once_case_tags_are_picked(alice: Client):
@@ -310,5 +339,18 @@ def test_one_with_nothing_to_use_is_told_how_to_get_it(
     assert response.status_code == 200
     assert any(
         "chatddx init-data nobody" in str(message)
+        for message in response.context["messages"]
+    )
+
+
+def test_one_with_no_case_of_their_own_is_told_so(
+    client: Client, django_user_model: Any, provision: Provision
+):
+    _ = provision("--with-giftbag", user="carol")
+    client.force_login(django_user_model.objects.create_superuser(username="carol"))
+    response = client.get(ADD)
+
+    assert any(
+        "No case of yours has a tag yet" in str(message)
         for message in response.context["messages"]
     )

@@ -42,6 +42,7 @@ from chatddx.core.utils import ensure_identity
 from chatddx.django.portal import batches, status
 from chatddx.django.portal.forms import CASES_FORM, BatchForm, CasesForm
 from chatddx.django.portal.models import Batch
+from chatddx.repo.entity_names import EntityName
 from chatddx.worker import control, queue
 from chatddx.worker.models import STOPPED_BY, JobModel, Status
 
@@ -58,6 +59,10 @@ CONTROLS = {"pause": control.pause, "resume": control.resume, "stop": control.st
 
 # the form a batch's page runs it with, apart from the page's own
 RUN_FORM = "batch-run"
+
+# what the portal shows of the owner's own alone: what is asked, and the
+# cases; what answers, the stacks, is the archive's, a class of record apart
+OWN: tuple[EntityName, ...] = ("configuration", *SLICES, "case")
 
 # what the portal calls a batch, for the model holds no words of the portal's
 Batch._meta.verbose_name = _("batch")
@@ -82,6 +87,11 @@ class GroupAdmin(BaseGroupAdmin, ModelAdmin):
 def identity_of(request: HttpRequest) -> str:
     """The identity a request acts as: its user's, by name."""
     return ensure_identity(request.user.get_username()).name
+
+
+def bench_of(request: HttpRequest) -> Bench:
+    """The request's identity's bench, as the portal has it: its own, bar the stacks."""
+    return Bench(identity_of(request), own=OWN)
 
 
 def _jobs(**filters: Any) -> Any:
@@ -264,7 +274,7 @@ class BatchAdmin(ModelAdmin):
     ) -> Any:
         form = super().get_form(request, obj, change, **kwargs)
 
-        return type(form.__name__, (form,), {"bench": Bench(identity_of(request))})
+        return type(form.__name__, (form,), {"bench": bench_of(request)})
 
     @override
     def get_changeform_initial_data(self, request: HttpRequest) -> dict[str, Any]:
@@ -312,15 +322,21 @@ class BatchAdmin(ModelAdmin):
             self.message_user(
                 request,
                 _(
-                    "Nothing to use yet: `chatddx init-data %(name)s` shares the "
-                    + "archive's inventory with you."
+                    "No configuration of yours yet: `chatddx init-data %(name)s "
+                    + "--with-giftbag` gives you the archive's to start from."
                 )
                 % {"name": form.bench.identity},
                 messages.WARNING,
             )
+        elif add and not form.fields["case_tags"].choices:
+            self.message_user(
+                request,
+                _("No case of yours has a tag yet: a batch runs the cases tagged so."),
+                messages.WARNING,
+            )
 
         if obj is not None:
-            cases = CasesForm(Bench(identity_of(request)), obj)
+            cases = CasesForm(bench_of(request), obj)
             context["media"] = context["media"] + cases.media
             context.update(self._batch_page(request, obj, cases))
 
@@ -532,7 +548,7 @@ class BatchAdmin(ModelAdmin):
         if not self.has_add_permission(request):
             raise PermissionDenied
 
-        form = CasesForm(Bench(identity_of(request)), batch, request.POST)
+        form = CasesForm(bench_of(request), batch, request.POST)
         back = HttpResponseRedirect(
             reverse("admin:portal_batch_change", args=[batch.pk])
         )
