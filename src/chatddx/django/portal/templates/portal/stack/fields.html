@@ -1,0 +1,17 @@
+{# what a record holds: each field's label, and its value or its items #}
+<dl class="portal-fields">
+    {% for field in fields %}
+        <dt>{{ field.label }}</dt>
+        <dd{% if field.trouble %} class="portal-refused"{% endif %}>
+            {% if field.items %}
+                <ul class="portal-facts">
+                    {% for item in field.items %}<li>{{ item }}</li>{% endfor %}
+                </ul>
+            {% elif field.code and field.value != "—" %}
+                <code class="portal-value">{{ field.value }}</code>
+            {% else %}
+                {{ field.value }}
+            {% endif %}
+        </dd>
+    {% endfor %}
+</dl>

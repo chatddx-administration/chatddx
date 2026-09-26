@@ -5,7 +5,8 @@ The portal is chatddx in a browser: Django's admin, dressed by unfold, at
 so far are the Cases, where clinicians go through each case and work with
 its vignette and targets; the Batch: the repl's `batch`, with its slices
 varied, run by a worker beside the portal, and watched and held from its
-Status page; and the Runs, each run with all it holds.
+Status page; the Runs, each run with all it holds; and the Stacks, each
+at a version, and tried live.
 
 The portal shows you what is yours: your cases, configurations and
 variations. The one exception is what answers, the stacks and their parts,
@@ -34,6 +35,14 @@ and beside it, on the minimal settings, the worker that runs the batches:
 A user signs in as the identity of their name, as the API's session does.
 `DJANGO_MODE=main` serves it for real: the secret key from
 `SECRET_KEY_FILE`, `HOST` as the allowed host, and secure cookies.
+
+A stack's Test (see [Testing a stack](#testing-a-stack)) streams its checks
+back as one response, which takes as long as the stack's LLM takes to
+answer them: seconds on the fake, a minute or two on a slow stack. A proxy
+in front is not to buffer it (the portal asks so, with
+`X-Accel-Buffering: no`), and the server is to hold a request that long:
+gunicorn's `gthread` workers do, and its sync workers kill one after their
+timeout, 30 seconds by default.
 
 ## Cases
 
@@ -246,9 +255,10 @@ of your batches they came from. It follows along every second.
   as the repl tallies them, `~N` as they stream and `N` once the server has
   counted them.
 - Up next: the case your queue runs next, and how many are outstanding.
-- The ten cases taken up last, the latest first: when, the case, the cell,
-  the batch, how it went and why, its tokens, and its scores. The when
-  opens the run the case came to.
+- The ten cases taken up last, the latest first: when, the case, the
+  configuration and the stack, the batch, how it went and why, its tokens,
+  and its scores. The when opens the run the case came to, and the stack
+  its page as the run read it (see [Stacks](#stacks)).
 
 Watching takes the view permission on batches, and running, adding cases,
 pausing and stopping the add permission.
@@ -272,7 +282,7 @@ on the Status page.
   - the case: a case of yours opens at the version the run is held to;
   - the batch it came from, and which of its trial's runs it is;
   - the stack and the LLM, as it read them, and the name and endpoint it
-    was served at;
+    was served at: each opens the stack's page at the versions it read;
   - the tools it ran, each with its file;
   - the client it was sent from;
   - its tokens, over how many requests;
@@ -322,6 +332,75 @@ code runs, and each run is written down and scored as any other.
 `--sample NAME` makes one of them, `--case NAME` runs them on another
 case, and `--pace` sets the seconds between the tokens streamed.
 The scripts are `src/chatddx/dev/samples/*.toml`.
+
+## Stacks
+
+**Stacks** in the sidebar lists the stacks you run on, the archive's and
+any of your own: each at its latest version, with its LLM, its machine,
+its endpoint, its slots, and how many versions it has.
+
+### A stack's page
+
+A stack's page shows a version of it, and never changes it. The list opens
+the latest; a run's page, and the cases taken up last on the Status page,
+open the version the run read, with the version of the LLM it read.
+
+- ◀ and ▶ step through the versions. On an earlier one, a note says a newer
+  one is saved, when, and what it changed; **Open the latest** opens it.
+- **The stack:** its endpoint and served name, its API, the secret it takes
+  and whether you have it, its slots (how many of the worker's jobs it
+  takes at once), and its tags.
+- **Its parts**, each by the name you have for it:
+  - the **LLM**: its snapshot and source, its specs, and its facts: what
+    each reasoning effort sends, or collapses into, or why it is refused;
+    the sampling recommended for each; which coercions hold and what they
+    need; and its profile. Opened from a run, it is the version the run
+    read, with a note where a newer one is saved;
+  - the **serving**: its engine, its arguments and environment, what it
+    sets for speed, and the parsers it provides;
+  - the **machine**: its id, its GPUs, CPU, RAM and location, and whether
+    it is a cloud provider's;
+  - its **system**, and a container's host's: its toplevel, the flake
+    revision, and its host name, kernel, NVIDIA driver and nixpkgs
+    revision.
+
+### Testing a stack
+
+**Test** tries the version shown live, as its page shows it, and says how
+each check went as it goes. Nothing is written down.
+
+- **The server**, asked what it serves (`GET /v1/models`) and what it is
+  (`GET /version`):
+  - **Reached**: how soon it answered, or why it didn't: it can't be
+    reached, it refuses the secret, or the secret is one you don't have.
+    Unreached, nothing further is tried.
+  - **Serves the LLM**: it lists the stack's served name; else it says
+    what it serves, and the LLM isn't tried.
+  - **Loads the snapshot**: what it loaded is the LLM's snapshot. A model
+    loaded by its repository name, as the fake vLLM's, can't be told from
+    one.
+  - **Context**: the tokens it takes in, held to its serving's
+    `max-model-len`, or, where that says nothing, to the LLM's whole
+    context.
+  - **Engine**: its vLLM version, held to its serving's engine.
+- **The LLM**, sent to as a run is, by its facts, unseeded:
+  - **Answers**: asked for its spec, with its own reasoning and the
+    sampling recommended, and streamed as it comes, its thinking and then
+    its answer: how soon the first token came and how fast the rest, and
+    whether thinking came back as its facts say it does.
+  - **Reasoning off**: no thinking comes back, where its facts can turn it
+    off.
+  - **Native**, **Tool** and **Prompted**: its spec held to a schema each
+    way, with the least reasoning its facts allow: guided decoding, the
+    schema never shown; a call of the answer tool; the schema shown, and
+    nothing more.
+  - **Calls a tool**: `sentinel_op`, a tool the answer can't be known
+    without, called with arguments that hold, and an answer once it
+    returned.
+
+  A check the facts or the serving refuse isn't tried, and says why.
+
+Reading stacks, and testing them, take the view permission on stacks.
 
 ## The worker
 

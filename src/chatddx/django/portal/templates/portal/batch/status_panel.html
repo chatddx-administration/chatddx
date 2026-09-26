@@ -60,7 +60,7 @@
                 {% for now in shown.running %}
                     <div class="portal-running">
                         <span class="font-semibold text-font-important-light dark:text-font-important-dark">{{ now.job.case }}</span>
-                        <span>{{ now.job.cell }}</span>
+                        <span>{{ now.job.label }} × {% include "portal/widgets/stack.html" with stack=now.job.stack page=now.stack_page %}</span>
                         <span class="portal-tally">{% blocktranslate count counter=now.job.tokens with tokens=now.job.tallied %}{{ tokens }} token{% plural %}{{ tokens }} tokens{% endblocktranslate %}</span>
                         <span class="portal-missing">{{ now.running_for }}</span>
                     </div>
@@ -77,7 +77,7 @@
 
             <div class="portal-running">
                 <span class="font-semibold text-font-important-light dark:text-font-important-dark">{{ shown.up_next.case }}</span>
-                <span>{{ shown.up_next.cell }}</span>
+                <span>{{ shown.up_next.label }} × {% include "portal/widgets/stack.html" with stack=shown.up_next.stack page=shown.up_next_stack %}</span>
                 <span class="portal-missing">{% blocktranslate count counter=shown.outstanding %}{{ counter }} outstanding{% plural %}{{ counter }} outstanding{% endblocktranslate %}</span>
             </div>
         </section>
@@ -94,7 +94,8 @@
                     <tr>
                         <th>{% translate "When" %}</th>
                         <th>{% translate "Case" %}</th>
-                        <th>{% translate "Cell" %}</th>
+                        <th>{% translate "Configuration" %}</th>
+                        <th>{% translate "Stack" %}</th>
                         <th>{% translate "Batch" %}</th>
                         <th>{% translate "Outcome" %}</th>
                         <th>{% translate "Tokens" %}</th>
@@ -112,7 +113,8 @@
                                 {% endif %}
                             </td>
                             <td class="font-medium">{{ ran.case }}</td>
-                            <td>{{ ran.cell }}</td>
+                            <td>{{ ran.configuration }}</td>
+                            <td>{% include "portal/widgets/stack.html" with stack=ran.stack page=ran.stack_page %}</td>
                             <td>
                                 {% if ran.batch.pk %}
                                     <a class="underline" href="{% url 'admin:portal_batch_change' ran.batch.pk %}">{{ ran.batch.name }}</a>

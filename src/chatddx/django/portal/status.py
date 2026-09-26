@@ -7,6 +7,7 @@ running and up next, and those taken up last; and a batch's page, how the
 batch stands and what it can do next.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -18,6 +19,7 @@ from django.utils.translation import gettext as _, gettext_lazy, ngettext
 
 from chatddx.bench.bench import Bench
 from chatddx.django.portal.models import BatchModel
+from chatddx.django.portal.stacks import page_named, page_of_run
 from chatddx.history.models import RunModel, RunStatus
 from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 from chatddx.worker import control, queue
@@ -94,6 +96,8 @@ class Now:
 
     job: JobModel
     running_for: str
+    # the page of the stack it runs on, as the stack is now
+    stack_page: str | None = None
 
 
 @dataclass(frozen=True)
@@ -102,7 +106,9 @@ class Ran:
 
     when: datetime | None
     case: str
-    cell: str
+    # the cell: the configuration with what is set in it, and the stack
+    configuration: str
+    stack: str
     batch: Link
     outcome: str
     # an outcome to look into: errored, stopped or not run
@@ -112,6 +118,12 @@ class Ran:
     scores: list[tuple[str, str]]
     # the run it came to, where it came to one
     run: Any = None
+    # the page of the stack as the run read it, or as it is now, run or not
+    stack_page: str | None = None
+
+    @property
+    def cell(self) -> str:
+        return f"{self.configuration} × {self.stack}"
 
 
 @dataclass(frozen=True)
@@ -121,6 +133,7 @@ class Shown:
     state: control.State
     running: list[Now]
     up_next: JobModel | None
+    up_next_stack: str | None
     outstanding: int
     waiting: list[queue.Waiting]
     # the batches the progress is of: those on their way, or the last
@@ -191,17 +204,35 @@ def shown(owner: str) -> Shown:
 
     latest = queue.latest(owner, LATEST)
     links = links_of(owner, [*batches, *(job.batch for job in latest)])
+    pages = stack_pages(owner)
+    up_next = queue.up_next(owner)
 
     return Shown(
         state=control.state(owner),
-        running=[Now(job, running_for(job)) for job in queue.running(owner)],
-        up_next=queue.up_next(owner),
+        running=[
+            Now(job, running_for(job), pages(job.stack)) for job in queue.running(owner)
+        ],
+        up_next=up_next,
+        up_next_stack=pages(up_next.stack) if up_next else None,
         outstanding=queue.outstanding(owner),
         waiting=queue.waiting(owner, max_jobs_of(owner)),
         batches=[links[batch] for batch in batches],
         progress=Progress(queue.counts(batches)),
-        latest=[ran(job, links[job.batch]) for job in latest],
+        latest=[ran(job, links[job.batch], pages) for job in latest],
     )
+
+
+def stack_pages(owner: str) -> Callable[[str], str | None]:
+    """The page of each stack, by name, as the owner has it now: looked up once each."""
+    found: dict[str, str | None] = {}
+
+    def page(name: str) -> str | None:
+        if name not in found:
+            found[name] = page_named(owner, name)
+
+        return found[name]
+
+    return page
 
 
 def links_of(owner: str, batches: list[UUID]) -> dict[UUID, Link]:
@@ -239,7 +270,7 @@ def running_for(job: JobModel) -> str:
     return f"{minutes}:{seconds:02}" if minutes else f"{seconds} s"
 
 
-def ran(job: JobModel, batch: Link) -> Ran:
+def ran(job: JobModel, batch: Link, pages: Callable[[str], str | None]) -> Ran:
     run = job.run
     outcome, trouble, reason = _outcome(job, run)
     latest: dict[str, str] = {}
@@ -250,7 +281,8 @@ def ran(job: JobModel, batch: Link) -> Ran:
     return Ran(
         when=job.finished,
         case=job.case,
-        cell=job.cell,
+        configuration=job.label,
+        stack=job.stack,
         batch=batch,
         outcome=outcome,
         trouble=trouble,
@@ -258,6 +290,7 @@ def ran(job: JobModel, batch: Link) -> Ran:
         tokens=job.tallied,
         scores=sorted(latest.items()),
         run=run.uuid if run else None,
+        stack_page=(page_of_run(run) if run else None) or pages(job.stack),
     )
 
 

@@ -1,0 +1,94 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n static unfold %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="{% static 'portal/js/stack_test.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+    <nav class="portal-navigator" aria-label="{% translate 'Versions' %}">
+        {% if shown.before %}
+            <a href="{{ shown.before }}" title="{% translate 'The version before' %}">
+                <span class="material-symbols-outlined">chevron_left</span>
+            </a>
+        {% else %}
+            <span class="portal-missing"><span class="material-symbols-outlined">chevron_left</span></span>
+        {% endif %}
+
+        <span>
+            {% blocktranslate with number=shown.version.number of=shown.version.of %}version {{ number }} of {{ of }}{% endblocktranslate %}
+            · {{ shown.version.saved|date:"DATETIME_FORMAT" }}
+        </span>
+
+        {% if shown.after %}
+            <a href="{{ shown.after }}" title="{% translate 'The version after' %}">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </a>
+        {% else %}
+            <span class="portal-missing"><span class="material-symbols-outlined">chevron_right</span></span>
+        {% endif %}
+    </nav>
+
+    {% if shown.newer %}
+        {% include "portal/stack/newer.html" with newer=shown.newer what=shown.row.name %}
+    {% endif %}
+
+    <section class="portal-box">
+        <div class="portal-box-head">
+            <h2 class="portal-heading">{{ shown.row.name }}</h2>
+            <span class="portal-missing text-sm">{{ shown.owner }} · {{ shown.fingerprint }}</span>
+        </div>
+
+        {% include "portal/stack/fields.html" with fields=shown.details %}
+    </section>
+
+    <section class="portal-box" id="stack-test" data-broke-off="{% translate 'The Test broke off:' %}">
+        <div class="portal-box-head">
+            <h2 class="portal-heading">{% translate "Test" %}</h2>
+
+            <form method="post" action="{{ test_url }}" class="ml-auto" onsubmit="portalTest(this); return false;">
+                {% csrf_token %}
+                {% component "unfold/components/button.html" with submit=1 icon="play_arrow" %}
+                    {% translate "Test" %}
+                {% endcomponent %}
+            </form>
+        </div>
+
+        <p class="portal-missing text-sm">
+            {% translate "Tries this version live, as this page shows it: its server first, then its LLM, sent to as a run is, by the facts below. Each check says how it went as it goes, and nothing is written down." %}
+        </p>
+
+        <div class="portal-checks">
+            <h3 class="portal-check-group">{% translate "The server" %}</h3>
+            <ul id="checks-server">
+                {% for check in checks %}{% if check.group == "server" %}{% include "portal/stack/check.html" %}{% endif %}{% endfor %}
+            </ul>
+
+            <h3 class="portal-check-group">{% translate "The LLM" %}</h3>
+            <ul id="checks-llm">
+                {% for check in checks %}{% if check.group == "llm" %}{% include "portal/stack/check.html" %}{% endif %}{% endfor %}
+            </ul>
+        </div>
+    </section>
+
+    <div class="portal-parts">
+        {% for part in shown.parts %}
+            <section class="portal-box" id="{{ part.key }}">
+                <div class="portal-box-head">
+                    <h2 class="portal-heading">{{ part.label }} · {{ part.name }}</h2>
+                    <span class="portal-missing text-sm">
+                        {% if part.version %}{% blocktranslate with number=part.version.number of=part.version.of %}version {{ number }} of {{ of }}{% endblocktranslate %} · {% endif %}{{ part.fingerprint }}
+                    </span>
+                </div>
+
+                {% if part.newer %}
+                    {% include "portal/stack/newer.html" with newer=part.newer what=part.name %}
+                {% endif %}
+
+                {% include "portal/stack/fields.html" with fields=part.fields %}
+            </section>
+        {% endfor %}
+    </div>
+{% endblock %}

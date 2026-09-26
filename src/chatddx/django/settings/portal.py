@@ -170,6 +170,11 @@ UNFOLD = {
                         "icon": "chat",
                         "link": reverse_lazy("admin:portal_run_changelist"),
                     },
+                    {
+                        "title": _("Stacks"),
+                        "icon": "dns",
+                        "link": reverse_lazy("admin:portal_stack_changelist"),
+                    },
                 ],
             },
             {

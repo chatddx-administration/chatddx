@@ -19,6 +19,7 @@ from django.utils.translation import gettext, gettext_lazy as _, ngettext
 from chatddx.bench.bench import Bench
 from chatddx.bench.cell import SLICES
 from chatddx.django.portal.models import BatchModel
+from chatddx.django.portal.stacks import page_of_run
 from chatddx.django.portal.status import value_of
 from chatddx.history.models import (
     MessageKind,
@@ -162,6 +163,8 @@ def shown(run: RunModel) -> Shown:
     answer = run.answer
     held = scoring.case_of(run)
     job = JobModel.objects.filter(run=run).first()
+    # the stack's page as the run read it: the stack's version, and its LLM's
+    stack_page = page_of_run(run)
 
     details = [
         Detail(_("Why"), run.error, True) if run.error else None,
@@ -185,10 +188,12 @@ def shown(run: RunModel) -> Shown:
         Detail(
             _("Stack"),
             stack.name if stack is not None else bench.name_of("stack", trial.stack),
+            link=stack_page,
         ),
         Detail(
             _("LLM"),
             run.llm_branch.name if run.llm_branch else bench.name_of("llm", None),
+            link=f"{stack_page}#llm" if stack_page and run.llm_branch else None,
         ),
         Detail(_("Served as"), _served(stack)) if stack is not None else None,
         Detail(

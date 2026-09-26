@@ -1,0 +1,39 @@
+{% load i18n %}
+
+{# a check of the Test's as it stands: its state, what it found, and what the LLM wrote #}
+<li id="check-{{ check.key }}" class="portal-check portal-check-{{ check.state }}">
+    <span class="material-symbols-outlined portal-check-icon" aria-hidden="true">{{ check.icon }}</span>
+
+    <div class="portal-check-body">
+        <div>
+            <span class="font-medium">{{ check.title }}</span>
+            {% if check.said %}<span class="portal-check-said">{{ check.said }}</span>{% endif %}
+        </div>
+
+        {% if check.streams and check.state == "running" %}
+            {% include "portal/stack/asked.html" %}
+
+            <details class="portal-part portal-part-thinking" open>
+                <summary class="portal-part-label">{% translate "Thinking" %}</summary>
+                <div class="portal-pre portal-check-text" data-stream="thinking"></div>
+            </details>
+
+            <div class="portal-pre portal-check-text" data-stream="answer"></div>
+        {% elif check.streams and check.asked %}
+            <details class="portal-part"{% if check.open %} open{% endif %}>
+                <summary class="portal-part-label">{% translate "What it wrote" %}</summary>
+
+                {% include "portal/stack/asked.html" %}
+
+                {% if check.thinking %}
+                    <details class="portal-part portal-part-thinking">
+                        <summary class="portal-part-label">{% translate "Thinking" %}</summary>
+                        <div class="portal-pre portal-check-text">{{ check.thinking }}</div>
+                    </details>
+                {% endif %}
+
+                <div class="portal-pre portal-check-text">{{ check.answer }}</div>
+            </details>
+        {% endif %}
+    </div>
+</li>

@@ -1,0 +1,21 @@
+{% load i18n %}
+
+{# a word that the version shown is an earlier one: when the latest was saved, and what it changed #}
+<div class="portal-note portal-note-warning" role="status">
+    {% blocktranslate with what=what number=newer.version.number when=newer.version.saved|date:"DATETIME_FORMAT" %}A newer version of {{ what }} is saved: version {{ number }}, {{ when }}.{% endblocktranslate %}
+    <a class="font-semibold underline" href="{{ newer.url }}">{% translate "Open the latest" %}</a>
+
+    {% if newer.changes %}
+        <ul class="portal-facts mt-1">
+            {% for change in newer.changes %}
+                <li>
+                    {% if change.before is None %}
+                        {% blocktranslate with label=change.label %}{{ label }} changed{% endblocktranslate %}
+                    {% else %}
+                        {{ change.label }}: {{ change.before }} → {{ change.after }}
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>

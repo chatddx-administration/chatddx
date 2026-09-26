@@ -10,6 +10,7 @@ from django.utils import timezone
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.django.portal.admin import CONFIRM, LATER, RUN
 from chatddx.django.portal.models import BatchModel
+from chatddx.django.portal.stacks import page_of_run
 from chatddx.history.models import RunModel, RunStatus
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.worker import control, worker
@@ -163,6 +164,9 @@ def test_the_status_counts_the_owner_s_batches_and_shows_their_cases_taken_up_la
     # each case taken up leads to the run it came to
     run = reverse("admin:portal_run_change", args=[second.run])
     assert f'href="{run}"'.encode() in response.content
+    # and to its stack, as the run read it: the stack's version, and its LLM's
+    assert second.stack_page == page_of_run(RunModel.objects.get(uuid=second.run))
+    assert f'href="{second.stack_page}"'.encode() in response.content
 
 
 def test_the_status_shows_the_owner_s_own_alone(
