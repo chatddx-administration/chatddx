@@ -288,7 +288,7 @@ SCHEMA: dict[str, Any] = {
 }
 
 STRUCTURED = OutputTrailIn.model_validate(
-    {"json_schema": SCHEMA, "guidance": "List the diagnoses."}
+    {"answer_schema": SCHEMA, "guidance": "List the diagnoses."}
 )
 
 
@@ -397,7 +397,7 @@ def test_references_are_inlined_as_the_request_carries_the_schema():
             "all": {"type": "array", "items": {"$ref": "#/$defs/Item"}},
         },
     }
-    output = OutputTrailIn.model_validate({"json_schema": schema})
+    output = OutputTrailIn.model_validate({"answer_schema": schema})
 
     resolution = resolve(cell(output=output), STACK, FACTS, SERVING)
 
@@ -426,7 +426,7 @@ def test_a_schema_that_refers_to_itself_can_t_be_sent():
         },
         "$ref": "#/$defs/Node",
     }
-    output = OutputTrailIn.model_validate({"json_schema": schema})
+    output = OutputTrailIn.model_validate({"answer_schema": schema})
 
     assert refusals(cell(output=output)) == [
         SliceRefusal(
@@ -437,7 +437,7 @@ def test_a_schema_that_refers_to_itself_can_t_be_sent():
 
 def test_a_schema_whose_root_isn_t_an_object_can_t_be_sent():
     output = OutputTrailIn.model_validate(
-        {"json_schema": {"type": "array", "items": {"type": "string"}}}
+        {"answer_schema": {"type": "array", "items": {"type": "string"}}}
     )
 
     assert refusals(cell(output=output)) == [

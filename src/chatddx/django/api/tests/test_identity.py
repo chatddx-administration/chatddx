@@ -60,7 +60,7 @@ def test_the_guest_s_requests_need_no_token(provision: Callable[..., None]):
     )
 
     assert saved.status_code == 200, saved.content
-    assert saved.json()["configuration"]["owner"] == "guest"
+    assert saved.json()["configuration"]["owner"]["name"] == "guest"
 
 
 def test_no_identity_s_secrets_are_shown(alex: Client):
@@ -80,7 +80,7 @@ def test_the_api_describes_itself(client: Client):
     events = described.json()["components"]["schemas"]["Event"]
 
     assert described.status_code == 200
-    assert {"/api/runs", "/api/cell", "/api/registry/{entity}/{name}"} <= set(paths)
+    assert {"/api/runs", "/api/cell", "/api/registry/case/{name}"} <= set(paths)
     assert set(run["content"]) == {"application/json", "text/event-stream"}
     assert set(batch["content"]) == {"text/event-stream"}
     assert {"batch", "run", "recorded", "summary"} <= set(

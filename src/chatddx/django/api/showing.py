@@ -1,5 +1,5 @@
 # pyright: basic
-"""The registry and its history as the API shows them to the identity."""
+"""The history the repo has no schemas of, and what came of the identity's runs."""
 
 from typing import Any
 
@@ -7,78 +7,30 @@ from django.db.models import prefetch_related_objects
 from pydantic import JsonValue
 
 from chatddx.django.api.schemas import (
-    Branch,
-    BranchDetail,
     BranchRow,
-    ClientOut,
     ReadOut,
-    ReasoningOut,
-    Ref,
-    Refusal,
     RunOut,
     RunSummary,
     RunsWith,
-    SamplingOut,
     ScoreOut,
     ScorerSum,
-    TargetOut,
     ToolRan,
 )
 from chatddx.history.models import RunModel, RunStatus, RunToolBranchModel, ScoreModel
-from chatddx.repl.bench import Bench, greedy, unread_pattern
-from chatddx.repl.cell import SLICES
-from chatddx.repo.bundles import entity_of
-from chatddx.repo.entities.case.pydantic import TARGET_KINDS, CaseDetails, Expected
+from chatddx.repl.bench import Bench, unread_pattern
+from chatddx.repo.entities.case.pydantic import CaseTrailOut, pattern_of
+from chatddx.repo.entities.client.pydantic import ClientTrailOut
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailOut
 from chatddx.repo.entities.output.pydantic import VIEWS, OutputTrailBase
+from chatddx.repo.entities.stack.pydantic import StackTrailOut
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel
-from chatddx.repo.families.pydantic import TrailOut
-from chatddx.runtime.resolution import Reasoning, Sampling, SliceRefusal
+from chatddx.repo.utils import resolve_trail
 from chatddx.scoring.score import Scoring, Summed
 
 
-def ref_of(
-    bench: Bench, entity: EntityName, trail: Any, name: str | None = None
-) -> Ref:
-    return Ref(
-        entity=entity,
-        name=name or bench.name_of(entity, trail),
-        fingerprint=trail.fingerprint,
-    )
-
-
-def maybe_ref_of(bench: Bench, entity: EntityName, trail: Any) -> Ref | None:
-    return None if trail is None else ref_of(bench, entity, trail)
-
-
-def branches_of(
-    bench: Bench, entity: EntityName, models: list[BranchModel]
-) -> list[Branch]:
-    prefetch_related_objects(models, "tags", "collaborators")
-    return [branch_of(bench, entity, model) for model in models]
-
-
-def branch_of(bench: Bench, entity: EntityName, model: BranchModel) -> Branch:
-    registered = entity_of(entity)
-    trail = registered.trail_out.model_validate(model.trail)
-
-    return Branch(
-        entity=entity,
-        id=model.pk,
-        name=model.name,
-        owner=model.owner.name,
-        timestamp=model.timestamp,
-        versions=model.version_count,
-        fingerprint=trail.fingerprint,
-        trail=content_of(bench, trail),
-        details=_in_order(_details(entity, model).model_dump(mode="json")),
-        tags=[tag.name for tag in model.tags.all()],
-        collaborators=[identity.name for identity in model.collaborators.all()],
-    )
-
-
-def detail_of(bench: Bench, entity: EntityName, model: BranchModel) -> BranchDetail:
-    """A branch, with what came of the identity's runs with its trail."""
+def detail_of(bench: Bench, entity: EntityName, model: BranchModel) -> dict[str, Any]:
+    """A branch, as its entity's Detail has it, and the identity's runs with it."""
     runs = bench.runs_with(entity, model.trail_id)
     scoring = Scoring(bench.identity)
     made = [score for run in runs for score in scoring.latest(run)]
@@ -86,83 +38,22 @@ def detail_of(bench: Bench, entity: EntityName, model: BranchModel) -> BranchDet
     if entity == "scorer":
         made = [score for score in made if score.scorer_id == model.trail_id]
 
-    return BranchDetail(
-        **branches_of(bench, entity, [model])[0].model_dump(),
-        runs=RunsWith(
+    targets: dict[str, Any] = model.details.get("targets", {})
+    unread = {
+        kind: why
+        for kind, target in targets.items()
+        if (pattern := pattern_of(target)) and (why := unread_pattern(pattern))
+    }
+
+    return {
+        "branch": model,
+        "runs": RunsWith(
             runs=len(runs),
             errored=sum(run.status == RunStatus.ERRORED for run in runs),
             scorers=sums_of(scoring.summed(made)),
         ),
-        targets=(targets_of(_details(entity, model)) if entity == "case" else None),
-    )
-
-
-def targets_of(details: Any) -> list[TargetOut]:
-    assert isinstance(details, CaseDetails)
-    shown: list[TargetOut] = []
-
-    for kind in TARGET_KINDS:
-        target = details.targets.get(kind)
-        expected = target if isinstance(target, Expected) else None
-        pattern = expected.pattern if expected else None
-
-        shown.append(
-            TargetOut(
-                kind=kind,
-                none_expected=target is False,
-                text=expected.text if expected else None,
-                pattern=pattern,
-                unread=None if pattern is None else unread_pattern(pattern),
-            )
-        )
-
-    return shown
-
-
-def content_of(bench: Bench, trail: TrailOut) -> dict[str, Any]:
-    """A trail's fields but its id and timestamp, each relation a `Ref`."""
-    own = set(TrailOut.model_fields)
-    content = _in_order(trail.model_dump(mode="json", exclude=own))
-
-    for field in content:
-        value = getattr(trail, field)
-
-        match value:
-            case TrailOut():
-                content[field] = _ref(bench, value).model_dump(mode="json")
-            case [TrailOut(), *_]:
-                content[field] = [
-                    _ref(bench, item).model_dump(mode="json") for item in value
-                ]
-            case _:
-                pass
-
-    return content
-
-
-def _details(entity: EntityName, model: BranchModel) -> Any:
-    """The branch's details, each at its default where the version leaves it out."""
-    details = entity_of(entity).branch_out.model_fields["details"].annotation
-    assert details is not None
-
-    return details.model_validate(model.details)
-
-
-def _in_order(fields: dict[str, Any]) -> dict[str, Any]:
-    """A mapping keyed by targets' kinds or views, in their order: jsonb keeps none."""
-    for field, value in fields.items():
-        if not isinstance(value, dict) or not value:
-            continue
-
-        for vocabulary in (TARGET_KINDS, VIEWS):
-            if set(value) <= set(vocabulary):
-                fields[field] = {key: value[key] for key in vocabulary if key in value}
-
-    return fields
-
-
-def _ref(bench: Bench, trail: TrailOut) -> Ref:
-    return ref_of(bench, entity_of(trail).name, trail)
+        "unread": unread,
+    }
 
 
 def score_of(score: ScoreModel) -> ScoreOut:
@@ -208,9 +99,8 @@ def summary_of(run: RunModel, scoring: Scoring) -> RunSummary:
     )
 
 
-def run_of(bench: Bench, run: RunModel, scoring: Scoring) -> RunOut:
+def run_of(run: RunModel, scoring: Scoring) -> RunOut:
     trial = run.trial
-    configuration = trial.configuration
     ran = RunToolBranchModel.objects.filter(run=run).select_related(
         "tool_branch__owner"
     )
@@ -225,20 +115,16 @@ def run_of(bench: Bench, run: RunModel, scoring: Scoring) -> RunOut:
         views=(
             None if run.answer is None else views_of(scoring.output_of(run), run.answer)
         ),
-        configuration=ref_of(bench, "configuration", configuration),
-        slices=slices_of(bench, configuration),
-        stack=ref_of(bench, "stack", trial.stack),
-        case=ref_of(bench, "case", trial.case),
-        seed=trial.seed,
-        client=(
-            None
-            if run.client is None
-            else ClientOut(
-                build=run.client.build,
-                rev=run.client_rev,
-                packages=run.client_packages,
-            )
+        configuration=ConfigurationTrailOut.model_validate(
+            resolve_trail(trial.configuration)
         ),
+        stack=StackTrailOut.model_validate(resolve_trail(trial.stack)),
+        case=CaseTrailOut.model_validate(trial.case),
+        seed=trial.seed,
+        client=None
+        if run.client is None
+        else ClientTrailOut.model_validate(run.client),
+        client_rev=run.client_rev,
         read=ReadOut(
             stack=_row(run.stack_branch),
             llm=_row(run.llm_branch),
@@ -255,40 +141,8 @@ def run_of(bench: Bench, run: RunModel, scoring: Scoring) -> RunOut:
     )
 
 
-def slices_of(bench: Bench, configuration: Any) -> dict[str, Ref | None]:
-    return {
-        entity: maybe_ref_of(bench, entity, getattr(configuration, entity))
-        for entity in SLICES
-    }
-
-
 def views_of(output: OutputTrailBase, answer: JsonValue) -> dict[str, list[JsonValue]]:
     return {view: output.view(view, answer) for view in VIEWS if view in output.views}
-
-
-def refusals_of(refusals: list[SliceRefusal]) -> list[Refusal]:
-    return [
-        Refusal(slice=refusal.slice, reason=refusal.reason, kind=refusal.kind)
-        for refusal in refusals
-    ]
-
-
-def reasoning_of(reasoning: Reasoning | None) -> ReasoningOut | None:
-    if reasoning is None:
-        return None
-
-    return ReasoningOut(
-        effort=reasoning.effort, intent=reasoning.intent, writes=reasoning.writes
-    )
-
-
-def sampling_of(sampling: Sampling | None) -> SamplingOut | None:
-    if sampling is None:
-        return None
-
-    return SamplingOut(
-        source=sampling.source, writes=sampling.writes, greedy=greedy(sampling)
-    )
 
 
 def _row(branch: BranchModel | None) -> BranchRow | None:

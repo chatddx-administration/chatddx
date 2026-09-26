@@ -13,3 +13,5 @@ class IdentityBase(BaseModel):
 
 class IdentitySchemaOut(IdentityBase, NinjaSchema):
     id: int
+    # read, never written out
+    secrets: dict[str, JsonValue] = Field(default_factory=dict, exclude=True)

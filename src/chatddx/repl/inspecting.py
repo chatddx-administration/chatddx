@@ -430,7 +430,7 @@ def _outcome(entity: str, refusals: list[SliceRefusal], realized: str) -> Text:
 
 def _realized(entity: str, slices: Slices, parts: Parts) -> str:
     reasoning, sampling, coercion, tools, slots = parts
-    free_text = slices.output.json_schema is None
+    free_text = slices.output.answer_schema is None
     views = ", ".join(v for v in VIEWS if v in slices.output.views) or "none"
 
     match entity:

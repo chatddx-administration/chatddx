@@ -178,7 +178,7 @@ def _describe(node: dict[str, Any]) -> str:
 
 
 class OutputTrailBase(BaseTrail):
-    json_schema: JsonSchema | None = Field(
+    answer_schema: JsonSchema | None = Field(
         default=None, json_schema_extra={ORDERED: True}
     )
     guidance: str | None = None
@@ -187,7 +187,7 @@ class OutputTrailBase(BaseTrail):
     def view(self, name: View, answer: JsonValue) -> list[JsonValue]:
         reading = self.views[name]
 
-        if self.json_schema is None:
+        if self.answer_schema is None:
             text = answer if isinstance(answer, str) else json.dumps(answer)
             return list(PARSE[reading](text))
 
@@ -196,7 +196,7 @@ class OutputTrailBase(BaseTrail):
     @model_validator(mode="after")
     def _every_view_is_proved(self):
         for view, reading in self.views.items():
-            if self.json_schema is None:
+            if self.answer_schema is None:
                 if PARSERS.get(reading) != view:
                     parsers = [name for name, gives in PARSERS.items() if gives == view]
                     raise ValueError(
@@ -212,7 +212,7 @@ class OutputTrailBase(BaseTrail):
                 )
 
             try:
-                prove(self.json_schema, reading, *VIEW_ITEMS[view])
+                prove(self.answer_schema, reading, *VIEW_ITEMS[view])
             except Unproved as e:
                 raise ValueError(
                     f"'{view}' reads {reading}, and the schema doesn't prove it: {e}"

@@ -51,37 +51,36 @@ def run(alex: Client, fake: FakeTransport) -> Callable[..., Events]:
 
 
 def events(streamed: bytes) -> Events:
-    """What a stream of server-sent events says, each event's type checked."""
+    """What a stream of server-sent events says, each event's name checked."""
     said: Events = []
 
     for block in streamed.decode().strip().split("\n\n"):
-        kind, data = block.split("\n")
+        name, data = block.split("\n")
         event = json.loads(data.removeprefix("data: "))
-        assert kind == f"event: {event['type']}"
+        assert name == f"event: {kind_of(event)}"
         said.append(event)
 
     return said
 
 
+def kind_of(event: dict[str, Any]) -> str:
+    """The API's own events by their type, pydantic-ai's by their event_kind."""
+    return event.get("type") or event["event_kind"]
+
+
 def of(events: Events, kind: str) -> Events:
-    return [event for event in events if event["type"] == kind]
+    return [event for event in events if kind_of(event) == kind]
 
 
-def parts(events: Events) -> list[tuple[str, str]]:
-    """What the LLM sent back part by part, pieces joined, and what tools returned."""
-    said: list[list[str]] = []
-    begun: dict[int, list[str]] = {}
+def written(events: Events, part_kind: str) -> str:
+    """What the LLM wrote as parts of `part_kind`: thinking, or text."""
+    said = ""
 
     for event in events:
-        match event["type"]:
-            case "thinking" | "text" | "call":
-                if event["part"] not in begun:
-                    begun[event["part"]] = [event.get("tool", event["type"]), ""]
-                    said.append(begun[event["part"]])
+        match event.get("event_kind"):
+            case "part_start" if event["part"]["part_kind"] == part_kind:
+                said += event["part"]["content"]
+            case "part_delta" if event["delta"]["part_delta_kind"] == part_kind:
+                said += event["delta"]["content_delta"]
 
-                piece = event["arguments"] if "tool" in event else event["text"]
-                begun[event["part"]][1] += piece
-            case "result":
-                said.append([f"result {event['tool']}", event["content"]])
-
-    return [(kind, text) for kind, text in said]
+    return said

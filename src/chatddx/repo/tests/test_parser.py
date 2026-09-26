@@ -187,15 +187,15 @@ def test_a_serving_s_arguments_are_content_and_its_speed_is_not(
 def test_a_schema_keeps_the_order_it_was_written_in(inventory: ParsedInventory):
     output, _ = inventory.output["management-plan"]
 
-    assert output.json_schema is not None
-    assert list(output.json_schema) == [
+    assert output.answer_schema is not None
+    assert list(output.answer_schema) == [
         "$defs",
         "properties",
         "required",
         "title",
         "type",
     ]
-    assert list(output.json_schema["properties"]) == [  # pyright: ignore[reportArgumentType]
+    assert list(output.answer_schema["properties"]) == [  # pyright: ignore[reportArgumentType]
         "acute_warning",
         "diagnoses",
         "management",
@@ -361,7 +361,7 @@ def test_an_empty_record_is_one_with_every_field_at_its_default(tmp_path: Path):
 
     output, _ = parsed.output["raw"]
 
-    assert (output.json_schema, output.guidance, output.views) == (None, None, {})
+    assert (output.answer_schema, output.guidance, output.views) == (None, None, {})
 
 
 def test_the_caller_s_details_reach_every_branch(tmp_path: Path):
@@ -760,7 +760,7 @@ def test_a_path_key_reads_a_file_next_to_the_file_that_names_it(tmp_path: Path):
                 variables = ["case", "output_guidance"]
 
                 [output.o]
-                json_schema_path = "schemas/o.json"
+                answer_schema_path = "schemas/o.json"
                 views.differential = "$.diagnoses[*]"
                 """,
                 "parts/templates/system.txt": "{{output_guidance}}\n",
@@ -781,8 +781,8 @@ def test_a_path_key_reads_a_file_next_to_the_file_that_names_it(tmp_path: Path):
     output, _ = parsed.output["o"]
 
     assert instruction.system == "{{output_guidance}}"
-    assert output.json_schema is not None
-    assert list(output.json_schema["properties"]) == ["diagnoses", "certainty"]  # pyright: ignore[reportArgumentType]
+    assert output.answer_schema is not None
+    assert list(output.answer_schema["properties"]) == ["diagnoses", "certainty"]  # pyright: ignore[reportArgumentType]
 
 
 def test_a_toml_file_loads_as_a_table(tmp_path: Path):
@@ -816,7 +816,7 @@ def test_only_a_record_s_own_keys_read_files(tmp_path: Path):
             {
                 "inventory.toml": """
                 [output.o]
-                json_schema_path = "o.json"
+                answer_schema_path = "o.json"
                 """,
                 "o.json": """
                 {"type": "object", "properties": {"image_path": {"type": "string"}}}
@@ -827,7 +827,7 @@ def test_only_a_record_s_own_keys_read_files(tmp_path: Path):
 
     output, _ = parsed.output["o"]
 
-    assert output.json_schema == {
+    assert output.answer_schema == {
         "type": "object",
         "properties": {"image_path": {"type": "string"}},
     }
@@ -858,7 +858,7 @@ def test_a_path_to_no_file_is_an_error(tmp_path: Path):
             tmp_path,
             """
             [output.o]
-            json_schema_path = "nowhere.json"
+            answer_schema_path = "nowhere.json"
             """,
         )
 
@@ -871,7 +871,7 @@ def test_a_file_of_no_known_kind_is_an_error(tmp_path: Path):
                 {
                     "inventory.toml": """
                     [output.o]
-                    json_schema_path = "o.yaml"
+                    answer_schema_path = "o.yaml"
                     """,
                     "o.yaml": "type: object",
                 },

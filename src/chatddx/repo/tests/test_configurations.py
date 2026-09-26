@@ -52,7 +52,7 @@ async def test_configurations_are_selected_by_what_they_name(
 
     free_text = await select_configurations_async(
         owner_name=owner.name,
-        qs=qs.filter(trail__output__json_schema__isnull=True),
+        qs=qs.filter(trail__output__answer_schema__isnull=True),
     )
     with_tools = await select_configurations_async(
         owner_name=owner.name,

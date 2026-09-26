@@ -358,13 +358,13 @@ def _output(
     if output.guidance is not None:
         slots[OUTPUT_GUIDANCE] = output.guidance
 
-    if output.json_schema is not None:
+    if output.answer_schema is not None:
         coercion = _coercion(
-            variation, output.json_schema, reasoning, facts, serving, refusals
+            variation, output.answer_schema, reasoning, facts, serving, refusals
         )
 
         if coercion and variation.schema_prompt is not None:
-            schema = json.dumps(output.json_schema, indent=2, ensure_ascii=False)
+            schema = json.dumps(output.answer_schema, indent=2, ensure_ascii=False)
             slots[SCHEMA_PROMPT] = TemplateStr(variation.schema_prompt).render(
                 {"schema": schema}
             )

@@ -1,19 +1,38 @@
 # pyright: basic
 """What the repl does, over HTTP; `/api/docs` lists the endpoints."""
 
+from dataclasses import asdict
+from typing import Any, override
+
 from django.http import HttpRequest
 from django.middleware.csrf import get_token
 from ninja import NinjaAPI
+from pydantic import TypeAdapter
 
 from chatddx.django.api import cell, registry, runs
 from chatddx.django.api.identity import Identified, identity_of
-from chatddx.django.api.schemas import Me
-from chatddx.django.api.showing import refusals_of
+from chatddx.django.api.schemas import Event, Me
 from chatddx.repl.bench import Ambiguous, NotFound
 from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 from chatddx.runtime.resolution import CellRefused
 
-api = NinjaAPI(
+
+class API(NinjaAPI):
+    @override
+    def get_openapi_schema(self, *args: Any, **kwargs: Any) -> Any:
+        """With the events a run streams, which no answer's schema names."""
+        schema = super().get_openapi_schema(*args, **kwargs)
+        event = TypeAdapter(Event).json_schema(
+            ref_template="#/components/schemas/{model}"
+        )
+        components = schema["components"]["schemas"]
+        components.update(event.pop("$defs", {}))
+        components["Event"] = event
+
+        return schema
+
+
+api = API(
     title="ChatDDX API",
     version="0.0.0+dev",
     auth=Identified(),
@@ -50,9 +69,7 @@ def refused(request: HttpRequest, error: CellRefused):
         request,
         {
             "detail": "the cell is refused on its stack",
-            "refusals": [
-                refusal.model_dump() for refusal in refusals_of(error.refusals)
-            ],
+            "refusals": [asdict(refusal) for refusal in error.refusals],
         },
         status=422,
     )

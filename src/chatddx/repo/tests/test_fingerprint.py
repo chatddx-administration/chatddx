@@ -112,7 +112,7 @@ def test_every_trail_of_the_inventory_has_a_fingerprint_of_the_scheme(
 
 def test_a_schema_s_order_is_content():
     reasons_first = OutputTrailIn(
-        json_schema={
+        answer_schema={
             "type": "object",
             "properties": {
                 "rationale": {"type": "string"},
@@ -121,7 +121,7 @@ def test_a_schema_s_order_is_content():
         }
     )
     answer_first = OutputTrailIn(
-        json_schema={
+        answer_schema={
             "type": "object",
             "properties": {
                 "diagnosis": {"type": "string"},

@@ -31,36 +31,37 @@ def held_to(cell: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {row["scorer"]: row for row in cell["scorers"]}
 
 
-def slice_of(cell: dict[str, Any], entity: str) -> dict[str, Any]:
-    return next(row for row in cell["slices"] if row["slice"] == entity)
+SLICES = {"instruction", "output", "coercion", "reasoning", "sampling", "toolset"}
 
 
 def test_show_sets_each_variation_beside_what_it_resolves_to(alex: Client):
     cell = show(alex, **FREE_TEXT, reasoning="off")
     resolution = cell["resolution"]
-    reasoning = slice_of(cell, "reasoning")
+    own = cell["configuration"]["trail"]
 
     assert cell["label"] == "free-text+reasoning=off"
-    assert cell["stack"]["served_name"] == "Qwen/Qwen3-8B-AWQ"
-    assert cell["output"] == {"free_text": True, "views": ["text", "differential"]}
-    assert (reasoning["variation"]["name"], reasoning["own"]["name"]) == (
+    assert cell["configuration"]["owner"]["name"] == "archive"
+    assert cell["stack"]["details"]["served_name"] == "Qwen/Qwen3-8B-AWQ"
+    assert own["output"]["answer_schema"] is None
+    assert set(own["output"]["views"]) == {"text", "differential"}
+    assert (cell["set"]["reasoning"]["name"], own["reasoning"]["effort"]) == (
         "off",
         "default",
     )
-    assert reasoning["set"] is True
-    assert resolution["resolved"] is True
+    assert list(cell["set"]) == ["reasoning"]
+    assert resolution["refusals"] == []
     assert resolution["reasoning"] == {
         "effort": "off",
         "intent": "off",
         "writes": {"chat_template_kwargs": {"enable_thinking": False}},
     }
     assert resolution["sampling"]["source"] == "recommended for 'off'"
-    assert resolution["sampling"]["greedy"] is False
+    assert resolution["greedy"] is False
     assert resolution["coercion"] is None
     assert resolution["fields"]["chat_template_kwargs"] == {"enable_thinking": False}
     assert "‹case›" in resolution["user"]
 
-    greedy = show(alex, **FREE_TEXT, sampling="greedy")["resolution"]["sampling"]
+    greedy = show(alex, **FREE_TEXT, sampling="greedy")["resolution"]
 
     assert greedy["greedy"] is True
 
@@ -71,7 +72,6 @@ def test_show_reports_a_refused_cell_slice_by_slice(alex: Client):
     )
     resolution = cell["resolution"]
 
-    assert resolution["resolved"] is False
     assert [
         (refusal["slice"], refusal["kind"]) for refusal in resolution["refusals"]
     ] == [("reasoning", "refused")]
@@ -90,10 +90,10 @@ def test_show_takes_half_a_cell_and_says_what_it_can_t_show(alex: Client):
     stacked = show(alex, stack="qwen3-8b-awq@fake")
 
     assert (configured["stack"], configured["resolution"]) == (None, None)
-    assert len(configured["slices"]) == 6
-    assert (stacked["configuration"], stacked["slices"], stacked["scorers"]) == (
+    assert SLICES <= set(configured["configuration"]["trail"])
+    assert (stacked["configuration"], stacked["set"], stacked["scorers"]) == (
         None,
-        [],
+        {},
         None,
     )
 
@@ -121,18 +121,13 @@ def test_none_takes_the_toolset_out_and_the_own_variation_sets_nothing(alex: Cli
     out = show(
         alex, configuration="test-tools", stack="qwen3-8b-awq@fake", toolset="none"
     )
-    toolset = slice_of(out, "toolset")
     own = show(alex, **FREE_TEXT, reasoning="default", toolset="none")
 
     assert out["label"] == "test-tools+toolset=none"
-    assert (toolset["variation"], toolset["own"]["name"], toolset["set"]) == (
-        None,
-        "sentinel",
-        True,
-    )
+    assert out["set"] == {"toolset": None}
+    assert out["configuration"]["trail"]["toolset"] is not None
     assert out["resolution"]["tools"] == []
-    assert own["label"] == "free-text"
-    assert not any(row["set"] for row in own["slices"])
+    assert (own["label"], own["set"]) == ("free-text", {})
 
 
 def test_show_says_which_cases_each_scorer_can_hold_the_cell_to(alex: Client):
@@ -174,7 +169,6 @@ def test_show_names_the_cases_whose_pattern_doesn_t_parse(alex: Client):
 
     scorers = held_to(show(alex, **PLAN))
     shown = alex.get("/api/registry/case/case-2").json()
-    diagnosis = next(row for row in shown["targets"] if row["kind"] == "diagnosis")
 
     assert (
         scorers["reciprocal_rank"]["have"],
@@ -183,8 +177,8 @@ def test_show_names_the_cases_whose_pattern_doesn_t_parse(alex: Client):
         1,
         ["case-2"],
     )
-    assert diagnosis["pattern"] == "fake & ("
-    assert diagnosis["unread"] is not None
+    assert shown["branch"]["details"]["targets"]["diagnosis"]["pattern"] == "fake & ("
+    assert list(shown["unread"]) == ["diagnosis"]
 
 
 def test_show_part_shows_the_cell_s_own_or_says_it_has_none(alex: Client):
@@ -195,19 +189,19 @@ def test_show_part_shows_the_cell_s_own_or_says_it_has_none(alex: Client):
     case = alex.get("/api/cell/case", FREE_TEXT)
     stackless = alex.get("/api/cell/llm", {"configuration": "free-text"})
 
-    assert (output["name"], output["owner"]) == ("free-text", "archive")
-    assert list(output["trail"]["views"]) == ["text", "differential"]
+    assert (output["branch"]["name"], output["branch"]["owner"]["name"]) == (
+        "free-text",
+        "archive",
+    )
+    assert set(output["branch"]["trail"]["views"]) == {"text", "differential"}
     assert output["runs"] == {"runs": 0, "errored": 0, "scorers": []}
-    assert reasoning.json()["name"] == "off"
-    assert llm["name"] == "qwen3-8b-awq"
+    assert reasoning.json()["branch"]["name"] == "off"
+    assert llm["branch"]["name"] == "qwen3-8b-awq"
     assert (toolset.status_code, toolset.json()) == (
         404,
         {"detail": "the cell has no toolset"},
     )
-    assert (case.status_code, case.json()) == (
-        400,
-        {"detail": "a case isn't in the cell"},
-    )
+    assert case.status_code == 404
     assert (stackless.status_code, stackless.json()) == (
         400,
         {"detail": "the cell has no stack"},
@@ -217,21 +211,22 @@ def test_show_part_shows_the_cell_s_own_or_says_it_has_none(alex: Client):
 def test_the_reasoning_table_sets_every_variation_on_every_stack(alex: Client):
     bare = alex.get("/api/reasoning").json()
     table = alex.get("/api/reasoning", {**FREE_TEXT, "reasoning": "high"}).json()
+    names = [variation["name"] for variation in table["variations"]]
     stacks = {row["stack"]: row for row in table["stacks"]}
-    gpt_oss = {
-        row["variation"]: row for row in stacks["gpt-oss-20b@fake"]["realizations"]
-    }
-    fake = {
-        row["variation"]: row for row in stacks["qwen3-8b-awq@fake"]["realizations"]
-    }
+    gpt_oss = dict(zip(names, stacks["gpt-oss-20b@fake"]["realizations"], strict=True))
+    fake = dict(zip(names, stacks["qwen3-8b-awq@fake"]["realizations"], strict=True))
 
-    assert bare["sampling"] is None
+    assert (bare["sampling"], bare["current"]) == (None, None)
     assert not any(stack["current"] for stack in bare["stacks"])
-    assert table["sampling"]["name"] == "recommended"
+    assert table["sampling"]["defaults"] == "recommended"
     assert [row["stack"] for row in table["stacks"] if row["current"]] == [
         "qwen3-8b-awq@fake"
     ]
-    assert [row["name"] for row in table["variations"] if row["current"]] == ["high"]
+    assert [
+        variation["name"]
+        for variation in table["variations"]
+        if variation["trail"]["fingerprint"] == table["current"]
+    ] == ["high"]
     assert "always reasons" in gpt_oss["off"]["refusals"][0]["reason"]
     assert gpt_oss["high"]["reasoning"]["writes"] == {"reasoning_effort": "high"}
     assert fake["off"]["sampling"]["writes"]["temperature"] == 0.7
@@ -264,7 +259,7 @@ def test_save_keeps_the_cell_as_a_configuration_of_one_s_own(alex: Client):
 
     assert saved.status_code == 200, saved.content
     assert saved.json()["what"] == "created"
-    assert saved.json()["configuration"]["owner"] == "alex"
+    assert saved.json()["configuration"]["owner"]["name"] == "alex"
 
     quiet = ConfigurationBranchModel.objects.get(owner__name="alex", name="quiet")
     off = ReasoningBranchModel.objects.get(owner__name="archive", name="off")

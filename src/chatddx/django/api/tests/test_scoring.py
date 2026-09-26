@@ -119,13 +119,9 @@ def test_a_trial_shows_your_runs_of_it_to_you_alone(
     trial = alex.get(f"/api/trials/{first['trial'][:8]}").json()
 
     assert trial["id"] == first["trial"]
-    assert (trial["case"]["name"], trial["vignette"], trial["seed"]) == (
-        "case-1",
-        "case vignette 1",
-        3,
-    )
-    assert trial["stack"]["name"] == "qwen3-8b-awq@fake"
-    assert trial["slices"]["output"]["name"] == "free-text"
+    assert (trial["case"]["vignette"], trial["seed"]) == ("case vignette 1", 3)
+    assert trial["stack"]["llm"]["fingerprint"].startswith("cddx-trail/")
+    assert set(trial["configuration"]["output"]["views"]) == {"text", "differential"}
     assert [row["id"] for row in trial["runs"]][-1] == first["id"]
     assert len(trial["runs"]) == 2
 

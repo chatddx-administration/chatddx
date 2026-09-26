@@ -10,7 +10,7 @@ from django.test import Client
 
 from chatddx.core.models import IdentityModel
 from chatddx.dev.fake_vllm import FakeTransport, stream
-from chatddx.django.api.tests.conftest import Events, of, parts
+from chatddx.django.api.tests.conftest import Events, of, written
 from chatddx.history.models import ConversationContext, RunModel
 from chatddx.repl.bench import MAX_SEED, SEEDS
 from chatddx.repo.entities.case.django import CaseBranchModel
@@ -18,6 +18,7 @@ from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.families.pydantic import BranchDetails
+from chatddx.repo.names import short_fingerprint
 from chatddx.repo.store.branch import commit
 
 pytestmark = pytest.mark.django_db
@@ -59,11 +60,15 @@ def test_a_run_streams_as_it_comes_and_ends_with_its_record(
         "free-text × qwen3-8b-awq@fake × case-1 (seed 5)"
     )
     assert (events[0]["case"], events[0]["seed"]) == ("case-1", 5)
-    assert len(of(events, "thinking")) > 1
-    assert "".join(event["text"] for event in of(events, "text")) == (
+    assert len(of(events, "part_delta")) > 1
+    assert written(events, "thinking").startswith("I am the fake vLLM")
+    assert written(events, "text") == (
         "Fake diagnosis A\nFake diagnosis B\nFake diagnosis C"
     )
-    assert of(events, "views")[0]["views"]["differential"] == [
+    [answered] = of(events, "answer")
+    assert answered["answer"] == written(events, "text")
+    assert answered["usage"]["requests"] == 1
+    assert of(events, "judged")[0]["views"]["differential"] == [
         "Fake diagnosis A",
         "Fake diagnosis B",
         "Fake diagnosis C",
@@ -83,6 +88,8 @@ def test_a_run_streams_as_it_comes_and_ends_with_its_record(
         5,
     )
     assert run_["read"]["stack"]["name"] == "qwen3-8b-awq@fake"
+    assert run_["case"]["vignette"] == "case vignette 1"
+    assert set(run_["configuration"]["output"]["views"]) == {"text", "differential"}
     assert fake.requests[0]["seed"] == 5
     assert fake.requests[0]["messages"][-1] == {
         "role": "user",
@@ -193,10 +200,10 @@ def test_a_run_whose_server_fails_is_recorded_as_errored(
     assert "no such model" in run_["error"]
     assert RunModel.objects.get().responses == ['{"error":{"message":"no such model"}}']
 
-    again = alex.get(f"/api/runs/{run_['id']}/transcript").json()
+    messages = alex.get(f"/api/runs/{run_['id']}/messages").json()
 
-    assert "no such model" in of(again, "error")[0]["message"]
-    assert of(again, "usage") == []
+    assert messages[-1]["kind"] == "error"
+    assert "no such model" in messages[-1]["payload"]["error"]
 
 
 def test_a_vignette_of_one_s_own_runs_as_a_case_without_a_branch(
@@ -206,9 +213,10 @@ def test_a_vignette_of_one_s_own_runs_as_a_case_without_a_branch(
     run_ = recorded(events)
 
     assert fake.requests[0]["messages"][-1]["content"] == "a cough, and a fever"
-    assert re.fullmatch(r"[0-9a-f]{6}", run_["case"]["name"])
-    assert events[0]["description"].endswith(f"× {run_['case']['name']}")
-    assert events[0]["case"] == run_["case"]["name"]
+    assert re.fullmatch(r"[0-9a-f]{6}", events[0]["case"])
+    assert events[0]["description"].endswith(f"× {events[0]['case']}")
+    assert run_["case"]["vignette"] == "a cough, and a fever"
+    assert short_fingerprint(run_["case"]["fingerprint"]) == events[0]["case"]
     assert run_["scores"] == []
     assert not CaseBranchModel.objects.filter(trail__vignette__startswith="a cough")
 
@@ -259,11 +267,14 @@ def test_a_stack_s_credential_is_one_of_the_identity_s_secrets(
 
 def test_a_structured_answer_is_judged_and_its_views_read(alex: Client, run: Run):
     live = run(configuration="plan", stack="qwen3-8b-awq@fake", case="case-1")
-    views = of(live, "views")[0]["views"]
+    [judged] = of(live, "judged")
+    views = judged["views"]
 
-    assert of(live, "validity") == [
-        {"type": "validity", "valid": True, "problem": None}
-    ]
+    assert (judged["valid"], judged["problem"], judged["warning"]) == (
+        True,
+        None,
+        None,
+    )
     assert views["differential"] == [
         "fake diagnosis 1",
         "fake diagnosis 2",
@@ -272,10 +283,9 @@ def test_a_structured_answer_is_judged_and_its_views_read(alex: Client, run: Run
     assert views["warning"] == ["fake acute warning"]
     assert recorded(live)["answer"]["acute_warning"] == "fake acute warning"
 
-    again = alex.get(f"/api/runs/{live[0]['run']}/transcript").json()
+    again = alex.get(f"/api/runs/{live[0]['run']}").json()
 
-    assert of(again, "validity") == of(live, "validity")
-    assert of(again, "views") == of(live, "views")
+    assert (again["valid"], again["views"]) == (True, views)
 
 
 def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for(
@@ -290,39 +300,42 @@ def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for(
 
     events = run(configuration="diagnoses", stack="qwen3-8b-awq@fake", case="case-1")
 
-    assert of(events, "warning") == [
-        {
-            "type": "warning",
-            "message": "no thinking came back, though reasoning resolved to 'on'",
-        }
-    ]
+    assert of(events, "judged")[0]["warning"] == (
+        "no thinking came back, though reasoning resolved to 'on'"
+    )
 
 
-def test_calls_and_what_they_returned_stream_and_replay_alike(
+def test_calls_and_what_they_returned_stream_as_they_come_and_are_kept(
     alex: Client, run: Run, fake: FakeTransport
 ):
     live = run(configuration="test-tools", stack="qwen3-8b-awq@fake", case="case-1")
-
-    assert [part for part in parts(live) if part[0] != "thinking"][:4] == [
-        ("sentinel_string", "{}"),
-        ("result sentinel_string", "asdf"),
-        ("sentinel_op", '{"v1": 1, "v2": 1}'),
-        ("result sentinel_op", "0"),
+    called = [
+        (event["part"]["tool_name"], event["part"]["args"])
+        for event in of(live, "function_tool_call")
     ]
-    assert of(live, "usage")[0]["requests"] == 3
+    returned = [
+        (event["part"]["tool_name"], event["part"]["content"])
+        for event in of(live, "function_tool_result")
+    ]
+
+    assert called == [("sentinel_string", "{}"), ("sentinel_op", '{"v1": 1, "v2": 1}')]
+    assert returned == [("sentinel_string", "asdf"), ("sentinel_op", 0)]
+    assert of(live, "answer")[0]["usage"]["requests"] == 3
     assert len(fake.requests) == 3
     assert [tool["name"] for tool in recorded(live)["read"]["tools"]] == [
         "sentinel_string",
         "sentinel_op",
     ]
 
-    again = alex.get(f"/api/runs/{live[0]['run']}/transcript").json()
+    messages = alex.get(f"/api/runs/{live[0]['run']}/messages").json()
+    kept = [
+        part["tool_name"]
+        for message in messages
+        for part in message["payload"]["parts"]
+        if part["part_kind"] == "tool-call"
+    ]
 
-    assert again[0] == live[0]
-    assert parts(again) == parts(live)
-    assert of(again, "usage") == of(live, "usage")
-    assert of(again, "views") == of(live, "views")
-    assert of(again, "scores") == of(live, "scores")
+    assert kept == ["sentinel_string", "sentinel_op"]
 
 
 def test_runs_are_listed_the_latest_first(alex: Client, run: Run):

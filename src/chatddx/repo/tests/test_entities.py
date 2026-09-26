@@ -335,7 +335,7 @@ PLAN: dict[str, JsonValue] = {
     ],
 )
 def test_a_view_is_a_path_the_schema_proves(path: str):
-    output = OutputTrailIn(json_schema=PLAN, views={"differential": path})
+    output = OutputTrailIn(answer_schema=PLAN, views={"differential": path})
 
     assert output.views == {"differential": path}
 
@@ -363,19 +363,19 @@ def test_a_view_is_a_path_the_schema_proves(path: str):
 )
 def test_a_path_the_schema_doesn_t_prove_is_refused(path: str, problem: str):
     with pytest.raises(ValidationError, match=problem):
-        _ = OutputTrailIn(json_schema=PLAN, views={"differential": path})
+        _ = OutputTrailIn(answer_schema=PLAN, views={"differential": path})
 
 
 def test_free_text_gives_its_views_through_parsers():
     output = OutputTrailIn(guidance="One per line.", views={"differential": "lines"})
 
-    assert output.json_schema is None
+    assert output.answer_schema is None
 
     with pytest.raises(ValidationError, match="through a parser"):
         _ = OutputTrailIn(views={"differential": "$.names[*]"})
 
     with pytest.raises(ValidationError, match="not a path"):
-        _ = OutputTrailIn(json_schema=PLAN, views={"differential": "lines"})
+        _ = OutputTrailIn(answer_schema=PLAN, views={"differential": "lines"})
 
 
 def test_free_text_offers_its_text_whole():
@@ -391,34 +391,34 @@ def test_free_text_offers_its_text_whole():
 
 
 def test_a_structured_output_offers_text_only_where_a_path_proves_a_string():
-    output = OutputTrailIn(json_schema=PLAN, views={"text": "$.summary"})
+    output = OutputTrailIn(answer_schema=PLAN, views={"text": "$.summary"})
 
     assert output.view("text", {"summary": "pneumonia"}) == ["pneumonia"]
 
     with pytest.raises(ValidationError, match="not a string"):
-        _ = OutputTrailIn(json_schema=PLAN, views={"text": "$"})
+        _ = OutputTrailIn(answer_schema=PLAN, views={"text": "$"})
 
 
 def test_a_warning_may_be_null_and_reads_as_nothing():
-    output = OutputTrailIn(json_schema=PLAN, views={"warning": "$.diagnoses[*].maybe"})
+    output = OutputTrailIn(answer_schema=PLAN, views={"warning": "$.diagnoses[*].maybe"})
     answer: JsonValue = {"diagnoses": [{"maybe": "sepsis"}, {"maybe": None}]}
 
     assert output.view("warning", answer) == ["sepsis"]
 
     with pytest.raises(ValidationError, match=r"of type \['string', 'null'\]"):
         _ = OutputTrailIn(
-            json_schema=PLAN, views={"disposition": "$.diagnoses[*].maybe"}
+            answer_schema=PLAN, views={"disposition": "$.diagnoses[*].maybe"}
         )
 
 
 def test_a_view_the_code_doesn_t_know_is_refused():
     with pytest.raises(ValidationError, match="views.plan"):
-        _ = OutputTrailIn(json_schema=PLAN, views={"plan": "$"})  # pyright: ignore[reportArgumentType]
+        _ = OutputTrailIn(answer_schema=PLAN, views={"plan": "$"})  # pyright: ignore[reportArgumentType]
 
 
 def test_a_view_reads_what_its_path_reaches_in_an_answer():
     output = OutputTrailIn(
-        json_schema=PLAN, views={"differential": "$.diagnoses[*].diagnosis"}
+        answer_schema=PLAN, views={"differential": "$.diagnoses[*].diagnosis"}
     )
     answer: JsonValue = {
         "diagnoses": [
@@ -433,7 +433,7 @@ def test_a_view_reads_what_its_path_reaches_in_an_answer():
 
 def test_a_filter_keeps_the_items_whose_boolean_is_true():
     output = OutputTrailIn(
-        json_schema=PLAN, views={"critical": "$.diagnoses[?(@.critical)].diagnosis"}
+        answer_schema=PLAN, views={"critical": "$.diagnoses[?(@.critical)].diagnosis"}
     )
     answer: JsonValue = {
         "diagnoses": [
@@ -447,7 +447,7 @@ def test_a_filter_keeps_the_items_whose_boolean_is_true():
 
 
 def test_a_view_of_one_string_reads_a_list_of_one():
-    output = OutputTrailIn(json_schema=PLAN, views={"differential": "$.summary"})
+    output = OutputTrailIn(answer_schema=PLAN, views={"differential": "$.summary"})
 
     assert output.view("differential", {"summary": "pneumonia"}) == ["pneumonia"]
     assert output.view("differential", {}) == []
@@ -470,7 +470,7 @@ def test_free_text_is_read_a_line_at_a_time_its_list_markers_stripped():
 
 def test_a_schema_is_a_json_schema():
     with pytest.raises(ValidationError, match="not a valid JSON Schema"):
-        _ = OutputTrailIn(json_schema={"type": "objet"})
+        _ = OutputTrailIn(answer_schema={"type": "objet"})
 
 
 def test_a_budget_is_for_reasoning_that_is_on():

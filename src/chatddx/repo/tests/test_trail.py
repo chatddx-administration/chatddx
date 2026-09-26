@@ -54,7 +54,7 @@ def test_a_schema_keeps_its_order_in_the_database(trails: InventoryTrailIn):
     stored = dump_trail(OutputTrailModel, output)
 
     fetched = OutputTrailModel.objects.get(pk=stored.pk)
-    schema = cast(dict[str, Any], cast(object, fetched.json_schema))
+    schema = cast(dict[str, Any], cast(object, fetched.answer_schema))
 
     assert list(schema["properties"]) == [
         "acute_warning",

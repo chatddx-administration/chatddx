@@ -24,7 +24,7 @@ from django.db import close_old_connections
 from django.test import Client
 
 from chatddx.dev.fake_vllm import FakeTransport
-from chatddx.django.api.tests.conftest import events, of
+from chatddx.django.api.tests.conftest import events, kind_of, of
 from chatddx.history.models import RunModel, RunStatus
 
 BATCH = {
@@ -182,7 +182,7 @@ def body_of(sent: list[dict[str, Any]]) -> bytes:
 
 def test_a_batch_streams_over_wsgi_case_by_case(gated: Gated, cookie: str):
     def received(chunk: bytes) -> bool:
-        if b"event: thinking" in chunk:
+        if b"event: part_start" in chunk:
             gated.open()
         return False
 
@@ -190,7 +190,7 @@ def test_a_batch_streams_over_wsgi_case_by_case(gated: Gated, cookie: str):
         wsgi({"method": "POST", "path": "/api/batch", "body": BATCH}, received, cookie)
     )
 
-    assert [event["type"] for event in said if event["type"] in ("batch", "run")] == [
+    assert [kind_of(event) for event in said if kind_of(event) in ("batch", "run")] == [
         "batch",
         "run",
         "run",
@@ -203,7 +203,7 @@ def test_a_batch_streams_over_wsgi_case_by_case(gated: Gated, cookie: str):
 def test_a_client_that_goes_away_over_wsgi_stops_the_batch(gated: Gated, cookie: str):
     streamed = wsgi(
         {"method": "POST", "path": "/api/batch", "body": BATCH},
-        lambda chunk: b"event: thinking" in chunk,
+        lambda chunk: b"event: part_start" in chunk,
         cookie,
     )
     gated.open()
@@ -222,7 +222,7 @@ def test_a_client_that_goes_away_over_wsgi_stops_the_batch(gated: Gated, cookie:
 def test_a_client_that_goes_away_over_asgi_stops_the_batch(gated: Gated, cookie: str):
     sent = asgi(
         {"method": "POST", "path": "/api/batch", "body": BATCH},
-        lambda body: b"event: thinking" in body,
+        lambda body: b"event: part_start" in body,
         cookie,
     )
     gated.open()
@@ -237,7 +237,7 @@ def test_a_client_that_goes_away_over_asgi_stops_the_batch(gated: Gated, cookie:
 
 def test_a_batch_streams_over_asgi_case_by_case(gated: Gated, cookie: str):
     def received(body: bytes) -> bool:
-        if b"event: thinking" in body:
+        if b"event: part_start" in body:
             gated.open()
         return False
 

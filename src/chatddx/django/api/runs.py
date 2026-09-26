@@ -14,7 +14,6 @@ from chatddx.django.api.cell import held
 from chatddx.django.api.identity import identity_of
 from chatddx.django.api.schemas import (
     BatchIn,
-    Event,
     Exchange,
     MessageOut,
     Page,
@@ -26,17 +25,14 @@ from chatddx.django.api.schemas import (
     ScoringOut,
     TrialOut,
 )
-from chatddx.django.api.sending import Batch, EventStream, Sending, transcript
-from chatddx.django.api.showing import (
-    ref_of,
-    run_of,
-    scores_of,
-    slices_of,
-    summary_of,
-    sums_of,
-)
+from chatddx.django.api.sending import Batch, EventStream, Sending
+from chatddx.django.api.showing import run_of, scores_of, summary_of, sums_of
 from chatddx.history.models import MessageModel, RunModel, RunStatus, TrialModel
 from chatddx.repl.bench import Ambiguous, Bench, NotFound
+from chatddx.repo.entities.case.pydantic import CaseTrailOut
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailOut
+from chatddx.repo.entities.stack.pydantic import StackTrailOut
+from chatddx.repo.utils import resolve_trail
 from chatddx.scoring.score import Scoring
 
 # where runs go in place of each stack's endpoint: the fake vLLM, in tests
@@ -46,7 +42,14 @@ router = Router(tags=["runs"])
 
 EVENTS = {"text/event-stream": {"schema": {"$ref": "#/components/schemas/Event"}}}
 
-STREAMED = {"responses": {200: {"description": "the run's events", "content": EVENTS}}}
+STREAMED = {
+    "responses": {
+        200: {
+            "description": "the run's events, and pydantic-ai's by their event_kind",
+            "content": EVENTS,
+        }
+    }
+}
 
 BATCHED = {"responses": {200: {"description": "the runs' events", "content": EVENTS}}}
 
@@ -86,15 +89,9 @@ def runs(request: HttpRequest, page: Query[Page]):
 
 @router.get("/runs/{run}", response=RunOut)
 def one(request: HttpRequest, run: str):
+    """The run as it is recorded: replay it with its messages."""
     bench = Bench(identity_of(request))
-    return run_of(bench, bench.run_named(run), Scoring(bench.identity))
-
-
-@router.get("/runs/{run}/transcript", response=list[Event])
-def replay(request: HttpRequest, run: str):
-    """The run again, as it streamed."""
-    bench = Bench(identity_of(request))
-    return transcript(bench, bench.run_named(run), Scoring(bench.identity))
+    return run_of(bench.run_named(run), Scoring(bench.identity))
 
 
 @router.get("/runs/{run}/messages", response=list[MessageOut])
@@ -190,11 +187,11 @@ def trial(request: HttpRequest, trial: str):
     return TrialOut(
         id=held_trial.uuid,
         timestamp=held_trial.timestamp,
-        configuration=ref_of(bench, "configuration", held_trial.configuration),
-        slices=slices_of(bench, held_trial.configuration),
-        stack=ref_of(bench, "stack", held_trial.stack),
-        case=ref_of(bench, "case", held_trial.case),
-        vignette=held_trial.case.vignette,
+        configuration=ConfigurationTrailOut.model_validate(
+            resolve_trail(held_trial.configuration)
+        ),
+        stack=StackTrailOut.model_validate(resolve_trail(held_trial.stack)),
+        case=CaseTrailOut.model_validate(held_trial.case),
         seed=held_trial.seed,
         runs=[summary_of(run, scoring) for run in its_runs],
     )

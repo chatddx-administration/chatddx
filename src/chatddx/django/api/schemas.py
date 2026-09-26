@@ -1,5 +1,5 @@
 # pyright: basic
-"""What the API takes and gives. An identity is given by name, never as its record."""
+"""What the API takes and gives beside the repo's, runtime's and pydantic-ai's."""
 
 from datetime import datetime
 from typing import Annotated, Any, Literal
@@ -7,12 +7,21 @@ from uuid import UUID
 
 from ninja import Schema
 from pydantic import Field, JsonValue, StringConstraints, model_validator
+from pydantic_ai.usage import RunUsage
 
 from chatddx.repl.bench import MAX_SEED
-from chatddx.repo.entities.case.pydantic import TargetKind
+from chatddx.repo.entities.case.pydantic import CaseTrailOut, TargetKind
+from chatddx.repo.entities.client.pydantic import ClientTrailOut
+from chatddx.repo.entities.configuration.pydantic import (
+    ConfigurationBranchOut,
+    ConfigurationTrailOut,
+)
 from chatddx.repo.entities.output.pydantic import View
-from chatddx.repo.entities.scorer.pydantic import Metric
-from chatddx.repo.entity_names import EntityName
+from chatddx.repo.entities.reasoning.pydantic import ReasoningBranchOut
+from chatddx.repo.entities.sampling.pydantic import SamplingTrailOut
+from chatddx.repo.entities.scorer.pydantic import Metric, ScorerTrailOut
+from chatddx.repo.entities.stack.pydantic import StackBranchOut, StackTrailOut
+from chatddx.runtime.resolution import Coercion, Reasoning, Sampling, SliceRefusal, Tool
 
 # where the case goes in the messages a cell is shown to make
 CASE = "‹case›"
@@ -28,28 +37,6 @@ class Me(Schema):
     guest: bool
 
 
-class Ref(Schema):
-    """A trail, by the name of a branch of it the identity sees, or its fingerprint."""
-
-    entity: EntityName
-    name: str
-    fingerprint: str
-
-
-class Branch(Schema):
-    entity: EntityName
-    id: int
-    name: str
-    owner: str
-    timestamp: datetime
-    versions: int | None
-    fingerprint: str
-    trail: dict[str, Any]
-    details: dict[str, Any]
-    tags: list[str]
-    collaborators: list[str]
-
-
 class ScorerSum(Schema):
     scorer: str
     scores: int
@@ -63,19 +50,12 @@ class RunsWith(Schema):
     scorers: list[ScorerSum]
 
 
-class TargetOut(Schema):
-    """A case's target, neither part where missing; `unread`: why a pattern fails."""
+class Detail[B](Schema):
+    """A branch, the identity's runs with it, and why a case's patterns don't parse."""
 
-    kind: TargetKind
-    none_expected: bool
-    text: str | None
-    pattern: str | None
-    unread: str | None
-
-
-class BranchDetail(Branch):
+    branch: B
     runs: RunsWith
-    targets: list[TargetOut] | None
+    unread: dict[TargetKind, str]
 
 
 class CellIn(Schema):
@@ -138,76 +118,15 @@ class Page(Schema):
     offset: int = Field(0, ge=0)
 
 
-class Refusal(Schema):
-    slice: str
-    reason: str
-    kind: Literal["refused", "later"]
+class Resolved(Schema):
+    """How the cell resolves on its stack, a refused one as far as it goes."""
 
-
-class SliceOut(Schema):
-    slice: str
-    variation: Ref | None
-    own: Ref | None
-    set: bool
-
-
-class StackOut(Schema):
-    name: str
-    owner: str
-    fingerprint: str
-    machine: Ref
-    llm: Ref
-    serving: Ref | None
-    endpoint: str | None
-    served_name: str | None
-    api: str | None
-
-
-class OutputOut(Schema):
-    free_text: bool
-    views: list[View]
-
-
-class ReasoningOut(Schema):
-    effort: str
-    intent: str
-    writes: dict[str, JsonValue]
-
-
-class SamplingOut(Schema):
-    """`greedy`: a temperature of 0 or a top-k of 1, which ignores a seed."""
-
-    source: str
-    writes: dict[str, JsonValue]
+    refusals: list[SliceRefusal]
+    reasoning: Reasoning | None
+    sampling: Sampling | None
     greedy: bool
-
-
-class CoercionOut(Schema):
-    """`shown`: whether the LLM reads the schema through its slot."""
-
-    requested: str
-    mode: str
-    shown: bool
-    tool_description: str | None
-    note: str | None
-    sent: dict[str, JsonValue]
-
-
-class ToolOut(Schema):
-    name: str
-    description: str
-    parameters: dict[str, JsonValue]
-
-
-class ResolutionOut(Schema):
-    """How the cell resolves on its stack: a refused one as far as it goes."""
-
-    resolved: bool
-    refusals: list[Refusal]
-    reasoning: ReasoningOut | None
-    sampling: SamplingOut | None
-    coercion: CoercionOut | None
-    tools: list[ToolOut]
+    coercion: Coercion | None
+    tools: list[Tool]
     slots: dict[str, str]
     fields: dict[str, JsonValue] | None
     system: str | None
@@ -227,13 +146,13 @@ class HeldTo(Schema):
 
 
 class CellOut(Schema):
+    """`set`: each slice's variation held in place of the configuration's, or none."""
+
     label: str | None
-    configuration: Ref | None
-    configuration_owner: str | None
-    slices: list[SliceOut]
-    output: OutputOut | None
-    stack: StackOut | None
-    resolution: ResolutionOut | None
+    configuration: ConfigurationBranchOut | None
+    set: dict[str, Any]
+    stack: StackBranchOut | None
+    resolution: Resolved | None
     cases: int | None
     tags: list[str]
     scorers: list[HeldTo] | None
@@ -242,37 +161,29 @@ class CellOut(Schema):
 class Saved(Schema):
     what: Literal["created", "a new version", "unchanged"]
     copied: list[str]
-    configuration: Branch
+    configuration: ConfigurationBranchOut
 
 
 class Realization(Schema):
-    variation: str
-    reasoning: ReasoningOut | None
-    sampling: SamplingOut | None
-    refusals: list[Refusal]
+    reasoning: Reasoning | None
+    sampling: Sampling | None
+    refusals: list[SliceRefusal]
 
 
 class StackRealizations(Schema):
+    """Each variation on the stack, in the table's order."""
+
     stack: str
-    owner: str
     current: bool
     realizations: list[Realization]
 
 
-class ReasoningVariation(Schema):
-    name: str
-    owner: str
-    fingerprint: str
-    effort: str
-    budget: int | None
-    current: bool
-
-
 class ReasoningTable(Schema):
-    """`sampling` is the cell's, which each variation pulls in."""
+    """`sampling` and `current` are the cell's, the variation by its fingerprint."""
 
-    sampling: Ref | None
-    variations: list[ReasoningVariation]
+    sampling: SamplingTrailOut | None
+    current: str | None
+    variations: list[ReasoningBranchOut]
     stacks: list[StackRealizations]
 
 
@@ -281,11 +192,7 @@ class ScorerOut(Schema):
 
     name: str
     owner: str
-    fingerprint: str
-    function: str
-    view: str
-    target_kind: str | None
-    args: dict[str, JsonValue]
+    trail: ScorerTrailOut
     metrics: list[Metric]
     offered: bool | None
 
@@ -330,12 +237,6 @@ class ReadOut(Schema):
     tools: list[ToolRan]
 
 
-class ClientOut(Schema):
-    build: str | None
-    rev: str | None
-    packages: dict[str, str]
-
-
 class RunOut(RunSummary):
     """`number`: the run's place among its trial's runs."""
 
@@ -345,23 +246,21 @@ class RunOut(RunSummary):
     finish_reason: str | None
     answer: JsonValue
     views: dict[str, list[JsonValue]] | None
-    configuration: Ref
-    slices: dict[str, Ref | None]
-    stack: Ref
-    case: Ref
+    configuration: ConfigurationTrailOut
+    stack: StackTrailOut
+    case: CaseTrailOut
     seed: int | None
-    client: ClientOut | None
+    client: ClientTrailOut | None
+    client_rev: str | None
     read: ReadOut
 
 
 class TrialOut(Schema):
     id: UUID
     timestamp: datetime
-    configuration: Ref
-    slices: dict[str, Ref | None]
-    stack: Ref
-    case: Ref
-    vignette: str
+    configuration: ConfigurationTrailOut
+    stack: StackTrailOut
+    case: CaseTrailOut
     seed: int | None
     runs: list[RunSummary]
 
@@ -390,9 +289,8 @@ class ScoringOut(Schema):
     summary: list[ScorerSum]
 
 
-# What a run streams as it goes, and its transcript repeats. A part is a piece
-# of what the LLM sends back, numbered through the run: thinking, text, or a
-# call to a tool, each of which may come in many events.
+# A run streams pydantic-ai's own events as they come, by their `event_kind`,
+# between these of the API's own, by their `type`.
 
 
 class Batched(Schema):
@@ -410,54 +308,19 @@ class Began(Schema):
     seed: int | None
 
 
-class Thought(Schema):
-    """`in_content`: the thinking came in the answer's text."""
-
-    type: Literal["thinking"] = "thinking"
-    part: int
-    text: str
-    in_content: bool
-
-
-class Wrote(Schema):
-    type: Literal["text"] = "text"
-    part: int
-    text: str
-
-
-class Called(Schema):
-    type: Literal["call"] = "call"
-    part: int
-    tool: str
-    arguments: str
-
-
-class Returned(Schema):
-    type: Literal["result"] = "result"
-    tool: str
-    content: str
-
-
-class Used(Schema):
-    type: Literal["usage"] = "usage"
-    input_tokens: int
-    output_tokens: int
-    requests: int
-
-
-class Warned(Schema):
-    type: Literal["warning"] = "warning"
-    message: str
+class Answered(Schema):
+    type: Literal["answer"] = "answer"
+    answer: JsonValue
+    usage: RunUsage
 
 
 class Judged(Schema):
-    type: Literal["validity"] = "validity"
-    valid: bool
+    """Whether the LLM reasoned as asked, and the answer held; what the views read."""
+
+    type: Literal["judged"] = "judged"
+    warning: str | None
+    valid: bool | None
     problem: str | None
-
-
-class Viewed(Schema):
-    type: Literal["views"] = "views"
     views: dict[str, list[JsonValue]]
 
 
@@ -483,19 +346,6 @@ class Summarized(Schema):
 
 
 type Event = Annotated[
-    Batched
-    | Began
-    | Thought
-    | Wrote
-    | Called
-    | Returned
-    | Used
-    | Warned
-    | Judged
-    | Viewed
-    | Failed
-    | Scored
-    | Recorded
-    | Summarized,
+    Batched | Began | Answered | Judged | Failed | Scored | Recorded | Summarized,
     Field(discriminator="type"),
 ]

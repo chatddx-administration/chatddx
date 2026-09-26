@@ -73,7 +73,7 @@ A few keys shape how records are written, and change nothing they mean:
 - `partial = true` makes a record a template for others to extend, never a
   record of its own.
 - A key ending in `_path` reads its value from a file next to the file it
-  is in: `json_schema_path = "schemas/diagnoses.json"`.
+  is in: `answer_schema_path = "schemas/diagnoses.json"`.
 
 ## Cases
 
@@ -174,7 +174,7 @@ What is asked for, and how the answer is read.
 
 ```toml
 [output.management-plan]
-json_schema_path = "schemas/management_plan_v1.json"
+answer_schema_path = "schemas/management_plan_v1.json"
 guidance = "Fill in the management plan for the case."
 views.differential = "$.diagnoses[*].diagnosis"
 views.warning = "$.acute_warning"
@@ -184,7 +184,7 @@ views.critical = "$.diagnoses[?(@.critical)].diagnosis"
 
 - **`guidance`:** the words that ask for the answer. The instruction
   places them in the prompt.
-- **`json_schema`** (or `json_schema_path`): the shape a structured answer
+- **`answer_schema`** (or `answer_schema_path`): the shape a structured answer
   must have. Each field's `description` in the schema is read by the
   model, so its wording is part of what the model is asked. Leave it out
   for a free-text answer.

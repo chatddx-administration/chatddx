@@ -12,7 +12,7 @@ from chatddx.repo.families.django import (
 
 class OutputTrailModel(TrailModel):
     # null for free text
-    json_schema = OrderedJSONField(null=True, blank=True)
+    answer_schema = OrderedJSONField(null=True, blank=True)
     guidance = TextField(null=True, blank=True)
     views = JSONField(default=dict, blank=True)
 

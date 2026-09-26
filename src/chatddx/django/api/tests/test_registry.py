@@ -42,30 +42,24 @@ def test_stacks_are_listed_with_what_they_hold_and_where_they_send(alex: Client)
 
     fake = stacks["qwen3-8b-awq@fake"]
 
-    assert fake["owner"] == "archive"
-    assert fake["trail"]["machine"]["name"] == "fake"
-    assert fake["trail"]["llm"] == {
-        "entity": "llm",
-        "name": "qwen3-8b-awq",
-        "fingerprint": fake["trail"]["llm"]["fingerprint"],
-    }
+    assert fake["owner"]["name"] == "archive"
+    assert "secrets" not in fake["owner"]
+    assert fake["trail"]["llm"]["fingerprint"].startswith("cddx-trail/")
+    assert fake["trail"]["machine"]["id"]
     assert fake["details"]["endpoint"] == "http://localhost:12099/v1/"
-    assert fake["versions"] == 1
 
 
 def test_configurations_are_listed_with_their_variations(alex: Client):
     free_text = named(alex.get("/api/registry/configuration").json())["free-text"]
 
-    assert {
-        entity: ref and ref["name"] for entity, ref in free_text["trail"].items()
-    } == {
-        "instruction": "ddx",
-        "output": "free-text",
-        "coercion": "auto",
-        "reasoning": "default",
-        "sampling": "recommended",
-        "toolset": None,
-    }
+    trail = free_text["trail"]
+
+    assert {"instruction", "output", "coercion", "reasoning", "sampling"} <= set(trail)
+    assert trail["toolset"] is None
+    assert (trail["reasoning"]["effort"], trail["sampling"]["defaults"]) == (
+        "default",
+        "recommended",
+    )
 
 
 def test_cases_are_listed_by_name_and_kept_to_any_of_the_tags(alex: Client):
@@ -79,34 +73,24 @@ def test_cases_are_listed_by_name_and_kept_to_any_of_the_tags(alex: Client):
 
 
 def test_a_case_says_its_text_and_its_targets(alex: Client):
-    case = alex.get("/api/registry/case/case-1").json()
-    targets = {row.pop("kind"): row for row in case["targets"]}
+    shown = alex.get("/api/registry/case/case-1").json()
+    case = shown["branch"]
 
-    assert case["trail"] == {"vignette": "case vignette 1"}
+    assert case["trail"]["vignette"] == "case vignette 1"
     assert case["details"]["targets"]["diagnosis"] == {
         "text": "Fake diagnosis B",
         "pattern": "fake & diagnosis & (b | 2)",
     }
-    assert list(case["details"]["targets"]) == ["diagnosis", "warning", "disposition"]
-    assert list(targets) == ["diagnosis", "warning", "disposition", "dont_miss"]
-    assert targets["diagnosis"] == {
-        "none_expected": False,
-        "text": "Fake diagnosis B",
-        "pattern": "fake & diagnosis & (b | 2)",
-        "unread": None,
-    }
-    assert (targets["disposition"]["text"], targets["disposition"]["pattern"]) == (
-        None,
-        "admit*",
-    )
-    assert targets["dont_miss"] == {
-        "none_expected": False,
+    assert case["details"]["targets"]["disposition"] == {
         "text": None,
-        "pattern": None,
-        "unread": None,
+        "pattern": "admit*",
     }
+    assert "dont_miss" not in case["details"]["targets"]
     assert case["tags"] == ["tag-1", "tag-2"]
-    assert case["runs"] == {"runs": 0, "errored": 0, "scorers": []}
+    assert (shown["unread"], shown["runs"]) == (
+        {},
+        {"runs": 0, "errored": 0, "scorers": []},
+    )
 
     case = CaseBranchModel.objects.get(owner__name="archive", name="case-2")
     _ = commit(
@@ -115,11 +99,8 @@ def test_a_case_says_its_text_and_its_targets(alex: Client):
     )
 
     calm = alex.get("/api/registry/case/calm").json()
-    warning = next(row for row in calm["targets"] if row["kind"] == "warning")
 
-    assert calm["details"]["targets"] == {"warning": False}
-    assert (warning["none_expected"], warning["pattern"]) == (True, None)
-    assert alex.get("/api/registry/stack/qwen3-8b-awq@fake").json()["targets"] is None
+    assert calm["branch"]["details"]["targets"] == {"warning": False}
 
 
 def test_a_branch_counts_your_runs_with_it_by_scorer(alex: Client, run: Run):
@@ -148,7 +129,7 @@ def test_a_branch_counts_your_runs_with_it_by_scorer(alex: Client, run: Run):
 
     scorer = alex.get("/api/registry/scorer/first_mention").json()
 
-    assert scorer["details"] == {"metrics": ["mean", "stderr"]}
+    assert scorer["branch"]["details"] == {"metrics": ["mean", "stderr"]}
     assert scorer["runs"]["runs"] == 3
     assert [row["scorer"] for row in scorer["runs"]["scorers"]] == ["first_mention"]
 
@@ -158,7 +139,7 @@ def test_what_isn_t_there_isn_t_found(alex: Client):
 
     assert missing.status_code == 404
     assert missing.json() == {"detail": "no case 'nope' for alex"}
-    assert alex.get("/api/registry/frobnicate").status_code == 422
+    assert alex.get("/api/registry/frobnicate").status_code == 404
 
 
 def test_another_s_configuration_is_had_by_its_owner(alex: Client):
@@ -169,10 +150,10 @@ def test_another_s_configuration_is_had_by_its_owner(alex: Client):
     assert "bobs-plan" not in named(alex.get("/api/registry/configuration").json())
     assert alex.get("/api/registry/configuration/bobs-plan").status_code == 404
 
-    plan = alex.get("/api/registry/configuration/bobs-plan?owner=bob").json()
+    plan = alex.get("/api/registry/configuration/bobs-plan?owner=bob").json()["branch"]
 
-    assert (plan["name"], plan["owner"]) == ("bobs-plan", "bob")
-    assert plan["trail"]["output"]["name"] == "management-plan"
+    assert (plan["name"], plan["owner"]["name"]) == ("bobs-plan", "bob")
+    assert "warning" in plan["trail"]["output"]["views"]
 
 
 def test_a_branch_lists_its_versions_the_head_first(alex: Client):
@@ -186,10 +167,10 @@ def test_a_branch_lists_its_versions_the_head_first(alex: Client):
 
     versions = alex.get("/api/registry/configuration/mine/versions").json()
 
-    assert [version["trail"]["reasoning"]["name"] for version in versions] == [
+    head = alex.get("/api/registry/configuration/mine").json()["branch"]
+
+    assert [version["trail"]["reasoning"]["effort"] for version in versions] == [
         "high",
         "off",
     ]
-    assert (
-        versions[0]["id"] == alex.get("/api/registry/configuration/mine").json()["id"]
-    )
+    assert versions[0]["id"] == head["id"]

@@ -14,60 +14,41 @@ import queue
 import threading
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from asgiref.sync import sync_to_async
 from django.http import StreamingHttpResponse
 from django.utils import timezone
+from ninja import Schema
 from ninja.errors import HttpError
 from ninja.responses import NinjaJSONEncoder
+from pydantic import TypeAdapter
 from pydantic_ai import (
     AgentRunResultEvent,
-    FunctionToolResultEvent,
-    ModelMessagesTypeAdapter,
-    ModelRequest,
-    ModelResponse,
+    AgentStreamEvent,
     PartDeltaEvent,
     PartStartEvent,
-    TextPart,
-    TextPartDelta,
     ThinkingPart,
     ThinkingPartDelta,
-    ToolCallPart,
-    ToolCallPartDelta,
-    ToolReturnPart,
 )
 
 from chatddx.django.api.schemas import (
+    Answered,
     Batched,
     BatchIn,
     Began,
-    Called,
     Event,
     Failed,
     Judged,
     Recorded,
-    Returned,
     RunIn,
     Scored,
     Seed,
     Summarized,
-    Thought,
-    Used,
-    Viewed,
-    Warned,
-    Wrote,
 )
 from chatddx.django.api.showing import run_of, scores_of, sums_of, views_of
-from chatddx.history.models import (
-    ConversationContext,
-    MessageKind,
-    MessageModel,
-    RunModel,
-    RunStatus,
-    ScoreModel,
-)
+from chatddx.history.models import ConversationContext, RunModel, RunStatus, ScoreModel
 from chatddx.history.record import Outcome
 from chatddx.repl.bench import (
     SHARED_BY,
@@ -84,10 +65,13 @@ from chatddx.repo.entities.case.django import CaseTrailModel
 from chatddx.repo.entities.case.pydantic import CaseTrailIn
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.repo.store.trail import dump_trail
-from chatddx.runtime.run import FINAL_RESULT, Run, invalid
+from chatddx.runtime.run import Run, invalid
 from chatddx.scoring.score import Scoring
 
 logger = logging.getLogger(__name__)
+
+# pydantic-ai's events, streamed as they come
+STREAMED: TypeAdapter[Any] = TypeAdapter(AgentStreamEvent)
 
 
 def ready_of(bench: Bench) -> Ready:
@@ -156,10 +140,6 @@ class Sending:
         self.finished: datetime | None = None
         self.made: list[ScoreModel] = []
 
-        # each part pydantic-ai is sending, by its index in its response: its
-        # number through the run, what it is, and whether it came in content
-        self._parts: dict[int, tuple[int, str, bool]] = {}
-        self._begun: int = 0
         self._thought: bool = False
         self._answer: Any = None
         self._written: bool = False
@@ -192,15 +172,25 @@ class Sending:
             seed=self.run.seed,
         )
 
-    async def events(self) -> AsyncGenerator[Event]:
+    async def events(self) -> AsyncGenerator[Any]:
         """What the LLM sends back, then what its answer comes to: no database."""
         self.started = timezone.now()
 
         try:
             async with self.run.stream() as stream:
                 async for event in stream:
-                    for said in self._said(event):
-                        yield said
+                    match event:
+                        case AgentRunResultEvent(result=result):
+                            self._answer = result.output
+                            yield Answered(answer=result.output, usage=result.usage)
+                        case (
+                            PartStartEvent(part=ThinkingPart())
+                            | PartDeltaEvent(delta=ThinkingPartDelta())
+                        ):
+                            self._thought = True
+                            yield event
+                        case _:
+                            yield event
         except (asyncio.CancelledError, GeneratorExit):
             self.outcome = STOPPED
             raise
@@ -216,88 +206,19 @@ class Sending:
     def _judged(self) -> list[Event]:
         resolution = self.ready.resolution
         answer = self._answer
-        self.outcome = Outcome(RunStatus.COMPLETED, answer=answer)
-        judged: list[Event] = []
-        warning = unheeded(resolution.reasoning.intent, self._thought)
+        coercion = resolution.coercion
+        problem = None if coercion is None else invalid(coercion.schema, answer)
+        valid = None if coercion is None else problem is None
+        self.outcome = Outcome(RunStatus.COMPLETED, answer=answer, valid=valid)
 
-        if warning is not None:
-            judged.append(Warned(message=warning))
-
-        if resolution.coercion is not None:
-            problem = invalid(resolution.coercion.schema, answer)
-            self.outcome = Outcome(
-                RunStatus.COMPLETED, answer=answer, valid=problem is None
+        return [
+            Judged(
+                warning=unheeded(resolution.reasoning.intent, self._thought),
+                valid=valid,
+                problem=problem,
+                views=views_of(resolution.output, answer),
             )
-            judged.append(Judged(valid=problem is None, problem=problem))
-
-        judged.append(Viewed(views=views_of(resolution.output, answer)))
-
-        return judged
-
-    def _said(self, event: Any) -> list[Event]:
-        match event:
-            case PartStartEvent(
-                index=index, part=ThinkingPart(content=text, id=origin)
-            ):
-                self._thought = True
-                part = self._begin(index, "thinking", origin == "content")
-                return [Thought(part=part, text=text, in_content=origin == "content")]
-            case PartDeltaEvent(
-                index=index, delta=ThinkingPartDelta(content_delta=text)
-            ) if text:
-                self._thought = True
-                part, _, in_content = self._part(index, "thinking")
-                return [Thought(part=part, text=text, in_content=in_content)]
-            case PartStartEvent(index=index, part=TextPart(content=text)):
-                return [Wrote(part=self._begin(index, "text"), text=text)]
-            case PartDeltaEvent(
-                index=index, delta=TextPartDelta(content_delta=text)
-            ) if text:
-                return [Wrote(part=self._part(index, "text")[0], text=text)]
-            case PartStartEvent(
-                index=index, part=ToolCallPart(tool_name=name, args=args)
-            ):
-                return [
-                    Called(
-                        part=self._begin(index, name), tool=name, arguments=_sent(args)
-                    )
-                ]
-            case PartDeltaEvent(
-                index=index, delta=ToolCallPartDelta(args_delta=args)
-            ) if args:
-                part, tool, _ = self._part(index, "")
-                return [Called(part=part, tool=tool, arguments=_sent(args))]
-            case FunctionToolResultEvent(part=ToolReturnPart() as returned):
-                return [
-                    Returned(
-                        tool=returned.tool_name, content=returned.model_response_str()
-                    )
-                ]
-            case AgentRunResultEvent(result=result):
-                self._answer = result.output
-                usage = result.usage
-                return [
-                    Used(
-                        input_tokens=usage.input_tokens,
-                        output_tokens=usage.output_tokens,
-                        requests=usage.requests,
-                    )
-                ]
-            case _:
-                return []
-
-    def _begin(self, index: int, kind: str, in_content: bool = False) -> int:
-        """A part begun, numbered through the run, not afresh in each response."""
-        part = self._begun
-        self._begun += 1
-        self._parts[index] = (part, kind, in_content)
-        return part
-
-    def _part(self, index: int, kind: str) -> tuple[int, str, bool]:
-        if index not in self._parts:
-            _ = self._begin(index, kind)
-
-        return self._parts[index]
+        ]
 
     def recorded(self) -> list[Event]:
         """Write the run down, once, and score it; a run that never began isn't."""
@@ -335,7 +256,7 @@ class Sending:
         run = RunModel.objects.select_related(
             "trial__configuration__output", "conversation", "client"
         ).get(pk=recorded.pk)
-        said.append(Recorded(run=run_of(bench, run, scoring)))
+        said.append(Recorded(run=run_of(run, scoring)))
 
         return said
 
@@ -514,107 +435,14 @@ def _send(loop: asyncio.AbstractEventLoop, task: asyncio.Task[None]) -> None:
         loop.close()
 
 
-def sse(event: Event) -> str:
-    data = json.dumps(event.model_dump(), cls=NinjaJSONEncoder)
-    return f"event: {event.type}\ndata: {data}\n\n"
+def sse(event: Any) -> str:
+    """An event of the API's own by its type, or of pydantic-ai's by its kind."""
+    if isinstance(event, Schema):
+        data = json.dumps(event.model_dump(), cls=NinjaJSONEncoder)
+        return _sse(cast(Any, event).type, data)
+
+    return _sse(event.event_kind, STREAMED.dump_json(event).decode())
 
 
-def transcript(bench: Bench, run: RunModel, scoring: Scoring) -> list[Event]:
-    """A recorded run again, as it streamed, but for what the answer's tool returned."""
-    stored = list(
-        MessageModel.objects.filter(conversation=run.conversation, run_uuid=run.uuid)
-    )
-    messages = ModelMessagesTypeAdapter.validate_python(
-        [message.payload for message in stored if message.kind != MessageKind.ERROR]
-    )
-    said: list[Event] = [
-        Began(
-            run=run.uuid,
-            description=(run.conversation.description if run.conversation else None)
-            or "",
-            case=bench.name_of("case", run.trial.case),
-            seed=run.trial.seed,
-        )
-    ]
-    begun = 0
-
-    for message in messages:
-        match message:
-            case ModelResponse(parts=parts):
-                for part in parts:
-                    match part:
-                        case ThinkingPart(content=text, id=origin):
-                            said.append(
-                                Thought(
-                                    part=begun,
-                                    text=text,
-                                    in_content=origin == "content",
-                                )
-                            )
-                        case TextPart(content=text):
-                            said.append(Wrote(part=begun, text=text))
-                        case ToolCallPart(tool_name=name):
-                            said.append(
-                                Called(
-                                    part=begun,
-                                    tool=name,
-                                    arguments=part.args_as_json_str(),
-                                )
-                            )
-                        case _:
-                            continue
-
-                    begun += 1
-            case ModelRequest(parts=parts):
-                for part in parts:
-                    if (
-                        isinstance(part, ToolReturnPart)
-                        and part.tool_name != FINAL_RESULT
-                    ):
-                        said.append(
-                            Returned(
-                                tool=part.tool_name, content=part.model_response_str()
-                            )
-                        )
-
-    answered = run.answer is not None
-    responses = [message for message in messages if isinstance(message, ModelResponse)]
-
-    if answered:
-        said.append(
-            Used(
-                input_tokens=sum(response.usage.input_tokens for response in responses),
-                output_tokens=sum(
-                    response.usage.output_tokens for response in responses
-                ),
-                requests=len(responses),
-            )
-        )
-
-    for message in stored:
-        if message.kind == MessageKind.ERROR:
-            said.append(Failed(message=str(message.payload["error"])))
-
-    if answered:
-        output = scoring.output_of(run)
-
-        if run.valid is not None and output.json_schema is not None:
-            problem = invalid(output.json_schema, run.answer)
-            said.append(Judged(valid=problem is None, problem=problem))
-
-        said.append(Viewed(views=views_of(output, run.answer)))
-
-    said.append(Scored(scores=scores_of(scoring.latest(run))))
-
-    return said
-
-
-def _sent(arguments: Any) -> str:
-    """A call's arguments, or a piece of them, as they were sent."""
-    match arguments:
-        case str():
-            return arguments
-        case None:
-            return ""
-        case _:
-            return json.dumps(arguments)
+def _sse(kind: str, data: str) -> str:
+    return f"event: {kind}\ndata: {data}\n\n"

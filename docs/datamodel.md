@@ -251,7 +251,7 @@ the text around it:
 
 | Field | Holds |
 |---|---|
-| `json_schema` | the shape a structured answer must have, as written, key order included; none for free text |
+| `answer_schema` | the shape a structured answer must have, as written, key order included; none for free text |
 | `guidance` | the words that ask for the answer, placed in the `output_guidance` slot |
 | `views` | where scorers find each part of the answer |
 

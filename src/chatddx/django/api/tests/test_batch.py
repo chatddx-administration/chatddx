@@ -43,9 +43,9 @@ def test_batch_runs_each_case_with_any_of_the_tags_and_sums_them_up(
     )
     assert (batched["cases"], batched["seed"]) == (["case-1", "case-2"], 42)
     assert [event["case"] for event in of(said, "run")] == ["case-1", "case-2"]
-    assert [event["run"]["case"]["name"] for event in of(said, "recorded")] == [
-        "case-1",
-        "case-2",
+    assert [event["run"]["case"]["vignette"] for event in of(said, "recorded")] == [
+        "case vignette 1",
+        "case vignette 2",
     ]
     assert [request["seed"] for request in fake.requests] == [42, 42]
     assert said[-1] == summary

@@ -54,7 +54,7 @@ variables = ["case", "schema_prompt"]
 
 # key order as authored: the DDXManagement model's own
 [output.management-plan]
-json_schema_path = "schemas/management_plan_v1.json"
+answer_schema_path = "schemas/management_plan_v1.json"
 guidance = "Fill in the management plan for the case."
 views.differential = "$.diagnoses[*].diagnosis"
 views.warning = "$.acute_warning"
@@ -62,7 +62,7 @@ views.disposition = "$.management.disposition"
 views.critical = "$.diagnoses[?(@.critical)].diagnosis"
 
 [output.diagnoses]
-json_schema_path = "schemas/diagnoses.json"
+answer_schema_path = "schemas/diagnoses.json"
 guidance = "List the plausible diagnoses, most likely first."
 views.differential = "$.diagnoses[*]"
 
@@ -77,7 +77,7 @@ views.text = "whole"
 
 # One field of each JSON type, to test coercion; it has no clinical reading.
 [output.type-check]
-json_schema_path = "schemas/type_check.json"
+answer_schema_path = "schemas/type_check.json"
 
 # ----------------------------------------------------------------- coercion
 #

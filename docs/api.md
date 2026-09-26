@@ -33,12 +33,12 @@ query parameters on a `GET` and in the JSON body of a `POST`.
 
 | shell | API |
 | --- | --- |
-| `configurations`, `stacks`, `cases` | `GET /api/registry/{entity}`, any entity; `?tag=` keeps those with any of the tags |
+| `configurations`, `stacks`, `cases` | `GET /api/registry/configuration`, and so for any entity; `?tag=` keeps those with any of the tags |
 | `use`, `on`, `cell`, `set` | the cell each request names |
 | `show` | `GET /api/cell`: the cell, how it resolves, and which cases each scorer can hold it to |
 | `show tag TAG...` | `GET /api/cell?tag=TAG&tag=...` |
-| `show ENTITY` | `GET /api/cell/{entity}` |
-| `show ENTITY NAME` | `GET /api/registry/{entity}/{name}`, and `?owner=` for one shared with you |
+| `show ENTITY` | `GET /api/cell/output`, and so for each entity a cell has |
+| `show ENTITY NAME` | `GET /api/registry/output/{name}`, and so for any entity; `?owner=` for one shared with you |
 | `reasoning` | `GET /api/reasoning` |
 | `scorers` | `GET /api/scorers` |
 | `seed` | the `seed` of each run or batch |
@@ -46,15 +46,18 @@ query parameters on a `GET` and in the JSON body of a `POST`.
 | `batch TAG...` | `POST /api/batch` |
 | `save NAME` | `POST /api/cell/save` |
 | `runs [COUNT]` | `GET /api/runs?limit=&offset=` |
-| `replay [RUN]` | `GET /api/runs/{run}/transcript` |
+| `replay [RUN]` | `GET /api/runs/{run}`, and its messages at `/messages` |
 | `score [RUN]` | `POST /api/scores` |
 
 A run or a trial is named by its id, or by its first letters, as `runs`
-shows them. Beyond the shell, a run's record is at `/api/runs/{run}`, its
-messages at `/messages`, and the bytes it sent and got back at
-`/exchange`; a trial is at `/api/trials/{trial}`, with your runs of it; and
-any branch's versions and your runs with it are at
+shows them. Beyond the shell, the bytes a run sent and got back are at
+`/api/runs/{run}/exchange`; a trial is at `/api/trials/{trial}`, with your
+runs of it; and any branch's versions and your runs with it are at
 `/api/registry/{entity}/{name}/versions` and `/runs`.
+
+Branches and trails are given as the repo's schemas give them: a branch
+with its owner, tags and details, and its trail with what it relates to, in
+full. An identity is given without its secrets.
 
 ## Running
 
@@ -75,20 +78,20 @@ configuration (403).
 ## Streaming
 
 A run streams as server-sent events, each as it comes, whether Django
-serves over ASGI or WSGI. Each event's `event:` is its `type`:
+serves over ASGI or WSGI. What the model sends back comes as pydantic-ai's
+own events, by their `event_kind`: `part_start`, `part_delta` and
+`part_end` for its thinking, text and calls to tools, and
+`function_tool_call` and `function_tool_result` for each call it runs.
+Around them come the API's own, by their `type`:
 
 - `batch`: a batch, before its first run: its cases and its seed.
 - `run`: a run, before anything is sent: its id, what runs, and its seed.
-- `thinking`, `text`, `call`: what the model sends back, piece by piece.
-  Pieces of one part share its `part` number.
-- `result`: what a tool returned.
-- `usage`: the tokens used, once an answer came.
-- `warning`, `validity`, `views`: whether the model reasoned as asked,
-  whether the answer holds to its schema, and what each view reads from it.
+- `answer`: the answer, and the tokens and requests it took.
+- `judged`: whether the model reasoned as asked, whether the answer holds to
+  its schema, and what each view reads from it.
 - `error`: why the run came to no answer, or wasn't recorded.
 - `scores`, `recorded`: the run's scores, and its record.
 - `summary`: a batch's scores, scorer by scorer, after its last run.
 
 A client that goes away stops the run, which is recorded as stopped, and
 the batch. `"stream": false` answers a run with its record instead.
-`GET /api/runs/{run}/transcript` gives a run's events again.
