@@ -3,9 +3,9 @@
 The portal is chatddx in a browser: Django's admin, dressed by unfold, at
 `/admin/`. It is being ported to the new datamodel page by page. Its pages
 so far are the Cases, where clinicians go through each case and work with
-its vignette and targets, and the Batch: the repl's `batch`, with its
-slices varied, run by a worker beside the portal, and watched and held from
-its Status page.
+its vignette and targets; the Batch: the repl's `batch`, with its slices
+varied, run by a worker beside the portal, and watched and held from its
+Status page; and the Runs, each run with all it holds.
 
 The portal shows you what is yours: your cases, configurations and
 variations. The one exception is what answers, the stacks and their parts,
@@ -112,7 +112,8 @@ Where another case has the page's vignette, the page says so:
 Under the case are your runs of its vignette, the latest first: when, the
 trial, how it ran, and each scorer's score for the targets they are held
 to now. A score not yet made for a changed target is **outstanding**, and
-**Score again** makes them.
+**Score again** makes them. The when opens the run's page (see
+[Runs](#runs)).
 
 ### Deleting
 
@@ -246,10 +247,81 @@ of your batches they came from. It follows along every second.
   counted them.
 - Up next: the case your queue runs next, and how many are outstanding.
 - The ten cases taken up last, the latest first: when, the case, the cell,
-  the batch, how it went and why, its tokens, and its scores.
+  the batch, how it went and why, its tokens, and its scores. The when
+  opens the run the case came to.
 
 Watching takes the view permission on batches, and running, adding cases,
 pausing and stopping the add permission.
+
+## Runs
+
+**Runs** in the sidebar lists your runs, the latest first: each by the
+start of its uuid, when it was sent, its trial, how it came out, and each
+scorer's latest score. Search them by their trials.
+
+### A run's page
+
+A run's page shows all a run holds, and never changes it. It opens from
+the list, from a case's runs on its page, and from the cases taken up last
+on the Status page.
+
+- **The run:** its trial (the cell, the case and the seed), how it came
+  out (valid, invalid, completed, errored or stopped), when it was sent
+  and how long it took. Then its details:
+  - why it went wrong, where it did, and how its last response finished;
+  - the case: a case of yours opens at the version the run is held to;
+  - the batch it came from, and which of its trial's runs it is;
+  - the stack and the LLM, as it read them, and the name and endpoint it
+    was served at;
+  - the tools it ran, each with its file;
+  - the client it was sent from;
+  - its tokens, over how many requests;
+  - its conversation;
+  - the configuration's slices, as it ran them.
+- **Answer:** each of the output's views of it, and the answer as
+  written. Where the schema refuses it, why.
+- **Scores:** each scorer's latest score: what it rests on, and the
+  pattern it was held to. The scores made before are shown below, greyed.
+- **Messages:** each message, folded to a line of what it says: the
+  user's vignette; the assistant thinking, writing, answering, or calling
+  a tool with what it asks; what a tool returned; the error that ended the
+  run. A message with something gone wrong in it is marked.
+  - Opened, a message shows itself part by part: the instructions where
+    they are new, the thinking folded, the text, the answer and each
+    call's arguments as JSON, and each return, by the id of the call it
+    answers; and the model that wrote it, and how it finished.
+  - **Open all** and **Close all** open and close every message.
+  - A message can be linked to as `#message-N`.
+- **What it sent and got back:** each request as it was sent, and each
+  response as it streamed back, byte for byte, with its size and events.
+  Each is loaded as it is opened.
+
+The runs are their owner's alone: another's run is not found. Reading them
+takes the view permission on runs.
+
+### Sample runs
+
+`chatddx samples OWNER` makes three runs for OWNER to look at a run's page
+with. Each is answered by a script in place of an LLM, and searches a web
+the script cans, so no vLLM, fake or real, needs to be running:
+
+- **typical:** `plan` on `qwen3-8b-awq@fake`. It thinks once and answers
+  with the plan: valid, and scored.
+- **broken:** `plan-web` on `qwen3-8b-awq@fake`, gone wrong every way it
+  could. Its search fails with a 503, its next one has arguments
+  `web_search` doesn't take, and the server goes away as it writes its
+  answer. It ends errored, with no answer and no scores.
+- **rich:** `plan-web` on `gpt-oss-20b@fake`, with reasoning high and the
+  tool coercion. It thinks hard before each of its five turns, and
+  searches six times: twice two searches at once, one with an argument of
+  the wrong type, and one finding nothing. It says a word to the user
+  beside its calls, and answers through `final_result`.
+
+They are sent as a batch's trial is, through the bench: the tools' own
+code runs, and each run is written down and scored as any other.
+`--sample NAME` makes one of them, `--case NAME` runs them on another
+case, and `--pace` sets the seconds between the tokens streamed.
+The scripts are `src/chatddx/dev/samples/*.toml`.
 
 ## The worker
 

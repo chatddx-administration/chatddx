@@ -1,0 +1,183 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n %}
+
+{% block extrahead %}
+    {{ block.super }}
+
+    <script>
+        // a section's folds, all opened or all closed
+        function portalFold(button, open) {
+            for (const fold of button.closest("section").querySelectorAll("details")) {
+                fold.open = open;
+            }
+        }
+    </script>
+{% endblock %}
+
+{% block content %}
+    {% with run=shown.run %}
+        <section class="portal-box mt-0">
+            <div class="portal-box-head">
+                <h2 class="portal-heading">{{ shown.description }}</h2>
+                <span class="portal-badge{% if shown.trouble %} portal-badge-trouble{% endif %}">{{ shown.outcome }}</span>
+            </div>
+
+            <p class="portal-said">
+                {% blocktranslate with run=run.uuid|stringformat:"s"|slice:":8" when=run.timestamp|date:"DATETIME_FORMAT" %}Run {{ run }}, sent {{ when }}{% endblocktranslate %}{% if shown.took %}, {% blocktranslate with took=shown.took %}took {{ took }}{% endblocktranslate %}{% endif %}
+            </p>
+
+            <dl class="portal-fields mt-4">
+                {% for detail in shown.details %}
+                    <dt>{{ detail.label }}</dt>
+                    <dd{% if detail.trouble %} class="portal-refused"{% endif %}>
+                        {% if detail.link %}<a class="underline" href="{{ detail.link }}">{{ detail.value }}</a>{% else %}{{ detail.value }}{% endif %}
+                    </dd>
+                {% endfor %}
+
+                <dt>{% translate "Configuration" %}</dt>
+                <dd class="portal-chips">
+                    {% for entity, name in shown.slices %}
+                        <span class="portal-chip portal-chip-set portal-slice">{{ entity }} <strong>{{ name }}</strong></span>
+                    {% endfor %}
+                </dd>
+            </dl>
+        </section>
+
+        {% if shown.answer %}
+            <details class="portal-box portal-fold" open>
+                <summary>
+                    <h2 class="portal-heading">{% translate "Answer" %}</h2>
+                    {% if shown.unheld %}<span class="portal-refused text-sm">{{ shown.unheld }}</span>{% endif %}
+                </summary>
+
+                {% if shown.views %}
+                    <dl class="portal-fields">
+                        {% for view, items in shown.views %}
+                            <dt>{{ view }}</dt>
+                            <dd>
+                                {% if items|length > 1 %}
+                                    <ol class="portal-items">{% for item in items %}<li>{{ item }}</li>{% endfor %}</ol>
+                                {% else %}
+                                    {% for item in items %}{{ item }}{% empty %}<span class="portal-missing">—</span>{% endfor %}
+                                {% endif %}
+                            </dd>
+                        {% endfor %}
+                    </dl>
+                {% endif %}
+
+                <details class="portal-part mt-4">
+                    <summary class="portal-part-label">{% translate "The answer as written" %}</summary>
+                    <pre class="portal-code">{{ shown.answer }}</pre>
+                </details>
+            </details>
+        {% endif %}
+
+        <section class="portal-box">
+            <h2 class="portal-heading">{% translate "Scores" %}</h2>
+
+            {% if shown.scores %}
+                <table class="portal-table">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Scorer" %}</th>
+                            <th>{% translate "Score" %}</th>
+                            <th>{% translate "What it rests on" %}</th>
+                            <th>{% translate "Held to" %}</th>
+                            <th>{% translate "When" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for score in shown.scores %}
+                            <tr{% if not score.latest %} class="portal-missing"{% endif %}>
+                                <td class="font-medium">{{ score.scorer }}{% if not score.latest %} <span class="text-xs">({% translate "earlier" %})</span>{% endif %}</td>
+                                <td>{{ score.value }}</td>
+                                <td>
+                                    {{ score.answer|default:"" }}
+                                    {% if score.reason %}<div class="portal-missing text-xs">{{ score.reason }}</div>{% endif %}
+                                </td>
+                                <td>{% if score.target %}<code>{{ score.target }}</code>{% else %}—{% endif %}</td>
+                                <td class="whitespace-nowrap">{{ score.when|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="portal-missing text-sm">{% translate "Not scored." %}</p>
+            {% endif %}
+        </section>
+
+        <section class="portal-box portal-messages">
+            <div class="portal-box-head">
+                <h2 class="portal-heading">
+                    {% blocktranslate count counter=shown.messages|length %}{{ counter }} message{% plural %}{{ counter }} messages{% endblocktranslate %}
+                </h2>
+
+                <span class="portal-fold-all">
+                    <button type="button" class="underline" onclick="portalFold(this, true)">{% translate "Open all" %}</button>
+                    <button type="button" class="underline" onclick="portalFold(this, false)">{% translate "Close all" %}</button>
+                </span>
+            </div>
+
+            {% for message in shown.messages %}
+                <details class="portal-message{% if message.trouble %} portal-message-trouble{% endif %}" id="message-{{ message.number }}">
+                    <summary>
+                        <span class="portal-message-number">{{ message.number }}</span>
+                        <span class="portal-role portal-role-{{ message.role }}">{{ message.label }}</span>
+                        <span class="portal-message-said">{{ message.said }}</span>
+                        <span class="portal-message-meta">{{ message.when|time:"H:i:s" }}{% if message.usage %} · {{ message.usage }}{% endif %}</span>
+                    </summary>
+
+                    <div class="portal-message-body">
+                        {% for part in message.parts %}
+                            {% if part.folded %}
+                                <details class="portal-part portal-part-{{ part.kind }}">
+                                    <summary class="portal-part-label">{{ part.label }} <span class="portal-part-preview">{{ part.text|truncatechars:110 }}</span></summary>
+                                    <div class="portal-pre">{{ part.text }}</div>
+                                </details>
+                            {% else %}
+                                <div class="portal-part portal-part-{{ part.kind }}{% if part.trouble %} portal-part-trouble{% endif %}">
+                                    <div class="portal-part-label">
+                                        {{ part.label }}
+                                        {% if part.note %}<span class="portal-part-note">{{ part.note }}</span>{% endif %}
+                                    </div>
+
+                                    {% if part.code %}<pre class="portal-code">{{ part.text }}</pre>{% else %}<div class="portal-pre">{{ part.text }}</div>{% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if message.model or message.finish %}
+                            <p class="portal-part-note">
+                                {{ message.model|default:"" }}{% if message.finish %} · {% blocktranslate with finish=message.finish %}finished: {{ finish }}{% endblocktranslate %}{% endif %}
+                            </p>
+                        {% endif %}
+                    </div>
+                </details>
+            {% endfor %}
+        </section>
+
+        <section class="portal-box">
+            <h2 class="portal-heading">{% translate "What it sent and got back" %}</h2>
+
+            <p class="portal-missing mb-2 text-sm">
+                {% translate "Each request as it was sent, and each response as it streamed back, byte for byte." %}
+            </p>
+
+            {% for exchanged in shown.exchanged %}
+                <details class="portal-message" hx-get="{% url 'admin:portal_run_exchange' run.uuid exchanged.number exchanged.which %}" hx-trigger="toggle once" hx-target="find pre">
+                    <summary>
+                        <span class="portal-message-number">{{ exchanged.number }}</span>
+                        <span class="portal-role">{% if exchanged.which == "request" %}{% translate "Request" %}{% else %}{% translate "Response" %}{% endif %}</span>
+                        <span class="portal-message-said"></span>
+                        <span class="portal-message-meta">
+                            {{ exchanged.size }}{% if exchanged.events %} · {% blocktranslate count counter=exchanged.events %}{{ counter }} event{% plural %}{{ counter }} events{% endblocktranslate %}{% endif %}
+                        </span>
+                    </summary>
+
+                    <pre class="portal-code portal-exchange">{% translate "Loading…" %}</pre>
+                </details>
+            {% endfor %}
+        </section>
+    {% endwith %}
+{% endblock %}

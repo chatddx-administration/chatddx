@@ -160,6 +160,9 @@ def test_the_status_counts_the_owner_s_batches_and_shows_their_cases_taken_up_la
     assert b"Idle: nothing of yours is queued." in response.content
     assert b"reciprocal_rank 0" in response.content
     assert f'href="{page_of(batch)}"'.encode() in response.content
+    # each case taken up leads to the run it came to
+    run = reverse("admin:portal_run_change", args=[second.run])
+    assert f'href="{run}"'.encode() in response.content
 
 
 def test_the_status_shows_the_owner_s_own_alone(

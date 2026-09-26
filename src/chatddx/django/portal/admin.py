@@ -1,11 +1,11 @@
 # pyright: basic
 """
-The portal's pages: the cases (case_admin.py); the Batch, which plans the
-repl's batch with its slices varied, confirms the plan and keeps it, to run
-now or later; a batch's own page, which shows how it stands, runs it,
-resumes it or runs it again, and takes more cases; the status of the worker
-at the owner's jobs, to pause, resume and stop them; and the admin's users
-and groups, in unfold's dress.
+The portal's pages: the cases (case_admin.py) and the runs (run_admin.py);
+the Batch, which plans the repl's batch with its slices varied, confirms
+the plan and keeps it, to run now or later; a batch's own page, which shows
+how it stands, runs it, resumes it or runs it again, and takes more cases;
+the status of the worker at the owner's jobs, to pause, resume and stop
+them; and the admin's users and groups, in unfold's dress.
 """
 
 from typing import Any, ClassVar, override
@@ -41,8 +41,9 @@ from chatddx.bench.cell import SLICES
 from chatddx.django.portal import batches, status
 from chatddx.django.portal.case_admin import CaseAdmin
 from chatddx.django.portal.forms import CASES_FORM, BatchForm, CasesForm
-from chatddx.django.portal.models import Batch, Case
+from chatddx.django.portal.models import Batch, Case, Run
 from chatddx.django.portal.owners import bench_of, identity_of
+from chatddx.django.portal.run_admin import RunAdmin
 from chatddx.worker import control, queue
 from chatddx.worker.models import STOPPED_BY, JobModel, Status
 
@@ -67,6 +68,7 @@ Batch._meta.verbose_name_plural = _("batches")
 admin.site.unregister(User)
 admin.site.unregister(Group)
 admin.site.register(Case, CaseAdmin)
+admin.site.register(Run, RunAdmin)
 
 
 @admin.register(User)

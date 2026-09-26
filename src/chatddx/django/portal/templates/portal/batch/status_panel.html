@@ -104,7 +104,13 @@
                 <tbody>
                     {% for ran in shown.latest %}
                         <tr>
-                            <td class="whitespace-nowrap">{{ ran.when|date:"Y-m-d H:i:s" }}</td>
+                            <td class="whitespace-nowrap">
+                                {% if ran.run %}
+                                    <a class="underline" href="{% url 'admin:portal_run_change' ran.run %}">{{ ran.when|date:"Y-m-d H:i:s" }}</a>
+                                {% else %}
+                                    {{ ran.when|date:"Y-m-d H:i:s" }}
+                                {% endif %}
+                            </td>
                             <td class="font-medium">{{ ran.case }}</td>
                             <td>{{ ran.cell }}</td>
                             <td>

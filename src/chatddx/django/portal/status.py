@@ -110,6 +110,8 @@ class Ran:
     reason: str | None
     tokens: str
     scores: list[tuple[str, str]]
+    # the run it came to, where it came to one
+    run: Any = None
 
 
 @dataclass(frozen=True)
@@ -255,6 +257,7 @@ def ran(job: JobModel, batch: Link) -> Ran:
         reason=reason,
         tokens=job.tallied,
         scores=sorted(latest.items()),
+        run=run.uuid if run else None,
     )
 
 

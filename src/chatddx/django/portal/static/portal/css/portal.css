@@ -387,3 +387,214 @@
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
 }
+
+/* A run's page: how it came out, in a word. */
+.portal-badge {
+    background-color: var(--color-primary-100);
+    border-radius: 9999px;
+    color: var(--color-primary-700);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.125rem 0.75rem;
+}
+
+.dark .portal-badge {
+    background-color: var(--color-primary-900);
+    color: var(--color-primary-200);
+}
+
+.portal-badge-trouble {
+    background-color: oklch(93.6% .032 17.717);
+    color: oklch(50.5% .213 27.518);
+}
+
+.dark .portal-badge-trouble {
+    background-color: oklch(39.6% .141 25.723);
+    color: oklch(88.5% .062 18.334);
+}
+
+/* folds: a summary that opens what it sums up */
+.portal-fold > summary,
+.portal-message > summary,
+.portal-part > summary {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 0.75rem;
+    list-style: none;
+}
+
+.portal-fold > summary::-webkit-details-marker,
+.portal-message > summary::-webkit-details-marker,
+.portal-part > summary::-webkit-details-marker {
+    display: none;
+}
+
+.portal-fold > summary::before,
+.portal-message > summary::before,
+.portal-part > summary::before {
+    content: "chevron_right";
+    font-family: "Material Symbols Outlined";
+    font-size: 1.25rem;
+    line-height: 1;
+    transition: transform 0.1s;
+}
+
+.portal-fold[open] > summary::before,
+.portal-message[open] > summary::before,
+.portal-part[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.portal-fold > summary .portal-heading {
+    margin-bottom: 0;
+}
+
+.portal-fold[open] > summary {
+    margin-bottom: 0.75rem;
+}
+
+.portal-fold-all {
+    display: flex;
+    font-size: 0.875rem;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+/* a message: a line to open, its parts under it */
+.portal-message {
+    border-top: 1px solid var(--color-base-200);
+}
+
+.dark .portal-message {
+    border-color: var(--color-base-800);
+}
+
+.portal-message > summary {
+    font-size: 0.875rem;
+    padding: 0.5rem 0;
+}
+
+.portal-message-number {
+    color: var(--color-base-500);
+    font-variant-numeric: tabular-nums;
+    min-width: 1.5rem;
+    text-align: right;
+}
+
+.portal-role {
+    font-weight: 600;
+    min-width: 5.5rem;
+}
+
+.portal-role-assistant {
+    color: var(--color-primary-600);
+}
+
+.dark .portal-role-assistant {
+    color: var(--color-primary-400);
+}
+
+.portal-message-trouble .portal-role,
+.portal-role-unknown {
+    color: oklch(57.7% .245 27.325);
+}
+
+.portal-message-said {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.portal-message-meta {
+    color: var(--color-base-500);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.portal-message-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0 0 1rem 2.25rem;
+}
+
+/* a message's part: what it is, and what it holds */
+.portal-part {
+    border-left: 3px solid var(--color-base-200);
+    font-size: 0.875rem;
+    padding-left: 0.75rem;
+}
+
+.dark .portal-part {
+    border-color: var(--color-base-700);
+}
+
+.portal-part-thinking {
+    border-color: var(--color-base-300);
+}
+
+.portal-part-call {
+    border-color: var(--color-primary-400);
+}
+
+.portal-part-return {
+    border-color: var(--color-primary-200);
+}
+
+.portal-part-trouble,
+.portal-part-error {
+    border-color: oklch(63.7% .237 25.331);
+}
+
+.portal-part-label {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.portal-part-note {
+    color: var(--color-base-500);
+    font-size: 0.75rem;
+    font-weight: 400;
+    margin-left: 0.5rem;
+}
+
+.portal-part-preview {
+    color: var(--color-base-500);
+    font-weight: 400;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.portal-part[open] .portal-part-preview {
+    display: none;
+}
+
+.portal-code {
+    background-color: var(--color-base-50);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    max-height: 32rem;
+    overflow: auto;
+    padding: 0.5rem 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.dark .portal-code {
+    background-color: var(--color-base-900);
+}
+
+/* a slice of the cell a run ran, and its variation */
+.portal-slice {
+    gap: 0.3rem;
+}
+
+.portal-items {
+    list-style: decimal;
+    padding-left: 1.25rem;
+}

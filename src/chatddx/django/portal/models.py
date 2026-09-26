@@ -2,8 +2,8 @@
 """
 A batch, as the portal keeps it for whoever asked for it: what was asked,
 and the plan they confirmed. Nothing outside the portal refers to it; a run
-never points at a batch (backlog/post-endgame.md). And a case, the repo's,
-as the portal's pages are of it.
+never points at a batch (backlog/post-endgame.md). And a case and a run,
+the repo's and the history's, as the portal's pages are of them.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from django.db.models import (
 )
 
 from chatddx.core.models import IdentityModel
+from chatddx.history.models import RunModel
 from chatddx.repo.entities.case.django import CaseBranchModel
 
 
@@ -92,3 +93,14 @@ class Case(CaseBranchModel):
 
     def __str__(self) -> str:
         return self.name
+
+
+class Run(RunModel):
+    """A run: its page shows its owner all it holds."""
+
+    class Meta:
+        app_label = "portal"
+        proxy = True
+
+    def __str__(self) -> str:
+        return str(self.uuid)[:8]

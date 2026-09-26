@@ -165,6 +165,11 @@ UNFOLD = {
                         "icon": "stacks",
                         "link": reverse_lazy("admin:portal_batch_changelist"),
                     },
+                    {
+                        "title": _("Runs"),
+                        "icon": "chat",
+                        "link": reverse_lazy("admin:portal_run_changelist"),
+                    },
                 ],
             },
             {

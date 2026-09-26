@@ -1,5 +1,5 @@
 NOTE:
-The project is under a heavy refactor. The portal (src/chatddx/django/portal) is being ported to the new datamodel page by page, its Cases and Batch pages first, from src/chatddx/django-old-ref: stale, loaded by nothing, and named only by conftest.py's collect_ignore. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
+The project is under a heavy refactor. The portal (src/chatddx/django/portal) is being ported to the new datamodel page by page, its Cases, Batch and Runs pages first, from src/chatddx/django-old-ref: stale, loaded by nothing, and named only by conftest.py's collect_ignore. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
 
 Devenv in flake.nix devShell
 
@@ -12,6 +12,8 @@ Baseline, in two runs: `pytest -m "not network"` under the minimal settings, and
 The repl, the API, the portal's Batch and the worker plan and run cells through one internal API, `chatddx.bench`: a Bench (the registry as an identity sees it), a Cell, a Plan, and a Sending (a trial on its way, written down once).
 
 The worker (src/chatddx/worker) runs the queue the portal's batches fill, on the minimal settings: `chatddx worker serve` is the host's service, `chatddx worker run` drains the queue once. It runs as many jobs at once on a stack as the stack's `max_jobs` detail says, first queued first, and each owner's jobs, batches and controls are their own.
+
+`chatddx samples OWNER` makes three runs to look at a page with, a typical one, a broken one and a rich one (docs/portal.md), answered by a script (src/chatddx/dev/samples): no vLLM needs to be running.
 
 Use `pyright: basic` for django code
 

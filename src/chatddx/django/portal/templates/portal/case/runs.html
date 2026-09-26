@@ -33,7 +33,9 @@
             <tbody>
                 {% for row in runs.rows %}
                     <tr>
-                        <td class="whitespace-nowrap">{{ row.run.timestamp|date:"Y-m-d H:i" }}</td>
+                        <td class="whitespace-nowrap">
+                            <a class="underline" href="{% url 'admin:portal_run_change' row.run.uuid %}">{{ row.run.timestamp|date:"Y-m-d H:i" }}</a>
+                        </td>
                         <td>{{ row.cell }}</td>
                         <td{% if row.run.status != "completed" %} class="portal-refused"{% endif %}>{{ row.run.status }}</td>
                         {% for value in row.scores %}
