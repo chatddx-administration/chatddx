@@ -30,18 +30,18 @@ def through(monkeypatch: pytest.MonkeyPatch) -> Callable[[Any], None]:
 
 
 @pytest.fixture
-def alex(client: Client, django_user_model: Any) -> Client:
-    """alex's session, on the test inventory: the archive's is shared with alex."""
-    client.force_login(django_user_model.objects.create_user(username="alex"))
+def alice(client: Client, django_user_model: Any) -> Client:
+    """alice's session, on the test inventory: the archive's is shared with alice."""
+    client.force_login(django_user_model.objects.create_user(username="alice"))
     return client
 
 
 @pytest.fixture
-def run(alex: Client, fake: FakeTransport) -> Callable[..., Events]:
-    """Run a cell on a case, as alex, and answer with the events it streamed."""
+def run(alice: Client, fake: FakeTransport) -> Callable[..., Events]:
+    """Run a cell on a case, as alice, and answer with the events it streamed."""
 
     def run(**spec: Any) -> Events:
-        response: Any = alex.post("/api/runs", spec, content_type="application/json")
+        response: Any = alice.post("/api/runs", spec, content_type="application/json")
         assert response.status_code == 200, response.content
         assert response["Content-Type"] == "text/event-stream"
         return events(b"".join(response.streaming_content))

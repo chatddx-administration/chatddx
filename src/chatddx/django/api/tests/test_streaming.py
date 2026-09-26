@@ -73,9 +73,9 @@ def held_open() -> Iterator[None]:
 
 @pytest.fixture
 def cookie(django_user_model: Any) -> str:
-    """alex's session, and a CSRF token beside it."""
+    """alice's session, and a CSRF token beside it."""
     client = Client()
-    client.force_login(django_user_model.objects.create_user(username="alex"))
+    client.force_login(django_user_model.objects.create_user(username="alice"))
     session = client.cookies[settings.SESSION_COOKIE_NAME].value
     return f"{settings.SESSION_COOKIE_NAME}={session}; csrftoken={TOKEN}"
 
@@ -83,7 +83,7 @@ def cookie(django_user_model: Any) -> str:
 def asgi(
     request: dict[str, Any], received: Callable[[bytes], bool], cookie: str
 ) -> list[dict[str, Any]]:
-    """Serve `request` as alex; the client goes away once `received` says so."""
+    """Serve `request` as alice; the client goes away once `received` says so."""
     body = json.dumps(request["body"]).encode()
     scope = {
         "type": "http",
@@ -135,7 +135,7 @@ def asgi(
 def wsgi(
     request: dict[str, Any], received: Callable[[bytes], bool], cookie: str
 ) -> bytes:
-    """Serve `request` as alex; the client goes away once `received` says so."""
+    """Serve `request` as alice; the client goes away once `received` says so."""
     body = json.dumps(request["body"]).encode()
     environ = {
         "REQUEST_METHOD": request["method"],

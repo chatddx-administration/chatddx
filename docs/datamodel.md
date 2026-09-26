@@ -33,7 +33,7 @@ fingerprints. The short form, `3f9a1c`, is what the shell shows.
 
 ### Names and descriptions: branches
 
-A **branch** is someone's named version of a trail: alex's
+A **branch** is someone's named version of a trail: alice's
 `management-plan`, the archive's `qwen3-8b-awq`. A branch has:
 
 - an **owner** and a **name**;

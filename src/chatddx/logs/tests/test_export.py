@@ -17,7 +17,7 @@ from chatddx.logs.tests.conftest import Run
 pytestmark = pytest.mark.django_db
 
 
-def log_of(identity: str = "alex") -> EvalLog:
+def log_of(identity: str = "alice") -> EvalLog:
     """The log of the cell `identity` ran last."""
     latest = RunModel.objects.filter(owner__name=identity).latest("pk")
 
@@ -58,8 +58,8 @@ def test_a_seeded_trial_is_a_draw_whose_epoch_is_its_seeds_place(run: Run):
 def test_a_seeded_trial_is_drawn_by_its_latest_run_that_completed(
     run_as: Callable[..., Run],
 ):
-    run_as("alex")("cell plan qwen3-8b-awq@fake", "run case-1 7")
-    run_as("alex", httpx2.MockTransport(failing))(
+    run_as("alice")("cell plan qwen3-8b-awq@fake", "run case-1 7")
+    run_as("alice", httpx2.MockTransport(failing))(
         "cell plan qwen3-8b-awq@fake", "run case-1 7"
     )
 
@@ -148,7 +148,7 @@ def test_a_run_that_called_tools_keeps_each_call_and_what_it_returned(run: Run):
 
 
 def test_an_errored_run_is_a_sample_with_its_error(run_as: Callable[..., Run]):
-    run_as("alex", httpx2.MockTransport(failing))(
+    run_as("alice", httpx2.MockTransport(failing))(
         "cell free-text qwen3-8b-awq@fake", "run case-1"
     )
 
@@ -166,7 +166,7 @@ def test_the_log_holds_the_identitys_runs_of_the_cell_alone(
     run_as: Callable[..., Run],
 ):
     run_as("bob")("cell plan qwen3-8b-awq@fake", "run case-1")
-    run_as("alex")(
+    run_as("alice")(
         "cell free-text qwen3-8b-awq@fake",
         "run case-1",
         "cell plan qwen3-8b-awq@fake",
@@ -174,10 +174,10 @@ def test_the_log_holds_the_identitys_runs_of_the_cell_alone(
         "run case-2",
     )
 
-    alexs = {
+    alices = {
         str(uuid)
         for uuid in RunModel.objects.filter(
-            owner__name="alex", trial__configuration__output__isnull=False
+            owner__name="alice", trial__configuration__output__isnull=False
         ).values_list("uuid", flat=True)
     }
     samples = log_of().samples or []
@@ -186,7 +186,7 @@ def test_the_log_holds_the_identitys_runs_of_the_cell_alone(
         ("case-1", 1),
         ("case-2", 1),
     ]
-    assert {sample.metadata["run"] for sample in samples} < alexs
+    assert {sample.metadata["run"] for sample in samples} < alices
     assert {sample.metadata["output"] for sample in samples} == {"management-plan"}
 
 

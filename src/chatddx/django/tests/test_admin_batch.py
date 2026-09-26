@@ -363,7 +363,7 @@ def test_the_experiment_traces_back_to_its_batch(lab: Lab, user_client: Client):
 
 
 def test_an_untagged_case_is_left_alone(lab: Lab, user_client: Client):
-    batch_plan = plan("alex", [lab.tags["tag-1"]], [])
+    batch_plan = plan("alice", [lab.tags["tag-1"]], [])
 
     # case-2 carries no tag, so it is not in the batch at all -- not excluded
     assert batch_plan.excluded == ()

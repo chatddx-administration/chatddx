@@ -34,7 +34,7 @@ def test_runs_lists_the_latest_first(say: Say):
 
 
 def test_runs_says_when_there_are_none(say: Say):
-    assert "alex has no runs" in say("runs")
+    assert "alice has no runs" in say("runs")
     assert "a count is a whole number, not 'x'" in say("runs x")
 
 
@@ -69,7 +69,7 @@ def test_replay_takes_a_run_by_the_start_of_its_id(say: Say):
     assert ": free-text × qwen3-8b-awq@fake × case-1" in say(
         f"replay {str(first.uuid)[:8]}"
     )
-    assert "alex has no run 'zzzz'" in say("replay zzzz")
+    assert "alice has no run 'zzzz'" in say("replay zzzz")
     assert "more than one run starts with ''" in say("replay ''")
 
 

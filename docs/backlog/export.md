@@ -145,7 +145,7 @@ The inspect log is built from draws, and nothing else reads the database.
 ## 3. The command
 
 ```
-chatddx export --owner alex --configuration plan --stack qwen3-8b-awq@pelle \
+chatddx export --owner alice --configuration plan --stack qwen3-8b-awq@pelle \
     --tags edn --seeds 1,2,3 --to eval,xlsx,parquet DIRECTORY
 ```
 

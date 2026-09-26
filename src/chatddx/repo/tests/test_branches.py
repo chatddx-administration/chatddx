@@ -332,7 +332,7 @@ def test_shared_by_one_owner_its_own_still_shadows(
 
     found = get_visible_branch_model("case", owner.name, "case-1", shared_by="other")
 
-    assert found.owner.name == "alex"
+    assert found.owner.name == "alice"
 
 
 def test_an_owner_s_branch_is_found_by_the_owner_where_it_is_shared(
@@ -346,7 +346,7 @@ def test_an_owner_s_branch_is_found_by_the_owner_where_it_is_shared(
     mine = get_shared_branch_model("case", owner.name, owner.name, "case-1")
 
     assert theirs.owner.name == "other"
-    assert mine.owner.name == "alex"
+    assert mine.owner.name == "alice"
 
 
 def test_an_owner_s_branch_not_shared_isn_t_found_by_the_owner(
@@ -355,7 +355,7 @@ def test_an_owner_s_branch_not_shared_isn_t_found_by_the_owner(
 ):
     case("case-1", other_owner.name)
 
-    with pytest.raises(BranchNotFoundError, match="no case 'other/case-1' for alex"):
+    with pytest.raises(BranchNotFoundError, match="no case 'other/case-1' for alice"):
         _ = get_shared_branch_model("case", owner.name, other_owner.name, "case-1")
 
 

@@ -78,7 +78,7 @@ def test_score_run_says_what_came_of_one_run(say: Say):
     latest = RunModel.objects.order_by("pk").last()
     assert latest is not None
     assert "no scorer applies to it" in say(f"score {str(latest.uuid)[:8]}")
-    assert "alex has no run 'zzzz'" in say("score zzzz")
+    assert "alice has no run 'zzzz'" in say("score zzzz")
 
 
 def test_score_says_an_errored_run_has_nothing_to_score(

@@ -26,6 +26,11 @@ collect_ignore = ["django/tests"]
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
 TEST_GIFTBAG = settings.INVENTORY_PATH / "test-giftbag-inventory.toml"
 
+# The tests' people come on in alphabetical order: alice, whom the seed is
+# for and a repl or a client speaks as unless told otherwise, then bob, carol,
+# dave and erin. No one real: an identity whose part matters more than who it
+# is goes by that part (archive, guest, nobody, other).
+
 type Provision = Callable[..., list[str]]
 type Say = Callable[..., str]
 type SayAs = Callable[..., Say]
@@ -73,7 +78,7 @@ def provision() -> Provision:
     return _init_data
 
 
-def _init_data(*options: str, user: str = "alex") -> list[str]:
+def _init_data(*options: str, user: str = "alice") -> list[str]:
     """init-data for `user` on the test inventory and giftbag: what it printed."""
     from chatddx.manage import app
 
@@ -106,7 +111,7 @@ def say_as(fake: FakeTransport) -> SayAs:
     fake vLLM: say lines to it, and read what it wrote since.
     """
 
-    def say_as(identity: str = "alex", transport: Any = None) -> Say:
+    def say_as(identity: str = "alice", transport: Any = None) -> Say:
         return say_to(
             Repl(
                 identity, Console(record=True, width=200), transport or fake, seed=None

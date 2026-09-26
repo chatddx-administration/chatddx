@@ -32,8 +32,8 @@ def held_to(cell: dict[str, Any]) -> dict[str, dict[str, Any]]:
 SLICES = {"instruction", "output", "coercion", "reasoning", "sampling", "toolset"}
 
 
-def test_show_sets_each_variation_beside_what_it_resolves_to(alex: Client):
-    cell = show(alex, **FREE_TEXT, reasoning="off")
+def test_show_sets_each_variation_beside_what_it_resolves_to(alice: Client):
+    cell = show(alice, **FREE_TEXT, reasoning="off")
     resolution = cell["resolution"]
     own = cell["configuration"]["trail"]
 
@@ -59,14 +59,14 @@ def test_show_sets_each_variation_beside_what_it_resolves_to(alex: Client):
     assert resolution["fields"]["chat_template_kwargs"] == {"enable_thinking": False}
     assert "‹case›" in resolution["user"]
 
-    greedy = show(alex, **FREE_TEXT, sampling="greedy")["resolution"]
+    greedy = show(alice, **FREE_TEXT, sampling="greedy")["resolution"]
 
     assert greedy["greedy"] is True
 
 
-def test_show_reports_a_refused_cell_slice_by_slice(alex: Client):
+def test_show_reports_a_refused_cell_slice_by_slice(alice: Client):
     cell = show(
-        alex, configuration="plan-web", stack="gpt-oss-20b@fake", reasoning="off"
+        alice, configuration="plan-web", stack="gpt-oss-20b@fake", reasoning="off"
     )
     resolution = cell["resolution"]
 
@@ -83,9 +83,9 @@ def test_show_reports_a_refused_cell_slice_by_slice(alex: Client):
     )
 
 
-def test_show_takes_half_a_cell_and_says_what_it_can_t_show(alex: Client):
-    configured = show(alex, configuration="free-text")
-    stacked = show(alex, stack="qwen3-8b-awq@fake")
+def test_show_takes_half_a_cell_and_says_what_it_can_t_show(alice: Client):
+    configured = show(alice, configuration="free-text")
+    stacked = show(alice, stack="qwen3-8b-awq@fake")
 
     assert (configured["stack"], configured["resolution"]) == (None, None)
     assert SLICES <= set(configured["configuration"]["trail"])
@@ -95,18 +95,18 @@ def test_show_takes_half_a_cell_and_says_what_it_can_t_show(alex: Client):
         None,
     )
 
-    empty = alex.get("/api/cell")
-    unset = alex.get("/api/cell", {"reasoning": "off"})
-    nope = alex.get("/api/cell", {**FREE_TEXT, "reasoning": "nope"})
-    none = alex.get("/api/cell", {**FREE_TEXT, "reasoning": "none"})
-    blank = alex.get("/api/cell", {**FREE_TEXT, "reasoning": ""})
+    empty = alice.get("/api/cell")
+    unset = alice.get("/api/cell", {"reasoning": "off"})
+    nope = alice.get("/api/cell", {**FREE_TEXT, "reasoning": "nope"})
+    none = alice.get("/api/cell", {**FREE_TEXT, "reasoning": "none"})
+    blank = alice.get("/api/cell", {**FREE_TEXT, "reasoning": ""})
 
     assert (empty.status_code, unset.status_code) == (400, 400)
     assert "the cell is empty" in empty.json()["detail"]
     assert "no configuration to set its reasoning in" in unset.json()["detail"]
     assert (nope.status_code, nope.json()) == (
         404,
-        {"detail": "no reasoning 'nope' for alex"},
+        {"detail": "no reasoning 'nope' for alice"},
     )
     assert blank.status_code == 422
     assert (none.status_code, none.json()["detail"]) == (
@@ -115,11 +115,11 @@ def test_show_takes_half_a_cell_and_says_what_it_can_t_show(alex: Client):
     )
 
 
-def test_none_takes_the_toolset_out_and_the_own_variation_sets_nothing(alex: Client):
+def test_none_takes_the_toolset_out_and_the_own_variation_sets_nothing(alice: Client):
     out = show(
-        alex, configuration="test-tools", stack="qwen3-8b-awq@fake", toolset="none"
+        alice, configuration="test-tools", stack="qwen3-8b-awq@fake", toolset="none"
     )
-    own = show(alex, **FREE_TEXT, reasoning="default", toolset="none")
+    own = show(alice, **FREE_TEXT, reasoning="default", toolset="none")
 
     assert out["label"] == "test-tools+toolset=none"
     assert out["set"] == {"toolset": None}
@@ -128,11 +128,11 @@ def test_none_takes_the_toolset_out_and_the_own_variation_sets_nothing(alex: Cli
     assert (own["label"], own["set"]) == ("free-text", {})
 
 
-def test_show_says_which_cases_each_scorer_can_hold_the_cell_to(alex: Client):
-    scorers = held_to(show(alex, **PLAN))
-    one = show(alex, **PLAN, tag="tag-1")
-    any_of = show(alex, **PLAN, tag=["tag-1", "nowhere"])
-    nowhere = alex.get("/api/cell", {**PLAN, "tag": "nowhere"})
+def test_show_says_which_cases_each_scorer_can_hold_the_cell_to(alice: Client):
+    scorers = held_to(show(alice, **PLAN))
+    one = show(alice, **PLAN, tag="tag-1")
+    any_of = show(alice, **PLAN, tag=["tag-1", "nowhere"])
+    nowhere = alice.get("/api/cell", {**PLAN, "tag": "nowhere"})
 
     assert scorers["reciprocal_rank"]["have"] == 2
     assert (
@@ -148,19 +148,19 @@ def test_show_says_which_cases_each_scorer_can_hold_the_cell_to(alex: Client):
     assert any_of["cases"] == 1
     assert (nowhere.status_code, nowhere.json()) == (
         404,
-        {"detail": "no case tagged nowhere for alex"},
+        {"detail": "no case tagged nowhere for alice"},
     )
 
 
 def test_show_names_the_cases_whose_pattern_doesn_t_parse(
-    alex: Client, recommit: Recommit
+    alice: Client, recommit: Recommit
 ):
     recommit(
-        "case", "case-2", owner="alex", targets={"diagnosis": {"pattern": "fake & ("}}
+        "case", "case-2", owner="alice", targets={"diagnosis": {"pattern": "fake & ("}}
     )
 
-    scorers = held_to(show(alex, **PLAN))
-    shown = alex.get("/api/registry/case/case-2").json()
+    scorers = held_to(show(alice, **PLAN))
+    shown = alice.get("/api/registry/case/case-2").json()
 
     assert (
         scorers["reciprocal_rank"]["have"],
@@ -173,13 +173,13 @@ def test_show_names_the_cases_whose_pattern_doesn_t_parse(
     assert list(shown["unread"]) == ["diagnosis"]
 
 
-def test_show_part_shows_the_cell_s_own_or_says_it_has_none(alex: Client):
-    output = alex.get("/api/cell/output", FREE_TEXT).json()
-    reasoning = alex.get("/api/cell/reasoning", {**FREE_TEXT, "reasoning": "off"})
-    llm = alex.get("/api/cell/llm", FREE_TEXT).json()
-    toolset = alex.get("/api/cell/toolset", FREE_TEXT)
-    case = alex.get("/api/cell/case", FREE_TEXT)
-    stackless = alex.get("/api/cell/llm", {"configuration": "free-text"})
+def test_show_part_shows_the_cell_s_own_or_says_it_has_none(alice: Client):
+    output = alice.get("/api/cell/output", FREE_TEXT).json()
+    reasoning = alice.get("/api/cell/reasoning", {**FREE_TEXT, "reasoning": "off"})
+    llm = alice.get("/api/cell/llm", FREE_TEXT).json()
+    toolset = alice.get("/api/cell/toolset", FREE_TEXT)
+    case = alice.get("/api/cell/case", FREE_TEXT)
+    stackless = alice.get("/api/cell/llm", {"configuration": "free-text"})
 
     assert (output["branch"]["name"], output["branch"]["owner"]["name"]) == (
         "free-text",
@@ -200,9 +200,9 @@ def test_show_part_shows_the_cell_s_own_or_says_it_has_none(alex: Client):
     )
 
 
-def test_the_reasoning_table_sets_every_variation_on_every_stack(alex: Client):
-    bare = alex.get("/api/reasoning").json()
-    table = alex.get("/api/reasoning", {**FREE_TEXT, "reasoning": "high"}).json()
+def test_the_reasoning_table_sets_every_variation_on_every_stack(alice: Client):
+    bare = alice.get("/api/reasoning").json()
+    table = alice.get("/api/reasoning", {**FREE_TEXT, "reasoning": "high"}).json()
     names = [variation["name"] for variation in table["variations"]]
     stacks = {row["stack"]: row for row in table["stacks"]}
     gpt_oss = dict(zip(names, stacks["gpt-oss-20b@fake"]["realizations"], strict=True))
@@ -224,11 +224,11 @@ def test_the_reasoning_table_sets_every_variation_on_every_stack(alex: Client):
     assert fake["off"]["sampling"]["writes"]["temperature"] == 0.7
 
 
-def test_scorers_say_what_each_reads_and_what_the_cell_offers(alex: Client):
-    bare = alex.get("/api/scorers").json()
+def test_scorers_say_what_each_reads_and_what_the_cell_offers(alice: Client):
+    bare = alice.get("/api/scorers").json()
     offered = {
         scorer["name"]: scorer["offered"]
-        for scorer in alex.get("/api/scorers", FREE_TEXT).json()
+        for scorer in alice.get("/api/scorers", FREE_TEXT).json()
     }
 
     assert [scorer["name"] for scorer in bare] == [
@@ -246,21 +246,21 @@ def test_scorers_say_what_each_reads_and_what_the_cell_offers(alex: Client):
     }
 
 
-def test_save_keeps_the_cell_as_a_configuration_of_one_s_own(alex: Client):
-    saved = save(alex, configuration="free-text", reasoning="off", name="quiet")
+def test_save_keeps_the_cell_as_a_configuration_of_one_s_own(alice: Client):
+    saved = save(alice, configuration="free-text", reasoning="off", name="quiet")
 
     assert saved.status_code == 200, saved.content
     assert saved.json()["what"] == "created"
-    assert saved.json()["configuration"]["owner"]["name"] == "alex"
+    assert saved.json()["configuration"]["owner"]["name"] == "alice"
 
-    quiet = ConfigurationBranchModel.objects.get(owner__name="alex", name="quiet")
+    quiet = ConfigurationBranchModel.objects.get(owner__name="alice", name="quiet")
     off = ReasoningBranchModel.objects.get(owner__name="archive", name="off")
 
     assert quiet.trail.reasoning_id == off.trail_id
-    assert show(alex, configuration="quiet")["label"] == "quiet"
+    assert show(alice, configuration="quiet")["label"] == "quiet"
 
-    nothing = save(alex, name="nothing")
-    slashed = save(alex, configuration="free-text", name="bob/mine")
+    nothing = save(alice, name="nothing")
+    slashed = save(alice, configuration="free-text", name="bob/mine")
 
     assert (nothing.status_code, slashed.status_code) == (400, 400)
     assert "no configuration to save" in nothing.json()["detail"]

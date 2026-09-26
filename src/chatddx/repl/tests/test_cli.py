@@ -27,32 +27,32 @@ def test_a_session_can_be_piped_in(tmp_path: Path):
 
     result = CliRunner().invoke(
         app,
-        ["repl", "alex", "--history", str(tmp_path / "history")],
+        ["repl", "alice", "--history", str(tmp_path / "history")],
         input="cell free-text qwen3-8b-awq@fake\nshow\nquit\n",
     )
 
     assert result.exit_code == 0, result.output
     # a seed drawn as it starts, in the prompt
     assert re.search(
-        r"alex #\d{1,5}> cell free-text qwen3-8b-awq@fake\n", result.output
+        r"alice #\d{1,5}> cell free-text qwen3-8b-awq@fake\n", result.output
     )
     assert re.search(
-        r"alex free-text×qwen3-8b-awq@fake #\d{1,5}> show\n", result.output
+        r"alice free-text×qwen3-8b-awq@fake #\d{1,5}> show\n", result.output
     )
     assert "the LLM's default, 'on'" in result.output
 
 
-# a transactional test may find the session's seed flushed away: alex will do
+# a transactional test may find the session's seed flushed away: alice will do
 
 
 @pytest.mark.django_db(transaction=True)
 def test_an_idle_repl_holds_no_connection(tmp_path: Path):
-    _ = ensure_identity("alex")
+    _ = ensure_identity("alice")
     assert connection.connection is not None
 
     result = CliRunner().invoke(
         app,
-        ["repl", "alex", "--history", str(tmp_path / "history")],
+        ["repl", "alice", "--history", str(tmp_path / "history")],
         input="stacks\nquit\n",
     )
 
@@ -62,8 +62,8 @@ def test_an_idle_repl_holds_no_connection(tmp_path: Path):
 
 @pytest.mark.django_db(transaction=True)
 def test_a_dropped_connection_is_said_and_the_next_line_opens_another():
-    _ = ensure_identity("alex")
-    repl = Repl("alex", Console(record=True, width=200), seed=None)
+    _ = ensure_identity("alice")
+    repl = Repl("alice", Console(record=True, width=200), seed=None)
     assert handle(repl, "stacks")
 
     settings = connection.settings_dict
@@ -95,10 +95,10 @@ def test_ctrl_c_ends_the_command_not_the_repl(
 
     result = CliRunner().invoke(
         app,
-        ["repl", "alex", "--history", str(tmp_path / "history")],
+        ["repl", "alice", "--history", str(tmp_path / "history")],
         input="cases\nstacks\nquit\n",
     )
 
     assert result.exit_code == 0, result.output
-    assert re.search(r"> cases\n\n\(interrupted\)\nalex #\d+> stacks\n", result.output)
+    assert re.search(r"> cases\n\n\(interrupted\)\nalice #\d+> stacks\n", result.output)
     assert "qwen3-8b-awq@fake" in result.output

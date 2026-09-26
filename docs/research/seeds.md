@@ -7,7 +7,7 @@ seed can say of a batch is in `design/post-endgame.md`.
 ## What was decided
 
 A run is seeded unless someone says otherwise. The repl holds a seed, drawn
-at random as it starts and shown in its prompt (`alex
+at random as it starts and shown in its prompt (`alice
 plan×qwen3-8b-awq@pelle #48213>`). Every run sends it; `seed` draws a fresh
 one, `seed N` holds N, and `seed none` runs unseeded; `run CASE SEED` is
 that run's alone. So runs under one seed line up across cases, and a run

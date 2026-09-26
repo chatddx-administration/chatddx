@@ -15,8 +15,8 @@ from chatddx.repo.inventories import InventoryBranchModel, InventoryFormDataOut
 @pytest.fixture
 def user_client(client: Client, django_user_model: User):
     django_user = django_user_model.objects.create_superuser(
-        username="alex",
-        email="alex@kompismoln.se",
+        username="alice",
+        email="alice@example.com",
         password="password",
     )
     client.force_login(django_user)

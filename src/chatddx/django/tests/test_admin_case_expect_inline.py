@@ -463,7 +463,7 @@ def test_a_collaborators_edit_leaves_the_owners_expects_alone(
     inventory_fixture_fdo: InventoryFormDataOut,
     owner: IdentityModel,
 ):
-    other = ensure_identity("olof")
+    other = ensure_identity("bob")
     scorer = ScorerTrailIn(command="scorer-a command")
 
     for trail, name in (

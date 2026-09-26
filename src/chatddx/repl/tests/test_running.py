@@ -332,7 +332,7 @@ def test_batch_runs_the_cases_with_any_of_its_tags(say: Say, fake: FakeTransport
     assert "2 cases tagged nope or tag-1 or tag-2" in written
     assert len(fake.requests) == 3
 
-    assert "no case tagged nope for alex" in say("batch nope")
+    assert "no case tagged nope for alice" in say("batch nope")
     assert "usage: batch TAG..." in say("batch")
     assert len(fake.requests) == 3
 
@@ -340,7 +340,7 @@ def test_batch_runs_the_cases_with_any_of_its_tags(say: Say, fake: FakeTransport
 def test_a_case_under_two_names_runs_once(
     say: Say, fake: FakeTransport, recommit: Recommit
 ):
-    recommit("case", "case-1", name="case-1-again", owner="alex", tags=["tag-1"])
+    recommit("case", "case-1", name="case-1-again", owner="alice", tags=["tag-1"])
 
     written = say("cell free-text qwen3-8b-awq@fake", "batch tag-1")
 
@@ -470,21 +470,21 @@ def test_ctrl_c_again_is_let_through_to_a_run_being_written_down(
 
 
 def test_the_repl_holds_a_seed_drawn_as_it_starts(fake: FakeTransport):
-    repl = Repl("alex", Console(record=True, width=200), transport=fake)
+    repl = Repl("alice", Console(record=True, width=200), transport=fake)
 
     assert repl.seed is not None and 0 <= repl.seed < SEEDS
-    assert repl.prompt == f"alex #{repl.seed}> "
+    assert repl.prompt == f"alice #{repl.seed}> "
 
 
 def test_seed_draws_holds_and_clears_the_seed(repl: Repl, say: Say):
     assert "seed: #42" in say("seed 42")
-    assert repl.prompt == "alex #42> "
+    assert repl.prompt == "alice #42> "
 
     written = say("seed")
     assert repl.seed is not None and f"seed: #{repl.seed}" in written
 
     assert "runs go unseeded" in say("seed none")
-    assert repl.prompt == "alex #none> "
+    assert repl.prompt == "alice #none> "
 
     assert "a seed is a whole number" in say("seed x")
     assert repl.seed is None

@@ -8,13 +8,13 @@ pytestmark = pytest.mark.django_db
 
 
 def test_the_prompt_shows_the_cell(repl: Repl, say: Say):
-    assert repl.prompt == "alex #none> "
+    assert repl.prompt == "alice #none> "
 
     _ = say("use free-text")
-    assert repl.prompt == "alex free-text #none> "
+    assert repl.prompt == "alice free-text #none> "
 
     _ = say("on qwen3-8b-awq@fake")
-    assert repl.prompt == "alex free-text×qwen3-8b-awq@fake #none> "
+    assert repl.prompt == "alice free-text×qwen3-8b-awq@fake #none> "
 
 
 def test_help_lists_every_command_with_the_words_it_takes(say: Say):
@@ -31,8 +31,8 @@ def test_help_lists_every_command_with_the_words_it_takes(say: Say):
 def test_what_it_doesn_t_know_is_said_and_nothing_changes(repl: Repl, say: Say):
     written = say("use nope", "cell free-text nope", "on", "frobnicate", "use 'x")
 
-    assert "no configuration 'nope' for alex" in written
-    assert "no stack 'nope' for alex" in written
+    assert "no configuration 'nope' for alice" in written
+    assert "no stack 'nope' for alice" in written
     assert "usage: on STACK" in written
     assert "no command 'frobnicate': try help" in written
     assert "No closing quotation" in written

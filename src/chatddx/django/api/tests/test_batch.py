@@ -20,9 +20,9 @@ def post(client: Client, **spec: Any) -> Any:
 
 
 @pytest.fixture
-def batch(alex: Client, fake: FakeTransport) -> Callable[..., Events]:
+def batch(alice: Client, fake: FakeTransport) -> Callable[..., Events]:
     def batch(**spec: Any) -> Events:
-        response = post(alex, **spec)
+        response = post(alice, **spec)
         assert response.status_code == 200, response.content
         assert response["Content-Type"] == "text/event-stream"
         return events(b"".join(response.streaming_content))
@@ -73,23 +73,25 @@ def test_a_batch_draws_one_seed_for_all_its_cases_unless_told_otherwise(
     assert of(greedy, "recorded")[0]["run"]["seed"] is None
 
 
-def test_a_batch_sends_nothing_for_what_it_can_t_run(alex: Client, fake: FakeTransport):
-    untagged = post(alex, **FREE_TEXT, tags=[])
-    nowhere = post(alex, **FREE_TEXT, tags=["nowhere"])
-    half = post(alex, configuration="free-text", tags=["tag-1"])
+def test_a_batch_sends_nothing_for_what_it_can_t_run(
+    alice: Client, fake: FakeTransport
+):
+    untagged = post(alice, **FREE_TEXT, tags=[])
+    nowhere = post(alice, **FREE_TEXT, tags=["nowhere"])
+    half = post(alice, configuration="free-text", tags=["tag-1"])
     refused = post(
-        alex,
+        alice,
         configuration="baseline",
         stack="gpt-oss-20b@fake",
         reasoning="off",
         tags=["tag-1"],
     )
-    greedy = post(alex, **FREE_TEXT, sampling="greedy", tags=["tag-1"], seed=42)
+    greedy = post(alice, **FREE_TEXT, sampling="greedy", tags=["tag-1"], seed=42)
 
     assert untagged.status_code == 422
     assert (nowhere.status_code, nowhere.json()) == (
         404,
-        {"detail": "no case tagged nowhere for alex"},
+        {"detail": "no case tagged nowhere for alice"},
     )
     assert half.status_code == 400
     assert refused.status_code == 422

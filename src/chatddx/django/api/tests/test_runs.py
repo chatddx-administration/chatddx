@@ -102,8 +102,10 @@ def test_a_run_streams_as_it_comes_and_ends_with_its_record(
     assert (again["trial"], again["number"]) == (run_["trial"], 2)
 
 
-def test_a_run_can_be_waited_for_rather_than_watched(alex: Client, fake: FakeTransport):
-    response = post(alex, **FREE_TEXT, case="case-1", stream=False)
+def test_a_run_can_be_waited_for_rather_than_watched(
+    alice: Client, fake: FakeTransport
+):
+    response = post(alice, **FREE_TEXT, case="case-1", stream=False)
 
     assert response.status_code == 200, response.content
     assert response["Content-Type"] == "application/json; charset=utf-8"
@@ -127,10 +129,10 @@ def test_a_run_is_seeded_with_a_seed_drawn_unless_told_otherwise(
 
 
 def test_greedy_sampling_runs_unseeded_and_is_refused_a_seed(
-    alex: Client, run: Run, fake: FakeTransport
+    alice: Client, run: Run, fake: FakeTransport
 ):
     greedy = {**FREE_TEXT, "sampling": "greedy", "case": "case-1"}
-    refused = post(alex, **greedy, seed=42)
+    refused = post(alice, **greedy, seed=42)
 
     assert refused.status_code == 422
     assert (
@@ -144,20 +146,20 @@ def test_greedy_sampling_runs_unseeded_and_is_refused_a_seed(
 
 
 def test_what_stands_in_a_run_s_way_is_said_before_anything_is_sent(
-    alex: Client, fake: FakeTransport
+    alice: Client, fake: FakeTransport
 ):
-    half = post(alex, configuration="free-text", case="case-1")
+    half = post(alice, configuration="free-text", case="case-1")
     refused = post(
-        alex,
+        alice,
         configuration="baseline",
         stack="gpt-oss-20b@fake",
         reasoning="off",
         case="case-1",
     )
-    unknown = post(alex, **FREE_TEXT, case="nope")
+    unknown = post(alice, **FREE_TEXT, case="nope")
     _ = ToolBranchModel.objects.filter(name="sentinel_op").update(details={})
     unrunnable = post(
-        alex, configuration="test-tools", stack="qwen3-8b-awq@fake", case="case-1"
+        alice, configuration="test-tools", stack="qwen3-8b-awq@fake", case="case-1"
     )
 
     assert half.status_code == 400
@@ -178,14 +180,14 @@ def test_what_stands_in_a_run_s_way_is_said_before_anything_is_sent(
         {"case": "case-1", "seed": MAX_SEED + 1},
         {"case": "case-1", "seed": "some"},
     ):
-        assert post(alex, **FREE_TEXT, **spec).status_code == 422, spec
+        assert post(alice, **FREE_TEXT, **spec).status_code == 422, spec
 
     assert fake.requests == []
     assert not RunModel.objects.exists()
 
 
 def test_a_run_whose_server_fails_is_recorded_as_errored(
-    alex: Client, run: Run, through: Callable[[Any], None]
+    alice: Client, run: Run, through: Callable[[Any], None]
 ):
     through(httpx2.MockTransport(failing))
 
@@ -198,7 +200,7 @@ def test_a_run_whose_server_fails_is_recorded_as_errored(
     assert "no such model" in run_["error"]
     assert RunModel.objects.get().responses == ['{"error":{"message":"no such model"}}']
 
-    messages = alex.get(f"/api/runs/{run_['id']}/messages").json()
+    messages = alice.get(f"/api/runs/{run_['id']}/messages").json()
 
     assert messages[-1]["kind"] == "error"
     assert "no such model" in messages[-1]["payload"]["error"]
@@ -220,12 +222,12 @@ def test_a_vignette_of_one_s_own_runs_as_a_case_without_a_branch(
 
 
 def test_another_s_configuration_runs_only_as_one_s_own(
-    alex: Client, fake: FakeTransport, recommit: Recommit
+    alice: Client, fake: FakeTransport, recommit: Recommit
 ):
-    recommit("configuration", "plan", owner="bob", collaborators=["alex"])
+    recommit("configuration", "plan", owner="bob", collaborators=["alice"])
 
     refused = post(
-        alex, configuration="bob/plan", stack="qwen3-8b-awq@fake", case="case-1"
+        alice, configuration="bob/plan", stack="qwen3-8b-awq@fake", case="case-1"
     )
 
     assert refused.status_code == 403
@@ -234,30 +236,30 @@ def test_another_s_configuration_runs_only_as_one_s_own(
 
 
 def test_a_stack_s_credential_is_one_of_the_identity_s_secrets(
-    alex: Client, fake: FakeTransport
+    alice: Client, fake: FakeTransport
 ):
     for stack in StackBranchModel.objects.filter(name="qwen3-8b-awq@fake"):
         stack.details = {**stack.details, "credential": "fake-key"}
         stack.save()
 
-    missing = post(alex, **FREE_TEXT, case="case-1")
+    missing = post(alice, **FREE_TEXT, case="case-1")
 
     assert missing.status_code == 409
-    assert missing.json()["detail"] == "alex has no secret 'fake-key'"
+    assert missing.json()["detail"] == "alice has no secret 'fake-key'"
     assert fake.requests == []
 
-    identity = IdentityModel.objects.get(name="alex")
+    identity = IdentityModel.objects.get(name="alice")
     identity.secrets = {"fake-key": "sesame"}
     identity.save()
 
-    ran = post(alex, **FREE_TEXT, case="case-1", stream=False)
+    ran = post(alice, **FREE_TEXT, case="case-1", stream=False)
 
     assert ran.status_code == 200
     assert RunModel.objects.get().requests
     assert len(fake.requests) == 1
 
 
-def test_a_structured_answer_is_judged_and_its_views_read(alex: Client, run: Run):
+def test_a_structured_answer_is_judged_and_its_views_read(alice: Client, run: Run):
     live = run(configuration="plan", stack="qwen3-8b-awq@fake", case="case-1")
     [judged] = of(live, "judged")
     views = judged["views"]
@@ -275,7 +277,7 @@ def test_a_structured_answer_is_judged_and_its_views_read(alex: Client, run: Run
     assert views["warning"] == ["fake acute warning"]
     assert recorded(live)["answer"]["acute_warning"] == "fake acute warning"
 
-    again = alex.get(f"/api/runs/{live[0]['run']}").json()
+    again = alice.get(f"/api/runs/{live[0]['run']}").json()
 
     assert (again["valid"], again["views"]) == (True, views)
 
@@ -298,7 +300,7 @@ def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for(
 
 
 def test_calls_and_what_they_returned_stream_as_they_come_and_are_kept(
-    alex: Client, run: Run, fake: FakeTransport
+    alice: Client, run: Run, fake: FakeTransport
 ):
     live = run(configuration="test-tools", stack="qwen3-8b-awq@fake", case="case-1")
     called = [
@@ -319,7 +321,7 @@ def test_calls_and_what_they_returned_stream_as_they_come_and_are_kept(
         "sentinel_op",
     ]
 
-    messages = alex.get(f"/api/runs/{live[0]['run']}/messages").json()
+    messages = alice.get(f"/api/runs/{live[0]['run']}/messages").json()
     kept = [
         part["tool_name"]
         for message in messages
@@ -330,11 +332,11 @@ def test_calls_and_what_they_returned_stream_as_they_come_and_are_kept(
     assert kept == ["sentinel_string", "sentinel_op"]
 
 
-def test_runs_are_listed_the_latest_first(alex: Client, run: Run):
+def test_runs_are_listed_the_latest_first(alice: Client, run: Run):
     _ = run(**FREE_TEXT, case="case-1", seed="none")
     _ = run(configuration="plan", stack="qwen3-8b-awq@fake", case="case-2", seed=3)
 
-    listed = alex.get("/api/runs").json()
+    listed = alice.get("/api/runs").json()
 
     assert [row["description"] for row in listed] == [
         "plan × qwen3-8b-awq@fake × case-2 (seed 3)",
@@ -344,19 +346,19 @@ def test_runs_are_listed_the_latest_first(alex: Client, run: Run):
         ("first_mention", 17.0),
         ("reciprocal_rank", 0.5),
     ]
-    assert len(alex.get("/api/runs", {"limit": 1}).json()) == 1
-    assert alex.get("/api/runs", {"offset": 1}).json() == listed[1:]
+    assert len(alice.get("/api/runs", {"limit": 1}).json()) == 1
+    assert alice.get("/api/runs", {"offset": 1}).json() == listed[1:]
 
 
 def test_a_run_is_had_by_the_start_of_its_id_with_its_messages_and_exchange(
-    alex: Client, run: Run
+    alice: Client, run: Run
 ):
     run_ = recorded(run(**FREE_TEXT, case="case-1"))
     prefix = run_["id"][:8]
 
-    shown = alex.get(f"/api/runs/{prefix}")
-    messages = alex.get(f"/api/runs/{prefix}/messages").json()
-    exchange = alex.get(f"/api/runs/{prefix}/exchange").json()
+    shown = alice.get(f"/api/runs/{prefix}")
+    messages = alice.get(f"/api/runs/{prefix}/messages").json()
+    exchange = alice.get(f"/api/runs/{prefix}/exchange").json()
 
     assert shown.json() == run_
     assert [(message["role"], message["kind"]) for message in messages] == [
@@ -366,5 +368,5 @@ def test_a_run_is_had_by_the_start_of_its_id_with_its_messages_and_exchange(
     assert messages[0]["payload"]["parts"][-1]["content"] == "case vignette 1"
     assert json.loads(exchange["requests"][0])["model"] == "Qwen/Qwen3-8B-AWQ"
     assert exchange["responses"][0].startswith("data: ")
-    assert alex.get("/api/runs/zzzz").status_code == 404
-    assert alex.get("/api/runs/zzzz").json() == {"detail": "alex has no run 'zzzz'"}
+    assert alice.get("/api/runs/zzzz").status_code == 404
+    assert alice.get("/api/runs/zzzz").json() == {"detail": "alice has no run 'zzzz'"}

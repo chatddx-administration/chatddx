@@ -28,14 +28,14 @@ def test_a_run_takes_a_conversation_up_where_it_was_left(
     test_inventory: ParsedInventory,
 ):
     configuration, _ = test_inventory.configuration["baseline"]
-    stack = get_visible_branch_model("stack", "alex", STACK)
-    llm = get_visible_branch_model("llm", "alex", trail=stack.trail.llm_id)
+    stack = get_visible_branch_model("stack", "alice", STACK)
+    llm = get_visible_branch_model("llm", "alice", trail=stack.trail.llm_id)
     fake = FakeTransport()
 
     def recorded(
         case_name: str, conversation: ConversationModel | None = None
     ) -> RunModel:
-        case = get_visible_branch_model("case", "alex", case_name)
+        case = get_visible_branch_model("case", "alice", case_name)
         history = ModelMessagesTypeAdapter.validate_python(
             [message.payload for message in conversation.messages.all()]
             if conversation
@@ -52,7 +52,7 @@ def test_a_run_takes_a_conversation_up_where_it_was_left(
         result = asyncio.run(ran(run))
 
         return record(
-            "alex",
+            "alice",
             configuration,
             Branches(stack.pk, llm.pk),
             case.trail_id,

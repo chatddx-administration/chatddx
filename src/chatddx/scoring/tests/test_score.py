@@ -56,20 +56,20 @@ def ran(
     configuration: str,
     case: str = "case-1",
     transport: httpx2.AsyncBaseTransport | None = None,
-    user: str = "alex",
+    user: str = "alice",
 ) -> RunModel:
     """A run of `configuration` on `case`, against the fake vLLM, written down."""
     own = ConfigurationBranchOut.model_validate(
-        get_visible_branch_model("configuration", "alex", configuration)
+        get_visible_branch_model("configuration", "alice", configuration)
     )
     slices: dict[str, Any] = {entity: getattr(own.trail, entity) for entity in SLICES}
     cell = ConfigurationTrailIn.model_validate(slices, from_attributes=True)
     stack = StackBranchOut.model_validate(
-        get_visible_branch_model("stack", "alex", STACK)
+        get_visible_branch_model("stack", "alice", STACK)
     )
-    llm = get_visible_branch_model("llm", "alex", trail=stack.trail.llm.id)
+    llm = get_visible_branch_model("llm", "alice", trail=stack.trail.llm.id)
     facts = LLMBranchOut.model_validate(llm).details.facts
-    case_model = get_visible_branch_model("case", "alex", case)
+    case_model = get_visible_branch_model("case", "alice", case)
 
     run = Run(
         resolve(cell, stack.details, facts, stack.trail.serving),
@@ -92,14 +92,14 @@ def ran(
 
 
 def made(
-    run: RunModel, user: str = "alex"
+    run: RunModel, user: str = "alice"
 ) -> dict[str, tuple[float | None, str | None, str | None]]:
     return {
         s.scorer_name: (s.value, s.answer, s.reason) for s in Scoring(user).score(run)
     }
 
 
-def applicable(run: RunModel, user: str = "alex") -> list[str]:
+def applicable(run: RunModel, user: str = "alice") -> list[str]:
     return [scorer.name for scorer, _, _ in Scoring(user).applicable(run)]
 
 
@@ -129,7 +129,7 @@ def test_a_scorer_applies_where_the_view_is_offered_and_the_target_expected():
 
 
 def test_the_scorers_are_the_archive_s_and_one_s_own():
-    scorers = Scoring("alex").scorers
+    scorers = Scoring("alice").scorers
 
     assert [(s.name, s.owner) for s in scorers] == [
         ("disposition_mentions", "archive"),
@@ -150,7 +150,7 @@ def test_a_scorer_of_one_s_own_shadows_the_archive_s_of_its_name():
             view="text",
             target_kind="diagnosis",
         ),
-        ScorerBranchDetails(name="reciprocal_rank", owner="alex", metrics=["mean"]),
+        ScorerBranchDetails(name="reciprocal_rank", owner="alice", metrics=["mean"]),
     )
 
     assert made(ran("free-text")) == {
@@ -164,7 +164,7 @@ def test_a_scorer_of_one_s_own_shadows_the_archive_s_of_its_name():
 
 
 def test_a_score_keeps_what_it_was_made_with_and_who_made_it():
-    [_, rank] = Scoring("alex").score(ran("free-text"))
+    [_, rank] = Scoring("alice").score(ran("free-text"))
 
     patterns = Path(scorers.__file__).parent / "patterns.py"
     assert rank.blob == blob_of(patterns.read_bytes())
@@ -179,7 +179,7 @@ def test_a_score_keeps_what_it_was_made_with_and_who_made_it():
         "archive",
         "case-1",
     )
-    assert rank.owner.name == "alex"
+    assert rank.owner.name == "alice"
 
 
 def test_a_target_without_a_pattern_is_missing_for_the_pattern_scorers(
@@ -195,21 +195,21 @@ def test_a_run_scored_is_outstanding_again_when_its_target_changes(
     recommit: Recommit,
 ):
     run = ran("free-text")
-    first = Scoring("alex").score(run)
+    first = Scoring("alice").score(run)
 
-    assert Scoring("alex").outstanding(run) == []
-    assert Scoring("alex").score(run) == []
+    assert Scoring("alice").outstanding(run) == []
+    assert Scoring("alice").score(run) == []
 
     recommit(
         "case", "case-1", targets={"diagnosis": {"pattern": "fake & diagnosis & a"}}
     )
 
-    assert [s.name for s, _, _ in Scoring("alex").outstanding(run)] == [
+    assert [s.name for s, _, _ in Scoring("alice").outstanding(run)] == [
         "first_mention",
         "reciprocal_rank",
     ]
 
-    again = Scoring("alex").score(run)
+    again = Scoring("alice").score(run)
 
     assert [s.value for s in again] == [0.0, 1.0]
     assert {s.case_branch_id for s in again} == {
@@ -218,7 +218,7 @@ def test_a_run_scored_is_outstanding_again_when_its_target_changes(
         .pk
     }
     assert ScoreModel.objects.filter(run=run).count() == len(first) + len(again)
-    assert Scoring("alex").latest(run) == again
+    assert Scoring("alice").latest(run) == again
 
 
 def test_one_s_own_case_s_targets_shadow_the_archive_s(recommit: Recommit):
@@ -227,7 +227,7 @@ def test_one_s_own_case_s_targets_shadow_the_archive_s(recommit: Recommit):
         "case",
         "case-1",
         name="my-case",
-        owner="alex",
+        owner="alice",
         targets={"diagnosis": {"pattern": "fake & diagnosis & a"}},
     )
 
@@ -261,11 +261,11 @@ def test_each_identity_holds_a_run_to_its_own_scores():
         owner__name="archive", name="case-1"
     ).collaborators.add(ensure_identity("bob"))
     run = ran("free-text")
-    _ = Scoring("alex").score(run)
+    _ = Scoring("alice").score(run)
 
     assert [s.name for s, _, _ in Scoring("bob").outstanding(run)] == []
     assert Scoring("bob").latest(run) == []
-    assert Scoring("alex").outstanding(run) == []
+    assert Scoring("alice").outstanding(run) == []
 
 
 def test_an_errored_run_is_never_scored():
@@ -275,8 +275,8 @@ def test_an_errored_run_is_never_scored():
     run = ran("free-text", transport=httpx2.MockTransport(failing))
 
     assert run.status == RunStatus.ERRORED
-    assert Scoring("alex").applicable(run) == []
-    assert run not in Scoring("alex").outstanding_runs()
+    assert Scoring("alice").applicable(run) == []
+    assert run not in Scoring("alice").outstanding_runs()
 
 
 def test_a_run_that_came_to_no_answer_is_scored_as_such():
@@ -301,6 +301,6 @@ def test_a_run_that_came_to_no_answer_is_scored_as_such():
 def test_outstanding_runs_are_those_with_a_scorer_to_go():
     scored = ran("free-text")
     unscored = ran("plan")
-    _ = Scoring("alex").score(scored)
+    _ = Scoring("alice").score(scored)
 
-    assert Scoring("alex").outstanding_runs() == [unscored]
+    assert Scoring("alice").outstanding_runs() == [unscored]

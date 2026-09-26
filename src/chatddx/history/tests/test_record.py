@@ -44,7 +44,7 @@ SLICES = ("instruction", "output", "coercion", "reasoning", "sampling", "toolset
 def branch(
     entity: EntityName, name: str | None = None, trail: int | None = None
 ) -> Any:
-    return get_visible_branch_model(entity, "alex", name, trail=trail)
+    return get_visible_branch_model(entity, "alice", name, trail=trail)
 
 
 async def outcome_of(run: Run) -> Outcome:
@@ -64,7 +64,7 @@ def written(
     seed: int | None = None,
     transport: httpx2.AsyncBaseTransport | None = None,
     reasoning: str | None = None,
-    user: str = "alex",
+    user: str = "alice",
 ) -> RunModel:
     own = ConfigurationBranchOut.model_validate(branch("configuration", configuration))
     slices: dict[str, Any] = {entity: getattr(own.trail, entity) for entity in SLICES}
@@ -174,12 +174,12 @@ def test_the_same_cell_case_and_seed_is_another_run_of_one_trial():
 
 def test_a_trial_is_no_one_s_and_each_run_its_maker_s():
     _ = ensure_identity("bob")
-    alex = written()
+    alice = written()
     bob = written(user="bob")
 
-    assert alex.trial_id == bob.trial_id
-    assert (alex.owner.name, bob.owner.name) == ("alex", "bob")
-    assert alex.trial.seed is None
+    assert alice.trial_id == bob.trial_id
+    assert (alice.owner.name, bob.owner.name) == ("alice", "bob")
+    assert alice.trial.seed is None
     assert TrialModel.objects.count() == 1
 
 

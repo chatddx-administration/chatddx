@@ -10,10 +10,10 @@ from chatddx.core.models import IdentityModel
 pytestmark = pytest.mark.django_db
 
 
-def test_a_session_acts_as_its_user_s_identity(alex: Client):
-    response = alex.get("/api/me")
+def test_a_session_acts_as_its_user_s_identity(alice: Client):
+    response = alice.get("/api/me")
 
-    assert response.json() == {"name": "alex", "guest": False}
+    assert response.json() == {"name": "alice", "guest": False}
     assert "csrftoken" in response.cookies
 
 
@@ -25,15 +25,15 @@ def test_a_request_without_a_session_acts_as_the_guest(client: Client):
 def test_a_user_s_identity_is_made_when_it_is_first_met(
     client: Client, django_user_model: Any
 ):
-    client.force_login(django_user_model.objects.create_user(username="sam"))
+    client.force_login(django_user_model.objects.create_user(username="bob"))
 
-    assert client.get("/api/me").json()["name"] == "sam"
-    assert IdentityModel.objects.filter(name="sam").exists()
+    assert client.get("/api/me").json()["name"] == "bob"
+    assert IdentityModel.objects.filter(name="bob").exists()
 
 
 def test_a_session_s_unsafe_requests_carry_its_csrf_token(django_user_model: Any):
     browser = Client(enforce_csrf_checks=True)
-    browser.force_login(django_user_model.objects.create_user(username="alex"))
+    browser.force_login(django_user_model.objects.create_user(username="alice"))
     save = {"configuration": "free-text", "name": "mine"}
 
     refused = browser.post("/api/cell/save", save, content_type="application/json")
@@ -63,13 +63,13 @@ def test_the_guest_s_requests_need_no_token(provision: Callable[..., None]):
     assert saved.json()["configuration"]["owner"]["name"] == "guest"
 
 
-def test_no_identity_s_secrets_are_shown(alex: Client):
+def test_no_identity_s_secrets_are_shown(alice: Client):
     archive = IdentityModel.objects.get(name="archive")
     archive.secrets = {"key": "sesame"}
     archive.save()
 
     for path in ("/api/registry/stack", "/api/registry/case/case-1", "/api/me"):
-        assert "sesame" not in alex.get(path).content.decode()
+        assert "sesame" not in alice.get(path).content.decode()
 
 
 def test_the_api_describes_itself(client: Client):

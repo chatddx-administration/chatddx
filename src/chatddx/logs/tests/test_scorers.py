@@ -19,7 +19,7 @@ def failing(_request: httpx2.Request) -> httpx2.Response:
     return httpx2.Response(502, json={"error": {"message": "the server went away"}})
 
 
-def logs(identity: str = "alex") -> list[EvalLog]:
+def logs(identity: str = "alice") -> list[EvalLog]:
     cells = {
         (trial.configuration, trial.stack)
         for trial in TrialModel.objects.filter(runs__owner__name=identity)
@@ -35,7 +35,7 @@ def logs(identity: str = "alex") -> list[EvalLog]:
 def test_inspect_scores_each_sample_as_chatddx_scored_its_run(
     run_as: Callable[..., Run],
 ):
-    run = run_as("alex")
+    run = run_as("alice")
 
     for configuration in ("plan", "free-text", "diagnoses", "test-tools"):
         run(
@@ -45,11 +45,11 @@ def test_inspect_scores_each_sample_as_chatddx_scored_its_run(
             "run case-1 5",
         )
 
-    run_as("alex", httpx2.MockTransport(failing))(
+    run_as("alice", httpx2.MockTransport(failing))(
         "cell plan qwen3-8b-awq@fake", "run case-2 9"
     )
 
-    scoring = Scoring("alex")
+    scoring = Scoring("alice")
     held: set[str] = set()
 
     for log in logs():
@@ -116,7 +116,7 @@ def test_a_scorers_metrics_are_chatddxs_sums_of_its_values(run: Run):
     values = [
         score.value
         for recorded in RunModel.objects.all()
-        for score in Scoring("alex").latest(recorded)
+        for score in Scoring("alice").latest(recorded)
         if score.scorer_name == "reciprocal_rank" and score.value is not None
     ]
 

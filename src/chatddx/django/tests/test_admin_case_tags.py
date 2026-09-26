@@ -169,7 +169,7 @@ def test_a_case_save_leaves_the_relations_the_form_has_no_say_over(
     owner: IdentityModel,
 ):
     case = case_branch(owner)
-    collaborator = ensure_identity("olof")
+    collaborator = ensure_identity("bob")
     case.collaborators.set([collaborator])
 
     response = user_client.post(
@@ -189,7 +189,7 @@ def test_case_tags_are_scoped_to_their_owner(
     inventory_fixture_fdo: InventoryFormDataOut,
     owner: IdentityModel,
 ):
-    other = ensure_identity("olof")
+    other = ensure_identity("bob")
     their_tag = ensure_tag(other, "case", "clinical")
 
     case = case_branch(owner)

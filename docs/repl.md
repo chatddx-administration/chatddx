@@ -16,13 +16,13 @@ settings. Create yours once, which also loads the shared inventory of
 models, settings and cases:
 
 ```
-chatddx init-data alex
+chatddx init-data alice
 ```
 
 Then start the shell:
 
 ```
-chatddx repl alex
+chatddx repl alice
 ```
 
 To try it without a GPU, start the fake model in another terminal first:
@@ -34,10 +34,10 @@ chatddx fake-vllm
 The shell greets you with its prompt:
 
 ```
-alex #13530>
+alice #13530>
 ```
 
-`alex` is who you are, and `#13530` is the seed the shell drew for you (see
+`alice` is who you are, and `#13530` is the seed the shell drew for you (see
 `seed` below). As you choose what to run, the prompt grows to show it.
 
 ## A few words first
@@ -71,7 +71,7 @@ Lists the configurations you can use: yours, and the archive's (the shared
 inventory). Each row shows what the configuration is made of.
 
 ```
-alex #13530> configurations
+alice #13530> configurations
  configuration    instruction  output           coercion  reasoning  sampling     toolset  owner
  diagnoses        ddx          diagnoses        native    default    recommended  —        archive
  free-text        ddx          free-text        auto      default    recommended  —        archive
@@ -84,7 +84,7 @@ alex #13530> configurations
 Lists the models you can run on, and where each is served.
 
 ```
-alex #13530> stacks
+alice #13530> stacks
  stack                 llm           machine  endpoint                     owner
  qwen3-8b-awq@fake     qwen3-8b-awq  fake     http://localhost:12099/v1/   archive
  qwen3-8b-awq@pelle    qwen3-8b-awq  pelle    http://pelle.km:12009/v1/    archive
@@ -96,7 +96,7 @@ alex #13530> stacks
 Lists the cases you can run, and how many there are.
 
 ```
-alex #13530> cases
+alice #13530> cases
 DutchFall10w  Dutchfall11w  ...  casesfromedn1  ...  openxddx-case_9
 99 cases
 ```
@@ -112,9 +112,9 @@ configuration after `use`, a case after `run`, a tag after `batch` or
 Puts a configuration in the cell.
 
 ```
-alex #13530> use plan
+alice #13530> use plan
 cell: plan × ?
-alex plan #13530>
+alice plan #13530>
 ```
 
 The `?` says the cell still needs a stack. A configuration someone else
@@ -126,9 +126,9 @@ look at it, but it runs only after you save it as your own (`save`).
 Puts a stack in the cell.
 
 ```
-alex plan #13530> on qwen3-8b-awq@fake
+alice plan #13530> on qwen3-8b-awq@fake
 cell: plan × qwen3-8b-awq@fake
-alex plan×qwen3-8b-awq@fake #13530>
+alice plan×qwen3-8b-awq@fake #13530>
 ```
 
 ### `cell CONFIGURATION STACK`
@@ -136,7 +136,7 @@ alex plan×qwen3-8b-awq@fake #13530>
 Both at once.
 
 ```
-alex #13530> cell free-text qwen3-8b-awq@fake
+alice #13530> cell free-text qwen3-8b-awq@fake
 cell: free-text × qwen3-8b-awq@fake
 ```
 
@@ -148,7 +148,7 @@ The parts, called slices, are `instruction`, `output`, `coercion`,
 answer without thinking first:
 
 ```
-alex plan×qwen3-8b-awq@fake #13530> set reasoning off
+alice plan×qwen3-8b-awq@fake #13530> set reasoning off
 cell: plan+reasoning=off × qwen3-8b-awq@fake
 ```
 
@@ -165,7 +165,7 @@ it anything to read, and how many cases have the target it needs. Nothing
 is sent.
 
 ```
-alex plan×qwen3-8b-awq@fake #13530> show
+alice plan×qwen3-8b-awq@fake #13530> show
 cell: plan × qwen3-8b-awq@fake
  slice        variation          on the stack
  stack        qwen3-8b-awq@fake  qwen3-8b-awq, served as Qwen/Qwen3-8B-AWQ at http://localhost:12099/v1/
@@ -201,7 +201,7 @@ The same, with the scorers' table counting only the cases with any of the
 tags: the cases `batch` would run.
 
 ```
-alex plan×qwen3-8b-awq@fake #13530> show tag edn
+alice plan×qwen3-8b-awq@fake #13530> show tag edn
 ...
  scorer                view          target       of 20 cases tagged edn
  disposition_mentions  disposition   disposition  20 have it
@@ -219,7 +219,7 @@ its words and its pattern, and `missing` where either, or the whole target,
 isn't there:
 
 ```
-alex #5> show case DutchFall10w
+alice #5> show case DutchFall10w
 case DutchFall10w, archive's  e647d6
  vignette                     Main complaint: abdominal pain in upper abdomen ...
  language                     en
@@ -264,11 +264,11 @@ a seeded run can be repeated, and it is recorded with its seed.
 - `seed none` stops seeding: runs are then unrepeatable draws.
 
 ```
-alex free-text×qwen3-8b-awq@fake #42> seed
+alice free-text×qwen3-8b-awq@fake #42> seed
 seed: #88645
-alex free-text×qwen3-8b-awq@fake #88645> seed none
+alice free-text×qwen3-8b-awq@fake #88645> seed none
 seed: none: runs go unseeded
-alex free-text×qwen3-8b-awq@fake #none>
+alice free-text×qwen3-8b-awq@fake #none>
 ```
 
 Draw a new seed whenever you want fresh answers rather than a repeat of
@@ -287,7 +287,7 @@ model's thinking first, labelled, then the answer. Then come the tokens it
 used, what each view reads from the answer, and the scores.
 
 ```
-alex free-text×qwen3-8b-awq@fake #42> run DutchFall10w
+alice free-text×qwen3-8b-awq@fake #42> run DutchFall10w
 trial: free-text × qwen3-8b-awq@fake × DutchFall10w (seed 42)
 [thinking] I am the fake vLLM, and nothing here reads the case. ...
 Fake diagnosis A
@@ -323,7 +323,7 @@ line fills in with how it went and each score. The batch ends with a
 summary per scorer.
 
 ```
-alex free-text×qwen3-8b-awq@fake #5> batch edn
+alice free-text×qwen3-8b-awq@fake #5> batch edn
 batch: free-text × qwen3-8b-awq@fake × 20 cases tagged edn, seed 5
 case            tokens  outcome    first_mention  reciprocal_rank
 casesfromedn1       44  completed  —              0
@@ -355,7 +355,7 @@ Lists your latest runs, the last 20, or as many as you say: when, what ran
 (cell, case and seed), how it went, and the scores.
 
 ```
-alex #5> runs 2
+alice #5> runs 2
  run       when              trial     what ran                                      outcome    scores
  84cc62dd  2026-09-25 17:32  c7789eaa  free-text × qwen3-8b-awq@fake × casesfromedn9  completed  first_mention —
                                        (seed 5)                                                 reciprocal_rank 0
@@ -380,7 +380,7 @@ Lists the scorers, what part of an answer each reads, which target it
 compares that to, and whether the cell's output offers what it reads.
 
 ```
-alex #5> scorers
+alice #5> scorers
  scorer                function         reads         held to      metrics      owner    the cell
  disposition_mentions  mentions         disposition   disposition  mean stderr  archive  —
  first_mention         first_mention    text          diagnosis    mean stderr  archive  offers it
@@ -404,7 +404,7 @@ be scored again; `score` catches them up, and ends with each scorer's
 summary. With a run, it shows that run's scores.
 
 ```
-alex #5> score
+alice #5> score
 nothing to score
 ```
 
@@ -416,7 +416,7 @@ Keeps the cell's configuration, with whatever you changed with `set`, as a
 configuration of your own under NAME. The pieces it uses become yours too.
 
 ```
-alex free-text×qwen3-8b-awq@fake #5> save my-free-text
+alice free-text×qwen3-8b-awq@fake #5> save my-free-text
 saved as my-free-text: created 87f14d
 yours now too: instruction ddx, output free-text, coercion auto, reasoning default, sampling recommended
 cell: my-free-text × qwen3-8b-awq@fake
@@ -432,5 +432,5 @@ The lines you type are kept in `~/.chatddx_history` (or the file given with
 reads lines from a pipe, which is handy for a fixed routine:
 
 ```
-printf 'cell plan qwen3-8b-awq@pelle\nseed\nbatch edn\n' | chatddx repl alex
+printf 'cell plan qwen3-8b-awq@pelle\nseed\nbatch edn\n' | chatddx repl alice
 ```

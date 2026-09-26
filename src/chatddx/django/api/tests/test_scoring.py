@@ -29,19 +29,19 @@ def values(scores: list[dict[str, Any]]) -> list[tuple[str, float | None]]:
 
 
 def test_score_holds_the_outstanding_runs_and_sums_them_up(
-    alex: Client, run: Run, recommit: Recommit
+    alice: Client, run: Run, recommit: Recommit
 ):
     _ = run(**FREE_TEXT, case="case-1", seed="none")
     _ = run(configuration="plan", stack="qwen3-8b-awq@fake", case="case-1", seed=2)
 
-    assert score(alex).json() == {"runs": [], "summary": []}
+    assert score(alice).json() == {"runs": [], "summary": []}
 
     recommit(
         "case",
         "case-1",
         targets={"diagnosis": {"pattern": "fake & diagnosis & (a | 1)"}},
     )
-    scored = score(alex).json()
+    scored = score(alice).json()
 
     assert [row["run"]["description"] for row in scored["runs"]] == [
         "free-text × qwen3-8b-awq@fake × case-1",
@@ -58,14 +58,14 @@ def test_score_holds_the_outstanding_runs_and_sums_them_up(
         "metrics": {"mean": 1.0, "stderr": 0.0},
         "without_value": 0,
     }
-    assert score(alex).json()["runs"] == []
+    assert score(alice).json()["runs"] == []
 
 
 def test_score_run_says_what_came_of_one_run(
-    alex: Client, run: Run, through: Callable[[Any], None]
+    alice: Client, run: Run, through: Callable[[Any], None]
 ):
     first = run(**FREE_TEXT, case="case-1")[0]["run"]
-    already = score(alex, first[:8]).json()
+    already = score(alice, first[:8]).json()
 
     assert [row["unscored"] for row in already["runs"]] == ["scored already"]
     assert values(already["runs"][0]["run"]["scores"]) == [
@@ -79,9 +79,9 @@ def test_score_run_says_what_came_of_one_run(
         case="case-1",
     )[0]["run"]
 
-    assert score(alex, offered).json()["runs"][0]["unscored"] == "no scorer applies"
-    assert score(alex, "zzzz").status_code == 404
-    assert score(alex, "").status_code == 409
+    assert score(alice, offered).json()["runs"][0]["unscored"] == "no scorer applies"
+    assert score(alice, "zzzz").status_code == 404
+    assert score(alice, "").status_code == 409
 
     def failing(_request: httpx2.Request) -> httpx2.Response:
         return httpx2.Response(400, json={"error": {"message": "no such model"}})
@@ -89,16 +89,16 @@ def test_score_run_says_what_came_of_one_run(
     through(httpx2.MockTransport(failing))
     errored = run(**FREE_TEXT, case="case-1")[0]["run"]
 
-    assert score(alex, errored).json()["runs"][0]["unscored"] == "errored"
+    assert score(alice, errored).json()["runs"][0]["unscored"] == "errored"
 
 
 def test_a_trial_shows_your_runs_of_it_to_you_alone(
-    alex: Client, run: Run, django_user_model: Any
+    alice: Client, run: Run, django_user_model: Any
 ):
     first = run(**FREE_TEXT, case="case-1", seed=3)[-1]["run"]
     _ = run(**FREE_TEXT, case="case-1", seed=3)
 
-    trial = alex.get(f"/api/trials/{first['trial'][:8]}").json()
+    trial = alice.get(f"/api/trials/{first['trial'][:8]}").json()
 
     assert trial["id"] == first["trial"]
     assert (trial["case"]["vignette"], trial["seed"]) == ("case vignette 1", 3)
@@ -108,11 +108,11 @@ def test_a_trial_shows_your_runs_of_it_to_you_alone(
     assert len(trial["runs"]) == 2
 
     stranger = Client()
-    stranger.force_login(django_user_model.objects.create_user(username="sam"))
+    stranger.force_login(django_user_model.objects.create_user(username="bob"))
     missing = stranger.get(f"/api/trials/{first['trial']}")
 
     assert missing.status_code == 404
     assert missing.json() == {
-        "detail": f"sam has no runs of a trial '{first['trial']}'"
+        "detail": f"bob has no runs of a trial '{first['trial']}'"
     }
     assert stranger.get("/api/runs").json() == []

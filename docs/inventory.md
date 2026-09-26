@@ -25,10 +25,10 @@ Nothing reads these files while chatddx runs. They are loaded into the
 database with:
 
 ```
-chatddx init-data alex
+chatddx init-data alice
 ```
 
-This loads everything as the archive's, the shared owner, and lets alex use
+This loads everything as the archive's, the shared owner, and lets alice use
 it. Run it again after an edit.
 
 Keys come in two sorts, and the difference matters:

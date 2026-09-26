@@ -8,7 +8,7 @@ from chatddx.repo.store import inventory
 
 @pytest.fixture
 def owner() -> IdentityModel:
-    return ensure_identity("alex")
+    return ensure_identity("alice")
 
 
 @pytest.fixture

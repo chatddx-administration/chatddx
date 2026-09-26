@@ -1,7 +1,7 @@
 """
 `chatddx init-data` and `chatddx wipe-data`, run as the command line runs
 them: on the test inventory and giftbag, and once on the live ones. The
-session's seed is the test inventory init-data gave alex; a test of seeding
+session's seed is the test inventory init-data gave alice; a test of seeding
 itself starts from an empty database.
 """
 
@@ -90,13 +90,13 @@ def test_init_data_provisions_the_live_inventory_and_giftbag_by_default():
     inventory = parse(settings.INVENTORY_PATH / "inventory.toml")
     giftbag = parse(settings.INVENTORY_PATH / "giftbag-inventory.toml")
 
-    assert run("init-data", "alex", "--with-giftbag") == (
+    assert run("init-data", "alice", "--with-giftbag") == (
         receipts(inventory, "archive", "created")
         + receipts(giftbag, "giftbag", "created")
     )
     assert owned(ARCHIVE) == names(inventory)
-    assert shared_with("alex") == names(inventory)
-    assert owned("alex") == names(giftbag)
+    assert shared_with("alice") == names(inventory)
+    assert owned("alice") == names(giftbag)
 
 
 @pytest.mark.usefixtures("unseeded")
@@ -114,20 +114,20 @@ def test_init_data_archives_the_inventory_and_shares_it_with_each_user(
             branch_model = archived[entity][name]
 
             assert branch_model.trail.fingerprint == trail.fingerprint
-            assert [c.name for c in branch_model.collaborators.all()] == ["alex"]
+            assert [c.name for c in branch_model.collaborators.all()] == ["alice"]
 
     assert owned(ARCHIVE) == names(inventory)
-    assert owned("alex") == NOTHING
+    assert owned("alice") == NOTHING
 
     before = versions()
 
     assert provision() == receipts(inventory, "archive", "validated")
     assert versions() == before
 
-    _ = provision(user="other")
+    _ = provision(user="bob")
 
-    assert shared_with("alex") == names(inventory)
-    assert shared_with("other") == names(inventory)
+    assert shared_with("alice") == names(inventory)
+    assert shared_with("bob") == names(inventory)
 
 
 def test_init_data_with_giftbag_gives_the_user_their_own(
@@ -140,10 +140,10 @@ def test_init_data_with_giftbag_gives_the_user_their_own(
         + receipts(giftbag, "giftbag", "created")
     )
 
-    assert owned("alex") == names(giftbag)
-    assert owned("alex")["stack"] == set()
+    assert owned("alice") == names(giftbag)
+    assert owned("alice")["stack"] == set()
 
-    mine = owned_inventory("alex")
+    mine = owned_inventory("alice")
     archived = owned_inventory(ARCHIVE)
 
     for entity in ENTITY_NAMES:
@@ -152,7 +152,7 @@ def test_init_data_with_giftbag_gives_the_user_their_own(
 
     plan = mine["configuration"]["plan"]
     tags = [(tag.owner.name, tag.entity, tag.name) for tag in plan.tags.all()]
-    assert tags == [("alex", "configuration", "ddx")]
+    assert tags == [("alice", "configuration", "ddx")]
 
 
 def test_init_data_keeps_the_archive_shared_as_it_changes(tmp_path: Path):
@@ -165,18 +165,18 @@ def test_init_data_keeps_the_archive_shared_as_it_changes(tmp_path: Path):
         return parse(path)
 
     _ = write("Look it up.")
-    _ = run("init-data", "alex", "--inventory", str(path))
-    _ = run("init-data", "other", "--inventory", str(path))
+    _ = run("init-data", "alice", "--inventory", str(path))
+    _ = run("init-data", "bob", "--inventory", str(path))
 
     changed = write("Look it up, and say where.")
 
-    assert run("init-data", "alex", "--inventory", str(path)) == receipts(
+    assert run("init-data", "alice", "--inventory", str(path)) == receipts(
         changed, "archive", "created"
     )
 
     lookup = owned_inventory(ARCHIVE)["tool"]["lookup"]
     assert lookup.version_count == 2
-    assert [c.name for c in lookup.collaborators.all()] == ["alex", "other"]
+    assert [c.name for c in lookup.collaborators.all()] == ["alice", "bob"]
 
 
 def test_init_data_reads_both_inventories_before_writing(tmp_path: Path):
@@ -186,14 +186,14 @@ def test_init_data_reads_both_inventories_before_writing(tmp_path: Path):
 
     result = CliRunner().invoke(
         app,
-        ["init-data", "carol", "--with-giftbag", "--giftbag-inventory", str(giftbag)],
+        ["init-data", "bob", "--with-giftbag", "--giftbag-inventory", str(giftbag)],
     )
 
     assert result.exit_code == 1
     assert result.stderr.startswith(f"{giftbag}: tool 'lookup': unknown key 'colour'")
 
     assert versions() == before
-    assert not IdentityModel.objects.filter(name="carol").exists()
+    assert not IdentityModel.objects.filter(name="bob").exists()
 
 
 def test_wipe_data_takes_back_what_init_data_gave_and_init_data_gives_it_again(
@@ -201,27 +201,27 @@ def test_wipe_data_takes_back_what_init_data_gave_and_init_data_gives_it_again(
 ):
     inventory, giftbag = test_inventory, test_giftbag
     _ = provision("--with-giftbag")
-    _ = provision("--with-giftbag", user="other")
+    _ = provision("--with-giftbag", user="bob")
 
-    assert run("wipe-data", "alex") == NO_HISTORY + [
+    assert run("wipe-data", "alice") == NO_HISTORY + [
         f"[{entity}]: removed {len(getattr(giftbag, entity))}, "
         + f"unshared {len(getattr(inventory, entity))}"
         for entity in ENTITY_NAMES
     ]
 
-    assert owned("alex") == NOTHING
-    assert shared_with("alex") == NOTHING
+    assert owned("alice") == NOTHING
+    assert shared_with("alice") == NOTHING
 
     assert owned(ARCHIVE) == names(inventory)
-    assert owned("other") == names(giftbag)
-    assert shared_with("other") == names(inventory)
+    assert owned("bob") == names(giftbag)
+    assert shared_with("bob") == names(inventory)
 
     assert provision("--with-giftbag") == (
         receipts(inventory, "archive", "validated")
         + receipts(giftbag, "giftbag", "created")
     )
-    assert shared_with("alex") == names(inventory)
-    assert owned("alex") == names(giftbag)
+    assert shared_with("alice") == names(inventory)
+    assert owned("alice") == names(giftbag)
 
 
 def test_wipe_data_of_nobody_removes_nothing():
@@ -242,9 +242,9 @@ def test_wipe_data_takes_back_the_user_s_history_too(
     provision: Provision, say_as: SayAs
 ):
     _ = provision("--with-giftbag")
-    ran_test_tools(say_as("alex"))
+    ran_test_tools(say_as("alice"))
 
-    assert run("wipe-data", "alex")[:5] == [
+    assert run("wipe-data", "alice")[:5] == [
         "[score]: removed 1",
         "[run]: removed 1, unshared 0",
         "[message]: removed 6",
@@ -253,7 +253,7 @@ def test_wipe_data_takes_back_the_user_s_history_too(
     ]
     assert not RunModel.objects.exists()
     assert not TrialModel.objects.exists()
-    assert owned("alex") == NOTHING
+    assert owned("alice") == NOTHING
 
 
 def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read(
@@ -261,15 +261,15 @@ def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read(
 ):
     _ = provision("--with-giftbag")
     _ = provision(user="bob")
-    ran_test_tools(say_as("alex"))
+    ran_test_tools(say_as("alice"))
 
     bob = IdentityModel.objects.get(name="bob")
     for model in (RunModel, ConversationModel):
         _ = model.objects.update(owner=bob)
 
-    result = CliRunner().invoke(app, ["wipe-data", "alex"])
+    result = CliRunner().invoke(app, ["wipe-data", "alice"])
 
     assert result.exit_code == 1
-    assert "alex is kept: others' runs or scores read its branches" in result.output
-    assert owned("alex") == names(test_giftbag)
+    assert "alice is kept: others' runs or scores read its branches" in result.output
+    assert owned("alice") == names(test_giftbag)
     assert RunModel.objects.count() == 1

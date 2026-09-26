@@ -8,7 +8,7 @@ from chatddx.repl.shell import Repl
 
 @pytest.fixture
 def repl(fake: FakeTransport) -> Repl:
-    return Repl("alex", Console(record=True, width=200), transport=fake, seed=None)
+    return Repl("alice", Console(record=True, width=200), transport=fake, seed=None)
 
 
 @pytest.fixture
