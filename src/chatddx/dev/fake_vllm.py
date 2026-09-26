@@ -50,11 +50,20 @@ def thinking(body: dict[str, Any]) -> str | None:
 
 
 @dataclass(frozen=True)
+class Call:
+    """A call to a tool, as the LLM writes one: its name, and its arguments as JSON."""
+
+    name: str
+    arguments: str
+    id: str = "chatcmpl-tool-fake"
+
+
+@dataclass(frozen=True)
 class Reply:
     reasoning: str | None
     content: str
-    # a call to a tool: its name and its arguments, as JSON
-    call: tuple[str, str] | None
+    # the calls to tools, one after another, as vLLM streams calls made at once
+    calls: tuple[Call, ...]
     finish: str
     # the newlines it goes on with after its answer, a token each
     runaway: int = 0
@@ -67,10 +76,12 @@ def respond(
     thought = _words(thought_text or "")
     tool = _next_tool(body)
     schema = _schema(body)
-    call: tuple[str, str] | None = None
+    calls: tuple[Call, ...] = ()
 
     if tool is not None:
-        call = (tool["name"], json.dumps(instance(tool.get("parameters") or {})))
+        calls = (
+            Call(tool["name"], json.dumps(instance(tool.get("parameters") or {}))),
+        )
         answer: list[str] = []
     elif schema is not None:
         answer = _words(json.dumps(instance(schema), indent=2))
@@ -81,7 +92,7 @@ def respond(
     if isinstance(budget, int):
         thought = thought[:budget]
 
-    finish = "tool_calls" if call else "stop"
+    finish = "tool_calls" if calls else "stop"
     # as vLLM does: OpenAI's newer name first
     limit = body.get("max_completion_tokens", body.get("max_tokens"))
 
@@ -110,12 +121,12 @@ def respond(
         return Reply(
             None,
             f"<think>\n{reasoning}{closed}{''.join(answer)}",
-            call,
+            calls,
             finish,
             newlines,
         )
 
-    return Reply(reasoning, "".join(answer), call, finish, newlines)
+    return Reply(reasoning, "".join(answer), calls, finish, newlines)
 
 
 def completion(
@@ -130,14 +141,14 @@ def completion(
     if reply.reasoning is not None:
         message["reasoning"] = reply.reasoning
 
-    if reply.call is not None:
-        name, arguments = reply.call
+    if reply.calls:
         message["tool_calls"] = [
             {
-                "id": "chatcmpl-tool-fake",
+                "id": call.id,
                 "type": "function",
-                "function": {"name": name, "arguments": arguments},
+                "function": {"name": call.name, "arguments": call.arguments},
             }
+            for call in reply.calls
         ]
 
     return {
@@ -153,7 +164,12 @@ def completion(
 def stream(
     body: dict[str, Any], reasoning_parser: bool = True, runaway: bool = False
 ) -> Iterator[str]:
-    for event, _ in _stream(body, respond(body, reasoning_parser, runaway)):
+    return streamed(body, respond(body, reasoning_parser, runaway))
+
+
+def streamed(body: dict[str, Any], reply: Reply) -> Iterator[str]:
+    """`reply`'s events, as vLLM streams an answer to `body`."""
+    for event, _ in _stream(body, reply):
         yield event
 
 
@@ -183,25 +199,24 @@ def _stream(body: dict[str, Any], reply: Reply) -> Iterator[tuple[str, int]]:
         generated += 1
         yield event({"content": "\n"})
 
-    if reply.call is not None:
-        name, arguments = reply.call
+    for index, call in enumerate(reply.calls):
         yield event(
             {
                 "tool_calls": [
                     {
-                        "index": 0,
-                        "id": "chatcmpl-tool-fake",
+                        "index": index,
+                        "id": call.id,
                         "type": "function",
-                        "function": {"name": name, "arguments": ""},
+                        "function": {"name": call.name, "arguments": ""},
                     }
                 ]
             },
         )
 
-        for piece in _words(arguments):
+        for piece in _words(call.arguments):
             generated += len(piece.split())
             yield event(
-                {"tool_calls": [{"index": 0, "function": {"arguments": piece}}]},
+                {"tool_calls": [{"index": index, "function": {"arguments": piece}}]},
             )
 
     yield event({}, reply.finish)
@@ -491,7 +506,7 @@ def _data(chunk: dict[str, Any]) -> str:
 
 
 def _usage(body: dict[str, Any], reply: Reply) -> dict[str, int]:
-    arguments = reply.call[1] if reply.call else ""
+    arguments = "".join(call.arguments for call in reply.calls)
     completion_tokens = sum(
         len(text.split()) for text in (reply.reasoning or "", reply.content, arguments)
     )

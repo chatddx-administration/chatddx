@@ -16,12 +16,15 @@ from chatddx.core import settings
 from chatddx.dev.fake_vllm import (
     ANSWER,
     CONTEXT,
+    Call,
     FakeTransport,
+    Reply,
     completion,
     instance,
     respond,
     server,
     stream,
+    streamed,
     thinking,
 )
 
@@ -112,7 +115,7 @@ def test_without_a_reasoning_parser_a_grammar_leaves_no_room_to_think():
 
     assert (held.reasoning, json.loads(held.content)) == (None, {"ok": False})
     assert (required.reasoning, required.content) == (None, "")
-    assert required.call == ("final_result", "null")
+    assert required.calls == (Call("final_result", "null"),)
 
 
 # ------------------------------------------------------------------ schemas
@@ -179,7 +182,7 @@ def test_offered_a_tool_it_calls_it():
     }
     reply = respond(body(tools=[tool]))
 
-    assert reply.call == ("final_result", '{"ok": false}')
+    assert reply.calls == (Call("final_result", '{"ok": false}'),)
     assert (reply.content, reply.finish) == ("", "tool_calls")
 
 
@@ -213,23 +216,21 @@ def called(*names: str) -> list[dict[str, Any]]:
 def test_offered_tools_it_calls_each_once_then_answers():
     tools = [function("lookup"), function("now")]
 
-    assert respond(body(tools=tools)).call == ("lookup", "null")
-    assert respond(body(tools=tools, messages=called("lookup"))).call == (
-        "now",
-        "null",
+    assert respond(body(tools=tools)).calls == (Call("lookup", "null"),)
+    assert respond(body(tools=tools, messages=called("lookup"))).calls == (
+        Call("now", "null"),
     )
 
     reply = respond(body(tools=tools, messages=called("lookup", "now")))
-    assert (reply.call, reply.content, reply.finish) == (None, ANSWER, "stop")
+    assert (reply.calls, reply.content, reply.finish) == ((), ANSWER, "stop")
 
 
 def test_offered_the_final_result_tool_too_it_answers_through_it_last():
     tools = [function("final_result"), function("lookup")]
 
-    assert respond(body(tools=tools)).call == ("lookup", "null")
-    assert respond(body(tools=tools, messages=called("lookup"))).call == (
-        "final_result",
-        "null",
+    assert respond(body(tools=tools)).calls == (Call("lookup", "null"),)
+    assert respond(body(tools=tools, messages=called("lookup"))).calls == (
+        Call("final_result", "null"),
     )
 
 
@@ -269,6 +270,31 @@ def test_it_streams_a_call_as_its_name_then_its_arguments():
     assert calls[0]["function"] == {"name": "final_result", "arguments": ""}
     assert "".join(call["function"]["arguments"] for call in calls) == "null"
     assert chunks[-1]["choices"][0]["finish_reason"] == "tool_calls"
+
+
+def test_it_streams_calls_made_at_once_one_after_another_by_their_index():
+    reply = Reply(
+        None,
+        "",
+        (Call("lookup", '{"q": "a"}', "call-a"), Call("now", "{}", "call-b")),
+        "tool_calls",
+    )
+    calls = [
+        call
+        for c in events(streamed(body(), reply))
+        if c["choices"]
+        for call in c["choices"][0]["delta"].get("tool_calls", [])
+    ]
+    started = [call for call in calls if "id" in call]
+
+    assert [(c["index"], c["id"], c["function"]["name"]) for c in started] == [
+        (0, "call-a", "lookup"),
+        (1, "call-b", "now"),
+    ]
+    assert {
+        index: "".join(c["function"]["arguments"] for c in calls if c["index"] == index)
+        for index in (0, 1)
+    } == {0: '{"q": "a"}', 1: "{}"}
 
 
 def test_asked_for_it_it_counts_the_usage_on_every_chunk_as_it_goes():
