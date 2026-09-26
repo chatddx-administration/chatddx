@@ -104,21 +104,26 @@
     background-color: var(--color-base-800);
 }
 
-.portal-progress-finished {
+.portal-progress-completed {
     background-color: var(--color-primary-600);
+}
+
+/* errored, skipped, or lost with the worker */
+.portal-progress-failed {
+    background-color: var(--color-red-500, #ef4444);
 }
 
 .portal-progress-running {
     background-color: var(--color-primary-300);
 }
 
-/* what a stop took out of the queue: at the far end, where it never got to */
-.portal-progress-cancelled {
+/* what a stop took out, or stopped as it ran: at the far end, where it never got to */
+.portal-progress-stopped {
     background-color: var(--color-base-300);
     margin-left: auto;
 }
 
-.dark .portal-progress-cancelled {
+.dark .portal-progress-stopped {
     background-color: var(--color-base-600);
 }
 
@@ -141,6 +146,19 @@
 .dark .portal-progress-label span {
     background-color: rgb(0 0 0 / 0.6);
     color: var(--color-base-100);
+}
+
+/* a kept batch's more cases: the two pickers and their button, in a line */
+.portal-cases {
+    align-items: flex-end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.portal-cases > div {
+    flex: 1 1 16rem;
+    min-width: 0;
 }
 
 /* the case running: what it is, and its tally as it grows */

@@ -29,7 +29,7 @@ ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
 NOTHING: dict[str, set[str]] = {entity: set() for entity in ENTITY_NAMES}
 
 NO_HISTORY = [
-    "[queued]: removed 0",
+    "[job]: removed 0",
     "[score]: removed 0",
     "[run]: removed 0, unshared 0",
     "[message]: removed 0",
@@ -246,7 +246,7 @@ def test_wipe_data_takes_back_the_user_s_history_too(
     ran_test_tools(say_as("alice"))
 
     assert run("wipe-data", "alice")[:6] == [
-        "[queued]: removed 0",
+        "[job]: removed 0",
         "[score]: removed 1",
         "[run]: removed 1, unshared 0",
         "[message]: removed 6",

@@ -3,9 +3,27 @@
 {% block after_field_sets %}
     {{ block.super }}
 
+    {% if batch_shown %}
+        {% include "portal/batch/state_panel.html" %}
+    {% endif %}
+
+    {% if cases_form and can_run %}
+        {% include "portal/batch/add_cases.html" %}
+    {% endif %}
+
     {% if shown %}
         <div class="border border-base-200 mt-6 p-4 rounded-default shadow-xs dark:border-base-800">
             {% include "portal/batch/plan.html" %}
         </div>
+    {% endif %}
+{% endblock %}
+
+{% block form_after %}
+    {{ block.super }}
+
+    {# a kept batch is shown, never changed: what its page asks goes by forms of their own #}
+    {% if batch_shown %}
+        <form id="{{ run_form_id }}" method="post" action="{{ run_url }}">{% csrf_token %}</form>
+        <form id="{{ cases_form_id }}" method="post" action="{{ cases_url }}">{% csrf_token %}</form>
     {% endif %}
 {% endblock %}

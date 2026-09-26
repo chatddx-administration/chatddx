@@ -196,9 +196,65 @@ class BatchForm(forms.ModelForm):
         }
         batch.cells = batches.cells_of(plan)
         batch.held_back = batches.held_back_of(plan)
-        batch.cases = batches.cases_of(plan)
+        batch.cases = batches.cases_of(plan.cases)
 
         return super().save(commit)
+
+
+# the form a batch's page adds cases with, apart from the page's own
+CASES_FORM = "batch-cases"
+
+
+class CasesForm(forms.Form):
+    """The cases to add to a kept batch: those with any of the tags, and those named."""
+
+    case_tags = forms.MultipleChoiceField(
+        label=_("With the case tags"),
+        required=False,
+        widget=UnfoldAdminSelect2MultipleWidget(
+            attrs={"data-placeholder": _("Pick case tags"), "form": CASES_FORM}
+        ),
+    )
+    cases = forms.MultipleChoiceField(
+        label=_("Or the cases"),
+        required=False,
+        widget=UnfoldAdminSelect2MultipleWidget(
+            attrs={"data-placeholder": _("Pick cases"), "form": CASES_FORM}
+        ),
+    )
+
+    def __init__(self, bench: Bench, batch: Batch, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.bench: Bench = bench
+        self.batch: Batch = batch
+        # the cases found once the form is valid
+        self.unheld: list[BranchModel] = []
+
+        for name, choices in (
+            ("case_tags", bench.tags("case")),
+            ("cases", _names(bench.visible("case"))),
+        ):
+            field = self.fields[name]
+            assert isinstance(field, forms.ChoiceField)
+            field.choices = [(choice, choice) for choice in choices]
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean()
+
+        if self.errors:
+            return cleaned
+
+        tags, names = cleaned.get("case_tags") or [], cleaned.get("cases") or []
+
+        if not (tags or names):
+            raise ValidationError(_("Pick case tags or cases to add."))
+
+        self.unheld = batches.unheld(self.bench, self.batch, tags, names)
+
+        if not self.unheld:
+            raise ValidationError(_("The batch holds every case picked already."))
+
+        return cleaned
 
 
 def _names(models: list[BranchModel]) -> list[str]:

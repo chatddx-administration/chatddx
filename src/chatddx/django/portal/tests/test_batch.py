@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from chatddx.bench.bench import SEEDS, Bench
 from chatddx.bench.cell import SLICES
-from chatddx.django.portal.admin import CONFIRM
+from chatddx.django.portal.admin import CONFIRM, RUN
 from chatddx.django.portal.forms import MOST_CELLS
 from chatddx.django.portal.models import BatchModel
 
@@ -24,8 +24,9 @@ FREE_TEXT = {
 }
 
 
-def confirmed(asked: dict[str, Any]) -> dict[str, Any]:
-    return asked | {CONFIRM: "1"}
+def confirmed(asked: dict[str, Any], how: str = RUN) -> dict[str, Any]:
+    """What was asked, confirmed: to run now, or to keep for later."""
+    return asked | {CONFIRM: how}
 
 
 def labels(response: Any) -> list[str]:

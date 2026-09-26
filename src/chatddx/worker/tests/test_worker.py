@@ -1,6 +1,8 @@
+import asyncio
 from collections.abc import Callable
 from datetime import timedelta
-from typing import Any, cast
+from typing import Any, cast, override
+from uuid import UUID, uuid4
 
 import pytest
 from django.utils import timezone
@@ -8,30 +10,47 @@ from typer.testing import CliRunner
 
 from chatddx.bench.bench import Bench
 from chatddx.bench.plan import Plan, crossed
-from chatddx.conftest import Stalling
+from chatddx.conftest import Provision, Stalling
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entity_names import EntityName
 from chatddx.worker import control, queue, worker
-from chatddx.worker.models import QueuedModel, Status, Stopping, WorkerStateModel
+from chatddx.worker.models import JobModel, Status, Stopping, WorkerStateModel
 
 pytestmark = pytest.mark.django_db
+
+FAKE = "qwen3-8b-awq@fake"
 
 
 @pytest.fixture(autouse=True)
 def beats(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Beats that come quickly, for tests that wait on one."""
+    """Beats and looks that come quickly, for tests that wait on one."""
     monkeypatch.setattr(worker, "BEAT", 0.01)
+    monkeypatch.setattr(worker, "POLL", 0.01)
+
+
+@pytest.fixture
+def bob(provision: Provision) -> str:
+    _ = provision(user="bob")
+    return "bob"
+
+
+class Slow(FakeTransport):
+    """The fake vLLM, a little slow, so that runs sent together overlap."""
+
+    @override
+    async def next_token(self, generated: int, /) -> None:
+        await asyncio.sleep(0.002)
 
 
 def planned(
-    configuration: str = "free-text",
+    owner: str = "alice",
     tags: tuple[str, ...] = ("tag-2",),
     seed: int | None = 42,
     **variations: list[str],
 ) -> Plan:
-    bench = Bench("alice")
-    cell = bench.cell_of(configuration, "qwen3-8b-awq@fake")
+    bench = Bench(owner)
+    cell = bench.cell_of("free-text", FAKE)
     ticked = {
         entity: [
             bench.variation_named(cast(EntityName, entity), name) for name in names
@@ -42,38 +61,68 @@ def planned(
     return Plan.of(bench, crossed(cell, ticked), tags, seed)
 
 
-def queued() -> list[QueuedModel]:
-    return list(QueuedModel.objects.select_related("run").order_by("pk"))
+def put(plan: Plan | None = None, owner: str = "alice", run: bool = True) -> UUID:
+    """A batch of the plan's, put in the queue, or stored for later."""
+    plan = plan or planned(owner)
+    batch = uuid4()
+    _ = queue.put(owner, batch, plan.kept, plan.cases, run=run)
+
+    return batch
 
 
-def pressing(times: int) -> Callable[..., Stopping]:
-    """A beat that presses stop `times` at the first beat, as someone watching does."""
-    beat = worker._beat  # pyright: ignore[reportPrivateUsage]
-    pressed: list[bool] = []
-
-    def pressed_beat(*args: Any) -> Stopping:
-        if not pressed:
-            pressed.append(True)
-
-            for _ in range(times):
-                _ = control.stop()
-
-        return beat(*args)
-
-    return pressed_beat
+def jobs(**filters: Any) -> list[JobModel]:
+    return list(
+        JobModel.objects.filter(**filters).select_related("run", "owner").order_by("pk")
+    )
 
 
-def test_the_worker_runs_the_queue_one_after_another_writing_each_down(
-    fake: FakeTransport,
-):
-    assert queue.put("alice", planned()) == 2
+def at_once(max_jobs: int, stack: str = FAKE) -> None:
+    """The stack taking `max_jobs` at once, as its details would say."""
+    for model in StackBranchModel.objects.filter(name=stack):
+        model.details = {**model.details, "max_jobs": max_jobs}
+        model.save()
+
+
+def beaten(
+    monkeypatch: pytest.MonkeyPatch, then: Callable[[worker.Worker], None]
+) -> list[int]:
+    """
+    What the worker runs at each beat, `then` done at the first, as someone
+    watching does.
+    """
+    beat = worker.Worker._beat  # pyright: ignore[reportPrivateUsage]
+    counted: list[int] = []
+
+    def watched(self: worker.Worker, relay: Any) -> None:
+        if not counted:
+            then(self)
+
+        counted.append(len(self._running))  # pyright: ignore[reportPrivateUsage]
+        beat(self, relay)
+
+    monkeypatch.setattr(worker.Worker, "_beat", watched)
+
+    return counted
+
+
+def stopping(times: int, owner: str = "alice") -> Callable[[worker.Worker], None]:
+    def pressed(_worker: worker.Worker) -> None:
+        for _press in range(times):
+            _ = control.stop(owner)
+
+    return pressed
+
+
+def test_the_worker_runs_a_batch_s_jobs_writing_each_down(fake: FakeTransport):
+    batch = put()
+
     assert worker.run(fake) == 2
 
-    first, second = queued()
+    first, second = jobs()
 
-    assert [(item.case, item.status) for item in (first, second)] == [
-        ("case-1", Status.DONE),
-        ("case-2", Status.DONE),
+    assert [(job.case, job.status, job.batch) for job in (first, second)] == [
+        ("case-1", Status.COMPLETED, batch),
+        ("case-2", Status.COMPLETED, batch),
     ]
     assert first.run is not None and first.run.status == "completed"
     assert first.run.conversation is not None
@@ -82,84 +131,131 @@ def test_the_worker_runs_the_queue_one_after_another_writing_each_down(
     assert first.counted and first.tokens > 0
     assert first.run.scores.exists()
     assert [request["seed"] for request in fake.requests] == [42, 42]
-    assert control.state().alive
+    assert control.state("alice").alive
 
 
-def test_a_paused_worker_takes_nothing_till_it_is_resumed(fake: FakeTransport):
-    _ = queue.put("alice", planned())
-    _ = control.pause()
+@pytest.mark.parametrize("max_jobs", [1, 2, 4])
+def test_jobs_run_side_by_side_as_many_as_their_stack_takes(
+    max_jobs: int, monkeypatch: pytest.MonkeyPatch
+):
+    at_once(max_jobs)
+    _ = put(planned(reasoning=["default", "off"]))
+    counted = beaten(monkeypatch, lambda _: None)
 
-    assert worker.run(fake) == 0
-    assert {item.status for item in queued()} == {Status.QUEUED}
+    assert worker.run(Slow()) == 4
+    assert max(counted) == max_jobs
+    assert {job.status for job in jobs()} == {Status.COMPLETED}
 
-    _ = control.resume()
+
+def test_a_stack_s_slots_go_first_come_first_served_whosever_the_jobs(bob: str):
+    at_once(1)
+    _ = put(owner="alice")
+    _ = put(planned(bob), owner=bob)
+
+    assert queue.waiting(bob, lambda _: 1) == [
+        queue.Waiting(FAKE, max_jobs=1, running=0, queued=2)
+    ]
+    assert queue.waiting("alice", lambda _: 1) == []
+
+    _ = worker.run(FakeTransport())
+
+    started = sorted(jobs(), key=lambda job: cast(Any, job.started))
+
+    assert [(job.owner.name, job.case) for job in started] == [
+        ("alice", "case-1"),
+        ("alice", "case-2"),
+        (bob, "case-1"),
+        (bob, "case-2"),
+    ]
+
+
+def test_an_owner_paused_waits_while_others_run_and_comes_before_no_one(
+    fake: FakeTransport, bob: str
+):
+    _ = put(owner="alice")
+    _ = put(planned(bob), owner=bob)
+    _ = control.pause("alice")
+
+    assert queue.waiting(bob, lambda _: 4) == []
+    assert worker.run(fake) == 2
+    assert {(job.owner.name, job.status) for job in jobs()} == {
+        ("alice", Status.QUEUED),
+        (bob, Status.COMPLETED),
+    }
+
+    _ = control.resume("alice")
 
     assert worker.run(fake) == 2
 
 
-def test_a_stop_with_no_case_under_way_takes_the_queue_out_at_once(
-    fake: FakeTransport,
+def test_a_stop_takes_the_owner_s_queue_out_at_once_and_no_one_else_s(
+    fake: FakeTransport, bob: str
 ):
-    _ = queue.put("alice", planned())
+    _ = put(owner="alice")
+    _ = put(planned(bob), owner=bob)
 
-    assert control.stop().stopping == Stopping.NO
-    assert {(item.status, item.reason) for item in queued()} == {
-        (Status.CANCELLED, control.STOPPED)
+    assert control.stop("alice").stopping == Stopping.NO
+    assert {(job.status, job.reason) for job in jobs(owner__name="alice")} == {
+        (Status.STOPPED, control.STOPPED)
     }
-    assert worker.run(fake) == 0
-    assert fake.requests == []
+    assert worker.run(fake) == 2
+    assert {job.status for job in jobs(owner__name=bob)} == {Status.COMPLETED}
+    assert [request["seed"] for request in fake.requests] == [42, 42]
 
 
-def test_a_stop_during_a_case_lets_it_finish_and_takes_the_rest_out(
+def test_a_stop_as_a_job_runs_lets_it_finish_and_takes_the_rest_out(
     fake: FakeTransport, monkeypatch: pytest.MonkeyPatch
 ):
-    _ = queue.put("alice", planned())
-    monkeypatch.setattr(worker, "_beat", pressing(1))
+    at_once(1)
+    _ = put()
+    _ = beaten(monkeypatch, stopping(1))
 
     assert worker.run(fake) == 1
 
-    first, second = queued()
+    first, second = jobs()
 
-    assert first.status == Status.DONE
+    assert first.status == Status.COMPLETED
     assert first.run is not None and first.run.status == "completed"
-    assert second.status == Status.CANCELLED
-    assert control.state().stopping == Stopping.NO
+    assert second.status == Status.STOPPED
+    assert control.state("alice").stopping == Stopping.NO
 
 
-def test_stop_again_stops_the_case_under_way_too_written_down_stopped(
+def test_stop_again_stops_the_jobs_running_too_written_down_stopped(
     stalling: Stalling, monkeypatch: pytest.MonkeyPatch
 ):
-    _ = queue.put("alice", planned())
-    monkeypatch.setattr(worker, "_beat", pressing(2))
+    at_once(1)
+    _ = put()
+    _ = beaten(monkeypatch, stopping(2))
 
     assert worker.run(stalling) == 1
 
-    first, second = queued()
+    first, second = jobs()
 
-    assert first.status == Status.DONE
+    assert first.status == Status.ABORTED
     assert first.run is not None
     assert (first.run.status, first.run.error) == ("errored", "stopped")
     assert stalling.aborted == stalling.requests
-    assert second.status == Status.CANCELLED
+    assert second.status == Status.STOPPED
+    assert control.state("alice").stopping == Stopping.NO
 
 
 def test_a_trial_that_can_t_be_sent_when_its_turn_comes_is_skipped_with_why(
     fake: FakeTransport,
 ):
-    _ = queue.put("alice", planned())
-    _ = QueuedModel.objects.filter(case="case-1").update(
+    _ = put()
+    _ = JobModel.objects.filter(case="case-1").update(
         fingerprint="cddx-trail/1:sha256:0"
     )
 
-    for stack in StackBranchModel.objects.filter(name="qwen3-8b-awq@fake"):
+    for stack in StackBranchModel.objects.filter(name=FAKE):
         stack.details = {**stack.details, "credential": "fake-key"}
         stack.save()
 
     assert worker.run(fake) == 2
 
-    changed, secretless = queued()
+    drifted, secretless = jobs()
 
-    assert (changed.status, changed.reason) == (
+    assert (drifted.status, drifted.reason) == (
         Status.SKIPPED,
         "free-text is another configuration than was planned",
     )
@@ -170,15 +266,15 @@ def test_a_trial_that_can_t_be_sent_when_its_turn_comes_is_skipped_with_why(
     assert fake.requests == []
 
 
-def test_a_case_whose_worker_went_away_is_lost(fake: FakeTransport):
-    _ = queue.put("alice", planned(tags=("tag-1",)))
-    _ = QueuedModel.objects.update(
+def test_a_job_whose_worker_went_away_is_lost(fake: FakeTransport):
+    _ = put(planned(tags=("tag-1",)))
+    _ = JobModel.objects.update(
         status=Status.RUNNING, beat=timezone.now() - timedelta(minutes=5)
     )
 
     assert worker.run(fake) == 0
 
-    [lost] = queued()
+    [lost] = jobs()
 
     assert (lost.status, lost.reason) == (
         Status.LOST,
@@ -186,45 +282,64 @@ def test_a_case_whose_worker_went_away_is_lost(fake: FakeTransport):
     )
 
 
-def test_a_plan_joins_the_drain_under_way_or_begins_one(fake: FakeTransport):
-    _ = queue.put("alice", planned(tags=("tag-1",)))
-    _ = queue.put("alice", planned(tags=("tag-2",)))
+def test_a_batch_kept_for_later_runs_once_it_is_resumed(fake: FakeTransport):
+    batch = put(run=False)
 
-    assert {item.drain for item in queued()} == {1}
+    assert {job.status for job in jobs()} == {Status.STORED}
+    assert worker.run(fake) == 0
+    assert queue.resume("alice", batch) == 2
+    assert worker.run(fake) == 2
+    assert {job.status for job in jobs()} == {Status.COMPLETED}
 
-    drain = queue.drain()
 
-    assert drain is not None and (drain.total, drain.queued) == (3, 3)
+def test_a_batch_resumed_runs_what_didn_t_complete_and_rerun_all_of_it(
+    fake: FakeTransport,
+):
+    batch = put()
+    [kept, _] = jobs()
+    _ = control.stop("alice")
+    _ = JobModel.objects.filter(pk=kept.pk).update(status=Status.COMPLETED)
 
-    _ = worker.run(fake)
-    _ = queue.put("alice", planned(tags=("tag-1",)))
+    assert queue.counts([batch]) == queue.Counts(total=2, completed=1, stopped=1)
+    assert queue.resume("alice", batch) == 1
+    assert worker.run(fake) == 1
+    assert queue.resume("alice", batch) == 0
 
-    assert [item.drain for item in queued()] == [1, 1, 1, 2]
-    assert queue.drain() == queue.Drain(
-        total=1, queued=1, running=0, finished=0, cancelled=0
-    )
+    runs = {job.pk: job.run_id for job in jobs()}
+
+    assert queue.rerun("alice", batch) == 2
+    assert queue.up_next("alice") == jobs()[0]
+    assert queue.outstanding("alice") == 2
+    assert worker.run(fake) == 2
+    assert queue.counts([batch]) == queue.Counts(total=2, completed=2)
+    assert all(job.run_id != runs[job.pk] for job in jobs())
 
 
 def test_the_greedy_cells_of_a_plan_go_unseeded(fake: FakeTransport):
-    _ = queue.put("alice", planned(tags=("tag-1",), sampling=["recommended", "greedy"]))
+    _ = put(planned(tags=("tag-1",), sampling=["recommended", "greedy"]))
     _ = worker.run(fake)
 
-    assert [(item.label, item.seed) for item in queued()] == [
+    assert [(job.label, job.seed) for job in jobs()] == [
         ("free-text", 42),
         ("free-text+sampling=greedy", None),
     ]
-    assert ["seed" in request for request in fake.requests] == [True, False]
+    assert sorted("seed" in request for request in fake.requests) == [False, True]
 
 
-def test_the_latest_cases_come_last_one_first_with_their_scores(fake: FakeTransport):
-    _ = queue.put("alice", planned())
+def test_the_latest_jobs_come_last_one_first_with_their_scores_the_owner_s(
+    fake: FakeTransport, bob: str
+):
+    at_once(1)
+    _ = put()
+    _ = put(planned(bob, tags=("tag-1",)), owner=bob)
     _ = worker.run(fake)
 
-    latest = queue.latest()
+    latest = queue.latest("alice")
 
-    assert [item.case for item in latest] == ["case-2", "case-1"]
-    assert all(item.run and item.run.scores.all() for item in latest)
-    assert queue.running() is None
+    assert [job.case for job in latest] == ["case-2", "case-1"]
+    assert all(job.run and job.run.scores.all() for job in latest)
+    assert [job.owner.name for job in queue.latest(bob)] == [bob]
+    assert queue.running() == []
 
 
 def test_the_host_s_service_runs_the_worker_as_it_did(
@@ -233,7 +348,7 @@ def test_the_host_s_service_runs_the_worker_as_it_did(
     from chatddx.manage import app
 
     monkeypatch.setattr(worker, "TRANSPORT", fake)
-    _ = queue.put("alice", planned())
+    _ = put()
 
     result = CliRunner().invoke(app, ["worker", "run"])
 

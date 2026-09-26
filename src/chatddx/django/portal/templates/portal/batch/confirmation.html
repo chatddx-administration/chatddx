@@ -83,8 +83,12 @@
                 {% endcomponent %}
 
                 {% if shown.trials %}
-                    {% component "unfold/components/button.html" with submit=1 name=confirm value="1" class="w-full lg:ml-auto lg:w-auto" %}
-                        {% translate "Save the batch" %}
+                    {% component "unfold/components/button.html" with submit=1 name=confirm value=later variant="default" icon="inventory_2" class="w-full lg:ml-auto lg:w-auto" %}
+                        {% translate "Keep it for later" %}
+                    {% endcomponent %}
+
+                    {% component "unfold/components/button.html" with submit=1 name=confirm value=run icon="play_arrow" class="w-full lg:w-auto" %}
+                        {% translate "Run it now" %}
                     {% endcomponent %}
                 {% endif %}
             </div>

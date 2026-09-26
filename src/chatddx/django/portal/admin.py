@@ -1,9 +1,10 @@
 # pyright: basic
 """
 The portal's pages: the Batch, which plans the repl's batch with its slices
-varied, confirms the plan, keeps it and puts it in the worker's queue; the
-status of the worker at its queue, to pause, resume and stop it; and the
-admin's users and groups, in unfold's dress.
+varied, confirms the plan and keeps it, to run now or later; a batch's own
+page, which shows how it stands, runs it, resumes it or runs it again, and
+takes more cases; the status of the worker at the owner's jobs, to pause,
+resume and stop them; and the admin's users and groups, in unfold's dress.
 """
 
 from typing import Any, ClassVar, override
@@ -17,9 +18,15 @@ from django.contrib.auth.admin import (
 )
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Count, OuterRef, Subquery
 from django.db.models.functions import Coalesce
-from django.http import HttpRequest, HttpResponseNotAllowed, HttpResponseRedirect
+from django.http import (
+    Http404,
+    HttpRequest,
+    HttpResponseNotAllowed,
+    HttpResponseRedirect,
+)
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.formats import date_format
@@ -33,19 +40,24 @@ from chatddx.bench.bench import Bench
 from chatddx.bench.cell import SLICES
 from chatddx.core.utils import ensure_identity
 from chatddx.django.portal import batches, status
-from chatddx.django.portal.forms import BatchForm
+from chatddx.django.portal.forms import CASES_FORM, BatchForm, CasesForm
 from chatddx.django.portal.models import Batch
 from chatddx.worker import control, queue
-from chatddx.worker.models import FINISHED, QueuedModel
+from chatddx.worker.models import STOPPED_BY, JobModel, Status
 
-# what the confirmation's post carries: that post alone saves a batch
+# what the confirmation's post carries: that post alone saves a batch, to
+# run now or later
 CONFIRM = "_confirm"
+RUN, LATER = "run", "later"
 
 # the add form's fields that take several values, from its query as well
 SEVERAL = ("case_tags", *SLICES)
 
-# what the status page's buttons ask of the worker
+# what the status page's buttons ask of the worker, for the owner
 CONTROLS = {"pause": control.pause, "resume": control.resume, "stop": control.stop}
+
+# the form a batch's page runs it with, apart from the page's own
+RUN_FORM = "batch-run"
 
 # what the portal calls a batch, for the model holds no words of the portal's
 Batch._meta.verbose_name = _("batch")
@@ -70,6 +82,32 @@ class GroupAdmin(BaseGroupAdmin, ModelAdmin):
 def identity_of(request: HttpRequest) -> str:
     """The identity a request acts as: its user's, by name."""
     return ensure_identity(request.user.get_username()).name
+
+
+def _jobs(**filters: Any) -> Any:
+    """How many of a batch's jobs are as `filters` say, for each batch listed."""
+    return Coalesce(
+        Subquery(
+            JobModel.objects.filter(batch=OuterRef("uuid"), **filters)
+            .order_by()
+            .values("batch")
+            .annotate(count=Count("pk"))
+            .values("count")
+        ),
+        0,
+    )
+
+
+def counts_of(batch: Any) -> queue.Counts:
+    """How a batch's jobs stand, as the batches' query counted them."""
+    counted = {
+        name: getattr(batch, f"jobs_{name}", 0)
+        for name in ("stored", "queued", "running", "completed", "stopped")
+    }
+    total = getattr(batch, "jobs_total", 0)
+
+    # what is left went wrong: errored, skipped or lost
+    return queue.Counts(total, **counted, failed=total - sum(counted.values()))
 
 
 @admin.register(Batch)
@@ -103,7 +141,7 @@ class BatchAdmin(ModelAdmin):
         "tags_",
         "varied_",
         "seed_",
-        "ran_",
+        "state_",
     )
     fieldsets = ((None, {"fields": readonly_fields}),)
     list_display = (
@@ -114,7 +152,7 @@ class BatchAdmin(ModelAdmin):
         "cells_",
         "cases_",
         "trials_",
-        "ran_",
+        "state_",
         "seed_",
     )
     list_display_links = ("batch_",)
@@ -170,26 +208,36 @@ class BatchAdmin(ModelAdmin):
     def seed_(self, batch: Batch) -> str:
         return "none" if batch.seed is None else f"#{batch.seed}"
 
-    @admin.display(description=_("Ran"))
-    def ran_(self, batch: Batch) -> str:
-        """How many of its trials the worker has taken up, of how many."""
-        return f"{getattr(batch, 'ran', 0)} of {batch.trials}"
+    @admin.display(description=_("State"))
+    def state_(self, batch: Batch) -> str:
+        """Where the batch stands, and how many of its trials completed."""
+        counts = counts_of(batch)
+        state = status.state_of(counts)
+        said = str(status.STATES[state])
+
+        if state == status.BatchState.STORED:
+            return said
+
+        return _("%(state)s · %(completed)d of %(total)d") % {
+            "state": said,
+            "completed": counts.completed,
+            "total": counts.total,
+        }
 
     @override
     def get_queryset(self, request: HttpRequest) -> Any:
-        ran = (
-            QueuedModel.objects.filter(batch=OuterRef("uuid"), status__in=FINISHED)
-            .order_by()
-            .values("batch")
-            .annotate(count=Count("pk"))
-            .values("count")
-        )
-
         return (
             super()
             .get_queryset(request)
             .filter(owner__name=identity_of(request))
-            .annotate(ran=Coalesce(Subquery(ran), 0))
+            .annotate(
+                jobs_total=_jobs(),
+                jobs_stored=_jobs(status=Status.STORED),
+                jobs_queued=_jobs(status=Status.QUEUED),
+                jobs_running=_jobs(status=Status.RUNNING),
+                jobs_completed=_jobs(status=Status.COMPLETED),
+                jobs_stopped=_jobs(status__in=STOPPED_BY),
+            )
         )
 
     @override
@@ -242,7 +290,7 @@ class BatchAdmin(ModelAdmin):
             form = self.get_form(request)(request.POST)
 
             if form.is_valid() and (
-                CONFIRM not in request.POST or not form.plan.trials
+                request.POST.get(CONFIRM) not in (RUN, LATER) or not form.plan.trials
             ):
                 return self._confirmation(request, form)
 
@@ -271,6 +319,11 @@ class BatchAdmin(ModelAdmin):
                 messages.WARNING,
             )
 
+        if obj is not None:
+            cases = CasesForm(Bench(identity_of(request)), obj)
+            context["media"] = context["media"] + cases.media
+            context.update(self._batch_page(request, obj, cases))
+
         return super().render_change_form(request, context, add, change, form_url, obj)
 
     def _confirmation(self, request: HttpRequest, form: Any) -> TemplateResponse:
@@ -293,31 +346,11 @@ class BatchAdmin(ModelAdmin):
             "back_url": f"{reverse('admin:portal_batch_add')}?{urlencode(asked)}",
             "action_url": request.get_full_path(),
             "confirm": CONFIRM,
+            "run": RUN,
+            "later": LATER,
         }
 
         return TemplateResponse(request, self.confirmation_template, context)
-
-    @override
-    def change_view(
-        self,
-        request: HttpRequest,
-        object_id: str,
-        form_url: str = "",
-        extra_context: Any = None,
-    ) -> Any:
-        batch = self.get_object(request, unquote(object_id))
-
-        if batch is not None:
-            shown = batches.Shown.of(
-                batch.configuration,
-                batch.cells,
-                batch.held_back,
-                batch.cases,
-                batch.seed,
-            )
-            extra_context = {**(extra_context or {}), "shown": shown}
-
-        return super().change_view(request, object_id, form_url, extra_context)
 
     @override
     def save_model(
@@ -326,39 +359,51 @@ class BatchAdmin(ModelAdmin):
         super().save_model(request, obj, form, change)
 
         if not change:
-            _ = queue.put(form.bench.identity, form.plan, batch=obj.uuid)
+            _ = batches.put(obj, run=request.POST.get(CONFIRM) == RUN)
 
     @override
     def response_add(
         self, request: HttpRequest, obj: Any, post_url_continue: Any = None
     ) -> Any:
-        kept = ngettext(
-            "Batch %(batch)s is kept, and its %(trials)d trial queued for the "
-            + "worker: %(cells)d × %(cases)d.",
-            "Batch %(batch)s is kept, and its %(trials)d trials queued for the "
-            + "worker: %(cells)d × %(cases)d.",
-            obj.trials,
-        ) % {
+        said = {
             "batch": self.batch_(obj),
             "trials": obj.trials,
             "cells": len(obj.cells),
             "cases": len(obj.cases),
         }
-        self.message_user(
-            request,
-            format_html(
-                '{} <a class="font-semibold underline" href="{}">{}</a>',
-                kept,
-                reverse("admin:portal_batch_status"),
-                _("Follow them on the status page."),
-            ),
-        )
+
+        if request.POST.get(CONFIRM) == RUN:
+            kept = ngettext(
+                "Batch %(batch)s is kept, and its %(trials)d trial queued for the "
+                + "worker: %(cells)d × %(cases)d.",
+                "Batch %(batch)s is kept, and its %(trials)d trials queued for the "
+                + "worker: %(cells)d × %(cases)d.",
+                obj.trials,
+            )
+            self.message_user(
+                request,
+                format_html(
+                    '{} <a class="font-semibold underline" href="{}">{}</a>',
+                    kept % said,
+                    reverse("admin:portal_batch_status"),
+                    _("Follow them on the status page."),
+                ),
+            )
+        else:
+            kept = ngettext(
+                "Batch %(batch)s is kept for later, its %(trials)d trial stored: "
+                + "%(cells)d × %(cases)d. Run it from here.",
+                "Batch %(batch)s is kept for later, its %(trials)d trials stored: "
+                + "%(cells)d × %(cases)d. Run it from here.",
+                obj.trials,
+            )
+            self.message_user(request, kept % said)
 
         return HttpResponseRedirect(reverse("admin:portal_batch_change", args=[obj.pk]))
 
     @override
     def get_urls(self) -> Any:
-        # before the admin's own, whose object_id would take "status" for one
+        # before the admin's own, whose object_id would take these for one
         return [
             path(
                 "status/",
@@ -375,11 +420,163 @@ class BatchAdmin(ModelAdmin):
                 self.admin_site.admin_view(self.control_view),
                 name="portal_batch_status_control",
             ),
+            path(
+                "<path:object_id>/state/",
+                self.admin_site.admin_view(self.state_view),
+                name="portal_batch_state",
+            ),
+            path(
+                "<path:object_id>/run/",
+                self.admin_site.admin_view(self.run_view),
+                name="portal_batch_run",
+            ),
+            path(
+                "<path:object_id>/cases/",
+                self.admin_site.admin_view(self.cases_view),
+                name="portal_batch_cases",
+            ),
             *super().get_urls(),
         ]
 
+    def _batch(self, request: HttpRequest, object_id: str) -> Any:
+        """The owner's batch, or none to be found."""
+        if not self.has_view_permission(request):
+            raise PermissionDenied
+
+        batch = self.get_object(request, unquote(object_id))
+
+        if batch is None:
+            raise Http404
+
+        return batch
+
+    def _batch_page(
+        self, request: HttpRequest, batch: Any, cases: CasesForm
+    ) -> dict[str, Any]:
+        return {
+            "shown": batches.Shown.of(
+                batch.configuration,
+                batch.cells,
+                batch.held_back,
+                batch.cases,
+                batch.seed,
+            ),
+            "cases_form": cases,
+            "cases_form_id": CASES_FORM,
+            "cases_url": reverse("admin:portal_batch_cases", args=[batch.pk]),
+            **self._state(request, batch),
+        }
+
+    def _state(self, request: HttpRequest, batch: Any) -> dict[str, Any]:
+        return {
+            "batch_shown": status.batch_shown(identity_of(request), batch),
+            "can_run": self.has_add_permission(request),
+            "run_form_id": RUN_FORM,
+            "run_url": reverse("admin:portal_batch_run", args=[batch.pk]),
+            "state_url": reverse("admin:portal_batch_state", args=[batch.pk]),
+        }
+
+    def state_view(self, request: HttpRequest, object_id: str) -> TemplateResponse:
+        """How the batch stands, as its page asks for it again every few seconds."""
+        batch = self._batch(request, object_id)
+
+        return TemplateResponse(
+            request, "portal/batch/state_panel.html", self._state(request, batch)
+        )
+
+    def run_view(self, request: HttpRequest, object_id: str) -> Any:
+        """The batch run, resumed or run again, as its page's button asks."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+
+        batch = self._batch(request, object_id)
+
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+
+        owner = identity_of(request)
+
+        match request.POST.get("action"):
+            # a batch kept before the queue was has no jobs to run yet
+            case "resume" if not JobModel.objects.filter(batch=batch.uuid).exists():
+                queued = batches.put(batch, run=True)
+            case "resume":
+                queued = queue.resume(owner, batch.uuid)
+            case "rerun":
+                queued = queue.rerun(owner, batch.uuid)
+            case _:
+                queued = 0
+
+        self.message_user(
+            request,
+            ngettext(
+                "%(queued)d trial of the batch queued for the worker.",
+                "%(queued)d trials of the batch queued for the worker.",
+                queued,
+            )
+            % {"queued": queued},
+            messages.SUCCESS if queued else messages.WARNING,
+        )
+
+        return HttpResponseRedirect(
+            reverse("admin:portal_batch_change", args=[batch.pk])
+        )
+
+    def cases_view(self, request: HttpRequest, object_id: str) -> Any:
+        """More cases for the batch, their trials queued behind it or stored."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+
+        batch = self._batch(request, object_id)
+
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+
+        form = CasesForm(Bench(identity_of(request)), batch, request.POST)
+        back = HttpResponseRedirect(
+            reverse("admin:portal_batch_change", args=[batch.pk])
+        )
+
+        if not form.is_valid():
+            for errors in form.errors.values():
+                for error in errors:
+                    self.message_user(request, str(error), messages.WARNING)
+
+            return back
+
+        added = form.unheld
+        run = queue.counts([batch.uuid]).under_way > 0
+
+        with transaction.atomic():
+            batch.cases = batch.cases + batches.cases_of(added)
+            batch.tags = sorted({*batch.tags, *form.cleaned_data["case_tags"]})
+            batch.save(update_fields=["cases", "tags"])
+            trials = queue.put(
+                batch.owner.name, batch.uuid, batches.kept_of(batch), added, run
+            )
+
+        cases = ngettext(
+            "%(cases)d case added", "%(cases)d cases added", len(added)
+        ) % {"cases": len(added)}
+        trials = (
+            ngettext(
+                "%(trials)d trial queued behind the batch's.",
+                "%(trials)d trials queued behind the batch's.",
+                trials,
+            )
+            if run
+            else ngettext(
+                "%(trials)d trial stored till the batch is run.",
+                "%(trials)d trials stored till the batch is run.",
+                trials,
+            )
+        ) % {"trials": trials}
+        self.message_user(request, f"{cases}: {trials}")
+
+        return back
+
     def status_view(self, request: HttpRequest) -> TemplateResponse:
-        """The worker at its queue, whatever batches it came from."""
+        """The worker at the owner's jobs, whichever batches they came from."""
         if not self.has_view_permission(request):
             raise PermissionDenied
 
@@ -402,7 +599,7 @@ class BatchAdmin(ModelAdmin):
         )
 
     def control_view(self, request: HttpRequest) -> Any:
-        """Pause, resume or stop the worker, as the page's buttons ask."""
+        """Pause, resume or stop the owner's jobs, as the page's buttons ask."""
         if request.method != "POST":
             return HttpResponseNotAllowed(["POST"])
 
@@ -412,7 +609,7 @@ class BatchAdmin(ModelAdmin):
         action = CONTROLS.get(request.POST.get("action", ""))
 
         if action is not None:
-            _ = action()
+            _ = action(identity_of(request))
 
         if request.headers.get("HX-Request"):
             return self.panel_view(request)
@@ -421,9 +618,9 @@ class BatchAdmin(ModelAdmin):
 
     def _panel(self, request: HttpRequest) -> dict[str, Any]:
         return {
-            "shown": status.shown(),
-            "identity": identity_of(request),
+            "shown": status.shown(identity_of(request)),
             "can_control": self.has_add_permission(request),
             "panel_url": reverse("admin:portal_batch_status_panel"),
             "control_url": reverse("admin:portal_batch_status_control"),
+            "change_url": reverse("admin:portal_batch_changelist"),
         }

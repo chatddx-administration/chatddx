@@ -1,8 +1,9 @@
 # pyright: basic
 """
-The worker's controls, as the repl's batch has them: a pause that lets the
-case under way finish and holds the rest, and a stop that ends the drain,
-once when the case under way is done, twice with it, written down as stopped.
+An owner's controls, as the repl's batch has them: a pause that lets the
+jobs running finish and holds the rest, and a stop that takes the owner's
+queue out, once when their jobs running are done, twice with them, written
+down as stopped. Each owner's are their own: others' jobs go on.
 """
 
 from dataclasses import dataclass
@@ -11,18 +12,21 @@ from datetime import datetime, timedelta
 from django.db import transaction
 from django.utils import timezone
 
+from chatddx.core.models import IdentityModel
 from chatddx.worker import queue
-from chatddx.worker.models import Stopping, WorkerStateModel
+from chatddx.worker.models import ControlsModel, Stopping, WorkerStateModel
 
 # seconds since the worker was last seen after which it isn't taken to be up
 ALIVE = 10
 
-# why a stop takes a case out of the queue
+# why a stop takes a job out of the queue
 STOPPED = "stopped before its turn"
 
 
 @dataclass(frozen=True)
 class State:
+    """What an owner asked of the worker, and when the worker was last seen."""
+
     paused: bool
     stopping: Stopping
     seen: datetime | None
@@ -34,42 +38,50 @@ class State:
         )
 
 
-def state() -> State:
-    row = WorkerStateModel.row()
-    return State(row.paused, Stopping(row.stopping), row.seen)
+def state(owner: str) -> State:
+    controls = ControlsModel.of(_identity(owner))
+
+    return State(
+        controls.paused, Stopping(controls.stopping), WorkerStateModel.row().seen
+    )
 
 
-def pause() -> State:
-    return _held(paused=True)
+def pause(owner: str) -> State:
+    return _held(owner, paused=True)
 
 
-def resume() -> State:
-    return _held(paused=False)
+def resume(owner: str) -> State:
+    return _held(owner, paused=False)
 
 
-def stop() -> State:
+def stop(owner: str) -> State:
     """
-    Once, the drain ends when the case under way is done; twice, with it. With
-    no case under way, what is queued is taken out now.
+    Once, the owner's queued jobs are taken out of the queue, and those
+    running finish; twice, those running are stopped too. With none running,
+    once is all it takes.
     """
     with transaction.atomic():
-        row = WorkerStateModel.row(lock=True)
+        controls = ControlsModel.of(_identity(owner), lock=True)
+        _ = queue.stop(owner, STOPPED)
 
-        if queue.running() is None:
-            _ = queue.cancel(STOPPED)
-            row.stopping = Stopping.NO
+        if queue.running(owner):
+            controls.stopping = min(controls.stopping + 1, Stopping.NOW)
         else:
-            row.stopping = min(row.stopping + 1, Stopping.NOW)
+            controls.stopping = Stopping.NO
 
-        row.save(update_fields=["stopping"])
+        controls.save(update_fields=["stopping"])
 
-    return state()
+    return state(owner)
 
 
-def _held(paused: bool) -> State:
+def _held(owner: str, paused: bool) -> State:
     with transaction.atomic():
-        row = WorkerStateModel.row(lock=True)
-        row.paused = paused
-        row.save(update_fields=["paused"])
+        controls = ControlsModel.of(_identity(owner), lock=True)
+        controls.paused = paused
+        controls.save(update_fields=["paused"])
 
-    return state()
+    return state(owner)
+
+
+def _identity(owner: str) -> IdentityModel:
+    return IdentityModel.objects.get(name=owner)

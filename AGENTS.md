@@ -11,7 +11,7 @@ Baseline, in two runs: `pytest -m "not network"` under the minimal settings, and
 
 The repl, the API, the portal's Batch and the worker plan and run cells through one internal API, `chatddx.bench`: a Bench (the registry as an identity sees it), a Cell, a Plan, and a Sending (a trial on its way, written down once).
 
-The worker (src/chatddx/worker) runs the queue the portal's batches fill, on the minimal settings: `chatddx worker serve` is the host's service, `chatddx worker run` drains the queue once.
+The worker (src/chatddx/worker) runs the queue the portal's batches fill, on the minimal settings: `chatddx worker serve` is the host's service, `chatddx worker run` drains the queue once. It runs as many jobs at once on a stack as the stack's `max_jobs` detail says, first queued first, and each owner's jobs, batches and controls are their own.
 
 Use `pyright: basic` for django code
 

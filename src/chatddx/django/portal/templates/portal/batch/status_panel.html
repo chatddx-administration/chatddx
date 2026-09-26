@@ -2,9 +2,17 @@
 
 <div id="worker-status" class="flex flex-col gap-6" hx-get="{{ panel_url }}" hx-trigger="every 1s" hx-swap="outerHTML">
     <section class="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <p class="font-semibold text-font-important-light dark:text-font-important-dark{% if not shown.state.alive %} portal-refused{% endif %}">
-            {{ shown.said }}
-        </p>
+        <div>
+            <p class="font-semibold text-font-important-light dark:text-font-important-dark{% if not shown.state.alive %} portal-refused{% endif %}">
+                {{ shown.said }}
+            </p>
+
+            {% for waits in shown.waiting %}
+                <p class="mt-1 text-sm">
+                    {% blocktranslate count counter=waits.ahead with stack=waits.stack %}On {{ stack }}: {{ counter }} case ahead of ours{% plural %}On {{ stack }}: {{ counter }} cases ahead of ours{% endblocktranslate %}{% if waits.running %}, {% blocktranslate count counter=waits.running %}{{ counter }} of them running{% plural %}{{ counter }} of them running{% endblocktranslate %}{% endif %}.
+                </p>
+            {% endfor %}
+        </div>
 
         {% if can_control %}
             <form method="post" action="{{ control_url }}" hx-post="{{ control_url }}" hx-target="#worker-status" hx-swap="outerHTML" class="flex flex-row gap-3 lg:ml-auto">
@@ -32,12 +40,14 @@
     </section>
 
     <section>
-        <div class="portal-progress" role="progressbar" aria-valuemin="0" aria-valuemax="{{ shown.drain.total|default:0 }}" aria-valuenow="{{ shown.drain.finished|default:0 }}" aria-valuetext="{{ shown.counted }}">
-            <div class="portal-progress-finished" style="width: {{ shown.finished_share }}%"></div>
-            <div class="portal-progress-running" style="width: {{ shown.running_share }}%"></div>
-            <div class="portal-progress-cancelled" style="width: {{ shown.cancelled_share }}%"></div>
-            <div class="portal-progress-label"><span>{{ shown.counted }}</span></div>
-        </div>
+        {% include "portal/batch/progress.html" with progress=shown.progress %}
+
+        {% if shown.batches %}
+            <p class="mt-2 text-sm">
+                {% blocktranslate count counter=shown.batches|length %}Of the batch{% plural %}Of the batches{% endblocktranslate %}
+                {% for batch in shown.batches %}{% if batch.pk %}<a class="font-medium underline" href="{% url 'admin:portal_batch_change' batch.pk %}">{{ batch.name }}</a>{% else %}{{ batch.name }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </p>
+        {% endif %}
     </section>
 
     {% if shown.running %}
@@ -46,15 +56,29 @@
                 {% translate "Running" %}
             </h2>
 
+            <div class="flex flex-col gap-2">
+                {% for now in shown.running %}
+                    <div class="portal-running">
+                        <span class="font-semibold text-font-important-light dark:text-font-important-dark">{{ now.job.case }}</span>
+                        <span>{{ now.job.cell }}</span>
+                        <span class="portal-tally">{% blocktranslate count counter=now.job.tokens with tokens=now.job.tallied %}{{ tokens }} token{% plural %}{{ tokens }} tokens{% endblocktranslate %}</span>
+                        <span class="portal-missing">{{ now.running_for }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    {% if shown.up_next %}
+        <section>
+            <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+                {% translate "Up next" %}
+            </h2>
+
             <div class="portal-running">
-                <span class="font-semibold text-font-important-light dark:text-font-important-dark">{{ shown.running.case }}</span>
-                <span>
-                    {{ shown.running.cell }}{% if shown.running.owner.name != identity %}
-                        <span class="portal-missing">{% blocktranslate with owner=shown.running.owner.name %}{{ owner }}'s{% endblocktranslate %}</span>
-                    {% endif %}
-                </span>
-                <span class="portal-tally">{% blocktranslate count counter=shown.running.tokens with tokens=shown.running.tallied %}{{ tokens }} token{% plural %}{{ tokens }} tokens{% endblocktranslate %}</span>
-                <span class="portal-missing">{{ shown.running_for }}</span>
+                <span class="font-semibold text-font-important-light dark:text-font-important-dark">{{ shown.up_next.case }}</span>
+                <span>{{ shown.up_next.cell }}</span>
+                <span class="portal-missing">{% blocktranslate count counter=shown.outstanding %}{{ counter }} outstanding{% plural %}{{ counter }} outstanding{% endblocktranslate %}</span>
             </div>
         </section>
     {% endif %}
@@ -71,6 +95,7 @@
                         <th>{% translate "When" %}</th>
                         <th>{% translate "Case" %}</th>
                         <th>{% translate "Cell" %}</th>
+                        <th>{% translate "Batch" %}</th>
                         <th>{% translate "Outcome" %}</th>
                         <th>{% translate "Tokens" %}</th>
                         <th>{% translate "Scores" %}</th>
@@ -81,9 +106,12 @@
                         <tr>
                             <td class="whitespace-nowrap">{{ ran.when|date:"Y-m-d H:i:s" }}</td>
                             <td class="font-medium">{{ ran.case }}</td>
+                            <td>{{ ran.cell }}</td>
                             <td>
-                                {{ ran.cell }}{% if ran.owner != identity %}
-                                    <span class="portal-missing">{% blocktranslate with owner=ran.owner %}{{ owner }}'s{% endblocktranslate %}</span>
+                                {% if ran.batch.pk %}
+                                    <a class="underline" href="{% url 'admin:portal_batch_change' ran.batch.pk %}">{{ ran.batch.name }}</a>
+                                {% else %}
+                                    {{ ran.batch.name }}
                                 {% endif %}
                             </td>
                             <td{% if ran.trouble %} class="portal-refused"{% endif %}>
@@ -103,7 +131,7 @@
                 </tbody>
             </table>
         {% else %}
-            <p class="text-sm">{% translate "The worker has taken up no case yet." %}</p>
+            <p class="text-sm">{% translate "The worker has taken up none of your cases yet." %}</p>
         {% endif %}
     </section>
 </div>

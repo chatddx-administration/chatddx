@@ -5,13 +5,17 @@ was confirmed on, and the rows its pages show, the confirmation's and the
 saved batch's alike.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
 from chatddx.bench.bench import Bench, HeldTo
-from chatddx.bench.cell import SLICES
+from chatddx.bench.cell import SLICES, Kept
 from chatddx.bench.plan import Plan
+from chatddx.repo.entities.case.django import CaseTrailModel
+from chatddx.repo.families.django import BranchModel
 from chatddx.scoring.score import Scoring
+from chatddx.worker import queue
 
 # the most names a list on a page shows before it says how many more
 SHOWN = 12
@@ -21,12 +25,27 @@ def cells_of(plan: Plan) -> list[dict[str, Any]]:
     """The cells a batch runs: what each sets, what it comes to, and its seed."""
     return [
         {
-            "label": ready.cell.label,
-            "set": ready.cell.set_names,
-            "fingerprint": ready.cell.fingerprint,
-            "seed": plan.seed_of(ready),
+            "label": kept.label,
+            "set": dict(kept.set),
+            "fingerprint": kept.fingerprint,
+            "seed": kept.seed,
         }
-        for ready in plan.ready
+        for kept in plan.kept
+    ]
+
+
+def kept_of(batch: Any) -> list[Kept]:
+    """The cells a batch keeps, as the bench puts them together again."""
+    return [
+        Kept(
+            batch.configuration,
+            batch.stack,
+            cell["set"],
+            cell["label"],
+            cell["fingerprint"],
+            cell["seed"],
+        )
+        for cell in batch.cells
     ]
 
 
@@ -41,11 +60,59 @@ def held_back_of(plan: Plan) -> list[dict[str, Any]]:
     ]
 
 
-def cases_of(plan: Plan) -> list[dict[str, str]]:
+def cases_of(cases: Iterable[BranchModel]) -> list[dict[str, str]]:
     return [
-        {"name": case.name, "fingerprint": case.trail.fingerprint}
-        for case in plan.cases
+        {"name": case.name, "fingerprint": case.trail.fingerprint} for case in cases
     ]
+
+
+@dataclass(frozen=True)
+class Case:
+    """A case a batch holds: by the name it holds it by, and its trail."""
+
+    name: str
+    trail_id: int
+
+
+def held(batch: Any) -> list[Case]:
+    """The cases the batch holds, as it holds them."""
+    trails = dict(
+        CaseTrailModel.objects.filter(
+            fingerprint__in=[case["fingerprint"] for case in batch.cases]
+        ).values_list("fingerprint", "pk")
+    )
+
+    return [Case(case["name"], trails[case["fingerprint"]]) for case in batch.cases]
+
+
+def put(batch: Any, run: bool) -> int:
+    """The batch's trials in the worker's queue, or stored for later."""
+    return queue.put(batch.owner.name, batch.uuid, kept_of(batch), held(batch), run)
+
+
+def unheld(
+    bench: Bench, batch: Any, tags: Iterable[str], names: Iterable[str]
+) -> list[BranchModel]:
+    """
+    The cases with any of `tags`, and those named, that the batch doesn't
+    hold yet: a vignette once, under the name it came by first.
+    """
+    held = set(
+        CaseTrailModel.objects.filter(
+            fingerprint__in=[case["fingerprint"] for case in batch.cases]
+        ).values_list("pk", flat=True)
+    )
+    tags, named = tuple(tags), set(names)
+    found: dict[int, BranchModel] = {}
+
+    for case in [
+        *(bench.cases(tags) if tags else []),
+        *(case for case in bench.usable("case") if case.name in named),
+    ]:
+        if case.trail_id not in held:
+            _ = found.setdefault(case.trail_id, case)
+
+    return list(found.values())
 
 
 @dataclass(frozen=True)
@@ -142,7 +209,11 @@ def shown(plan: Plan) -> Shown:
     configuration = plan.cells[0].cell.name if plan.cells else ""
 
     return Shown.of(
-        configuration, cells_of(plan), held_back_of(plan), cases_of(plan), plan.seed
+        configuration,
+        cells_of(plan),
+        held_back_of(plan),
+        cases_of(plan.cases),
+        plan.seed,
     )
 
 

@@ -1,7 +1,9 @@
 # pyright: basic
 """
-The worker's queue: the trials put in it, run one after another, and how
-each went; and the controls it heeds, between cases and during one.
+The worker's queue: each job a trial of a batch's, kept for later or put in
+the queue, run once a slot of its stack's comes free, and how it went; what
+each owner asked of the worker, to pause their jobs or stop them; and when
+the worker was last at the queue.
 """
 
 from __future__ import annotations
@@ -9,6 +11,7 @@ from __future__ import annotations
 from enum import IntEnum, StrEnum
 
 from django.db.models import (
+    CASCADE,
     PROTECT,
     SET_NULL,
     BigIntegerField,
@@ -18,50 +21,80 @@ from django.db.models import (
     ForeignKey,
     JSONField,
     Model,
+    OneToOneField,
     PositiveIntegerField,
     PositiveSmallIntegerField,
     TextField,
     UUIDField,
 )
 
+from chatddx.bench.cell import Kept
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import RunModel
 from chatddx.repo.entities.case.django import CaseTrailModel
 
-__all__ = ["QueuedModel", "WorkerStateModel"]
+__all__ = ["ControlsModel", "JobModel", "WorkerStateModel"]
 
 
 class Status(StrEnum):
+    # kept for later: in the queue once its batch is run
+    STORED = "stored"
+    # in the queue, till a slot of its stack's comes free
     QUEUED = "queued"
     RUNNING = "running"
-    # written down, as completed, errored or stopped as the run's record says
-    DONE = "done"
+    # the LLM answered, however well, and the run is written down
+    COMPLETED = "completed"
+    # the LLM or the server failed, or the run couldn't be written down
+    ERRORED = "errored"
+    # stopped as it ran, written down as stopped
+    ABORTED = "aborted"
+    # taken out of the queue by a stop before its turn
+    STOPPED = "stopped"
     # not sent: what stood in its way when its turn came is its reason
     SKIPPED = "skipped"
-    # taken out of the queue before its turn by a stop
-    CANCELLED = "cancelled"
-    # sent, and not written down, its reason why
-    FAILED = "failed"
     # its worker went away while it ran
     LOST = "lost"
 
 
-# what has been taken off the queue for good
-FINISHED = (Status.DONE, Status.SKIPPED, Status.FAILED, Status.LOST)
+# what is on its way: in the queue, or running
+UNDER_WAY = (Status.QUEUED, Status.RUNNING)
+
+# what the worker took up and is done with, one way or another
+TAKEN_UP = (
+    Status.COMPLETED,
+    Status.ERRORED,
+    Status.ABORTED,
+    Status.SKIPPED,
+    Status.LOST,
+)
+
+# what a batch resumed runs: all but what completed, and what is on its way
+UNFINISHED = (
+    Status.STORED,
+    Status.ERRORED,
+    Status.ABORTED,
+    Status.STOPPED,
+    Status.SKIPPED,
+    Status.LOST,
+)
+
+# what a stop took out, and what went wrong otherwise
+STOPPED_BY = (Status.STOPPED, Status.ABORTED)
+FAILED = (Status.ERRORED, Status.SKIPPED, Status.LOST)
 
 
 class Stopping(IntEnum):
     NO = 0
-    # when the case under way is done
+    # once the jobs running are done
     AFTER = 1
-    # the case under way too, written down as stopped
+    # the jobs running too, written down as stopped
     NOW = 2
 
 
-class QueuedModel(Model):
+class JobModel(Model):
     class Meta:
         app_label = "worker"
-        db_table = "worker_queued"
+        db_table = "worker_job"
         ordering = ("pk",)
 
     owner = ForeignKey(
@@ -70,22 +103,12 @@ class QueuedModel(Model):
         related_name="+",
     )
     owner_id: int
-    # what put it in the queue, as it names itself: the portal's batch
-    batch = UUIDField(
-        default=None,
-        null=True,
-        blank=True,
-        db_index=True,
-    )
-    # the stretch of the queue it came in on: from empty to empty again
-    drain = PositiveIntegerField(db_index=True)
-    queued = DateTimeField(auto_now_add=True)
+    # what put it in, as it names itself: the portal's batch
+    batch = UUIDField(db_index=True)
 
-    # the trial: the cell by what its owner calls its configuration and
-    # stack, what is set in it by name, and the fingerprint of the
-    # configuration it came to when it was planned; the case; the seed
+    # the trial: the cell as its batch keeps it (Kept), the case, the seed
     configuration = CharField(max_length=255)
-    stack = CharField(max_length=255)
+    stack = CharField(max_length=255, db_index=True)
     set: JSONField[dict[str, str]] = JSONField(default=dict, blank=True)
     label = CharField(max_length=255)
     fingerprint = CharField(max_length=128)
@@ -104,6 +127,12 @@ class QueuedModel(Model):
 
     status = CharField(max_length=16, default=Status.QUEUED.value, db_index=True)
     reason = TextField(
+        default=None,
+        null=True,
+        blank=True,
+    )
+    # when it was put in the queue last: its place in it
+    queued = DateTimeField(
         default=None,
         null=True,
         blank=True,
@@ -138,6 +167,17 @@ class QueuedModel(Model):
     run_id: int | None
 
     @property
+    def kept(self) -> Kept:
+        return Kept(
+            self.configuration,
+            self.stack,
+            self.set,
+            self.label,
+            self.fingerprint,
+            self.seed,
+        )
+
+    @property
     def cell(self) -> str:
         return f"{self.label} × {self.stack}"
 
@@ -149,15 +189,47 @@ class QueuedModel(Model):
         )
 
 
+class ControlsModel(Model):
+    """What an owner asked of the worker: to pause their jobs, or to stop them."""
+
+    class Meta:
+        app_label = "worker"
+        db_table = "worker_controls"
+
+    owner = OneToOneField(
+        IdentityModel,
+        on_delete=CASCADE,
+        related_name="+",
+    )
+    owner_id: int
+    paused = BooleanField(default=False)
+    stopping = PositiveSmallIntegerField(default=Stopping.NO.value)
+
+    @classmethod
+    def of(cls, owner: IdentityModel, lock: bool = False) -> ControlsModel:
+        """The owner's, held till the transaction under way ends where `lock`."""
+        qs = cls.objects.select_for_update() if lock else cls.objects.all()
+        controls, _ = qs.get_or_create(owner=owner)
+
+        return controls
+
+    @classmethod
+    def holding(cls) -> list[int]:
+        """The owners whose jobs wait in the queue: paused, or stopping."""
+        return list(
+            cls.objects.exclude(paused=False, stopping=Stopping.NO).values_list(
+                "owner_id", flat=True
+            )
+        )
+
+
 class WorkerStateModel(Model):
-    """The worker's controls, and when it was last seen: one row."""
+    """When the worker was last at the queue: one row."""
 
     class Meta:
         app_label = "worker"
         db_table = "worker_state"
 
-    paused = BooleanField(default=False)
-    stopping = PositiveSmallIntegerField(default=Stopping.NO.value)
     seen = DateTimeField(
         default=None,
         null=True,
