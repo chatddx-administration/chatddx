@@ -1,12 +1,8 @@
-from collections.abc import Callable
-from typing import Any
-
 import httpx2
 import pytest
 
+from chatddx.conftest import Say, SayAs
 from chatddx.history.models import RunModel
-
-type Say = Callable[..., str]
 
 pytestmark = pytest.mark.django_db
 
@@ -78,12 +74,12 @@ def test_replay_takes_a_run_by_the_start_of_its_id(say: Say):
 
 
 def test_replay_of_a_run_whose_server_failed_says_why(
-    say_through: Callable[[Any], Say],
+    say_as: SayAs,
 ):
     def handler(_request: httpx2.Request) -> httpx2.Response:
         return httpx2.Response(400, json={"error": {"message": "no such model"}})
 
-    say = say_through(httpx2.MockTransport(handler))
+    say = say_as(transport=httpx2.MockTransport(handler))
     _ = say("cell free-text qwen3-8b-awq@fake", "run case-1")
 
     replayed = say("replay")

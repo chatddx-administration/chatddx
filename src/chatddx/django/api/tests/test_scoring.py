@@ -6,36 +6,14 @@ import httpx2
 import pytest
 from django.test import Client
 
+from chatddx.conftest import Recommit
 from chatddx.django.api.tests.conftest import Events
-from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Expected
-from chatddx.repo.store.branch import commit
 
 pytestmark = pytest.mark.django_db
 
 type Run = Callable[..., Events]
 
 FREE_TEXT = {"configuration": "free-text", "stack": "qwen3-8b-awq@fake"}
-
-
-@pytest.fixture
-def retarget() -> Callable[[], None]:
-    """Expect case-1's first diagnosis from now on, and nothing else."""
-
-    def retarget() -> None:
-        case = CaseBranchModel.objects.filter(
-            owner__name="archive", name="case-1"
-        ).latest("pk")
-        _ = commit(
-            case.trail,
-            CaseBranchDetails(
-                name="case-1",
-                owner="archive",
-                targets={"diagnosis": Expected(pattern="fake & diagnosis & (a | 1)")},
-            ),
-        )
-
-    return retarget
 
 
 def score(client: Client, run: str | None = None) -> Any:
@@ -51,14 +29,18 @@ def values(scores: list[dict[str, Any]]) -> list[tuple[str, float | None]]:
 
 
 def test_score_holds_the_outstanding_runs_and_sums_them_up(
-    alex: Client, run: Run, retarget: Callable[[], None]
+    alex: Client, run: Run, recommit: Recommit
 ):
     _ = run(**FREE_TEXT, case="case-1", seed="none")
     _ = run(configuration="plan", stack="qwen3-8b-awq@fake", case="case-1", seed=2)
 
     assert score(alex).json() == {"runs": [], "summary": []}
 
-    retarget()
+    recommit(
+        "case",
+        "case-1",
+        targets={"diagnosis": {"pattern": "fake & diagnosis & (a | 1)"}},
+    )
     scored = score(alex).json()
 
     assert [row["run"]["description"] for row in scored["runs"]] == [

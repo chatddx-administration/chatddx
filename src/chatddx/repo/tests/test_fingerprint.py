@@ -61,6 +61,14 @@ def test_keys_are_sorted_by_their_utf16_code_units():
 def test_a_string_escapes_only_what_json_must():
     assert canonical_json('é"\\\n\u0001/') == '"é\\"\\\\\\n\\u0001/"'
 
+    named = {"\b": "b", "\f": "f", "\n": "n", "\r": "r", "\t": "t"}
+
+    for code in range(0x20):
+        escape = named.get(chr(code)) or f"u{code:04x}"
+        assert canonical_json(chr(code)) == f'"\\{escape}"'
+
+    assert canonical_json("\x7f\u2028\U0001f600") == '"\x7f\u2028\U0001f600"'
+
 
 def test_nothing_but_json_has_a_canonical_form():
     with pytest.raises(TypeError, match="not a JSON value"):

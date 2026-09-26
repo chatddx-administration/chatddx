@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest
 
+from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_tag
 from chatddx.repo.bundles import entity_of
@@ -268,23 +269,16 @@ def test_the_owner_s_own_branch_keeps_what_it_carries(
     assert machine.details["unreliable"] is True
 
 
-def test_the_test_inventory_leaves_nothing_branchless(
-    inventory_fixture_commit: object,
-    owner: IdentityModel,
-):
-    _ = inventory_fixture_commit
-
-    assert dangling_trails(owner.name) == []
+# the archive, as the session's seed committed the test inventory
 
 
-def test_committed_in_order_every_part_keeps_the_name_its_record_gave_it(
-    inventory_fixture_commit: object,
-    owner: IdentityModel,
-):
-    _ = inventory_fixture_commit
+def test_the_test_inventory_leaves_nothing_branchless():
+    assert dangling_trails(settings.ARCHIVE_IDENTITY_NAME) == []
 
+
+def test_committed_in_order_every_part_keeps_the_name_its_record_gave_it():
     for entity_name in ENTITY_NAMES:
-        for branch in select_branch_models(entity_name, owner.name):
+        for branch in select_branch_models(entity_name, settings.ARCHIVE_IDENTITY_NAME):
             assert not branch.name.startswith(f"{entity_name} "), branch.name
 
 

@@ -2,26 +2,20 @@ import asyncio
 import json
 import re
 import signal
-from collections.abc import Callable
 from typing import Any, override
 
 import httpx2
 import pytest
 from rich.console import Console
 
+from chatddx.conftest import Recommit, Say, SayAs
 from chatddx.dev.fake_vllm import FakeTransport, completion, stream
 from chatddx.history.models import RunModel, TrialModel
 from chatddx.history.record import record
 from chatddx.repl import bench
 from chatddx.repl.bench import SEEDS
 from chatddx.repl.shell import Repl
-from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails
 from chatddx.repo.entities.tool.django import ToolBranchModel
-from chatddx.repo.store.branch import commit
-
-type Say = Callable[..., str]
-type SayThrough = Callable[[Any], Say]
 
 pytestmark = pytest.mark.django_db
 
@@ -63,8 +57,8 @@ def test_each_run_is_recorded_as_a_run_of_its_trial(say: Say):
     assert trial.runs.filter(status="completed").count() == 2
 
 
-def test_a_run_whose_server_fails_is_recorded_as_errored(say_through: SayThrough):
-    say = say_through(httpx2.MockTransport(failing))
+def test_a_run_whose_server_fails_is_recorded_as_errored(say_as: SayAs):
+    say = say_as(transport=httpx2.MockTransport(failing))
 
     written = say("cell free-text qwen3-8b-awq@fake", "run case-1")
 
@@ -125,13 +119,13 @@ def test_tool_mode_shows_the_call_the_answer_is_given_through(say: Say):
     assert "valid" in written
 
 
-def test_an_answer_that_doesn_t_hold_says_why(say_through: SayThrough):
+def test_an_answer_that_doesn_t_hold_says_why(say_as: SayAs):
     def handler(request: httpx2.Request) -> httpx2.Response:
         body = json.loads(request.content)
         body["response_format"] = {"type": "json_object"}
         return streaming(body)
 
-    say = say_through(httpx2.MockTransport(handler))
+    say = say_as(transport=httpx2.MockTransport(handler))
 
     written = say("cell plan qwen3-8b-awq@fake", "run case-1")
 
@@ -139,11 +133,11 @@ def test_an_answer_that_doesn_t_hold_says_why(say_through: SayThrough):
     assert "differential\n  nothing" in written
 
 
-def test_an_answer_that_doesn_t_parse_says_so(say_through: SayThrough):
+def test_an_answer_that_doesn_t_parse_says_so(say_as: SayAs):
     def handler(_request: httpx2.Request) -> httpx2.Response:
         return streaming({"model": "Qwen/Qwen3-8B-AWQ", "messages": []})
 
-    say = say_through(httpx2.MockTransport(handler))
+    say = say_as(transport=httpx2.MockTransport(handler))
 
     written = say("cell challenge-coercion-prompted qwen3-8b-awq@fake", "run case-1")
 
@@ -154,14 +148,14 @@ def test_an_answer_that_doesn_t_parse_says_so(say_through: SayThrough):
 
 
 def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for(
-    say_through: SayThrough,
+    say_as: SayAs,
 ):
     def handler(request: httpx2.Request) -> httpx2.Response:
         body = json.loads(request.content)
         body["chat_template_kwargs"] = {"enable_thinking": False}
         return streaming(body)
 
-    say = say_through(httpx2.MockTransport(handler))
+    say = say_as(transport=httpx2.MockTransport(handler))
 
     written = say("cell diagnoses qwen3-8b-awq@fake", "run case-1")
 
@@ -170,9 +164,9 @@ def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for(
 
 
 def test_thinking_no_reasoning_parser_took_out_is_labelled_so(
-    say_through: SayThrough,
+    say_as: SayAs,
 ):
-    say = say_through(FakeTransport(reasoning_parser=False))
+    say = say_as(transport=FakeTransport(reasoning_parser=False))
 
     written = say("cell free-text qwen3-8b-awq@fake", "run case-1")
 
@@ -205,12 +199,12 @@ def test_a_toolset_can_be_set_in_any_configuration(say: Say, fake: FakeTransport
     ]
 
 
-def test_an_llm_still_calling_tools_is_stopped(say_through: SayThrough):
+def test_an_llm_still_calling_tools_is_stopped(say_as: SayAs):
     def handler(request: httpx2.Request) -> httpx2.Response:
         body = json.loads(request.content)
         return streaming(body | {"messages": body["messages"][:1]})
 
-    say = say_through(httpx2.MockTransport(handler))
+    say = say_as(transport=httpx2.MockTransport(handler))
 
     written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
 
@@ -343,13 +337,10 @@ def test_batch_runs_the_cases_with_any_of_its_tags(say: Say, fake: FakeTransport
     assert len(fake.requests) == 3
 
 
-def test_a_case_under_two_names_runs_once(say: Say, fake: FakeTransport):
-    case = CaseBranchModel.objects.filter(owner__name="archive", name="case-1").latest(
-        "pk"
-    )
-    _ = commit(
-        case.trail, CaseBranchDetails(name="case-1-again", owner="alex", tags=["tag-1"])
-    )
+def test_a_case_under_two_names_runs_once(
+    say: Say, fake: FakeTransport, recommit: Recommit
+):
+    recommit("case", "case-1", name="case-1-again", owner="alex", tags=["tag-1"])
 
     written = say("cell free-text qwen3-8b-awq@fake", "batch tag-1")
 
@@ -371,9 +362,9 @@ def test_batch_sends_nothing_for_a_cell_that_can_t_run(say: Say, fake: FakeTrans
 
 
 def test_a_run_that_fails_is_said_on_its_line_and_the_batch_goes_on(
-    say_through: SayThrough,
+    say_as: SayAs,
 ):
-    say = say_through(httpx2.MockTransport(failing))
+    say = say_as(transport=httpx2.MockTransport(failing))
 
     written = say("cell free-text qwen3-8b-awq@fake", "batch tag-2")
 
@@ -385,10 +376,10 @@ def test_a_run_that_fails_is_said_on_its_line_and_the_batch_goes_on(
 
 
 def test_ctrl_c_stops_a_run_as_it_streams_and_it_is_recorded_as_stopped(
-    say_through: SayThrough,
+    say_as: SayAs,
 ):
     transport = Interrupting(after=5)
-    say = say_through(transport)
+    say = say_as(transport=transport)
 
     written = pressing(say, "cell free-text qwen3-8b-awq@fake", "run case-1")
 
@@ -406,10 +397,10 @@ def test_ctrl_c_stops_a_run_as_it_streams_and_it_is_recorded_as_stopped(
 
 
 def test_ctrl_c_lets_the_run_under_way_finish_then_stops_the_batch(
-    say_through: SayThrough,
+    say_as: SayAs,
 ):
     transport = Interrupting(after=5, waits=False)
-    say = say_through(transport)
+    say = say_as(transport=transport)
 
     written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
 
@@ -421,9 +412,9 @@ def test_ctrl_c_lets_the_run_under_way_finish_then_stops_the_batch(
     assert RunModel.objects.get().status == "completed"
 
 
-def test_ctrl_c_again_stops_the_run_under_way_too(say_through: SayThrough):
+def test_ctrl_c_again_stops_the_run_under_way_too(say_as: SayAs):
     transport = Interrupting(after=5, presses=2)
-    say = say_through(transport)
+    say = say_as(transport=transport)
 
     written = pressing(say, "cell free-text qwen3-8b-awq@fake", "batch tag-2")
 

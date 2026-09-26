@@ -4,11 +4,9 @@ from typing import Any
 import pytest
 from django.test import Client
 
-from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Expected
+from chatddx.conftest import Recommit
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
-from chatddx.repo.store.branch import commit
 
 pytestmark = pytest.mark.django_db
 
@@ -154,17 +152,11 @@ def test_show_says_which_cases_each_scorer_can_hold_the_cell_to(alex: Client):
     )
 
 
-def test_show_names_the_cases_whose_pattern_doesn_t_parse(alex: Client):
-    case = CaseBranchModel.objects.filter(owner__name="archive", name="case-2").latest(
-        "pk"
-    )
-    _ = commit(
-        case.trail,
-        CaseBranchDetails(
-            name="case-2",
-            owner="alex",
-            targets={"diagnosis": Expected(pattern="fake & (")},
-        ),
+def test_show_names_the_cases_whose_pattern_doesn_t_parse(
+    alex: Client, recommit: Recommit
+):
+    recommit(
+        "case", "case-2", owner="alex", targets={"diagnosis": {"pattern": "fake & ("}}
     )
 
     scorers = held_to(show(alex, **PLAN))

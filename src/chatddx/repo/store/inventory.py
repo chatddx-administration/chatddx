@@ -1,5 +1,7 @@
 from typing import Any, Literal, cast
 
+from chatddx.core.models import IdentityModel
+from chatddx.core.utils import ensure_identity
 from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
 from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.repo.inventories import (
@@ -52,12 +54,11 @@ def commit_parsed_inventory(inventory: ParsedInventory) -> InventoryCommitReceip
     False: the trail was already the head
     """
 
+    owners = _Owners()
+
     return {
         entity: {
-            name: commit(
-                trail=trail,
-                branch_details=branch_details,
-            )
+            name: commit(trail, branch_details, owners[branch_details.owner])
             for name, (trail, branch_details) in getattr(inventory, entity).items()
         }
         for entity in ENTITY_NAMES
@@ -77,16 +78,23 @@ def commit_trails_in(
     False: the trail was already the head
     """
 
+    owner = ensure_identity(owner_name)
+
     return {
         entity: {
-            name: commit(
-                trail=trail,
-                branch_details=BranchDetails(name=name, owner=owner_name),
-            )
+            name: commit(trail, BranchDetails(name=name, owner=owner_name), owner)
             for name, trail in getattr(inventory, entity).items()
         }
         for entity in ENTITY_NAMES
     }
+
+
+class _Owners(dict[str, IdentityModel]):
+    """Each owner an inventory names, read the first time it is named."""
+
+    def __missing__(self, name: str) -> IdentityModel:
+        self[name] = ensure_identity(name)
+        return self[name]
 
 
 def trails_in(parsed_inventory: ParsedInventory) -> InventoryTrailIn:

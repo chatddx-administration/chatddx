@@ -5,11 +5,11 @@ Devenv in flake.nix devShell
 
 PostgreSQL 16 always
 
-Baseline: `pytest -m "not network"`; quick: `pytest -m "not network and not slow"`
+Baseline: `pytest -m "not network"`; quick: `pytest -m "not network and not slow"`; `--reuse-db` keeps the test database between runs (`--create-db` once a migration changes)
 
 Use `pyright: basic` for django code
 
 Lessons:
 * Never put help_text or any other user facing data in django models or migrations.
 * Identity resolution throughout the app uses Identity.name == request.user.username, not the auth_user FK.
-* Tests share one test inventory, `src/chatddx/data/test-inventory.toml`, through the fixtures in `src/chatddx/conftest.py`: init-data seeds it for alex once per session, and every test starts from that seed and rolls back to it; `provision` seeds another user, `unseeded` empties the database for a test of seeding itself, repo commits it with its own inventory functions, and a test without a database reads it parsed (`test_inventory`).
+* Tests share one test inventory, `src/chatddx/data/test-inventory.toml`, and its giftbag, through the fixtures in `src/chatddx/conftest.py`: init-data seeds it for alex once per session, and every test starts from that seed and rolls back to it. A test reads the seeded archive rather than committing the inventory again: `recommit` varies an archived branch, `provision` seeds another user, `unseeded` empties the database for a test of seeding itself, `say_as` speaks to a repl through the `fake` vLLM, and a test without a database reads the inventory parsed (`test_inventory`). One slow test alone provisions the live inventory.

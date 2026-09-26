@@ -5,12 +5,8 @@ from typing import Any
 import pytest
 from django.test import Client
 
-from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails
-from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
+from chatddx.conftest import Recommit
 from chatddx.repo.entity_names import ENTITY_NAMES
-from chatddx.repo.families.pydantic import BranchDetails
-from chatddx.repo.store.branch import commit
 
 pytestmark = pytest.mark.django_db
 
@@ -72,7 +68,7 @@ def test_cases_are_listed_by_name_and_kept_to_any_of_the_tags(alex: Client):
     assert listed("?tag=nowhere") == []
 
 
-def test_a_case_says_its_text_and_its_targets(alex: Client):
+def test_a_case_says_its_text_and_its_targets(alex: Client, recommit: Recommit):
     shown = alex.get("/api/registry/case/case-1").json()
     case = shown["branch"]
 
@@ -92,11 +88,7 @@ def test_a_case_says_its_text_and_its_targets(alex: Client):
         {"runs": 0, "errored": 0, "scorers": []},
     )
 
-    case = CaseBranchModel.objects.get(owner__name="archive", name="case-2")
-    _ = commit(
-        case.trail,
-        CaseBranchDetails(name="calm", owner="alex", targets={"warning": False}),
-    )
+    recommit("case", "case-2", name="calm", owner="alex", targets={"warning": False})
 
     calm = alex.get("/api/registry/case/calm").json()
 
@@ -142,10 +134,10 @@ def test_what_isn_t_there_isn_t_found(alex: Client):
     assert alex.get("/api/registry/frobnicate").status_code == 404
 
 
-def test_another_s_configuration_is_had_by_its_owner(alex: Client):
-    plan = ConfigurationBranchModel.objects.get(owner__name="archive", name="plan")
-    details = BranchDetails(name="bobs-plan", owner="bob", collaborators=["alex"])
-    _ = commit(plan.trail, details)
+def test_another_s_configuration_is_had_by_its_owner(alex: Client, recommit: Recommit):
+    recommit(
+        "configuration", "plan", name="bobs-plan", owner="bob", collaborators=["alex"]
+    )
 
     assert "bobs-plan" not in named(alex.get("/api/registry/configuration").json())
     assert alex.get("/api/registry/configuration/bobs-plan").status_code == 404

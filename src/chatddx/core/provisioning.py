@@ -10,6 +10,7 @@ django.setup()
 from django.db import transaction
 from django.db.models import ProtectedError, QuerySet
 
+from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
 from chatddx.history.models import (
     ConversationModel,
@@ -19,11 +20,12 @@ from chatddx.history.models import (
     TrialModel,
 )
 from chatddx.repo.bundles import entity_of
-from chatddx.repo.entity_names import ENTITY_NAMES
+from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
 from chatddx.repo.families.pydantic import BranchDetailsPatch
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.names import short_fingerprint
 from chatddx.repo.parsers.inventory import ParseError, parse
+from chatddx.repo.queries import qs_head
 from chatddx.repo.store import inventory
 
 receipt_text = {
@@ -143,14 +145,32 @@ def init_data(
     archive_receipt = _commit("archive", archived)
 
     # The archive keeps the inventory, and its users collaborate on it.
-    archive_branch_models = inventory.owned_inventory(settings.ARCHIVE_IDENTITY_NAME)
-
     for entity in ENTITY_NAMES:
-        for name in archive_receipt[entity]:
-            archive_branch_models[entity][name].collaborators.add(user)
+        _share(entity, list(archive_receipt[entity]), user)
 
     if giftbag is not None:
         _ = _commit("giftbag", giftbag)
+
+
+def _share(entity: EntityName, names: list[str], user: IdentityModel) -> None:
+    """The heads of the archive's branches of `names`, shared with `user`."""
+    if not names:
+        return
+
+    branch_model = entity_of(entity).branch_model
+    heads = qs_head(
+        branch_model.objects.filter(name__in=names), settings.ARCHIVE_IDENTITY_NAME
+    )
+    through = branch_model.collaborators.through
+    shared = f"{branch_model._meta.model_name}_id"
+
+    _ = through.objects.bulk_create(
+        [
+            through(**{shared: head, "identitymodel_id": user.pk})
+            for head in heads.values_list("id", flat=True)
+        ],
+        ignore_conflicts=True,
+    )
 
 
 def _parse(path: Path, owner_name: str) -> ParsedInventory:

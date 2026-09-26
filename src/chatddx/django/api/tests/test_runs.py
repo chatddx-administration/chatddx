@@ -8,18 +8,16 @@ import httpx2
 import pytest
 from django.test import Client
 
+from chatddx.conftest import Recommit
 from chatddx.core.models import IdentityModel
 from chatddx.dev.fake_vllm import FakeTransport, stream
 from chatddx.django.api.tests.conftest import Events, of, written
 from chatddx.history.models import ConversationContext, RunModel
 from chatddx.repl.bench import MAX_SEED, SEEDS
 from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
-from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.repo.names import short_fingerprint
-from chatddx.repo.store.branch import commit
 
 pytestmark = pytest.mark.django_db
 
@@ -222,15 +220,9 @@ def test_a_vignette_of_one_s_own_runs_as_a_case_without_a_branch(
 
 
 def test_another_s_configuration_runs_only_as_one_s_own(
-    alex: Client, fake: FakeTransport
+    alex: Client, fake: FakeTransport, recommit: Recommit
 ):
-    plan = ConfigurationBranchModel.objects.filter(
-        owner__name="archive", name="plan"
-    ).latest("pk")
-    _ = commit(
-        plan.trail,
-        BranchDetails(name="plan", owner="bob", collaborators=["alex"]),
-    )
+    recommit("configuration", "plan", owner="bob", collaborators=["alex"])
 
     refused = post(
         alex, configuration="bob/plan", stack="qwen3-8b-awq@fake", case="case-1"

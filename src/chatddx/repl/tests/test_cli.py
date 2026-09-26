@@ -1,5 +1,4 @@
 import re
-from collections.abc import Callable
 from pathlib import Path
 
 import psycopg
@@ -8,6 +7,7 @@ from django.db import connection
 from rich.console import Console
 from typer.testing import CliRunner
 
+from chatddx.core.utils import ensure_identity
 from chatddx.manage import app
 from chatddx.repl.cli import let_go
 from chatddx.repl.commands import COMMANDS, Command, handle
@@ -42,11 +42,12 @@ def test_a_session_can_be_piped_in(tmp_path: Path):
     assert "the LLM's default, 'on'" in result.output
 
 
+# a transactional test may find the session's seed flushed away: alex will do
+
+
 @pytest.mark.django_db(transaction=True)
-def test_an_idle_repl_holds_no_connection(
-    provision: Callable[..., None], tmp_path: Path
-):
-    provision()
+def test_an_idle_repl_holds_no_connection(tmp_path: Path):
+    _ = ensure_identity("alex")
     assert connection.connection is not None
 
     result = CliRunner().invoke(
@@ -60,10 +61,8 @@ def test_an_idle_repl_holds_no_connection(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_a_dropped_connection_is_said_and_the_next_line_opens_another(
-    provision: Callable[..., None],
-):
-    provision()
+def test_a_dropped_connection_is_said_and_the_next_line_opens_another():
+    _ = ensure_identity("alex")
     repl = Repl("alex", Console(record=True, width=200), seed=None)
     assert handle(repl, "stacks")
 
@@ -79,7 +78,10 @@ def test_a_dropped_connection_is_said_and_the_next_line_opens_another(
 
     let_go()
     assert handle(repl, "cases")
-    assert "case-1" in repl.console.export_text()
+
+    listed = repl.console.export_text()
+    assert "the database failed" not in listed
+    assert listed.endswith(" cases\n")
 
 
 def test_ctrl_c_ends_the_command_not_the_repl(

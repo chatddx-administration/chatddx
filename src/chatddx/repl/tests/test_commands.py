@@ -1,11 +1,8 @@
-from collections.abc import Callable
-
 import pytest
 
+from chatddx.conftest import Say
 from chatddx.repl.commands import COMMANDS, complete, handle
 from chatddx.repl.shell import Repl
-
-type Say = Callable[..., str]
 
 pytestmark = pytest.mark.django_db
 

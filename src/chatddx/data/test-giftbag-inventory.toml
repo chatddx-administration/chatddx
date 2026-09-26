@@ -1,0 +1,7 @@
+# The giftbag the tests give an owner: giftbag-inventory.toml's, on the test
+# cases.
+extends = [
+  "inventory/slices.toml",
+  "inventory/configurations.toml",
+  "test-cases.toml",
+]

@@ -1,4 +1,5 @@
-from collections.abc import Callable
+from collections import defaultdict
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from django.db.models import Model, QuerySet
@@ -6,7 +7,7 @@ from pydantic import ValidationError
 
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
-from chatddx.core.utils import ensure_identity, ensure_tag
+from chatddx.core.utils import ensure_identities, ensure_identity, ensure_tags
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel, TrailModel
@@ -18,7 +19,7 @@ from chatddx.repo.families.pydantic import (
     relation_fields,
 )
 from chatddx.repo.names import closure_branch_name
-from chatddx.repo.queries import qs_head, qs_head_visible, qs_with_relations
+from chatddx.repo.queries import head_of, qs_head, qs_head_visible, qs_with_relations
 from chatddx.repo.store.trail import dump_trail
 from chatddx.repo.utils import (
     resolve_trail,
@@ -266,83 +267,117 @@ select_branch_async = make_async(select_branch_outs)
 def commit(
     trail: TrailIn | TrailModel,
     branch_details: BranchDetails,
+    owner: IdentityModel | None = None,
 ) -> bool:
     """
     Embed trail in a branch and make it the head
     True: the head changed
     False: the head didn't, the trail was already the branch's head
+    `owner`: the identity the details name, where the caller has it
     """
-    entity = entity_of(trail)
-    branch_model_cls = entity.branch_model
-    trail_model_cls = entity.trail_model
-
-    branch_details = entity.branch_details.model_validate(branch_details.model_dump())
-    details = dump_details(branch_details)
-
-    qs = branch_model_cls.objects.all()
-
-    head = qs_head(
-        qs.filter(name=branch_details.name),
-        branch_details.owner,
-    ).first()
-
-    if head and trail.fingerprint == head.trail.fingerprint and details == head.details:
-        commit_relations(head, head, branch_details)
-        _ = commit_closure(head.trail, branch_details.owner)
-        return False
-
-    match trail:
-        case TrailIn():
-            committed = dump_trail(trail_model_cls, trail)
-        case TrailModel():
-            committed = trail
-
-    branch_model = branch_model_cls.objects.create(
-        name=branch_details.name,
-        owner=ensure_identity(branch_details.owner),
-        trail=committed,
-        details=details,
-    )
-
-    commit_relations(branch_model, head, branch_details)
-    _ = commit_closure(committed, branch_details.owner)
-
-    return True
+    return _commit(trail, branch_details, owner, closure=True)
 
 
 commit_async = make_async(commit)
 
 
+def _commit(
+    trail: TrailIn | TrailModel,
+    branch_details: BranchDetails,
+    owner: IdentityModel | None,
+    closure: bool,
+) -> bool:
+    entity = entity_of(trail)
+
+    branch_details = entity.branch_details.model_validate(branch_details.model_dump())
+    details = dump_details(branch_details)
+
+    head = head_of(
+        entity.branch_model.objects.all(), branch_details.owner, branch_details.name
+    )
+
+    if head and trail.fingerprint == head.trail.fingerprint and details == head.details:
+        commit_relations(head, head, branch_details)
+
+        if closure:
+            _ = _commit_closure(head.trail, head.owner)
+
+        return False
+
+    match trail:
+        case TrailIn():
+            committed = dump_trail(entity.trail_model, trail)
+        case TrailModel():
+            committed = trail
+
+    if head is not None:
+        owner = head.owner
+    elif owner is None:
+        owner = ensure_identity(branch_details.owner)
+
+    assert owner.name == branch_details.owner
+
+    branch_model = entity.branch_model.objects.create(
+        name=branch_details.name,
+        owner=owner,
+        trail=committed,
+        details=details,
+    )
+
+    commit_relations(branch_model, head, branch_details)
+
+    if closure:
+        _ = _commit_closure(committed, owner)
+
+    return True
+
+
 def commit_closure(root: TrailModel, owner_name: str) -> list[str]:
+    """
+    A branch of `owner_name`'s on each trail `root` reaches that has none,
+    named for it: the names, in the order the walk reached them.
+    """
+    return _commit_closure(root, ensure_identity(owner_name))
+
+
+commit_closure_async = make_async(commit_closure)
+
+
+def _commit_closure(root: TrailModel, owner: IdentityModel) -> list[str]:
+    closure = trail_closure(root)
+    by_entity: dict[EntityName, list[TrailModel]] = defaultdict(list)
+
+    for trail in closure:
+        by_entity[entity_of(trail).name].append(trail)
+
+    # the whole closure is walked here: what a branch of it reaches, too
+    branched = {
+        (entity, trail_id)
+        for entity, trails in by_entity.items()
+        for trail_id in entity_of(entity)
+        .branch_model.objects.filter(trail__in=trails, owner=owner)
+        .values_list("trail_id", flat=True)
+    }
     committed: list[str] = []
 
-    for trail in trail_closure(root):
+    for trail in closure:
         entity = entity_of(trail)
 
-        has_branch = entity.branch_model.objects.filter(
-            trail=trail,
-            owner__name=owner_name,
-        ).exists()
-
-        if has_branch:
+        if (entity.name, trail.pk) in branched:
             continue
 
         branch_name = closure_branch_name(entity.name, trail.fingerprint)
 
-        _ = commit(
-            trail=trail,
-            branch_details=BranchDetails(
-                name=branch_name,
-                owner=owner_name,
-            ),
+        _ = _commit(
+            trail,
+            BranchDetails(name=branch_name, owner=owner.name),
+            owner,
+            closure=False,
         )
 
         committed.append(branch_name)
 
     return committed
-
-
-commit_closure_async = make_async(commit_closure)
 
 
 def commit_copies(root: TrailModel, owner_name: str, source_name: str) -> list[str]:
@@ -392,10 +427,10 @@ def _reached(root: TrailModel) -> list[TrailModel]:
 
 RELATION_RESOLVERS: dict[
     str,
-    Callable[[IdentityModel, EntityName], Callable[[str], Model]],
+    Callable[[IdentityModel, EntityName, list[str]], Sequence[Model]],
 ] = {
-    "identity": lambda owner, entity: ensure_identity,
-    "tag": lambda owner, entity: lambda name: ensure_tag(owner, entity, name),
+    "identity": lambda owner, entity, names: ensure_identities(names),
+    "tag": ensure_tags,
 }
 
 
@@ -408,12 +443,14 @@ def commit_relations(
     entity = entity_of(branch_model).name
 
     for field_name, resolver in relation_fields(type(branch_details)):
+        names: list[str] | None = getattr(branch_details, field_name)
         _commit_relation(
             branch_model,
             previous,
             field_name,
-            getattr(branch_details, field_name),
-            RELATION_RESOLVERS[resolver](owner, entity),
+            None
+            if names is None
+            else RELATION_RESOLVERS[resolver](owner, entity, names),
         )
 
 
@@ -421,14 +458,17 @@ def _commit_relation(
     branch_model: BranchModel,
     previous: BranchModel | None,
     field_name: str,
-    names: list[str] | None,
-    resolve: Callable[[str], Model],
+    related: Sequence[Model] | None,
 ) -> None:
-    if names is None:
-        if previous is None or previous.pk == branch_model.pk:
+    again = previous is not None and previous.pk == branch_model.pk
+
+    if related is None:
+        if previous is None or again:
             return
         related = list(getattr(previous, field_name).all())
-    else:
-        related = [resolve(name) for name in names]
 
-    getattr(branch_model, field_name).set(related)
+    if again:
+        getattr(branch_model, field_name).set(related)
+    elif related:
+        # a new version relates to nothing yet
+        getattr(branch_model, field_name).add(*related)

@@ -1,40 +1,42 @@
 # pyright: basic
 
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from django.contrib.contenttypes.models import ContentType
+from pytest_django import DjangoDbBlocker
+from rich.console import Console
 from typer.testing import CliRunner
 
 from chatddx.core import settings
-from chatddx.core.models import IdentityModel
-from chatddx.core.utils import ensure_identity
-from chatddx.repo.families.pydantic import BranchDetailsPatch
-from chatddx.repo.inventories import (
-    InventoryBranchModel,
-    InventoryBranchOut,
-    InventoryFormDataOut,
-    InventoryTrailIn,
-    ParsedInventory,
-)
+from chatddx.dev.fake_vllm import FakeTransport
+from chatddx.repl.commands import handle
+from chatddx.repl.shell import Repl
+from chatddx.repo.bundles import entity_of
+from chatddx.repo.entity_names import EntityName
+from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.parsers.inventory import parse
-from chatddx.repo.store import inventory
+from chatddx.repo.queries import head_of
+from chatddx.repo.store.branch import commit
 
 # the portal's tests still speak the old datamodel
 collect_ignore = ["django/tests"]
 
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
+TEST_GIFTBAG = settings.INVENTORY_PATH / "test-giftbag-inventory.toml"
+
+type Provision = Callable[..., list[str]]
+type Say = Callable[..., str]
+type SayAs = Callable[..., Say]
+type Recommit = Callable[..., None]
 
 
 @pytest.fixture(scope="session")
-def django_db_setup(django_test_environment, django_db_blocker):
+def django_db_setup(django_db_setup: None, django_db_blocker: DjangoDbBlocker) -> None:
+    # seeded once: each test's transaction starts from it, and rolls back to it
     with django_db_blocker.unblock():
-        from django.test.utils import setup_databases
-
-        setup_databases(verbosity=0, interactive=False, keepdb=False)
-        # seeded once: each test's transaction starts from it, and rolls back to it
-        _init_data()
-        yield
+        _ = _init_data()
 
 
 @pytest.fixture(autouse=True)
@@ -46,6 +48,11 @@ def clear_content_type_cache():
 @pytest.fixture(scope="session")
 def test_inventory() -> ParsedInventory:
     return parse(TEST_INVENTORY)
+
+
+@pytest.fixture(scope="session")
+def test_giftbag() -> ParsedInventory:
+    return parse(TEST_GIFTBAG)
 
 
 @pytest.fixture
@@ -62,70 +69,83 @@ def unseeded() -> None:
 
 
 @pytest.fixture
-def provision() -> Callable[..., None]:
+def provision() -> Provision:
     return _init_data
 
 
-def _init_data(*options: str, user: str = "alex") -> None:
+def _init_data(*options: str, user: str = "alex") -> list[str]:
+    """init-data for `user` on the test inventory and giftbag: what it printed."""
     from chatddx.manage import app
 
     result = CliRunner().invoke(
-        app, ["init-data", user, "--inventory", str(TEST_INVENTORY), *options]
+        app,
+        [
+            "init-data",
+            user,
+            "--inventory",
+            str(TEST_INVENTORY),
+            "--giftbag-inventory",
+            str(TEST_GIFTBAG),
+            *options,
+        ],
     )
     assert result.exit_code == 0, result.output
+    return result.output.splitlines()
 
 
 @pytest.fixture
-def owner() -> IdentityModel:
-    return ensure_identity("alex")
+def fake() -> FakeTransport:
+    """The fake vLLM: it answers what a run sends it, as vLLM would."""
+    return FakeTransport()
 
 
 @pytest.fixture
-def other_owner() -> IdentityModel:
-    return ensure_identity("other")
+def say_as(fake: FakeTransport) -> SayAs:
+    """
+    A repl of `identity`'s, unseeded, its runs sent through `transport` or the
+    fake vLLM: say lines to it, and read what it wrote since.
+    """
+
+    def say_as(identity: str = "alex", transport: Any = None) -> Say:
+        return say_to(
+            Repl(
+                identity, Console(record=True, width=200), transport or fake, seed=None
+            )
+        )
+
+    return say_as
+
+
+def say_to(repl: Repl) -> Say:
+    def say(*lines: str) -> str:
+        for line in lines:
+            assert handle(repl, line)
+
+        return repl.console.export_text()
+
+    return say
 
 
 @pytest.fixture
-def parsed_inventory(owner: IdentityModel) -> ParsedInventory:
-    return parse(TEST_INVENTORY, BranchDetailsPatch(owner=owner.name))
+def recommit() -> Recommit:
+    return _recommit
 
 
-@pytest.fixture
-def inventory_fixture_ti(parsed_inventory: ParsedInventory) -> InventoryTrailIn:
-    return inventory.trails_in(parsed_inventory)
+def _recommit(entity: EntityName, archived: str, /, **details: Any) -> None:
+    """
+    The trail of the archive's `archived` of `entity`, committed again as
+    `details` have it: a new version of the archive's, or, named or owned
+    otherwise, a copy.
+    """
+    bundle = entity_of(entity)
+    head = head_of(
+        bundle.branch_model.objects.all(), settings.ARCHIVE_IDENTITY_NAME, archived
+    )
+    assert head is not None, f"the archive has no {entity} '{archived}'"
 
-
-@pytest.fixture
-def inventory_fixture_commit_branchless(
-    inventory_fixture_ti: InventoryTrailIn,
-    owner: IdentityModel,
-) -> inventory.InventoryCommitReceipt:
-    return inventory.commit_trails_in(inventory_fixture_ti, owner.name)
-
-
-@pytest.fixture
-def inventory_fixture_commit(
-    parsed_inventory: ParsedInventory,
-    owner: IdentityModel,
-) -> inventory.InventoryCommitReceipt:
-    return inventory.commit_parsed_inventory(parsed_inventory)
-
-
-@pytest.fixture
-def inventory_fixture_bm(
-    owner: IdentityModel,
-    inventory_fixture_commit,
-) -> InventoryBranchModel:
-    return inventory.owned_inventory(owner.name)
-
-
-@pytest.fixture
-def inventory_fixture_bo(inventory_fixture_bm: InventoryBranchModel):
-    return InventoryBranchOut.model_validate(inventory_fixture_bm)
-
-
-@pytest.fixture
-def inventory_fixture_fdo(
-    inventory_fixture_bo: InventoryBranchOut,
-) -> InventoryFormDataOut:
-    return inventory.form_data_out(inventory_fixture_bo)
+    _ = commit(
+        head.trail,
+        bundle.branch_details.model_validate(
+            {**head.details, "name": archived, "owner": head.owner.name, **details}
+        ),
+    )

@@ -400,7 +400,9 @@ def test_a_structured_output_offers_text_only_where_a_path_proves_a_string():
 
 
 def test_a_warning_may_be_null_and_reads_as_nothing():
-    output = OutputTrailIn(answer_schema=PLAN, views={"warning": "$.diagnoses[*].maybe"})
+    output = OutputTrailIn(
+        answer_schema=PLAN, views={"warning": "$.diagnoses[*].maybe"}
+    )
     answer: JsonValue = {"diagnoses": [{"maybe": "sepsis"}, {"maybe": None}]}
 
     assert output.view("warning", answer) == ["sepsis"]
@@ -469,8 +471,10 @@ def test_free_text_is_read_a_line_at_a_time_its_list_markers_stripped():
 
 
 def test_a_schema_is_a_json_schema():
-    with pytest.raises(ValidationError, match="not a valid JSON Schema"):
-        _ = OutputTrailIn(answer_schema={"type": "objet"})
+    # the second time, read from what the first found
+    for _ in range(2):
+        with pytest.raises(ValidationError, match="not a valid JSON Schema"):
+            _ = OutputTrailIn(answer_schema={"type": "objet"})
 
 
 def test_a_budget_is_for_reasoning_that_is_on():

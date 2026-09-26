@@ -1,0 +1,16 @@
+# The cases the tests run: the test inventory's, and the test giftbag's.
+
+[case.case-1]
+vignette = "case vignette 1"
+tags = ["tag-1", "tag-2"]
+language = "en"
+targets.diagnosis.text = "Fake diagnosis B"
+targets.diagnosis.pattern = "fake & diagnosis & (b | 2)"
+targets.warning.pattern = "acute & warning"
+targets.disposition.pattern = "admit*"
+
+[case.case-2]
+vignette = "case vignette 2"
+tags = ["tag-2"]
+language = "en"
+targets.diagnosis.pattern = "nothing & listed"

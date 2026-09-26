@@ -1,21 +1,20 @@
 """
 `chatddx init-data` and `chatddx wipe-data`, run as the command line runs
-them on the live inventory and giftbag they provision.
+them: on the test inventory and giftbag, and once on the live ones. The
+session's seed is the test inventory init-data gave alex; a test of seeding
+itself starts from an empty database.
 """
 
 from pathlib import Path
 
 import pytest
-from rich.console import Console
 from typer.testing import CliRunner
 
+from chatddx.conftest import Provision, Say, SayAs
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
-from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.history.models import ConversationModel, RunModel, TrialModel
 from chatddx.manage import app
-from chatddx.repl.commands import handle
-from chatddx.repl.shell import Repl
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.inventories import ParsedInventory
@@ -23,11 +22,9 @@ from chatddx.repo.names import short_fingerprint
 from chatddx.repo.parsers.inventory import parse
 from chatddx.repo.store.inventory import owned_inventory
 
-pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("unseeded")]
+pytestmark = pytest.mark.django_db
 
 ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
-INVENTORY = settings.INVENTORY_PATH / "inventory.toml"
-GIFTBAG = settings.INVENTORY_PATH / "giftbag-inventory.toml"
 
 NOTHING: dict[str, set[str]] = {entity: set() for entity in ENTITY_NAMES}
 
@@ -88,10 +85,27 @@ def versions() -> dict[str, int]:
 
 
 @pytest.mark.slow
-def test_init_data_archives_the_inventory_and_shares_it_with_each_user():
-    inventory = parse(INVENTORY)
+@pytest.mark.usefixtures("unseeded")
+def test_init_data_provisions_the_live_inventory_and_giftbag_by_default():
+    inventory = parse(settings.INVENTORY_PATH / "inventory.toml")
+    giftbag = parse(settings.INVENTORY_PATH / "giftbag-inventory.toml")
 
-    assert run("init-data", "alex") == receipts(inventory, "archive", "created")
+    assert run("init-data", "alex", "--with-giftbag") == (
+        receipts(inventory, "archive", "created")
+        + receipts(giftbag, "giftbag", "created")
+    )
+    assert owned(ARCHIVE) == names(inventory)
+    assert shared_with("alex") == names(inventory)
+    assert owned("alex") == names(giftbag)
+
+
+@pytest.mark.usefixtures("unseeded")
+def test_init_data_archives_the_inventory_and_shares_it_with_each_user(
+    provision: Provision, test_inventory: ParsedInventory
+):
+    inventory = test_inventory
+
+    assert provision() == receipts(inventory, "archive", "created")
 
     archived = owned_inventory(ARCHIVE)
 
@@ -107,22 +121,22 @@ def test_init_data_archives_the_inventory_and_shares_it_with_each_user():
 
     before = versions()
 
-    assert run("init-data", "alex") == receipts(inventory, "archive", "validated")
+    assert provision() == receipts(inventory, "archive", "validated")
     assert versions() == before
 
-    _ = run("init-data", "other")
+    _ = provision(user="other")
 
     assert shared_with("alex") == names(inventory)
     assert shared_with("other") == names(inventory)
 
 
-@pytest.mark.slow
-def test_init_data_with_giftbag_gives_the_user_their_own():
-    inventory = parse(INVENTORY)
-    giftbag = parse(GIFTBAG)
+def test_init_data_with_giftbag_gives_the_user_their_own(
+    provision: Provision, test_inventory: ParsedInventory, test_giftbag: ParsedInventory
+):
+    giftbag = test_giftbag
 
-    assert run("init-data", "alex", "--with-giftbag") == (
-        receipts(inventory, "archive", "created")
+    assert provision("--with-giftbag") == (
+        receipts(test_inventory, "archive", "validated")
         + receipts(giftbag, "giftbag", "created")
     )
 
@@ -168,25 +182,26 @@ def test_init_data_keeps_the_archive_shared_as_it_changes(tmp_path: Path):
 def test_init_data_reads_both_inventories_before_writing(tmp_path: Path):
     giftbag = tmp_path / "giftbag.toml"
     _ = giftbag.write_text('[tool.lookup]\nname = "lookup"\ncolour = "blue"\n')
+    before = versions()
 
     result = CliRunner().invoke(
         app,
-        ["init-data", "alex", "--with-giftbag", "--giftbag-inventory", str(giftbag)],
+        ["init-data", "carol", "--with-giftbag", "--giftbag-inventory", str(giftbag)],
     )
 
     assert result.exit_code == 1
     assert result.stderr.startswith(f"{giftbag}: tool 'lookup': unknown key 'colour'")
 
-    assert owned(ARCHIVE) == NOTHING
-    assert not IdentityModel.objects.filter(name="alex").exists()
+    assert versions() == before
+    assert not IdentityModel.objects.filter(name="carol").exists()
 
 
-@pytest.mark.slow
-def test_wipe_data_takes_back_what_init_data_gave_and_init_data_gives_it_again():
-    inventory = parse(INVENTORY)
-    giftbag = parse(GIFTBAG)
-    _ = run("init-data", "alex", "--with-giftbag")
-    _ = run("init-data", "other", "--with-giftbag")
+def test_wipe_data_takes_back_what_init_data_gave_and_init_data_gives_it_again(
+    provision: Provision, test_inventory: ParsedInventory, test_giftbag: ParsedInventory
+):
+    inventory, giftbag = test_inventory, test_giftbag
+    _ = provision("--with-giftbag")
+    _ = provision("--with-giftbag", user="other")
 
     assert run("wipe-data", "alex") == NO_HISTORY + [
         f"[{entity}]: removed {len(getattr(giftbag, entity))}, "
@@ -201,7 +216,7 @@ def test_wipe_data_takes_back_what_init_data_gave_and_init_data_gives_it_again()
     assert owned("other") == names(giftbag)
     assert shared_with("other") == names(inventory)
 
-    assert run("init-data", "alex", "--with-giftbag") == (
+    assert provision("--with-giftbag") == (
         receipts(inventory, "archive", "validated")
         + receipts(giftbag, "giftbag", "created")
     )
@@ -216,22 +231,18 @@ def test_wipe_data_of_nobody_removes_nothing():
     assert not IdentityModel.objects.filter(name="nobody").exists()
 
 
-def ran_test_tools(user: str) -> None:
+def ran_test_tools(say: Say) -> None:
     """A run of test-tools, on the user's own tools, written down."""
-    case = next(iter(parse(INVENTORY).case))
-    repl = Repl(
-        user, Console(record=True, width=200), transport=FakeTransport(), seed=None
-    )
+    written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
 
-    assert handle(repl, "cell test-tools qwen3-8b-awq@fake")
-    assert handle(repl, f"run {case}")
-    assert "recorded as run 1" in repl.console.export_text()
+    assert "recorded as run 1" in written
 
 
-@pytest.mark.slow
-def test_wipe_data_takes_back_the_user_s_history_too():
-    _ = run("init-data", "alex", "--with-giftbag")
-    ran_test_tools("alex")
+def test_wipe_data_takes_back_the_user_s_history_too(
+    provision: Provision, say_as: SayAs
+):
+    _ = provision("--with-giftbag")
+    ran_test_tools(say_as("alex"))
 
     assert run("wipe-data", "alex")[:5] == [
         "[score]: removed 1",
@@ -245,12 +256,12 @@ def test_wipe_data_takes_back_the_user_s_history_too():
     assert owned("alex") == NOTHING
 
 
-@pytest.mark.slow
-def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read():
-    giftbag = parse(GIFTBAG)
-    _ = run("init-data", "alex", "--with-giftbag")
-    _ = run("init-data", "bob")
-    ran_test_tools("alex")
+def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read(
+    provision: Provision, say_as: SayAs, test_giftbag: ParsedInventory
+):
+    _ = provision("--with-giftbag")
+    _ = provision(user="bob")
+    ran_test_tools(say_as("alex"))
 
     bob = IdentityModel.objects.get(name="bob")
     for model in (RunModel, ConversationModel):
@@ -260,5 +271,5 @@ def test_wipe_data_keeps_a_user_whose_branches_another_s_run_read():
 
     assert result.exit_code == 1
     assert "alex is kept: others' runs or scores read its branches" in result.output
-    assert owned("alex") == names(giftbag)
+    assert owned("alex") == names(test_giftbag)
     assert RunModel.objects.count() == 1

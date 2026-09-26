@@ -1,26 +1,18 @@
 import pytest
 
-from chatddx.core.models import IdentityModel
+from chatddx.core import settings
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.queries import qs_head
-from chatddx.repo.store.configuration import (
-    get_configuration_async,
-    select_configurations_async,
-)
+from chatddx.repo.store.configuration import get_configuration, select_configurations
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.django_db(transaction=True),
-]
+# the archive, as the session's seed committed the test inventory
+pytestmark = pytest.mark.django_db
+
+ARCHIVE = settings.ARCHIVE_IDENTITY_NAME
 
 
-async def test_a_configuration_is_one_variation_of_each_slice(
-    inventory_fixture_commit: object,
-    owner: IdentityModel,
-):
-    _ = inventory_fixture_commit
-
-    plan = await get_configuration_async(owner.name, "plan-web")
+def test_a_configuration_is_one_variation_of_each_slice():
+    plan = get_configuration(ARCHIVE, "plan-web")
 
     assert plan.trail.instruction.variables == [
         "case",
@@ -42,21 +34,14 @@ async def test_a_configuration_is_one_variation_of_each_slice(
     assert plan.tags == ["ddx"]
 
 
-async def test_configurations_are_selected_by_what_they_name(
-    inventory_fixture_commit: object,
-    owner: IdentityModel,
-):
-    _ = inventory_fixture_commit
+def test_configurations_are_selected_by_what_they_name():
+    qs = qs_head(entity_of("configuration").branch_model.objects.all(), ARCHIVE)
 
-    qs = qs_head(entity_of("configuration").branch_model.objects.all(), owner.name)
-
-    free_text = await select_configurations_async(
-        owner_name=owner.name,
-        qs=qs.filter(trail__output__answer_schema__isnull=True),
+    free_text = select_configurations(
+        owner_name=ARCHIVE, qs=qs.filter(trail__output__answer_schema__isnull=True)
     )
-    with_tools = await select_configurations_async(
-        owner_name=owner.name,
-        qs=qs.filter(trail__toolset__isnull=False),
+    with_tools = select_configurations(
+        owner_name=ARCHIVE, qs=qs.filter(trail__toolset__isnull=False)
     )
 
     assert sorted(c.name for c in free_text) == [

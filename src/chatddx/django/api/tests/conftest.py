@@ -13,11 +13,10 @@ type Events = list[dict[str, Any]]
 
 
 @pytest.fixture
-def fake(monkeypatch: pytest.MonkeyPatch) -> FakeTransport:
+def fake(fake: FakeTransport, monkeypatch: pytest.MonkeyPatch) -> FakeTransport:
     """The fake vLLM, which the API's runs are sent to."""
-    transport = FakeTransport()
-    monkeypatch.setattr(runs, "TRANSPORT", transport)
-    return transport
+    monkeypatch.setattr(runs, "TRANSPORT", fake)
+    return fake
 
 
 @pytest.fixture

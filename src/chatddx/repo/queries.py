@@ -25,6 +25,17 @@ def qs_head[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
     return _head(qs, qs_owned(qs, owner_name))
 
 
+def head_of[T: BranchModel](qs: QuerySet[T], owner_name: str, name: str) -> T | None:
+    """The head of `owner_name`'s branch `name`, as `qs_head` has it, if it has one."""
+    return (
+        qs_owned(qs, owner_name)
+        .filter(name=name)
+        .select_related("owner", "trail")
+        .order_by("-timestamp", "-id")
+        .first()
+    )
+
+
 def qs_head_visible[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
     """As `qs_head`, with the branches `owner_name` collaborates on."""
     return _head(
@@ -47,8 +58,10 @@ def _head[T: BranchModel](qs: QuerySet[T], owned: QuerySet[T]) -> QuerySet[T]:
         .values_list("id", flat=True)
     )
 
+    # the heads by id alone: joined to the collaborators `owned` is filtered
+    # on, a branch would come once for each
     return (
-        owned.filter(id__in=canonical_ids)
+        qs.filter(id__in=canonical_ids)
         .select_related("owner", "trail")
         .annotate(version_count=Subquery(version_count))
         .order_by("-timestamp")

@@ -1,37 +1,12 @@
-from collections.abc import Callable
-from typing import Any
-
 import httpx2
 import pytest
 
+from chatddx.conftest import Recommit, Say, SayAs
 from chatddx.history.models import RunModel
 from chatddx.repl.commands import complete
 from chatddx.repl.shell import Repl
-from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Expected
-from chatddx.repo.store.branch import commit
-
-type Say = Callable[..., str]
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def retarget() -> Callable[[], None]:
-    def retarget() -> None:
-        case = CaseBranchModel.objects.filter(
-            owner__name="archive", name="case-1"
-        ).latest("pk")
-        _ = commit(
-            case.trail,
-            CaseBranchDetails(
-                name="case-1",
-                owner="archive",
-                targets={"diagnosis": Expected(pattern="fake & diagnosis & (a | 1)")},
-            ),
-        )
-
-    return retarget
 
 
 def lines(written: str) -> list[list[str]]:
@@ -60,7 +35,7 @@ def test_a_plan_ends_with_its_warning_and_disposition_held_to_theirs(say: Say):
 
 
 def test_score_holds_the_outstanding_runs_and_sums_them_up(
-    say: Say, retarget: Callable[[], None]
+    say: Say, recommit: Recommit
 ):
     _ = say(
         "cell free-text qwen3-8b-awq@fake",
@@ -70,7 +45,11 @@ def test_score_holds_the_outstanding_runs_and_sums_them_up(
     )
     assert "nothing to score" in say("score")
 
-    retarget()
+    recommit(
+        "case",
+        "case-1",
+        targets={"diagnosis": {"pattern": "fake & diagnosis & (a | 1)"}},
+    )
     written = say("score")
 
     assert written.count("run ") == 2
@@ -103,12 +82,12 @@ def test_score_run_says_what_came_of_one_run(say: Say):
 
 
 def test_score_says_an_errored_run_has_nothing_to_score(
-    say_through: Callable[[Any], Say],
+    say_as: SayAs,
 ):
     def failing(_request: httpx2.Request) -> httpx2.Response:
         return httpx2.Response(400, json={"error": {"message": "no such model"}})
 
-    say = say_through(httpx2.MockTransport(failing))
+    say = say_as(transport=httpx2.MockTransport(failing))
     written = say("cell free-text qwen3-8b-awq@fake", "run case-1")
 
     assert "scores" not in written
@@ -166,14 +145,16 @@ def test_scorers_lists_what_each_reads_and_what_the_cell_offers(say: Say):
     ]
 
 
-def test_score_completes_the_outstanding_runs(
-    repl: Repl, say: Say, retarget: Callable[[], None]
-):
+def test_score_completes_the_outstanding_runs(repl: Repl, say: Say, recommit: Recommit):
     _ = say("cell free-text qwen3-8b-awq@fake", "run case-1")
     run = str(RunModel.objects.get().uuid)[:8]
     assert repl.completions()["score:run"] == []
 
-    retarget()
+    recommit(
+        "case",
+        "case-1",
+        targets={"diagnosis": {"pattern": "fake & diagnosis & (a | 1)"}},
+    )
     names = repl.completions()
 
     assert names["score:run"] == [run]

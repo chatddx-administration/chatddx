@@ -1,12 +1,9 @@
 import pytest
 
+from chatddx.core import settings
 from chatddx.repo.entity_names import ENTITY_NAMES
-from chatddx.repo.inventories import (
-    InventoryBranchModel,
-    InventoryBranchOut,
-    InventoryFormDataOut,
-    InventoryTrailIn,
-)
+from chatddx.repo.inventories import InventoryBranchOut, InventoryTrailIn
+from chatddx.repo.store.inventory import form_data_out, owned_inventory
 
 pytestmark = pytest.mark.django_db
 
@@ -30,28 +27,29 @@ COUNTS = {
 }
 
 
-def test_trail_schema(inventory_fixture_ti: InventoryTrailIn):
-    assert {e: len(getattr(inventory_fixture_ti, e)) for e in ENTITY_NAMES} == COUNTS
+def test_trail_schema(trails: InventoryTrailIn):
+    assert {e: len(getattr(trails, e)) for e in ENTITY_NAMES} == COUNTS
 
 
-def test_a_committed_inventory_reads_back_as_models_specs_and_form_data(
-    inventory_fixture_bm: InventoryBranchModel,
-    inventory_fixture_bo: InventoryBranchOut,
-    inventory_fixture_fdo: InventoryFormDataOut,
-):
-    assert {e: len(inventory_fixture_bm[e]) for e in ENTITY_NAMES} == COUNTS
-    assert {e: len(getattr(inventory_fixture_bo, e)) for e in ENTITY_NAMES} == COUNTS
+def test_a_committed_inventory_reads_back_as_models_specs_and_form_data():
+    # the archive, as the session's seed committed the test inventory
+    models = owned_inventory(settings.ARCHIVE_IDENTITY_NAME)
+    specs = InventoryBranchOut.model_validate(models)
+    form_data = form_data_out(specs)
 
-    stack = inventory_fixture_bo.stack["qwen3-8b-awq@malborg"]
+    assert {e: len(models[e]) for e in ENTITY_NAMES} == COUNTS
+    assert {e: len(getattr(specs, e)) for e in ENTITY_NAMES} == COUNTS
+
+    stack = specs.stack["qwen3-8b-awq@malborg"]
 
     assert stack.details.served_name == "Qwen/Qwen3-8B-AWQ"
     assert stack.trail.host_os is not None
     assert stack.tags == ["rtx-5090"]
-    assert {e: len(getattr(inventory_fixture_fdo, e)) for e in ENTITY_NAMES} == COUNTS
+    assert {e: len(getattr(form_data, e)) for e in ENTITY_NAMES} == COUNTS
 
-    tool = inventory_fixture_fdo.tool["web_search"]
+    tool = form_data.tool["web_search"]
 
     assert (tool.name, tool.tool_name) == ("web_search", "web_search")
-    assert inventory_fixture_fdo.stack["qwen3-8b-awq@pelle"].endpoint == (
+    assert form_data.stack["qwen3-8b-awq@pelle"].endpoint == (
         "http://pelle.km:12009/v1/"
     )

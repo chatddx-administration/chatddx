@@ -1,4 +1,5 @@
 import hashlib
+import json
 import math
 from collections.abc import Mapping
 from typing import Any, cast
@@ -6,16 +7,6 @@ from typing import Any, cast
 SCHEME = "cddx-trail/1"
 
 ORDERED_PAIRS = "ordered"
-
-_ESCAPES = {
-    '"': '\\"',
-    "\\": "\\\\",
-    "\b": "\\b",
-    "\f": "\\f",
-    "\n": "\\n",
-    "\r": "\\r",
-    "\t": "\\t",
-}
 
 
 def ordered(value: Any) -> Any:
@@ -72,11 +63,9 @@ def _utf16(key: str) -> bytes:
 
 
 def _string(value: str) -> str:
-    escaped = (
-        _ESCAPES.get(char) or (f"\\u{ord(char):04x}" if ord(char) < 0x20 else char)
-        for char in value
-    )
-    return '"' + "".join(escaped) + '"'
+    # json's own escapes are the scheme's: " and \ escaped, \b \f \n \r \t by
+    # name, any other control character as \u00xx, and nothing else
+    return json.dumps(value, ensure_ascii=False)
 
 
 def _number(value: float) -> str:

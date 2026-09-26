@@ -240,61 +240,58 @@ def case(name: str, owner: str, *collaborators: str, vignette: str = "") -> None
     )
 
 
-@pytest.mark.usefixtures("unseeded")
-def test_an_identity_sees_its_own_branches_and_those_shared_with_it(
-    owner: IdentityModel,
-    other_owner: IdentityModel,
-):
-    case("mine", owner.name)
-    case("shared", other_owner.name, owner.name)
-    case("theirs", other_owner.name)
+# carol, dave and erin: the seed shares nothing with any of them
 
-    visible = select_visible_branch_models("case", owner.name)
+
+def test_an_identity_sees_its_own_branches_and_those_shared_with_it():
+    case("mine", "carol")
+    case("shared", "dave", "carol")
+    case("theirs", "dave")
+
+    visible = select_visible_branch_models("case", "carol")
 
     assert [(m.name, m.owner.name) for m in visible] == [
-        ("mine", "alex"),
-        ("shared", "other"),
+        ("mine", "carol"),
+        ("shared", "dave"),
     ]
 
 
-@pytest.mark.usefixtures("unseeded")
-def test_its_own_branch_shadows_a_shared_one_of_the_same_name(
-    owner: IdentityModel,
-    other_owner: IdentityModel,
-):
-    case("case-1", other_owner.name, owner.name)
-    case("case-1", owner.name)
+def test_a_branch_shared_with_two_is_one_branch_still():
+    case("case-1", "carol", "dave", "erin")
 
-    visible = select_visible_branch_models("case", owner.name)
-    found = get_visible_branch_model("case", owner.name, "case-1")
+    visible = select_visible_branch_models("case", "carol")
+    found = get_visible_branch_model("case", "carol", "case-1")
 
-    assert [m.owner.name for m in visible] == ["alex"]
-    assert found.owner.name == "alex"
+    assert [(m.name, m.owner.name) for m in visible] == [("case-1", "carol")]
+    assert found.owner.name == "carol"
 
 
-@pytest.mark.usefixtures("unseeded")
-def test_a_shared_branch_is_found_by_its_name_or_by_its_trail(
-    owner: IdentityModel,
-    other_owner: IdentityModel,
-):
-    case("case-1", other_owner.name, owner.name)
+def test_its_own_branch_shadows_a_shared_one_of_the_same_name():
+    case("case-1", "dave", "carol")
+    case("case-1", "carol")
 
-    by_name = get_visible_branch_model("case", owner.name, "case-1")
-    by_trail = get_visible_branch_model("case", owner.name, trail=by_name.trail_id)
+    visible = select_visible_branch_models("case", "carol")
+    found = get_visible_branch_model("case", "carol", "case-1")
 
-    assert by_name.owner.name == "other"
+    assert [m.owner.name for m in visible] == ["carol"]
+    assert found.owner.name == "carol"
+
+
+def test_a_shared_branch_is_found_by_its_name_or_by_its_trail():
+    case("case-1", "dave", "carol")
+
+    by_name = get_visible_branch_model("case", "carol", "case-1")
+    by_trail = get_visible_branch_model("case", "carol", trail=by_name.trail_id)
+
+    assert by_name.owner.name == "dave"
     assert by_trail.pk == by_name.pk
 
 
-@pytest.mark.usefixtures("unseeded")
-def test_a_branch_not_shared_with_an_identity_isn_t_found(
-    owner: IdentityModel,
-    other_owner: IdentityModel,
-):
-    case("case-1", other_owner.name)
+def test_a_branch_not_shared_with_an_identity_isn_t_found():
+    case("case-1", "dave")
 
-    with pytest.raises(BranchNotFoundError, match="no case 'case-1' for alex"):
-        _ = get_visible_branch_model("case", owner.name, "case-1")
+    with pytest.raises(BranchNotFoundError, match="no case 'case-1' for carol"):
+        _ = get_visible_branch_model("case", "carol", "case-1")
 
 
 def test_one_name_shared_by_two_is_ambiguous(

@@ -1,3 +1,5 @@
+import functools
+import json
 import re
 from collections.abc import Callable
 from typing import Annotated
@@ -30,14 +32,26 @@ def _pinned_source(value: str) -> str:
 
 
 def _json_schema(value: dict[str, JsonValue]) -> dict[str, JsonValue]:
+    problem = _schema_problem(json.dumps(value))
+
+    if problem is not None:
+        raise ValueError(f"not a valid JSON Schema: {problem}")
+
+    return value
+
+
+@functools.lru_cache(maxsize=256)
+def _schema_problem(written: str) -> str | None:
+    """What keeps the schema `written` from being a JSON Schema: each is read once."""
+    value = json.loads(written)
     validator = validator_for(value, default=jsonschema.Draft202012Validator)
 
     try:
         validator.check_schema(value)
     except jsonschema.SchemaError as e:
-        raise ValueError(f"not a valid JSON Schema: {e.message}") from None
+        return e.message
 
-    return value
+    return None
 
 
 def distinct[T](label: Callable[[T], object] = lambda item: item) -> AfterValidator:

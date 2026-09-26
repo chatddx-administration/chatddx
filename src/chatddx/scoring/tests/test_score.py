@@ -7,12 +7,12 @@ import pytest
 from django.utils import timezone
 from pydantic_ai import AgentRunResultEvent, UnexpectedModelBehavior
 
+from chatddx.conftest import Recommit
 from chatddx.core.utils import ensure_identity
 from chatddx.dev.fake_vllm import FakeTransport, stream
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
 from chatddx.history.record import Branches, Outcome, record
 from chatddx.repo.entities.case.django import CaseBranchModel
-from chatddx.repo.entities.case.pydantic import CaseBranchDetails, Expected
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
     ConfigurationTrailIn,
@@ -103,27 +103,6 @@ def applicable(run: RunModel, user: str = "alex") -> list[str]:
     return [scorer.name for scorer, _, _ in Scoring(user).applicable(run)]
 
 
-def retarget(case: str, owner: str = "archive", **targets: str | bool) -> None:
-    """
-    Commit a version of `owner`'s branch of `case` that expects `targets`,
-    each a pattern, or false.
-    """
-    branch = CaseBranchModel.objects.filter(owner__name=owner, name=case).latest("pk")
-    _ = commit(
-        branch.trail,
-        CaseBranchDetails.model_validate(
-            {
-                "name": case,
-                "owner": owner,
-                "targets": {
-                    kind: {"pattern": target} if isinstance(target, str) else target
-                    for kind, target in targets.items()
-                },
-            }
-        ),
-    )
-
-
 def test_free_text_is_held_to_its_rank_and_its_first_mention():
     assert made(ran("free-text")) == {
         "reciprocal_rank": (0.5, "2. Fake diagnosis B", None),
@@ -203,31 +182,27 @@ def test_a_score_keeps_what_it_was_made_with_and_who_made_it():
     assert rank.owner.name == "alex"
 
 
-def test_a_target_without_a_pattern_is_missing_for_the_pattern_scorers():
+def test_a_target_without_a_pattern_is_missing_for_the_pattern_scorers(
+    recommit: Recommit,
+):
     run = ran("free-text")
-    archive = CaseBranchModel.objects.get(owner__name="archive", name="case-1")
-    _ = commit(
-        archive.trail,
-        CaseBranchDetails.model_validate(
-            {
-                "name": "case-1",
-                "owner": "archive",
-                "targets": {"diagnosis": {"text": "Fake diagnosis B"}},
-            }
-        ),
-    )
+    recommit("case", "case-1", targets={"diagnosis": {"text": "Fake diagnosis B"}})
 
     assert applicable(run) == []
 
 
-def test_a_run_scored_is_outstanding_again_when_its_target_changes():
+def test_a_run_scored_is_outstanding_again_when_its_target_changes(
+    recommit: Recommit,
+):
     run = ran("free-text")
     first = Scoring("alex").score(run)
 
     assert Scoring("alex").outstanding(run) == []
     assert Scoring("alex").score(run) == []
 
-    retarget("case-1", diagnosis="fake & diagnosis & a")
+    recommit(
+        "case", "case-1", targets={"diagnosis": {"pattern": "fake & diagnosis & a"}}
+    )
 
     assert [s.name for s, _, _ in Scoring("alex").outstanding(run)] == [
         "first_mention",
@@ -246,16 +221,14 @@ def test_a_run_scored_is_outstanding_again_when_its_target_changes():
     assert Scoring("alex").latest(run) == again
 
 
-def test_one_s_own_case_s_targets_shadow_the_archive_s():
+def test_one_s_own_case_s_targets_shadow_the_archive_s(recommit: Recommit):
     run = ran("free-text")
-    archive = CaseBranchModel.objects.get(owner__name="archive", name="case-1")
-    _ = commit(
-        archive.trail,
-        CaseBranchDetails(
-            name="my-case",
-            owner="alex",
-            targets={"diagnosis": Expected(pattern="fake & diagnosis & a")},
-        ),
+    recommit(
+        "case",
+        "case-1",
+        name="my-case",
+        owner="alex",
+        targets={"diagnosis": {"pattern": "fake & diagnosis & a"}},
     )
 
     assert made(run) == {
@@ -264,12 +237,15 @@ def test_one_s_own_case_s_targets_shadow_the_archive_s():
     }
 
 
-def test_a_plan_that_rightly_raises_no_warning_is_held_to_none():
-    retarget(
+def test_a_plan_that_rightly_raises_no_warning_is_held_to_none(recommit: Recommit):
+    recommit(
+        "case",
         "case-1",
-        diagnosis="fake & diagnosis & (b | 2)",
-        warning=False,
-        disposition="admit*",
+        targets={
+            "diagnosis": {"pattern": "fake & diagnosis & (b | 2)"},
+            "warning": False,
+            "disposition": {"pattern": "admit*"},
+        },
     )
 
     assert made(ran("plan"))["warning_mentions"] == (
