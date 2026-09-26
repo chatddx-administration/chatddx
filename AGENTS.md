@@ -1,5 +1,5 @@
 NOTE:
-The project is under a heavy refactor. The portal (src/chatddx/django/portal) is being ported to the new datamodel page by page, its Batch page first, from src/chatddx/django-old-ref: stale, loaded by nothing, and named only by conftest.py's collect_ignore. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
+The project is under a heavy refactor. The portal (src/chatddx/django/portal) is being ported to the new datamodel page by page, its Cases and Batch pages first, from src/chatddx/django-old-ref: stale, loaded by nothing, and named only by conftest.py's collect_ignore. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
 
 Devenv in flake.nix devShell
 
@@ -18,5 +18,5 @@ Use `pyright: basic` for django code
 Lessons:
 * Never put help_text or any other user facing data in django models or migrations.
 * Identity resolution throughout the app uses Identity.name == request.user.username, not the auth_user FK.
-* Tests share one test inventory, `src/chatddx/data/test-inventory.toml`, and its giftbag, through the fixtures in `src/chatddx/conftest.py`: init-data seeds it for alice once per session, and every test starts from that seed and rolls back to it. A test reads the seeded archive rather than committing the inventory again: `recommit` varies an archived branch, `provision` seeds another user, `unseeded` empties the database for a test of seeding itself, `say_as` speaks to a repl through the `fake` vLLM, and a test without a database reads the inventory parsed (`test_inventory`). One slow test alone provisions the live inventory.
+* Tests share one test inventory, `src/chatddx/data/test-inventory.toml`, and its giftbag, through the fixtures in `src/chatddx/conftest.py`: init-data seeds it for alice once per session (the portal's run also gives her, as the portal takes an owner on, the giftbag and the test cases as her own), and every test starts from that seed and rolls back to it. A test reads the seeded archive rather than committing the inventory again: `recommit` varies an archived branch, `provision` seeds another user, `unseeded` empties the database for a test of seeding itself, `say_as` speaks to a repl through the `fake` vLLM, and a test without a database reads the inventory parsed (`test_inventory`). One slow test alone provisions the live inventory.
 * No real person's name goes in a test or a doc. The people in them come on in alphabetical order: alice, whom the seed is for and whom a repl or a client speaks as unless told otherwise, then bob, carol, dave and erin. An identity whose part matters more than who it is goes by that part (archive, guest, nobody, other).

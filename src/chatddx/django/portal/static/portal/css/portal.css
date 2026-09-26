@@ -173,3 +173,217 @@
 .portal-tally {
     font-variant-numeric: tabular-nums;
 }
+
+/* A case's page: boxes of its parts, as the batch's page has them. */
+.portal-box {
+    border: 1px solid var(--color-base-200);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    margin-top: 1.5rem;
+    padding: 1rem;
+}
+
+.dark .portal-box {
+    border-color: var(--color-base-800);
+}
+
+.portal-heading {
+    color: var(--color-base-900);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.dark .portal-heading {
+    color: var(--color-base-100);
+}
+
+/* a word on the version shown: an earlier one, or deleted */
+.portal-note {
+    background-color: var(--color-base-100);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+}
+
+.dark .portal-note {
+    background-color: var(--color-base-800);
+}
+
+.portal-note-warning {
+    background-color: oklch(96.2% .059 95.617);
+    color: oklch(41.4% .112 45.904);
+}
+
+.dark .portal-note-warning {
+    background-color: oklch(27.9% .077 45.635);
+    color: oklch(92.4% .12 95.746);
+}
+
+/* the name, wide, beside the language */
+.portal-case-head {
+    display: grid;
+    gap: 0 1rem;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+    .portal-case-head {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+    }
+}
+
+/* a kind of target: its name, then its text beside its pattern */
+.portal-target {
+    border-top: 1px solid var(--color-base-200);
+    display: grid;
+    gap: 0 1rem;
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 0.75rem;
+}
+
+.dark .portal-target {
+    border-color: var(--color-base-800);
+}
+
+@media (min-width: 1024px) {
+    .portal-target {
+        grid-template-columns: 10rem minmax(0, 3fr) minmax(0, 2fr);
+    }
+}
+
+.portal-target-kind {
+    padding-bottom: 0.75rem;
+}
+
+.portal-target-kind .form-checkbox {
+    margin: 0.5rem 0 0;
+}
+
+/* a box's heading, and what it offers beside it */
+.portal-box-head {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.portal-box-head .portal-heading {
+    margin-bottom: 0;
+}
+
+.portal-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+/* what saving would do, under the fields */
+.portal-said {
+    color: var(--color-base-600);
+    font-size: 0.875rem;
+}
+
+.dark .portal-said {
+    color: var(--color-base-300);
+}
+
+.portal-said-note,
+.portal-said-warning {
+    border-left: 3px solid var(--color-base-300);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.75rem;
+}
+
+.portal-said-warning {
+    border-color: oklch(76.9% .188 70.08);
+}
+
+.dark .portal-said-note {
+    border-color: var(--color-base-600);
+}
+
+/* the timeline, stepped through */
+.portal-navigator {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+    gap: 0.5rem;
+}
+
+.portal-navigator a,
+.portal-navigator > span {
+    align-items: center;
+    display: inline-flex;
+}
+
+/* the cases before and after, at the far end */
+.portal-navigator .portal-neighbours {
+    gap: 1rem;
+    margin-left: auto;
+}
+
+.portal-neighbours a {
+    gap: 0.25rem;
+}
+
+/* what changed, part by part */
+.portal-changes,
+.portal-fields {
+    display: grid;
+    font-size: 0.875rem;
+    gap: 0.5rem 1rem;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+    .portal-changes,
+    .portal-fields {
+        grid-template-columns: 10rem minmax(0, 1fr);
+    }
+}
+
+.portal-changes dt,
+.portal-fields dt {
+    font-weight: 600;
+}
+
+.portal-words,
+.portal-pre {
+    white-space: pre-wrap;
+}
+
+.portal-word-gone {
+    background-color: oklch(93.6% .032 17.717);
+    text-decoration: line-through;
+}
+
+.portal-word-new {
+    background-color: oklch(96.2% .044 156.743);
+}
+
+.dark .portal-word-gone {
+    background-color: oklch(39.6% .141 25.723);
+}
+
+.dark .portal-word-new {
+    background-color: oklch(39.3% .095 152.535);
+}
+
+/* a case beside what replaces it */
+.portal-side-by-side {
+    display: grid;
+    gap: 0 1.5rem;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+    .portal-side-by-side {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+}

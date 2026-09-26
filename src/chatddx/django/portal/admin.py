@@ -1,10 +1,11 @@
 # pyright: basic
 """
-The portal's pages: the Batch, which plans the repl's batch with its slices
-varied, confirms the plan and keeps it, to run now or later; a batch's own
-page, which shows how it stands, runs it, resumes it or runs it again, and
-takes more cases; the status of the worker at the owner's jobs, to pause,
-resume and stop them; and the admin's users and groups, in unfold's dress.
+The portal's pages: the cases (case_admin.py); the Batch, which plans the
+repl's batch with its slices varied, confirms the plan and keeps it, to run
+now or later; a batch's own page, which shows how it stands, runs it,
+resumes it or runs it again, and takes more cases; the status of the worker
+at the owner's jobs, to pause, resume and stop them; and the admin's users
+and groups, in unfold's dress.
 """
 
 from typing import Any, ClassVar, override
@@ -36,13 +37,12 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from chatddx.bench.bench import Bench
 from chatddx.bench.cell import SLICES
-from chatddx.core.utils import ensure_identity
 from chatddx.django.portal import batches, status
+from chatddx.django.portal.case_admin import CaseAdmin
 from chatddx.django.portal.forms import CASES_FORM, BatchForm, CasesForm
-from chatddx.django.portal.models import Batch
-from chatddx.repo.entity_names import EntityName
+from chatddx.django.portal.models import Batch, Case
+from chatddx.django.portal.owners import bench_of, identity_of
 from chatddx.worker import control, queue
 from chatddx.worker.models import STOPPED_BY, JobModel, Status
 
@@ -60,16 +60,13 @@ CONTROLS = {"pause": control.pause, "resume": control.resume, "stop": control.st
 # the form a batch's page runs it with, apart from the page's own
 RUN_FORM = "batch-run"
 
-# what the portal shows of the owner's own alone: what is asked, and the
-# cases; what answers, the stacks, is the archive's, a class of record apart
-OWN: tuple[EntityName, ...] = ("configuration", *SLICES, "case")
-
 # what the portal calls a batch, for the model holds no words of the portal's
 Batch._meta.verbose_name = _("batch")
 Batch._meta.verbose_name_plural = _("batches")
 
 admin.site.unregister(User)
 admin.site.unregister(Group)
+admin.site.register(Case, CaseAdmin)
 
 
 @admin.register(User)
@@ -82,16 +79,6 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 @admin.register(Group)
 class GroupAdmin(BaseGroupAdmin, ModelAdmin):
     pass
-
-
-def identity_of(request: HttpRequest) -> str:
-    """The identity a request acts as: its user's, by name."""
-    return ensure_identity(request.user.get_username()).name
-
-
-def bench_of(request: HttpRequest) -> Bench:
-    """The request's identity's bench, as the portal has it: its own, bar the stacks."""
-    return Bench(identity_of(request), own=OWN)
 
 
 def _jobs(**filters: Any) -> Any:

@@ -1,0 +1,49 @@
+{% load i18n %}
+
+{# a case's content as it was, or as a page would save it #}
+<section class="portal-box">
+    <dl class="portal-fields">
+        <dt>{% translate "Language" %}</dt>
+        <dd>{{ shown.language|default:"—" }}</dd>
+
+        <dt>{% translate "Vignette" %}</dt>
+        <dd class="portal-pre">{{ shown.vignette }}</dd>
+
+        <dt>{% translate "Tags" %}</dt>
+        <dd>{{ shown.tags|join:" "|default:"—" }}</dd>
+    </dl>
+</section>
+
+<section class="portal-box">
+    <h2 class="portal-heading">{% translate "Targets" %}</h2>
+
+    <table class="portal-table">
+        <thead>
+            <tr>
+                <th>{% translate "Kind" %}</th>
+                <th>{% translate "Text" %}</th>
+                <th>{% translate "Pattern" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for target in shown.targets %}
+                <tr>
+                    <td class="font-medium">{{ target.label }}</td>
+                    {% if target.none %}
+                        <td colspan="2">{% translate "none expected" %}</td>
+                    {% else %}
+                        <td>{% if target.text %}{{ target.text }}{% else %}<span class="portal-missing">{% translate "missing" %}</span>{% endif %}</td>
+                        <td>
+                            {% if target.pattern %}
+                                <code>{{ target.pattern }}</code>
+                                {% if target.unread %}<div class="portal-refused text-xs">{% translate "doesn't parse" %}: {{ target.unread }}</div>{% endif %}
+                            {% else %}
+                                <span class="portal-missing">{% translate "missing" %}</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>

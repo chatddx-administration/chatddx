@@ -1,0 +1,43 @@
+{% load i18n %}
+
+{# the case's timeline, stepped through a version at a time; and the cases beside it in the list #}
+<nav class="portal-navigator" aria-label="{% translate 'Versions' %}">
+    {% if before_url %}
+        <a href="{{ before_url }}" title="{% translate 'The version before' %}">
+            <span class="material-symbols-outlined">chevron_left</span>
+        </a>
+    {% else %}
+        <span class="portal-missing"><span class="material-symbols-outlined">chevron_left</span></span>
+    {% endif %}
+
+    <span>
+        {% blocktranslate with number=version.number of=version.of %}version {{ number }} of {{ of }}{% endblocktranslate %}
+        · {{ version.row.timestamp|date:"DATETIME_FORMAT" }}
+    </span>
+
+    {% if after_url %}
+        <a href="{{ after_url }}" title="{% translate 'The version after' %}">
+            <span class="material-symbols-outlined">chevron_right</span>
+        </a>
+    {% else %}
+        <span class="portal-missing"><span class="material-symbols-outlined">chevron_right</span></span>
+    {% endif %}
+
+    {% if not version.is_head %}
+        <a class="font-semibold underline" href="{{ head_url }}">{% translate "The latest" %}</a>
+    {% endif %}
+
+    <span class="portal-neighbours">
+        {% if previous_case %}
+            <a href="{{ previous_case.1 }}" title="{% translate 'The case before in the list' %}">
+                <span class="material-symbols-outlined">arrow_back</span> {{ previous_case.0 }}
+            </a>
+        {% endif %}
+
+        {% if next_case %}
+            <a href="{{ next_case.1 }}" title="{% translate 'The case after in the list' %}">
+                {{ next_case.0 }} <span class="material-symbols-outlined">arrow_forward</span>
+            </a>
+        {% endif %}
+    </span>
+</nav>

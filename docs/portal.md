@@ -1,9 +1,15 @@
 # The chatddx portal
 
 The portal is chatddx in a browser: Django's admin, dressed by unfold, at
-`/admin/`. It is being ported to the new datamodel page by page, and its
-first page is the Batch: the repl's `batch`, with its slices varied, run by
-a worker beside the portal, and watched and held from its Status page.
+`/admin/`. It is being ported to the new datamodel page by page. Its pages
+so far are the Cases, where clinicians go through each case and work with
+its vignette and targets, and the Batch: the repl's `batch`, with its
+slices varied, run by a worker beside the portal, and watched and held from
+its Status page.
+
+The portal shows you what is yours: your cases, configurations and
+variations. The one exception is what answers, the stacks and their parts,
+a class of record the archive keeps for everyone.
 
 ## Serving it
 
@@ -28,6 +34,106 @@ and beside it, on the minimal settings, the worker that runs the batches:
 A user signs in as the identity of their name, as the API's session does.
 `DJANGO_MODE=main` serves it for real: the secret key from
 `SECRET_KEY_FILE`, `HOST` as the allowed host, and secure cookies.
+
+## Cases
+
+**Cases** in the sidebar lists your cases, as a to-do list:
+
+- each case's language;
+- what its targets still want: a text, a pattern, or a pattern that
+  parses;
+- its tags, its versions, and when it was last saved.
+
+Filter the list by tag, by language or by what is still wanted, and
+search the names and the vignettes. **Add case** starts a blank one.
+
+### A case's page
+
+A case's page shows one version of it, in its timeline:
+
+- ◀ and ▶ step through the versions, with "version i of n" and when each
+  was saved.
+- It lists what that version changed of the one before: the vignette word
+  by word, each target's text and pattern, the language and the tags.
+- The cases before and after it in the list it came from are a click
+  away, with the list filtered as it was.
+
+The latest version is a form:
+
+- **Name**, **Language** and **Vignette**.
+- **Targets**. Each kind has a text, in plain words for people, and a
+  pattern, what the scorers look for. Either can wait. **None expected**
+  marks a warning that none is expected of.
+- **Tags**: those of your cases, or new ones.
+
+The form refuses a pattern that doesn't parse. It trims the whitespace
+around a text or a pattern, and an empty one counts as missing.
+
+An earlier version is shown as it was. **Edit from here** puts its content
+in the form, and saving it makes a new version from it; the versions after
+it stay in the timeline.
+
+### Saving
+
+One save makes one new version, and that version becomes the head. Saving
+what is there already makes none, and a change of tags alone is saved on
+the head as it is.
+
+The name decides where the save goes. A line under the vignette says so as
+you type, and the button says the same:
+
+- **the case's own name:** a new version of it;
+- **a new name:** a new case, and this one stays as it is;
+- **the name of another case of yours:** a new version of that case,
+  replacing its vignette and targets. The save asks first, showing that
+  case beside what replaces it. A case you deleted comes back this way.
+
+The tags go with the page. A name can't hold `/`, and the page says when a
+name differs from one of yours in capitals alone. If the case has a newer
+version since you opened the page, the page says so, and saving again
+saves yours on top of it.
+
+The vignette is what the model reads, so a changed vignette is another
+case to the runs: the runs of the old vignette keep the targets they had.
+A vignette that differs only in its line endings, or in the whitespace
+around it, is the same vignette.
+
+Where another case has the page's vignette, the page says so:
+
+- **One of yours.** While both have it, its runs go by neither name, and
+  a batch by tag runs it once. **Take its tags off** the other case, or
+  open it.
+- **One shared with you, the archive's.** Named as it is, yours takes its
+  place for you, and the vignette's runs go by that name. **Name it …**
+  puts that name in.
+
+### Runs and scores
+
+Under the case are your runs of its vignette, the latest first: when, the
+trial, how it ran, and each scorer's score for the targets they are held
+to now. A score not yet made for a changed target is **outstanding**, and
+**Score again** makes them.
+
+### Deleting
+
+**Delete this version** deletes a version for good. Deleting the latest
+version is an undo: the version before it becomes the head again. A
+version can't be deleted if scores were held to it, or if runs or trials
+of your batches read its vignette and no other version of the case has
+it.
+
+**Delete the cases ticked**, in the list, deletes whole cases:
+
+- a case nothing has read is gone for good;
+- any other case is taken out of sight. It leaves every list and batch,
+  and its runs keep its name and targets.
+
+Deleting a case's only version deletes the case. Right after, **Undo**
+brings it back, and so does saving a case under its name.
+
+Reading cases takes the view permission on them; saving a new version of
+one takes the change permission, a new case the add permission, and
+deleting the delete permission.
 
 ## The Batch
 

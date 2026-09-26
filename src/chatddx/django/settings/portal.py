@@ -156,6 +156,11 @@ UNFOLD = {
                 "collapsible": False,
                 "items": [
                     {
+                        "title": _("Cases"),
+                        "icon": "clinical_notes",
+                        "link": reverse_lazy("admin:portal_case_changelist"),
+                    },
+                    {
                         "title": _("Batches"),
                         "icon": "stacks",
                         "link": reverse_lazy("admin:portal_batch_changelist"),
