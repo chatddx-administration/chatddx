@@ -31,6 +31,13 @@ chatddx init-data alice
 This loads everything as the archive's, the shared owner, and lets alice use
 it. Run it again after an edit.
 
+`--with-giftbag` also gives alice, as her own, what
+`giftbag-inventory.toml` names: what is asked, the configurations and the
+variations they name, for a new owner to start from. What answers (the
+machines, the models and the stacks) is a class of record apart, which the
+archive keeps for everyone and no owner is given; the cases and the
+scorers stay the archive's too, shared.
+
 Keys come in two sorts, and the difference matters:
 
 - **Keys that make a thing what it is,** such as a case's vignette or an

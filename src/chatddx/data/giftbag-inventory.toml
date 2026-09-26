@@ -1,8 +1,9 @@
-# What `chatddx init-data --with-giftbag` gives a new owner as their own: the
-# configurations, every variation they name, and the cases. Machines, LLMs
-# and stacks stay the archive's.
+# What `chatddx init-data --with-giftbag` gives a new owner as their own,
+# before they start: what is asked (datamodel.md §1), the configurations and
+# every variation they name. The rest is the archive's, shared with them:
+# what answers (machines, LLMs, stacks and their parts), a different class
+# of record that no owner is given, and the cases and scorers.
 extends = [
   "inventory/slices.toml",
   "inventory/configurations.toml",
-  "cases.toml",
 ]

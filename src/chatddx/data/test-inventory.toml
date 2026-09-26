@@ -1,6 +1,13 @@
 # The inventory the tests seed the archive with: inventory.toml's registry,
 # on the test cases.
 extends = [
-  "test-registry-inventory.toml",
+  "inventory/pelle.toml",
+  "inventory/malborg.toml",
+  "inventory/fake.toml",
+  "inventory/llms.toml",
+  "inventory/clients.toml",
+  "inventory/slices.toml",
+  "inventory/configurations.toml",
+  "inventory/scorers.toml",
   "test-cases.toml",
 ]

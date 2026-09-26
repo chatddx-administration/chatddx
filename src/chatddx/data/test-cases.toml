@@ -1,4 +1,4 @@
-# The cases the tests run: the test inventory's, and the test giftbag's.
+# The cases the tests run: the archive's, which init-data shares.
 
 [case.case-1]
 vignette = "case vignette 1"
