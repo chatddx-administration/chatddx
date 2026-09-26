@@ -215,25 +215,32 @@ def test_an_llm_still_calling_tools_is_stopped(say_as: SayAs):
 RAN_AWAY = f"stopped: nothing but whitespace for {RUNAWAY} tokens"
 
 
-def test_an_llm_that_runs_away_is_stopped_and_the_run_recorded(say_as: SayAs):
+def test_an_llm_that_runs_away_is_stopped_and_what_came_before_scored(
+    say_as: SayAs,
+):
     fake = FakeTransport(runaway=True)
     say = say_as(transport=fake)
 
     written = say("cell plan qwen3-8b-awq@fake", "run case-1")
 
-    assert '"acute_warning": "fake acute warning"' in written
-    # no trail of blank lines between the answer and why it stopped
-    assert f"}}\n{RAN_AWAY}" in written
+    # no trail of blank lines between the answer, unclosed, and why it stopped
+    assert re.search(rf"\]\n+{re.escape(RAN_AWAY)}\nvalid\n", written)
+    assert "differential\n  1. fake diagnosis 1" in written
     assert "recorded as run 1 of trial" in written
     assert fake.aborted == fake.requests
 
+    # the answer is the document the fake would have written whole
+    [request] = fake.requests
+    whole = json.loads(completion(request)["choices"][0]["message"]["content"])
+
     [run] = RunModel.objects.all()
-    assert (run.status, run.valid, run.answer, run.error) == (
-        "completed",
-        False,
-        None,
-        RAN_AWAY,
-    )
+    assert (run.status, run.valid, run.error) == ("completed", True, RAN_AWAY)
+    assert run.answer == whole
+    assert {score.scorer_name: score.value for score in run.scores.all()} == {
+        "disposition_mentions": 0,
+        "reciprocal_rank": 0.5,
+        "warning_mentions": 1,
+    }
 
 
 def test_a_tool_with_nothing_to_run_is_said_before_anything_is_sent(
@@ -408,7 +415,7 @@ class RunningAway(FakeTransport):
         return body["messages"][-1]["content"] == "case vignette 1"
 
 
-def test_a_run_that_runs_away_is_stopped_on_its_line_and_the_batch_goes_on(
+def test_a_run_that_runs_away_is_scored_and_flagged_and_the_batch_goes_on(
     say_as: SayAs,
 ):
     transport = RunningAway()
@@ -417,7 +424,7 @@ def test_a_run_that_runs_away_is_stopped_on_its_line_and_the_batch_goes_on(
     written = say("cell plan qwen3-8b-awq@fake", "batch tag-2")
 
     assert row(written, "case-1")[1].startswith("~")
-    assert row(written, "case-1")[2] == "invalid"
+    assert row(written, "case-1")[2:6] == ["valid", "0", "0.5", "1"]
     assert line_of(written, "case-1 ").endswith(RAN_AWAY)
     assert row(written, "case-2")[2] == "valid"
     assert "stopped after" not in written

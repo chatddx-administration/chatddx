@@ -11,11 +11,14 @@ from pydantic_ai import (
     Agent,
     AgentRunEvents,
     ModelMessage,
+    ModelResponse,
     ModelSettings,
     NativeOutput,
     PromptedOutput,
     StructuredDict,
+    TextPart,
     Tool,
+    ToolCallPart,
     ToolOutput,
     UsageLimits,
     capture_run_messages,
@@ -24,6 +27,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.profiles import DEFAULT_PROFILE, ModelProfile, merge_profile
 from pydantic_ai.profiles.openai import OpenAIModelProfile
 from pydantic_ai.providers.vllm import VLLMProvider
+from pydantic_core import from_json
 
 from chatddx.runtime.implementation import Implementation, implementation
 from chatddx.runtime.resolution import Resolution
@@ -49,8 +53,8 @@ FINAL_RESULT = "final_result"
 TOOL_ROUNDS = 5
 
 # tokens of nothing but whitespace in a row: an LLM that streams as many has
-# run away, as gpt-oss does on malborg at times, answering and then going on
-# with newlines till its context runs out
+# run away, as gpt-oss does on malborg at times, held to a schema (see
+# docs/vllm.md), and would go on till its context runs out
 RUNAWAY = 100
 
 # where vLLM's reasoning parser streams the thinking, as versions have it
@@ -142,6 +146,44 @@ class Run:
     @property
     def new_messages(self) -> list[ModelMessage]:
         return self.messages[len(self.history) :]
+
+    def salvaged(self) -> Any:
+        """
+        The answer as far as the LLM wrote it before it ran away: the text, or
+        the JSON it wrote, closed where it stops. A string it hadn't finished
+        is left out.
+        """
+        responses = [m for m in self.new_messages if isinstance(m, ModelResponse)]
+
+        if not responses:
+            return None
+
+        parts = responses[-1].parts
+        text = "".join(part.content for part in parts if isinstance(part, TextPart))
+        coercion = self.resolution.coercion
+
+        if coercion is None:
+            return text.rstrip() or None
+
+        if coercion.mode == "tool":
+            calls = [
+                part.args
+                for part in parts
+                if isinstance(part, ToolCallPart) and part.tool_name == FINAL_RESULT
+            ]
+            written = calls[-1] if calls else None
+
+            if not isinstance(written, str):
+                return written
+        else:
+            written = text
+
+        start = written.find("{")
+
+        try:
+            return None if start < 0 else from_json(written[start:], allow_partial=True)
+        except ValueError:
+            return None
 
     def settings(self) -> ModelSettings:
         settings: dict[str, Any] = {}

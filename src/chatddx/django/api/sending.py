@@ -58,6 +58,7 @@ from chatddx.repl.bench import (
     drawn_seed,
     failed,
     greedy,
+    holds,
     unheeded,
 )
 from chatddx.repl.cell import NONE
@@ -65,7 +66,7 @@ from chatddx.repo.entities.case.django import CaseTrailModel
 from chatddx.repo.entities.case.pydantic import CaseTrailIn
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.repo.store.trail import dump_trail
-from chatddx.runtime.run import Run, invalid
+from chatddx.runtime.run import Run, Runaway, invalid
 from chatddx.scoring.score import Scoring
 
 logger = logging.getLogger(__name__)
@@ -194,31 +195,35 @@ class Sending:
         except (asyncio.CancelledError, GeneratorExit):
             self.outcome = STOPPED
             raise
+        except Runaway as e:
+            self.outcome = failed(e, self.run)
+            yield self._judged(self.outcome, self.outcome.error)
         except Exception as e:  # noqa: BLE001
-            self.outcome = failed(e, self.ready.resolution)
+            self.outcome = failed(e, self.run)
             yield Failed(message=self.outcome.error or type(e).__name__)
         else:
-            for judged in self._judged():
-                yield judged
+            resolution = self.ready.resolution
+            self.outcome = Outcome(
+                RunStatus.COMPLETED,
+                answer=self._answer,
+                valid=holds(resolution, self._answer),
+            )
+            yield self._judged(self.outcome)
         finally:
             self.finished = timezone.now()
 
-    def _judged(self) -> list[Event]:
+    def _judged(self, outcome: Outcome, stopped: str | None = None) -> Judged:
         resolution = self.ready.resolution
-        answer = self._answer
         coercion = resolution.coercion
-        problem = None if coercion is None else invalid(coercion.schema, answer)
-        valid = None if coercion is None else problem is None
-        self.outcome = Outcome(RunStatus.COMPLETED, answer=answer, valid=valid)
+        answer = outcome.answer
 
-        return [
-            Judged(
-                warning=unheeded(resolution.reasoning.intent, self._thought),
-                valid=valid,
-                problem=problem,
-                views=views_of(resolution.output, answer),
-            )
-        ]
+        return Judged(
+            warning=unheeded(resolution.reasoning.intent, self._thought),
+            valid=outcome.valid,
+            problem=None if coercion is None else invalid(coercion.schema, answer),
+            views=views_of(resolution.output, answer),
+            stopped=stopped,
+        )
 
     def recorded(self) -> list[Event]:
         """Write the run down, once, and score it; a run that never began isn't."""

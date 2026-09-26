@@ -93,7 +93,11 @@ def respond(
     newlines = 0
 
     if runaway and finish == "stop":
-        # as gpt-oss does on malborg at times: the answer ends, the tokens don't
+        # as gpt-oss does on malborg at times, held to a grammar that lets
+        # whitespace in before a closing brace: the answer ends, the tokens don't
+        if schema is not None:
+            answer = answer[:-1]
+
         room = limit if isinstance(limit, int) else CONTEXT - _prompt_tokens(body)
         newlines = max(room - len(thought) - len(answer), 0)
         finish = "length"
@@ -439,14 +443,15 @@ def fake_vllm(
     runaway: Annotated[
         bool,
         typer.Option(
-            help="after each answer, go on with newlines till max_tokens or the "
-            + "context runs out, as gpt-oss does on malborg at times"
+            help="go on with newlines till max_tokens or the context runs out, "
+            + "after a text answer or before a document's closing brace, as "
+            + "gpt-oss does on malborg at times"
         ),
     ] = False,
 ):
     fake = server(host, port, delay, reasoning_parser, runaway)
     without = "" if reasoning_parser else ", without a reasoning parser"
-    running = ", running away after each answer" if runaway else ""
+    running = ", running away at the end of each answer" if runaway else ""
     typer.echo(f"the fake vLLM, at http://{host}:{port}/v1/{without}{running}")
 
     try:

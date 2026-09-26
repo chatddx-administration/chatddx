@@ -41,7 +41,7 @@ from chatddx.repl.shell import Repl
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import CellRefused, Resolution
-from chatddx.runtime.run import Run, invalid
+from chatddx.runtime.run import Run, Runaway, invalid
 from chatddx.scoring.score import Scoring
 
 
@@ -88,8 +88,12 @@ def run(repl: Repl, name: str, seed: str | None = None) -> None:
     except KeyboardInterrupt:
         repl.console.print("\n(stopped)", style=LABEL)
         outcome = STOPPED
+    except Runaway as e:
+        outcome = failed(e, run)
+        repl.error(f"\n{outcome.error}")
+        _ = _shown(repl, ready.resolution, outcome.answer)
     except Exception as e:  # noqa: BLE001
-        outcome = failed(e, ready.resolution)
+        outcome = failed(e, run)
         unparsed = isinstance(e, UnexpectedModelBehavior)
         repl.error(f"invalid: {outcome.error}" if unparsed else f"\n{outcome.error}")
     else:
@@ -166,7 +170,7 @@ def batch(repl: Repl, *tags: str) -> None:
                     except asyncio.CancelledError:
                         outcome = STOPPED
                     except Exception as e:  # noqa: BLE001
-                        outcome = failed(e, ready.resolution)
+                        outcome = failed(e, run)
                     else:
                         outcome = Outcome(
                             RunStatus.COMPLETED,
@@ -274,7 +278,10 @@ def _judge(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | Non
     if warning is not None:
         repl.console.print(Text(warning, style=LATER))
 
-    answer = streamed.answer
+    return _shown(repl, resolution, streamed.answer)
+
+
+def _shown(repl: Repl, resolution: Resolution, answer: Any) -> bool | None:
     valid: bool | None = None
 
     if resolution.coercion is not None:

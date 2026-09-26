@@ -88,7 +88,8 @@ Around them come the API's own, by their `type`:
 - `run`: a run, before anything is sent: its id, what runs, and its seed.
 - `answer`: the answer, and the tokens and requests it took.
 - `judged`: whether the model reasoned as asked, whether the answer holds to
-  its schema, and what each view reads from it.
+  its schema, and what each view reads from it; and, where the model ran
+  away and was stopped, why (`stopped`), its answer what came before.
 - `error`: why the run came to no answer, or wasn't recorded.
 - `scores`, `recorded`: the run's scores, and its record.
 - `summary`: a batch's scores, scorer by scorer, after its last run.

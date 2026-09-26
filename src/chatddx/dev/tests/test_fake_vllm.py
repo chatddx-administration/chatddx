@@ -317,6 +317,15 @@ def test_a_call_or_an_answer_cut_short_doesn_t_run_away():
     assert (cut.runaway, cut.finish) == (0, "length")
 
 
+def test_held_to_a_schema_it_runs_away_before_the_closing_brace():
+    schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
+    held = {"type": "json_schema", "json_schema": {"schema": schema}}
+    reply = respond(body(response_format=held), runaway=True)
+
+    assert reply.content == json.dumps({"ok": False}, indent=2).removesuffix("}")
+    assert reply.runaway > 0
+
+
 def test_it_answers_whole_when_asked_not_to_stream():
     response = completion(body(GPT_OSS, stream=False))
     message = response["choices"][0]["message"]

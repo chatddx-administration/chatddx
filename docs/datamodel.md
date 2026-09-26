@@ -480,7 +480,10 @@ A **run** is one go at a trial. It records:
 - the **answer:** the parsed object for a structured output, the text for
   free text; whether it is **valid** against the schema (none for free
   text); the last response's **finish reason**; and the **error**, if any.
-  An answer that parsed but doesn't fit the schema is kept, marked invalid;
+  An answer that parsed but doesn't fit the schema is kept, marked invalid.
+  A model stopped for writing nothing but whitespace has what it wrote
+  before kept as its answer, closed where it stops, and the stop as its
+  error;
 - its **conversation.**
 
 A **conversation** holds the exchange as messages: each request, response

@@ -18,6 +18,7 @@ from pydantic_ai import (
     PartStartEvent,
     TextPart,
     ThinkingPart,
+    ToolCallPart,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
@@ -27,6 +28,7 @@ from chatddx.runtime import tools
 from chatddx.runtime.implementation import blob_of
 from chatddx.runtime.resolution import Resolution, Sampling
 from chatddx.runtime.run import (
+    FINAL_RESULT,
     RUNAWAY,
     TOOL_ROUNDS,
     Run,
@@ -521,12 +523,36 @@ async def test_an_llm_that_goes_on_with_nothing_but_whitespace_is_stopped(cell: 
 
     [response] = run.responses
     _, answered = run.messages
+    resolved = run.resolution
+    assert resolved.coercion
 
     assert fake.aborted == fake.requests
     assert bytes(response).count(b'"content": "\\n"') == RUNAWAY
     assert isinstance(answered, ModelResponse)
     assert answered.state == "interrupted"
-    assert '"acute_warning": "fake acute warning"' in str(answered.text)
+    # the closing brace never came: what came before is closed where it stops
+    assert str(answered.text).rstrip().endswith("]")
+    assert run.salvaged()["acute_warning"] == "fake acute warning"
+    assert invalid(resolved.coercion.schema, run.salvaged()) is None
+
+
+@pytest.mark.parametrize(
+    ("configuration", "part", "salvaged"),
+    [
+        ("free-text", TextPart("A cough.\n\n\n"), "A cough."),
+        ("plan", TextPart('{"a": 1, "b": ["x", "y"]\n\n'), {"a": 1, "b": ["x", "y"]}),
+        ("plan", TextPart('{"a": 1, "b": ["x", "unfinish'), {"a": 1, "b": ["x"]}),
+        ("plan", TextPart("\n\n"), None),
+        ("diagnoses-tool", ToolCallPart(FINAL_RESULT, '{"a": ["x"\n'), {"a": ["x"]}),
+    ],
+)
+def test_what_came_before_a_runaway_is_its_answer(
+    cell: Cell, configuration: str, part: Any, salvaged: Any
+):
+    run = Run(cell(configuration, "qwen3-8b-awq@fake"), CASE)
+    run.messages = [ModelResponse(parts=[part])]
+
+    assert run.salvaged() == salvaged
 
 
 @pytest.mark.asyncio

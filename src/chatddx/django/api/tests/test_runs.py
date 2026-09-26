@@ -207,7 +207,7 @@ def test_a_run_whose_server_fails_is_recorded_as_errored(
     assert "no such model" in messages[-1]["payload"]["error"]
 
 
-def test_a_run_whose_llm_runs_away_is_stopped_and_recorded(
+def test_a_run_whose_llm_runs_away_is_stopped_and_what_came_before_scored(
     run: Run, through: Callable[[Any], None]
 ):
     fake = FakeTransport(runaway=True)
@@ -215,10 +215,21 @@ def test_a_run_whose_llm_runs_away_is_stopped_and_recorded(
     stopped = f"stopped: nothing but whitespace for {RUNAWAY} tokens"
 
     events = run(**FREE_TEXT, case="case-1")
+    [judged] = of(events, "judged")
     run_ = recorded(events)
 
-    assert of(events, "error")[0]["message"] == stopped
-    assert (run_["status"], run_["error"]) == ("completed", stopped)
+    assert of(events, "error") == []
+    assert judged["stopped"] == stopped
+    assert judged["views"]["differential"][0] == "Fake diagnosis A"
+    assert (run_["status"], run_["answer"], run_["error"]) == (
+        "completed",
+        "Fake diagnosis A\nFake diagnosis B\nFake diagnosis C",
+        stopped,
+    )
+    assert [score["scorer"] for score in run_["scores"]] == [
+        "first_mention",
+        "reciprocal_rank",
+    ]
     assert fake.aborted == fake.requests
 
 

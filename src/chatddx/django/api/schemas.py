@@ -322,6 +322,8 @@ class Judged(Schema):
     valid: bool | None
     problem: str | None
     views: dict[str, list[JsonValue]]
+    # why the run was stopped short, its answer what came before
+    stopped: str | None = None
 
 
 class Failed(Schema):

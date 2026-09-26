@@ -420,7 +420,8 @@ def greedy(sampling: Sampling) -> bool:
     return writes.get("temperature") == 0 or writes.get("top_k") == 1
 
 
-def failed(error: Exception, resolution: Resolution) -> Outcome:
+def failed(error: Exception, run: Run) -> Outcome:
+    resolution = run.resolution
     unheld = False if resolution.coercion is not None else None
 
     match error:
@@ -431,7 +432,14 @@ def failed(error: Exception, resolution: Resolution) -> Outcome:
             stopped = f"stopped: still calling tools after {TOOL_ROUNDS} rounds"
             return Outcome(RunStatus.COMPLETED, valid=unheld, error=stopped)
         case Runaway():
-            return Outcome(RunStatus.COMPLETED, valid=unheld, error=f"stopped: {error}")
+            # what came before stands as the answer, and the run is flagged
+            answer = run.salvaged()
+            return Outcome(
+                RunStatus.COMPLETED,
+                answer=answer,
+                valid=holds(resolution, answer),
+                error=f"stopped: {error}",
+            )
         case _:
             return Outcome(RunStatus.ERRORED, error=f"{type(error).__name__}: {error}")
 
