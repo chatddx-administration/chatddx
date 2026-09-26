@@ -1,0 +1,22 @@
+{% extends "admin/submit_line.html" %}
+
+{% load i18n admin_urls unfold %}
+
+{% block submit-row %}
+    {% if add %}
+        {# a batch is kept once its plan is confirmed: the form only asks for it #}
+        {% component "unfold/components/button.html" with submit=1 form=opts.model_name|add:"_form" name="_save" class="w-full lg:w-auto" %}
+            {% translate "Review the batch" %}
+        {% endcomponent %}
+
+        <div class="flex flex-col gap-3 mr-auto w-full lg:flex-row lg:w-auto">
+            {% url opts|admin_urlname:'changelist' as changelist_url %}
+
+            {% component "unfold/components/button.html" with href=changelist_url variant="default" class="w-full lg:w-auto" %}
+                {% translate "Close" %}
+            {% endcomponent %}
+        </div>
+    {% else %}
+        {{ block.super }}
+    {% endif %}
+{% endblock %}

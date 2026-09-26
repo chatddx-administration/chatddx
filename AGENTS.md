@@ -1,11 +1,15 @@
 NOTE:
-The project is under a heavy refactor. The portal (src/chatddx/django/portal) still relies on remnants from the past, and the baseline leaves its tests (src/chatddx/django/tests) out. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
+The project is under a heavy refactor. The portal (src/chatddx/django/portal) is being ported to the new datamodel page by page, its Batch page first, from src/chatddx/django-old-ref: stale, loaded by nothing, and named only by conftest.py's collect_ignore. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
 
 Devenv in flake.nix devShell
 
 PostgreSQL 16 always
 
-Baseline: `pytest -m "not network"`; quick: `pytest -m "not network and not slow"`; `--reuse-db` keeps the test database between runs (`--create-db` once a migration changes)
+Settings: `chatddx.django.settings` is minimal, for the CLI, the repl, the API and their tests; `chatddx.django.settings.portal` adds what serving the portal takes (docs/portal.md), and nothing outside the portal leans on it.
+
+Baseline, in two runs: `pytest -m "not network"` under the minimal settings, and `pytest -m "not network" --ds chatddx.django.settings.portal`, which runs the portal's tests alone, on a test database of their own; quick: add `and not slow` to either; `--reuse-db` keeps the test database between runs (`--create-db` once a migration changes)
+
+The repl, the API and the portal's Batch plan and run cells through one internal API, `chatddx.bench`: a Bench (the registry as an identity sees it), a Cell, and a Plan.
 
 Use `pyright: basic` for django code
 

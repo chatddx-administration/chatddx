@@ -1,9 +1,11 @@
 # pyright: basic
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from pytest_django import DjangoDbBlocker
 from rich.console import Console
@@ -23,6 +25,8 @@ from chatddx.repo.store.branch import commit
 # the old portal and its worker, kept for reference: nothing runs them
 collect_ignore = ["django-old-ref"]
 
+PORTAL = Path(__file__).parent / "django" / "portal"
+
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
 TEST_GIFTBAG = settings.INVENTORY_PATH / "test-giftbag-inventory.toml"
 
@@ -35,6 +39,19 @@ type Provision = Callable[..., list[str]]
 type Say = Callable[..., str]
 type SayAs = Callable[..., Say]
 type Recommit = Callable[..., None]
+
+
+def pytest_ignore_collect(collection_path: Path) -> bool | None:
+    """
+    The portal's tests run under its settings, the rest's under the minimal
+    ones, and each run leaves the other's out (AGENTS.md).
+    """
+    inside = collection_path == PORTAL or PORTAL in collection_path.parents
+
+    if apps.is_installed("chatddx.django.portal"):
+        return None if inside or collection_path in PORTAL.parents else True
+
+    return True if inside else None
 
 
 @pytest.fixture(scope="session")

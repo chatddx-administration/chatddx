@@ -14,6 +14,10 @@ after another, each run recorded as `run` records it. No run points at a
 batch, and nothing more is planned for it. The seed is the de facto batch
 key until there is a reason to do otherwise.
 
+The portal's Batch page (`portal.md`) keeps a batch of its own: what its
+owner asked for and the plan they confirmed, for them to look back on. It
+is the portal's alone, and no run points at it, so what follows stands.
+
 ### What was designed
 
 A batch was to be an order kept in history, naming:

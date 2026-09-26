@@ -1,0 +1,91 @@
+/* A slice's variations: checkboxes as chips, a ticked one filled. */
+.portal-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.portal-chip {
+    align-items: center;
+    border: 1px solid var(--color-base-200);
+    border-radius: 9999px;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    padding: 0.25rem 0.75rem;
+    position: relative;
+    user-select: none;
+}
+
+.dark .portal-chip {
+    border-color: var(--color-base-700);
+}
+
+.portal-chip input {
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 1px;
+}
+
+.portal-chip:hover {
+    border-color: var(--color-primary-400);
+}
+
+.portal-chip:has(input:checked) {
+    background-color: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+    color: white;
+}
+
+.portal-chip:has(input:focus-visible) {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+/* What a planned cell sets in place of its configuration's. */
+.portal-chip-set {
+    cursor: default;
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+    padding: 0 0.5rem;
+}
+
+/* The tables of a plan. */
+.portal-table {
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    width: 100%;
+}
+
+.portal-table th {
+    border-bottom: 1px solid var(--color-base-200);
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+
+.portal-table td {
+    border-bottom: 1px solid var(--color-base-200);
+    padding: 0.5rem 0.75rem;
+    vertical-align: top;
+}
+
+.dark .portal-table th,
+.dark .portal-table td {
+    border-color: var(--color-base-800);
+}
+
+.portal-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.portal-refused {
+    color: oklch(57.7% .245 27.325);
+}
+
+.portal-missing {
+    color: var(--color-base-500);
+}

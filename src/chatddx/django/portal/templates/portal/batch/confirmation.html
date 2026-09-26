@@ -1,0 +1,93 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n unfold %}
+
+{% block content %}
+    <div class="border border-base-200 rounded-default shadow-xs dark:border-base-800">
+        <div class="p-4">
+            <p class="font-semibold text-font-important-light dark:text-font-important-dark">
+                {% if shown.trials %}
+                    {% blocktranslate count counter=shown.trials %}Saving this batch plans {{ counter }} trial:{% plural %}Saving this batch plans {{ counter }} trials:{% endblocktranslate %}
+                {% else %}
+                    {% translate "This batch plans nothing to run:" %}
+                {% endif %}
+                {{ description }}.
+            </p>
+
+            <p class="mt-1 text-sm">
+                {% if shown.seed is not None %}
+                    {% blocktranslate with seed=shown.seed %}Each trial takes the seed #{{ seed }}, a greedy cell's aside.{% endblocktranslate %}
+                {% else %}
+                    {% translate "Its trials go unseeded." %}
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="border-base-200 border-t p-4 dark:border-base-800">
+            {% include "portal/batch/plan.html" %}
+        </div>
+
+        {% if scorers %}
+            <div class="border-base-200 border-t p-4 dark:border-base-800">
+                <h2 class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+                    {% translate "Scorers" %}
+                </h2>
+
+                <table class="portal-table">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Scorer" %}</th>
+                            <th>{% translate "Reads" %}</th>
+                            <th>{% translate "Held to" %}</th>
+                            <th>{% translate "Cells" %}</th>
+                            <th>{% blocktranslate count counter=shown.case_count %}Of {{ counter }} case{% plural %}Of {{ counter }} cases{% endblocktranslate %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for scorer in scorers %}
+                            <tr>
+                                <td class="font-medium">{{ scorer.name }}</td>
+                                <td>{{ scorer.view }}</td>
+                                <td>{{ scorer.target_kind|default:"—" }}</td>
+                                {% if scorer.offered %}
+                                    <td class="whitespace-nowrap">
+                                        {% blocktranslate with offered=scorer.offered cells=shown.cells|length %}{{ offered }} of {{ cells }} offer it{% endblocktranslate %}
+                                    </td>
+                                    <td>
+                                        {% if scorer.target_kind %}
+                                            {% blocktranslate with have=scorer.have %}{{ have }} have it{% endblocktranslate %}{% if scorer.missing.shown %}<span class="portal-missing">; {% translate "missing" %}: {{ scorer.missing.shown|join:" " }}{% if scorer.missing.more %} {% blocktranslate count counter=scorer.missing.more %}and {{ counter }} more{% plural %}and {{ counter }} more{% endblocktranslate %}{% endif %}</span>{% endif %}{% if scorer.unread.shown %}<span class="portal-refused">; {% translate "doesn't parse" %}: {{ scorer.unread.shown|join:" " }}{% if scorer.unread.more %} {% blocktranslate count counter=scorer.unread.more %}and {{ counter }} more{% plural %}and {{ counter }} more{% endblocktranslate %}{% endif %}</span>{% endif %}
+                                        {% else %}
+                                            {% translate "all" %}
+                                        {% endif %}
+                                    </td>
+                                {% else %}
+                                    <td class="portal-missing" colspan="2">{% translate "no cell's output offers what it reads" %}</td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        <form method="post" action="{{ action_url }}" class="border-base-200 border-t px-4 py-3 dark:border-base-800">
+            {% csrf_token %}
+
+            {% for name, value in asked %}
+                <input type="hidden" name="{{ name }}" value="{{ value }}">
+            {% endfor %}
+
+            <div class="flex flex-col gap-3 items-center w-full lg:flex-row">
+                {% component "unfold/components/button.html" with href=back_url variant="default" class="w-full lg:mb-0 lg:w-auto" %}
+                    {% translate "Back to the form" %}
+                {% endcomponent %}
+
+                {% if shown.trials %}
+                    {% component "unfold/components/button.html" with submit=1 name=confirm value="1" class="w-full lg:ml-auto lg:w-auto" %}
+                        {% translate "Save the batch" %}
+                    {% endcomponent %}
+                {% endif %}
+            </div>
+        </form>
+    </div>
+{% endblock %}
