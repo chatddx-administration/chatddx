@@ -1,3 +1,5 @@
+{% load i18n %}
+
 {# what a record holds: each field's label, and its value or its items #}
 <dl class="portal-fields">
     {% for field in fields %}
@@ -7,7 +9,16 @@
                 <ul class="portal-facts">
                     {% for item in field.items %}<li>{{ item }}</li>{% endfor %}
                 </ul>
-            {% elif field.code and field.value != "—" %}
+            {% elif field.value == "—" %}
+                —
+            {% elif field.folded %}
+                <details class="portal-part">
+                    <summary class="portal-part-label">{% translate "Show it" %}</summary>
+                    <pre class="portal-code">{{ field.value }}</pre>
+                </details>
+            {% elif field.text %}
+                <div class="portal-pre portal-text">{{ field.value }}</div>
+            {% elif field.code %}
                 <code class="portal-value">{{ field.value }}</code>
             {% else %}
                 {{ field.value }}

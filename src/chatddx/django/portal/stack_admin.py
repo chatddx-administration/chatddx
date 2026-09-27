@@ -28,7 +28,7 @@ from unfold.admin import ModelAdmin
 
 from chatddx.bench.bench import Bench
 from chatddx.bench.sending import Handed
-from chatddx.django.portal import checking, stacks
+from chatddx.django.portal import checking, records, stacks
 from chatddx.django.portal.checking import Checked, Checking, Event
 from chatddx.django.portal.models import Stack
 from chatddx.django.portal.owners import identity_of
@@ -133,7 +133,7 @@ class StackAdmin(ModelAdmin):
             else None
         )
 
-        if row is None or not stacks.readable(row, identity_of(request)):
+        if row is None or not records.readable(row, identity_of(request)):
             raise Http404
 
         return row

@@ -7,19 +7,29 @@ stack reads has it, the LLM as a run read it where the page is a run's; and
 where the pages are, a run's the version it read.
 """
 
-import json
 from collections.abc import Sequence
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from typing import Any
 
-from django.db.models import Model
 from django.urls import reverse
 from django.utils.translation import gettext, gettext_lazy as _, ngettext
 from pydantic import JsonValue
 
 from chatddx.bench.bench import Bench
-from chatddx.core import settings
+from chatddx.django.portal.records import (
+    Change,
+    Field,
+    Newer,
+    Version,
+    branch_of,
+    name_of,
+    or_none,
+    owner_of,
+    readable,
+    said,
+    timeline_of,
+    version_of,
+)
 from chatddx.history.models import RunModel
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.llm.django import LLMBranchModel
@@ -40,7 +50,6 @@ from chatddx.repo.entities.serving.pydantic import ServingDetails, ServingTrailB
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entities.stack.pydantic import StackBranchOut, StackDetails
 from chatddx.repo.entity_names import EntityName
-from chatddx.repo.families.django import BranchModel
 from chatddx.repo.names import short_fingerprint
 from chatddx.repo.store.branch import (
     AmbiguousBranchError,
@@ -90,53 +99,6 @@ DETAILS: dict[str, Any] = {
     "credential": _("Credential"),
     "max_jobs": _("Slots"),
 }
-
-
-@dataclass(frozen=True)
-class Field:
-    """A line of what a record holds: what it is, and its value, or its items."""
-
-    label: Any
-    value: str = "—"
-    items: list[str] = field(default_factory=list[str])
-    # shown as code: a path, a name as it is sent
-    code: bool = False
-    # a value to look into
-    trouble: bool = False
-
-
-@dataclass(frozen=True)
-class Version:
-    """Which version of its timeline a row is, and when it was saved."""
-
-    number: int
-    of: int
-    saved: datetime
-
-    @property
-    def latest(self) -> bool:
-        return self.number == self.of
-
-
-@dataclass(frozen=True)
-class Change:
-    """
-    What the latest version holds in place of what this one does, or, of
-    what takes more than a line to say, that it changed.
-    """
-
-    label: Any
-    before: str | None = None
-    after: str | None = None
-
-
-@dataclass(frozen=True)
-class Newer:
-    """The latest version of a timeline, where the one shown is an earlier."""
-
-    url: str
-    version: Version
-    changes: list[Change]
 
 
 @dataclass(frozen=True)
@@ -197,35 +159,6 @@ def page_named(identity: str, name: str) -> str | None:
     return page_of(row.pk)
 
 
-def readable(row: BranchModel, identity: str) -> bool:
-    """Whether the identity reads the row's timeline: its own, or shared with it."""
-    if row.owner.name == identity:
-        return True
-
-    return (
-        type(row)
-        .objects.filter(
-            owner_id=row.owner_id, name=row.name, collaborators__name=identity
-        )
-        .exists()
-    )
-
-
-def timeline_of(row: BranchModel) -> list[Any]:
-    """The row's timeline, its first version first."""
-    return list(
-        type(row)
-        .objects.filter(owner_id=row.owner_id, name=row.name)
-        .select_related("owner", "trail")
-        .order_by("timestamp", "id")
-    )
-
-
-def version_of(row: BranchModel, timeline: list[Any]) -> Version:
-    number = next(i for i, each in enumerate(timeline, 1) if each.pk == row.pk)
-    return Version(number, len(timeline), row.timestamp)
-
-
 def shown(row: StackBranchModel, identity: str, llm: int | None = None) -> Shown:
     """
     The stack's version, gathered for its page; its LLM the version `llm`
@@ -245,7 +178,7 @@ def shown(row: StackBranchModel, identity: str, llm: int | None = None) -> Shown
     return Shown(
         row=row,
         stack=stack,
-        owner=_owner(row.owner.name, identity),
+        owner=owner_of(row.owner.name, identity),
         fingerprint=short_fingerprint(row.trail.fingerprint),
         version=version,
         before=page_of(timeline[number - 2].pk) if number > 1 else None,
@@ -282,16 +215,8 @@ def _pinned(llm: int | None, stack: StackBranchOut, identity: str) -> Any:
     return found if found is not None and readable(found, identity) else None
 
 
-def _branch_of(entity: EntityName, trail: Any, identity: str) -> Any:
-    """The newest version of the identity's branch of the part, if it has one."""
-    try:
-        return get_visible_branch_model(entity, identity, trail=trail.id)
-    except (BranchNotFoundError, AmbiguousBranchError):
-        return None
-
-
 def _llm_out(pinned: Any, stack: StackBranchOut, identity: str) -> LLMBranchOut | None:
-    row = pinned or _branch_of("llm", stack.trail.llm, identity)
+    row = pinned or branch_of("llm", stack.trail.llm, identity)
     return None if row is None else LLMBranchOut.model_validate(row)
 
 
@@ -303,7 +228,7 @@ def _part(
     pinned: Any,
     stack_row: StackBranchModel,
 ) -> Part:
-    row = (pinned if key == "llm" else None) or _branch_of(entity, trail, identity)
+    row = (pinned if key == "llm" else None) or branch_of(entity, trail, identity)
     details: Any = (
         entity_of(entity).branch_out.model_validate(row).details
         if row is not None
@@ -355,9 +280,9 @@ def _details(stack: StackBranchOut, bench: Bench) -> list[Field]:
     held = bench.secret(credential) is not None if credential else None
 
     return [
-        Field(DETAILS["endpoint"], _or_none(details.endpoint), code=True),
-        Field(DETAILS["served_name"], _or_none(details.served_name), code=True),
-        Field(DETAILS["api"], _or_none(details.api)),
+        Field(DETAILS["endpoint"], or_none(details.endpoint), code=True),
+        Field(DETAILS["served_name"], or_none(details.served_name), code=True),
+        Field(DETAILS["api"], or_none(details.api)),
         Field(
             DETAILS["credential"],
             gettext("none: it takes no secret")
@@ -390,7 +315,7 @@ def _changes(
         for each in (row, latest)
     )
     changes = [
-        Change(label, _said(was[key]), _said(now[key]))
+        Change(label, said(was[key]), said(now[key]))
         for key, label in DETAILS.items()
         if was[key] != now[key]
     ]
@@ -403,22 +328,12 @@ def _changes(
             changes.append(
                 Change(
                     LABELS[key],
-                    _name_of(entity, before, identity),
-                    _name_of(entity, after, identity),
+                    name_of(entity, before, identity),
+                    name_of(entity, after, identity),
                 )
             )
 
     return changes
-
-
-def _name_of(entity: EntityName, trail: Any, identity: str) -> str:
-    if trail is None:
-        return "—"
-
-    row = _branch_of(entity, trail, identity)
-    short = short_fingerprint(trail.fingerprint)
-
-    return f"{row.name} ({short})" if row is not None else short
 
 
 def _llm_fields(trail: Any, details: LLMDetails) -> list[Field]:
@@ -427,18 +342,18 @@ def _llm_fields(trail: Any, details: LLMDetails) -> list[Field]:
 
     return [
         Field(_("Snapshot"), trail.snapshot, code=True),
-        Field(_("Source"), _or_none(details.source), code=details.source is not None),
-        Field(_("Family"), _or_none(specs.family)),
+        Field(_("Source"), or_none(details.source), code=details.source is not None),
+        Field(_("Family"), or_none(specs.family)),
         Field(_("Parameters"), _parameters(specs)),
-        Field(_("Quantization"), _or_none(specs.quantization)),
+        Field(_("Quantization"), or_none(specs.quantization)),
         Field(_("Context"), _tokens(specs.context_length)),
-        Field(_("Licence"), _or_none(specs.licence)),
+        Field(_("Licence"), or_none(specs.licence)),
         Field(_("Reasoning"), items=_reasoning(facts.reasoning)),
         Field(_("Sampling"), items=_sampling(facts.sampling)),
         Field(_("Coercion"), items=_coercion(facts.coercion)),
         Field(
             _("Profile"),
-            items=[f"{name} = {_said(value)}" for name, value in facts.profile.items()],
+            items=[f"{name} = {said(value)}" for name, value in facts.profile.items()],
         ),
     ]
 
@@ -477,9 +392,9 @@ def _machine_fields(trail: Any, details: MachineDetails) -> list[Field]:
                 for gpu in (specs.gpus if specs else [])
             ],
         ),
-        Field(_("CPU"), _or_none(specs.cpu if specs else None)),
+        Field(_("CPU"), or_none(specs.cpu if specs else None)),
         Field(_("RAM"), f"{specs.ram_gib} GiB" if specs and specs.ram_gib else "—"),
-        Field(_("Location"), _or_none(specs.location if specs else None)),
+        Field(_("Location"), or_none(specs.location if specs else None)),
         Field(
             _("Unreliable"),
             gettext(
@@ -498,22 +413,22 @@ def _os_fields(trail: Any, details: OsDetails) -> list[Field]:
         Field(_("Toplevel"), trail.toplevel, code=True),
         Field(
             _("Flake revision"),
-            _or_none(details.flake_rev),
+            or_none(details.flake_rev),
             code=bool(details.flake_rev),
         ),
-        Field(_("Hostname"), _or_none(specs.hostname if specs else None)),
-        Field(_("Kernel"), _or_none(specs.kernel if specs else None)),
-        Field(_("NVIDIA driver"), _or_none(specs.nvidia_driver if specs else None)),
+        Field(_("Hostname"), or_none(specs.hostname if specs else None)),
+        Field(_("Kernel"), or_none(specs.kernel if specs else None)),
+        Field(_("NVIDIA driver"), or_none(specs.nvidia_driver if specs else None)),
         Field(
             _("Nixpkgs revision"),
-            _or_none(specs.nixpkgs_rev if specs else None),
+            or_none(specs.nixpkgs_rev if specs else None),
             code=bool(specs and specs.nixpkgs_rev),
         ),
     ]
 
 
 def _reasoning(facts: ReasoningFacts) -> list[str]:
-    said = (
+    lines = (
         [gettext("by default: %(intent)s") % {"intent": facts.default}]
         if facts.default
         else []
@@ -523,11 +438,11 @@ def _reasoning(facts: ReasoningFacts) -> list[str]:
         fact = getattr(facts, intent)
 
         if fact is not None:
-            said.append(f"{intent}: {_fact(fact)}")
+            lines.append(f"{intent}: {_fact(fact)}")
 
     if facts.budget is not None:
         budget = facts.budget
-        said.append(
+        lines.append(
             gettext("a budget: %(fact)s")
             % {
                 "fact": _fact(budget)
@@ -536,28 +451,28 @@ def _reasoning(facts: ReasoningFacts) -> list[str]:
             }
         )
 
-    return said
+    return lines
 
 
 def _sampling(facts: SamplingFacts) -> list[str]:
-    said = [
+    lines = [
         gettext("recommended for %(intent)s: %(values)s")
-        % {"intent": intent, "values": _said(values.model_dump(exclude_none=True))}
+        % {"intent": intent, "values": said(values.model_dump(exclude_none=True))}
         for intent, values in facts.recommended.items()
     ]
 
     if facts.generation_config is not None:
         written = facts.generation_config.model_dump(exclude_none=True)
-        said.append(
+        lines.append(
             gettext("its generation config: %(values)s")
-            % {"values": _said(written) if written else gettext("sets nothing")}
+            % {"values": said(written) if written else gettext("sets nothing")}
         )
 
-    return said
+    return lines
 
 
 def _coercion(facts: CoercionFacts) -> list[str]:
-    said = (
+    lines = (
         [gettext("auto: %(mode)s") % {"mode": facts.default}] if facts.default else []
     )
 
@@ -568,13 +483,13 @@ def _coercion(facts: CoercionFacts) -> list[str]:
             case None:
                 continue
             case Refusal():
-                said.append(f"{mode}: {_fact(fact)}")
+                lines.append(f"{mode}: {_fact(fact)}")
             case ModeFact(needs=needs, note=note):
-                said.append(
+                lines.append(
                     f"{mode}: {_needing(None, needs)}" + (f"; {note}" if note else "")
                 )
 
-    return said
+    return lines
 
 
 def _fact(fact: Any) -> str:
@@ -584,7 +499,7 @@ def _fact(fact: Any) -> str:
         case Refusal(refused=why):
             return gettext("refused: %(why)s") % {"why": why}
         case _:
-            return _said(fact)
+            return said(fact)
 
 
 def _needing(field_name: str | None, needs: Sequence[str]) -> str:
@@ -594,19 +509,19 @@ def _needing(field_name: str | None, needs: Sequence[str]) -> str:
         else gettext("a tool-call parser")
         for need in needs
     )
-    said = field_name or ""
+    named = field_name or ""
 
     if wanted:
-        return (f"{said}, " if said else "") + gettext("needs %(what)s") % {
+        return (f"{named}, " if named else "") + gettext("needs %(what)s") % {
             "what": wanted
         }
 
-    return said or gettext("needs nothing")
+    return named or gettext("needs nothing")
 
 
 def _arguments(args: dict[str, JsonValue]) -> list[str]:
     return [
-        name if value is True else f"{name} = {_said(value)}"
+        name if value is True else f"{name} = {said(value)}"
         for name, value in args.items()
     ]
 
@@ -631,46 +546,3 @@ def _tokens(count: int | None) -> str:
         return "—"
 
     return ngettext("%(count)d token", "%(count)d tokens", count) % {"count": count}
-
-
-def _owner(owner: str, identity: str) -> str:
-    if owner == identity:
-        return gettext("yours")
-
-    if owner == settings.ARCHIVE_IDENTITY_NAME:
-        return gettext("the archive's")
-
-    return gettext("%(owner)s's") % {"owner": owner}
-
-
-def _or_none(value: Any) -> str:
-    return "—" if value is None or value == "" else str(value)
-
-
-def _said(value: Any) -> str:
-    """A value in a line, as the inventory writes it: `name = value, …`."""
-    match value:
-        case None:
-            return "—"
-        case bool():
-            return "true" if value else "false"
-        case dict():
-            return ", ".join(f"{k} = {_inner(v)}" for k, v in value.items()) or "{}"
-        case list():
-            return ", ".join(_inner(item) for item in value)
-        case Model():
-            return str(value)
-        case _:
-            return str(value)
-
-
-def _inner(value: Any) -> str:
-    match value:
-        case str():
-            return json.dumps(value, ensure_ascii=False)
-        case dict():
-            return "{" + _said(value) + "}"
-        case list():
-            return "[" + _said(value) + "]"
-        case _:
-            return _said(value)

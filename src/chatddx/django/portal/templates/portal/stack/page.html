@@ -32,7 +32,7 @@
     </nav>
 
     {% if shown.newer %}
-        {% include "portal/stack/newer.html" with newer=shown.newer what=shown.row.name %}
+        {% include "portal/record/newer.html" with newer=shown.newer what=shown.row.name %}
     {% endif %}
 
     <section class="portal-box">
@@ -41,7 +41,7 @@
             <span class="portal-missing text-sm">{{ shown.owner }} · {{ shown.fingerprint }}</span>
         </div>
 
-        {% include "portal/stack/fields.html" with fields=shown.details %}
+        {% include "portal/record/fields.html" with fields=shown.details %}
     </section>
 
     <section class="portal-box" id="stack-test" data-broke-off="{% translate 'The Test broke off:' %}">
@@ -84,10 +84,10 @@
                 </div>
 
                 {% if part.newer %}
-                    {% include "portal/stack/newer.html" with newer=part.newer what=part.name %}
+                    {% include "portal/record/newer.html" with newer=part.newer what=part.name %}
                 {% endif %}
 
-                {% include "portal/stack/fields.html" with fields=part.fields %}
+                {% include "portal/record/fields.html" with fields=part.fields %}
             </section>
         {% endfor %}
     </div>
