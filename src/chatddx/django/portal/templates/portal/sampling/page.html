@@ -1,0 +1,32 @@
+{% extends "portal/variation/page.html" %}
+
+{% load i18n %}
+
+{% block fields %}
+    <div class="portal-halves">
+        <div>
+            {% include "unfold/helpers/field.html" with field=form.name %}
+        </div>
+
+        <div>
+            {% include "unfold/helpers/field.html" with field=form.defaults %}
+        </div>
+    </div>
+
+    <p class="portal-missing mb-2 text-sm">{% translate "A setting left empty is the defaults'. One given outright wins over them." %}</p>
+
+    <div class="portal-settings">
+        {% include "unfold/helpers/field.html" with field=form.temperature %}
+        {% include "unfold/helpers/field.html" with field=form.top_p %}
+        {% include "unfold/helpers/field.html" with field=form.top_k %}
+        {% include "unfold/helpers/field.html" with field=form.max_tokens %}
+        {% include "unfold/helpers/field.html" with field=form.presence_penalty %}
+        {% include "unfold/helpers/field.html" with field=form.frequency_penalty %}
+    </div>
+
+    {% include "unfold/helpers/field.html" with field=form.stop %}
+{% endblock %}
+
+{% block shown %}
+    {% include "portal/sampling/realized.html" %}
+{% endblock %}

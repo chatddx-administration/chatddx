@@ -5,20 +5,23 @@ slices varied. Use and On put a configuration and a stack in the cell, the
 case tags say which cases it runs on, the variations ticked on each slice
 are crossed into the batch's cells, and the seed is each trial's, a greedy
 cell's aside. The case form: a case as its page saves it, a new version of
-whichever case its name names.
+whichever case its name names. The sampling form: a sampling variation, so
+saved.
 """
 
 import json
 from dataclasses import dataclass
 from math import prod
-from typing import Any
+from typing import Any, ClassVar
 
 from django import forms
 from django.core.exceptions import ValidationError
 from django.http import QueryDict
 from django.utils.text import capfirst
 from django.utils.translation import gettext_lazy as _
+from pydantic import ValidationError as PydanticValidationError
 from unfold.widgets import (
+    UnfoldAdminDecimalFieldWidget,
     UnfoldAdminIntegerFieldWidget,
     UnfoldAdminSelect2MultipleWidget,
     UnfoldAdminSelect2Widget,
@@ -32,8 +35,9 @@ from chatddx.bench.bench import MAX_SEED, Bench, drawn_seed
 from chatddx.bench.cell import NONE, OPTIONAL, SLICES
 from chatddx.bench.plan import Plan, crossed
 from chatddx.core.models import IdentityModel
-from chatddx.django.portal import batches, cases
+from chatddx.django.portal import batches, cases, variations
 from chatddx.django.portal.models import Batch
+from chatddx.django.portal.slices import DEFAULTS
 from chatddx.repo.entities.case.pydantic import (
     EXPECTS_NONE,
     TARGET_KINDS,
@@ -43,8 +47,10 @@ from chatddx.repo.entities.case.pydantic import (
     Target,
     TargetKind,
 )
+from chatddx.repo.entities.sampling.pydantic import SamplingTrailIn
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel
+from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.scoring.scorers.patterns import unread_pattern
 
 # the most cells a batch crosses its variations into
@@ -515,3 +521,154 @@ def _own(visible: dict[str, list[BranchModel]]) -> dict[str, dict[str, str]]:
         own[model.name] = variations
 
     return own
+
+
+# what a sampling sets outright, in the order its form asks
+SAMPLING_SET = (
+    "temperature",
+    "top_p",
+    "top_k",
+    "max_tokens",
+    "presence_penalty",
+    "frequency_penalty",
+)
+
+
+class SamplingForm(forms.Form):
+    """
+    A sampling variation as its page saves it: the name it is saved under,
+    what a setting left out means, and what it sets outright. What the page
+    began from rides along: the variation it is of, the head it found, and
+    the version it began from, where it is an earlier one.
+    """
+
+    # a new variation, as its page starts it
+    BLANK: ClassVar[dict[str, Any]] = {"defaults": "recommended"}
+
+    edited = forms.CharField(required=False, widget=forms.HiddenInput)
+    head = forms.IntegerField(required=False, widget=forms.HiddenInput)
+    since = forms.IntegerField(required=False, widget=forms.HiddenInput)
+
+    name = forms.CharField(
+        label=_("Name"), max_length=255, widget=UnfoldAdminTextInputWidget
+    )
+    defaults = forms.ChoiceField(
+        label=_("A setting left out"),
+        choices=lambda: [(name, f"{name}: {said}") for name, said in DEFAULTS.items()],
+        widget=UnfoldAdminSelectWidget,
+    )
+    temperature = forms.FloatField(
+        label=_("Temperature"),
+        required=False,
+        widget=UnfoldAdminDecimalFieldWidget(attrs={"step": "0.05"}),
+    )
+    top_p = forms.FloatField(
+        label=_("Top p"),
+        required=False,
+        widget=UnfoldAdminDecimalFieldWidget(attrs={"step": "0.05"}),
+    )
+    top_k = forms.IntegerField(
+        label=_("Top k"), required=False, widget=UnfoldAdminIntegerFieldWidget
+    )
+    max_tokens = forms.IntegerField(
+        label=_("Max tokens"), required=False, widget=UnfoldAdminIntegerFieldWidget
+    )
+    presence_penalty = forms.FloatField(
+        label=_("Presence penalty"),
+        required=False,
+        widget=UnfoldAdminDecimalFieldWidget(attrs={"step": "0.1"}),
+    )
+    frequency_penalty = forms.FloatField(
+        label=_("Frequency penalty"),
+        required=False,
+        widget=UnfoldAdminDecimalFieldWidget(attrs={"step": "0.1"}),
+    )
+    stop = forms.CharField(
+        label=_("Stop"),
+        help_text=_("One a line, or a JSON list, where one holds a line's end."),
+        required=False,
+        strip=False,
+        widget=UnfoldAdminTextareaWidget(attrs={"rows": 2}),
+    )
+
+    def __init__(self, owner: str, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.owner: str = owner
+        # what the form's values come to, once they hold, whatever its name
+        self.made: SamplingTrailIn | None = None
+
+    def clean_name(self) -> str:
+        name = self.cleaned_data["name"].strip()
+        why = variations.refused(name)
+
+        if why is not None:
+            raise ValidationError(why)
+
+        return name
+
+    def clean(self) -> dict[str, Any]:
+        cleaned = super().clean()
+        asked = {
+            "defaults": cleaned.get("defaults"),
+            **{name: cleaned.get(name) for name in SAMPLING_SET},
+            "stop": _stops(cleaned.get("stop") or ""),
+        }
+
+        if any(name in self.errors for name in asked):
+            return cleaned
+
+        try:
+            self.made = SamplingTrailIn.model_validate(asked)
+        except PydanticValidationError as e:
+            for error in e.errors(include_url=False, include_input=False):
+                where = str(error["loc"][0]) if error["loc"] else None
+                self.add_error(where if where in self.fields else None, error["msg"])
+
+        return cleaned
+
+    @property
+    def trail(self) -> SamplingTrailIn:
+        assert self.made is not None
+        return self.made
+
+    @property
+    def details(self) -> BranchDetails:
+        return BranchDetails(name=self.cleaned_data["name"], owner=self.owner)
+
+    @staticmethod
+    def initial_of(trail: Any) -> dict[str, Any]:
+        """The form's values, as a version of a variation fills them."""
+        return {
+            "defaults": trail.defaults,
+            **{name: getattr(trail, name) for name in SAMPLING_SET},
+            "stop": _stops_written(trail.stop),
+        }
+
+
+def _stops(text: str) -> list[str] | None:
+    """Stop sequences, as the form takes them: one a line, or a JSON list."""
+    if text.lstrip().startswith("["):
+        try:
+            listed = json.loads(text)
+        except json.JSONDecodeError:
+            listed = None
+
+        if isinstance(listed, list) and all(isinstance(each, str) for each in listed):
+            return listed
+
+    return [line for line in text.splitlines() if line.strip()] or None
+
+
+def _stops_written(stop: list[str] | None) -> str:
+    """Stop sequences, as the form shows them: a JSON list where lines can't hold them."""
+    if stop is None:
+        return ""
+
+    if (
+        not stop
+        or stop[0].lstrip().startswith("[")
+        or any("\n" in each or "\r" in each or not each.strip() for each in stop)
+    ):
+        return json.dumps(stop, ensure_ascii=False)
+
+    return "\n".join(stop)

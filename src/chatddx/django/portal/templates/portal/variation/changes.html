@@ -1,0 +1,17 @@
+{% load i18n %}
+
+{# what a version changed of the one before, field by field #}
+<dl class="portal-changes">
+    {% for change in changes %}
+        <dt>{{ change.label }}</dt>
+        <dd>
+            {% if change.before is None %}
+                {% translate "changed" %}
+            {% else %}
+                {% if change.before != "—" %}<span class="portal-word-gone">{{ change.before }}</span>{% else %}<span class="portal-missing">—</span>{% endif %}
+                <span class="portal-missing">→</span>
+                {% if change.after != "—" %}<span class="portal-word-new">{{ change.after }}</span>{% else %}<span class="portal-missing">—</span>{% endif %}
+            {% endif %}
+        </dd>
+    {% endfor %}
+</dl>

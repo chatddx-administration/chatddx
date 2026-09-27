@@ -183,6 +183,18 @@ UNFOLD = {
                 ],
             },
             {
+                "title": _("Variations"),
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": _("Sampling"),
+                        "icon": "casino",
+                        "link": reverse_lazy("admin:portal_sampling_changelist"),
+                    },
+                ],
+            },
+            {
                 "title": _("Admin"),
                 "separator": True,
                 "collapsible": False,

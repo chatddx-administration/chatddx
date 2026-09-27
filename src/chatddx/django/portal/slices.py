@@ -1,13 +1,15 @@
 # pyright: basic
 """
 A slice's variation as the portal's pages say it: what each slice and each
-of its fields is called; its fields, a line each; and what one variation
-does in place of another, field by field.
+of its fields is called; its fields, a line each; what one variation does
+in place of another, field by field; and the page of its own a variation
+has, where its slice's are edited in the portal.
 """
 
 import json
 from typing import Any
 
+from django.urls import reverse
 from django.utils.translation import gettext, gettext_lazy as _
 
 from chatddx.django.portal.records import Change, Field, or_none, said
@@ -69,6 +71,17 @@ DEFAULTS: dict[str, Any] = {
 
 # a change of a text too long for a line: its start, and that there is more
 BRIEF = 60
+
+# the slices whose variations have a page of their own, where they are edited
+PAGES: dict[str, str] = {"sampling": "admin:portal_sampling_change"}
+
+
+def page_of_variation(entity: EntityName, row: Any, identity: str) -> str | None:
+    """The page of a version of a variation, where it has one and is the identity's."""
+    if entity not in PAGES or row is None or row.owner.name != identity:
+        return None
+
+    return reverse(PAGES[entity], args=[row.pk])
 
 
 def values_of(entity: EntityName, trail: Any) -> dict[str, Any]:

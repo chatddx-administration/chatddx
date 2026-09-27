@@ -194,8 +194,10 @@ the vignette.
 
 Otherwise rows are removed only where nothing reads them: from the
 portal, a case, or a version of one, that no score is held to and none of
-its owner's runs or batches read; and with `chatddx wipe-data`, an
-identity's own, where no one else's history reads them (§12).
+its owner's runs or batches read, and a variation, every version of it,
+that none of its owner's configurations, runs or batches read; and with
+`chatddx wipe-data`, an identity's own, where no one else's history reads
+them (§12).
 
 ## 5. The factors
 

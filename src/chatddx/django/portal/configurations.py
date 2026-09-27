@@ -31,7 +31,7 @@ from chatddx.django.portal.records import (
     timeline_of,
     version_of,
 )
-from chatddx.django.portal.slices import LABELS, done, fields_of
+from chatddx.django.portal.slices import LABELS, done, fields_of, page_of_variation
 from chatddx.history.models import RunModel
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
@@ -61,6 +61,8 @@ class Slice:
     # the version of the variation set, and its latest where it is an earlier
     version: Version | None = None
     newer: Newer | None = None
+    # the variation's own page, at the version shown, where it is the identity's
+    page: str | None = None
 
     @property
     def set(self) -> bool:
@@ -323,6 +325,11 @@ def _slice(
             _named(entity, trail, identity),
             _short(trail),
             fields,
+            page=page_of_variation(
+                entity,
+                branch_of(entity, trail, identity) if trail is not None else None,
+                identity,
+            ),
         )
 
     variation = pins[entity]
@@ -351,6 +358,7 @@ def _slice(
         changes=done(entity, own, trail),
         version=version,
         newer=newer,
+        page=page_of_variation(entity, variation, identity),
     )
 
 

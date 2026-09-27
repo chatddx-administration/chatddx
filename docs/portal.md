@@ -6,8 +6,9 @@ so far are the Cases, where clinicians go through each case and work with
 its vignette and targets; the Batch: the repl's `batch`, with its slices
 varied, run by a worker beside the portal, and watched and held from its
 Status page; the Runs, each run with all it holds; the Configurations,
-each at a version, with any variation set in it; and the Stacks, each at a
-version, and tried live.
+each at a version, with any variation set in it; the Stacks, each at a
+version, and tried live; and the Variations, where a slice's variations
+are edited, sampling first.
 
 The portal shows you what is yours: your cases, configurations and
 variations. The one exception is what answers, the stacks and their parts,
@@ -376,7 +377,80 @@ each cell's as it would run now.
   - the sampling: what a setting left out means, and what it sets outright;
   - the toolset: its tools, and its guidance, or none.
 
+  A slice whose variations are edited in the portal, the sampling for now,
+  opens the variation's page by its name, at the version the configuration
+  holds, where the variation is yours.
+
 Reading configurations takes the view permission on them.
+
+## Variations
+
+**Variations** in the sidebar has a page for each slice whose variations
+are edited in the portal, **Sampling** for now. Its list shows your
+sampling variations, each at its latest version: what a setting left out
+means, what it sets outright, how many versions it has, and when it was
+saved. **+** starts a blank one, which leaves every setting to the
+recommended.
+
+### A variation's page
+
+A variation's page shows one version of it, in its timeline, as a case's
+does: ◀ and ▶ step through the versions, and it lists what that version
+changed of the one before, field by field. The latest version is a form:
+
+- **Name**, and **A setting left out**: `recommended`, what the LLM's
+  facts recommend for the reasoning it comes to, or `generation_config`,
+  the LLM's own, as its server applies them;
+- the settings given outright, which win over those: **Temperature**,
+  **Top p**, **Top k** (-1 turns it off), **Max tokens**, **Presence
+  penalty** and **Frequency penalty**, each left empty to leave it to the
+  defaults;
+- **Stop**, the stop sequences: one a line, or a JSON list, where one
+  holds a line's end or is blank.
+
+An earlier version is shown as it was. **Edit from here** puts it in the
+form, and saving it makes a new version from it.
+
+**What it does** says, on each LLM your stacks serve and for each way its
+facts realize reasoning, what a request carries of the variation, and
+where the settings it leaves out come from; the reasonings it comes to the
+same on share a row. What an LLM's facts can't give it is refused, with
+the reason, and a greedy variation is said to be: a seed changes nothing
+of it, so its trials run unseeded. It is said again as the form is typed.
+
+**What goes by its name** lists what of yours holds the variation: your
+configurations whose latest version holds a version of it, and which;
+how many earlier versions of your configurations do; your runs; and the
+trials of your batches that set it by name. What holds values another of
+your variations holds too goes by neither name, so it is neither's alone.
+
+### Saving a variation
+
+One save makes one version, as a case's does. The name decides where it
+goes, and a line under the form says so as you type, the button the same:
+
+- **the variation's own name:** a new version of it; saving what the
+  latest version holds already makes none;
+- **a new name:** a new variation, and this one stays as it is;
+- **the name of another variation of yours:** refused, with a link to open
+  it.
+
+A name can't hold `/`, `+`, `=` or `×`, which part names from owners and
+cells, and can't be `none`. Where another variation holds the values
+typed, the page says so. If the variation has a newer version since you
+opened the page, the page says so, and saving again saves yours as the
+version after it.
+
+### Deleting a variation
+
+**Delete the variation** deletes every version of it for good, where
+nothing of yours goes by its name. Where something does, the page lists
+it, and nothing is deleted: a variation a configuration holds, or a batch
+has tried, stays.
+
+Reading variations takes the view permission on them; saving a new version
+of one takes the change permission, a new variation the add permission,
+and deleting the delete permission.
 
 ## Stacks
 

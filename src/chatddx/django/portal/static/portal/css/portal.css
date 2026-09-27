@@ -730,3 +730,28 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.8125rem;
 }
+
+/* a setting a request carries, kept whole where its line breaks */
+.portal-setting {
+    white-space: nowrap;
+}
+
+/* a sampling's settings given outright, side by side where there is room */
+.portal-settings {
+    display: grid;
+    gap: 0 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+}
+
+/* two fields side by side where there is room: a name, and what it goes with */
+.portal-halves {
+    display: grid;
+    gap: 0 1rem;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+    .portal-halves {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+}

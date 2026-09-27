@@ -71,7 +71,10 @@
         {% for slice in shown.slices %}
             <section class="portal-box{% if slice.set %} portal-box-set{% endif %}" id="{{ slice.entity }}">
                 <div class="portal-box-head">
-                    <h2 class="portal-heading">{{ slice.label }} · {{ slice.name }}</h2>
+                    <h2 class="portal-heading">
+                        {{ slice.label }} ·
+                        {% if slice.page %}<a class="underline" href="{{ slice.page }}" title="{% translate 'Open the variation' %}">{{ slice.name }}</a>{% else %}{{ slice.name }}{% endif %}
+                    </h2>
                     {% if slice.set %}
                         <span class="portal-badge">{% blocktranslate with own=slice.own %}set in place of {{ own }}{% endblocktranslate %}</span>
                     {% endif %}

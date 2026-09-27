@@ -1,0 +1,27 @@
+{% load i18n %}
+
+{# what saving the page would do, and what else holds its values: as it is typed #}
+<p class="portal-said">
+    {{ said.line }}
+    {% if taken_url %}
+        <a class="font-semibold underline" href="{{ taken_url }}">{% translate "Open it" %}</a>
+    {% endif %}
+</p>
+
+{% for sharer, url in sharers %}
+    {% if sharer.own %}
+        <div class="portal-said-warning">
+            {% blocktranslate with name=sharer.name %}{{ name }}, a variation of yours, holds these values too: while both do, what holds them goes by neither name.{% endblocktranslate %}
+
+            <a class="font-semibold underline" href="{{ url }}">{% translate "Open it" %}</a>
+        </div>
+    {% else %}
+        <div class="portal-said-note">
+            {% blocktranslate with owner=sharer.owner name=sharer.name %}{{ owner }}'s {{ name }} holds these values: while yours is named otherwise, what holds them goes by neither name; named {{ name }}, yours takes its place for you.{% endblocktranslate %}
+        </div>
+    {% endif %}
+{% endfor %}
+
+{% if oob %}
+    <span id="variation-save-label" hx-swap-oob="true">{{ said.button }}</span>
+{% endif %}

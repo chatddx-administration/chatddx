@@ -1,0 +1,110 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n unfold %}
+
+{% block extrahead %}
+    {{ block.super }}
+    {{ media }}
+{% endblock %}
+
+{% block content %}
+    {% if version %}
+        {% include "portal/variation/navigator.html" %}
+
+        {% if not version.latest %}
+            <div class="portal-note">
+                {% if form %}
+                    {% blocktranslate with number=version.number %}Editing from version {{ number }}: saving makes a new version from it, and the versions after it stay in the timeline.{% endblocktranslate %}
+                {% else %}
+                    {% blocktranslate with number=version.number of=version.of %}Version {{ number }} of {{ of }}, an earlier one, as it was.{% endblocktranslate %}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if changes %}
+            <section class="portal-box">
+                <h2 class="portal-heading">
+                    {% blocktranslate with number=version.number %}What version {{ number }} changed{% endblocktranslate %}
+                </h2>
+
+                {% include "portal/variation/changes.html" %}
+            </section>
+        {% elif version.number == 1 %}
+            <p class="portal-missing mt-4 text-sm">{% translate "The first version of the variation." %}</p>
+        {% endif %}
+    {% endif %}
+
+    {% if form %}
+        <form id="variation-form" method="post" novalidate>
+            {% csrf_token %}
+
+            {% for field in form.hidden_fields %}
+                {{ field }}
+            {% endfor %}
+
+            {% include "unfold/helpers/form_errors.html" with errors=form.non_field_errors %}
+
+            <section class="portal-box">
+                {% block fields %}
+                    {% include "unfold/helpers/field.html" with field=form.name %}
+                {% endblock %}
+
+                <div id="variation-said" aria-live="polite">
+                    {% include said_template %}
+                </div>
+            </section>
+
+            <div class="portal-actions">
+                <button type="submit" class="bg-primary-600 border border-transparent cursor-pointer font-medium gap-1 hover:bg-primary-600/80 inline-flex items-center justify-center px-3 py-2 relative rounded-default text-white whitespace-nowrap">
+                    <span id="variation-save-label">{{ said.button }}</span>
+                </button>
+
+                {% if version and can_delete %}
+                    {% component "unfold/components/button.html" with href=delete_url variant="default" icon="delete" %}
+                        {% translate "Delete the variation" %}
+                    {% endcomponent %}
+                {% endif %}
+
+                {% component "unfold/components/button.html" with href=changelist_url variant="default" class="lg:ml-auto" %}
+                    {% translate "Close" %}
+                {% endcomponent %}
+            </div>
+        </form>
+    {% elif version %}
+        <section class="portal-box">
+            {% include "portal/record/fields.html" %}
+        </section>
+
+        <div class="portal-actions">
+            {% if can_change %}
+                {% component "unfold/components/button.html" with href=edit_url icon="edit" %}
+                    {% translate "Edit from here" %}
+                {% endcomponent %}
+            {% endif %}
+
+            {% if can_delete %}
+                {% component "unfold/components/button.html" with href=delete_url variant="default" icon="delete" %}
+                    {% translate "Delete the variation" %}
+                {% endcomponent %}
+            {% endif %}
+
+            {% component "unfold/components/button.html" with href=changelist_url variant="default" class="lg:ml-auto" %}
+                {% translate "Close" %}
+            {% endcomponent %}
+        </div>
+    {% endif %}
+
+    {% block shown %}{% endblock %}
+
+    {% if holds %}
+        <section class="portal-box">
+            <h2 class="portal-heading">{% translate "What goes by its name" %}</h2>
+
+            {% if holds.anything %}
+                {% include "portal/variation/held.html" %}
+            {% else %}
+                <p class="portal-said">{% translate "Nothing of yours: no configuration holds it, no run, and no batch sets it." %}</p>
+            {% endif %}
+        </section>
+    {% endif %}
+{% endblock %}

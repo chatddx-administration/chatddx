@@ -44,9 +44,17 @@ from chatddx.django.portal import batches, status
 from chatddx.django.portal.case_admin import CaseAdmin
 from chatddx.django.portal.configuration_admin import ConfigurationAdmin
 from chatddx.django.portal.forms import CASES_FORM, BatchForm, CasesForm
-from chatddx.django.portal.models import Batch, Case, Configuration, Run, Stack
+from chatddx.django.portal.models import (
+    Batch,
+    Case,
+    Configuration,
+    Run,
+    Sampling,
+    Stack,
+)
 from chatddx.django.portal.owners import bench_of, identity_of
 from chatddx.django.portal.run_admin import RunAdmin
+from chatddx.django.portal.sampling_admin import SamplingAdmin
 from chatddx.django.portal.stack_admin import StackAdmin
 from chatddx.worker import control, queue
 from chatddx.worker.models import STOPPED_BY, JobModel, Status
@@ -74,6 +82,7 @@ admin.site.unregister(Group)
 admin.site.register(Case, CaseAdmin)
 admin.site.register(Configuration, ConfigurationAdmin)
 admin.site.register(Run, RunAdmin)
+admin.site.register(Sampling, SamplingAdmin)
 admin.site.register(Stack, StackAdmin)
 
 
