@@ -8,7 +8,6 @@ configuration's timeline it is, and what its latest changed; and where the
 pages are, a run's the configuration as it ran.
 """
 
-import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -16,7 +15,6 @@ from typing import Any
 from urllib.parse import urlencode
 
 from django.urls import reverse
-from django.utils.translation import gettext, gettext_lazy as _
 
 from chatddx.bench.bench import Bench
 from chatddx.bench.cell import NONE, SLICES, Cell
@@ -28,78 +26,20 @@ from chatddx.django.portal.records import (
     Version,
     branch_of,
     name_of,
-    or_none,
     owner_of,
     readable,
-    said,
     timeline_of,
     version_of,
 )
+from chatddx.django.portal.slices import LABELS, done, fields_of
 from chatddx.history.models import RunModel
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
-from chatddx.repo.entities.output.pydantic import VIEWS
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.names import short_fingerprint
 from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 from chatddx.repo.utils import resolve_trail
 from chatddx.worker.models import JobModel
-
-# what the page calls each slice
-LABELS: dict[str, Any] = {
-    "instruction": _("Instruction"),
-    "output": _("Output"),
-    "coercion": _("Coercion"),
-    "reasoning": _("Reasoning"),
-    "sampling": _("Sampling"),
-    "toolset": _("Toolset"),
-}
-
-# what the page calls each of a slice's fields, in the order it shows them
-FIELDS: dict[str, dict[str, Any]] = {
-    "instruction": {
-        "system": _("System"),
-        "user": _("User"),
-        "variables": _("Variables"),
-    },
-    "output": {
-        "guidance": _("Guidance"),
-        "views": _("Views"),
-        "answer_schema": _("Answer schema"),
-    },
-    "coercion": {
-        "mode": _("Mode"),
-        "schema_prompt": _("Schema prompt"),
-        "tool_description": _("Tool description"),
-    },
-    "reasoning": {
-        "effort": _("Effort"),
-        "budget": _("Budget"),
-    },
-    "sampling": {
-        "defaults": _("Defaults"),
-        "temperature": _("Temperature"),
-        "top_p": _("Top p"),
-        "top_k": _("Top k"),
-        "max_tokens": _("Max tokens"),
-        "presence_penalty": _("Presence penalty"),
-        "frequency_penalty": _("Frequency penalty"),
-        "stop": _("Stop"),
-    },
-    "toolset": {
-        "tools": _("Tools"),
-        "guidance": _("Guidance"),
-    },
-}
-
-# what a sampling's defaults are, in words
-DEFAULTS: dict[str, Any] = {
-    "recommended": _("what the LLM's facts recommend for the reasoning it comes to"),
-    "generation_config": _("the LLM's generation config, as its server has it"),
-}
-
-# a change of a text too long for a line: its start, and that there is more
-BRIEF = 60
 
 # a cell's label: a variation set in it, from its end
 _SET = re.compile(r"\+(" + "|".join(SLICES) + r")=([^+]*)$")
@@ -374,7 +314,7 @@ def _slice(
 ) -> Slice:
     trail = cell.variation(entity)
     own = getattr(cell.configuration.trail, entity) if cell.configuration else None
-    fields = _fields(entity, trail)
+    fields = fields_of(entity, trail)
 
     if entity not in cell.variations:
         return Slice(
@@ -408,7 +348,7 @@ def _slice(
         _short(trail),
         fields,
         own=_named(entity, own, identity),
-        changes=_done(entity, own, trail),
+        changes=done(entity, own, trail),
         version=version,
         newer=newer,
     )
@@ -426,65 +366,6 @@ def _short(trail: Any) -> str | None:
     return None if trail is None else short_fingerprint(trail.fingerprint)
 
 
-def _values(entity: EntityName, trail: Any) -> dict[str, Any]:
-    """A slice's fields, as the page compares them: a toolset's tools by name."""
-    if trail is None:
-        return {name: None for name in FIELDS[entity]}
-
-    values = {name: getattr(trail, name, None) for name in FIELDS[entity]}
-
-    if entity == "toolset":
-        values["tools"] = [tool.name for tool in trail.tools]
-
-    return values
-
-
-def _done(entity: EntityName, own: Any, set_: Any) -> list[Change]:
-    """What a variation set does in place of the configuration's own: each field it changes."""
-    before, after = _values(entity, own), _values(entity, set_)
-
-    if entity == "toolset" and (own is None or set_ is None):
-        return [
-            Change(
-                FIELDS[entity]["tools"],
-                _brief(before["tools"]) if own else gettext("none"),
-                _brief(after["tools"]) if set_ else gettext("none"),
-            )
-        ]
-
-    # a schema takes more than a line to say: that it changed
-    return [
-        Change(label)
-        if name == "answer_schema" and before[name] and after[name]
-        else Change(label, _brief(before[name]), _brief(after[name]))
-        for name, label in FIELDS[entity].items()
-        if before[name] != after[name]
-    ]
-
-
-def _brief(value: Any) -> str:
-    """A value in a line: a text by its start, where it is longer than one."""
-    if isinstance(value, list) and all(isinstance(item, str) for item in value):
-        return ", ".join(value) or gettext("none")
-
-    if isinstance(value, dict) and "type" in value:
-        return gettext("a schema")
-
-    if isinstance(value, str):
-        line = " ".join(value.split())
-
-        if not line:
-            return gettext("nothing")
-
-        return (
-            line
-            if len(line) <= BRIEF and "\n" not in value.strip()
-            else f"“{line[: BRIEF - 1]}…”"
-        )
-
-    return said(value)
-
-
 def _changes(
     row: ConfigurationBranchModel, latest: ConfigurationBranchModel, identity: str
 ) -> list[Change]:
@@ -500,84 +381,3 @@ def _changes(
         for entity in SLICES
         if getattr(row.trail, f"{entity}_id") != getattr(latest.trail, f"{entity}_id")
     ]
-
-
-def _fields(entity: EntityName, trail: Any) -> list[Field]:
-    labels = FIELDS[entity]
-
-    match entity:
-        case "instruction":
-            return [
-                Field(labels["system"], or_none(trail.system), text=True),
-                Field(labels["user"], or_none(trail.user), text=True),
-                Field(labels["variables"], items=list(trail.variables)),
-            ]
-        case "output":
-            schema = trail.answer_schema
-
-            return [
-                Field(labels["guidance"], or_none(trail.guidance), text=True),
-                Field(
-                    labels["views"],
-                    # in the order the outputs' views go, which the database doesn't keep
-                    items=[
-                        f"{view}: {trail.views[view]}"
-                        for view in VIEWS
-                        if view in trail.views
-                    ],
-                ),
-                Field(
-                    labels["answer_schema"],
-                    gettext("none: the answer is free text")
-                    if schema is None
-                    else json.dumps(schema, indent=2, ensure_ascii=False),
-                    folded=schema is not None,
-                ),
-            ]
-        case "coercion":
-            return [
-                Field(labels["mode"], trail.mode),
-                Field(labels["schema_prompt"], or_none(trail.schema_prompt), text=True),
-                Field(
-                    labels["tool_description"],
-                    or_none(trail.tool_description),
-                    text=True,
-                ),
-            ]
-        case "reasoning":
-            return [
-                Field(labels["effort"], trail.effort),
-                Field(
-                    labels["budget"],
-                    "—"
-                    if trail.budget is None
-                    else gettext("%(tokens)d thinking tokens")
-                    % {"tokens": trail.budget},
-                ),
-            ]
-        case "sampling":
-            return [
-                Field(
-                    labels["defaults"], f"{trail.defaults}: {DEFAULTS[trail.defaults]}"
-                ),
-                *(
-                    Field(label, said(getattr(trail, name)))
-                    for name, label in labels.items()
-                    if name != "defaults" and getattr(trail, name) is not None
-                ),
-            ]
-        case _ if trail is None:
-            return [Field(labels["tools"], gettext("none: no tool is offered"))]
-        case _:
-            return [
-                Field(
-                    labels["tools"],
-                    items=[
-                        f"{tool.name}: {tool.description}"
-                        if tool.description
-                        else tool.name
-                        for tool in trail.tools
-                    ],
-                ),
-                Field(labels["guidance"], or_none(trail.guidance), text=True),
-            ]

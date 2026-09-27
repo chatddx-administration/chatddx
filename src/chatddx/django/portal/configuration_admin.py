@@ -20,7 +20,7 @@ from unfold.admin import ModelAdmin
 
 from chatddx.bench.bench import Bench
 from chatddx.bench.cell import SLICES
-from chatddx.django.portal import configurations, records
+from chatddx.django.portal import configurations, records, slices
 from chatddx.django.portal.models import Configuration
 from chatddx.django.portal.owners import identity_of
 from chatddx.repo.queries import qs_head
@@ -42,7 +42,7 @@ class ConfigurationAdmin(ModelAdmin):
         bench = Bench(identity_of(request))
 
         def column(entity: Any) -> Any:
-            @admin.display(description=configurations.LABELS[entity])
+            @admin.display(description=slices.LABELS[entity])
             def variation(configuration: Configuration) -> str:
                 return bench.name_of(entity, getattr(configuration.trail, entity))
 
