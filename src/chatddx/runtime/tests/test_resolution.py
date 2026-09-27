@@ -19,7 +19,6 @@ from chatddx.runtime.resolution import (
     CellRefused,
     Coercion,
     SliceRefusal,
-    Slices,
     Tool,
     realize,
     resolve,
@@ -174,17 +173,11 @@ def test_free_text_places_no_schema_whatever_the_coercion():
 
 
 def test_a_variation_set_in_a_configuration_s_place_resolves_there():
-    configuration = cell()
-    slices = Slices(
-        instruction=configuration.instruction,
-        output=configuration.output,
-        coercion=configuration.coercion,
-        reasoning=ReasoningTrailIn(effort="off"),
-        sampling=configuration.sampling,
-        toolset=configuration.toolset,
+    configuration = cell().model_copy(
+        update={"reasoning": ReasoningTrailIn(effort="off")}
     )
 
-    resolution = resolve(slices, STACK, FACTS, SERVING)
+    resolution = resolve(configuration, STACK, FACTS, SERVING)
 
     assert resolution.reasoning.writes == {
         "chat_template_kwargs": {"enable_thinking": False}

@@ -1,3 +1,4 @@
+# pyright: basic
 from __future__ import annotations
 
 from enum import IntEnum, StrEnum
@@ -6,12 +7,10 @@ from django.db.models import (
     CASCADE,
     PROTECT,
     SET_NULL,
-    BigIntegerField,
     BooleanField,
     CharField,
     DateTimeField,
     ForeignKey,
-    JSONField,
     Model,
     OneToOneField,
     PositiveIntegerField,
@@ -20,10 +19,16 @@ from django.db.models import (
     UUIDField,
 )
 
-from chatddx.bench.cell import Kept
 from chatddx.core.models import IdentityModel
-from chatddx.history.models import RunModel
-from chatddx.repo.entities.case.django import CaseTrailModel
+from chatddx.history.models import RunModel, TrialModel
+from chatddx.repo.entities.coercion.django import CoercionBranchModel
+from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
+from chatddx.repo.entities.instruction.django import InstructionBranchModel
+from chatddx.repo.entities.output.django import OutputBranchModel
+from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
+from chatddx.repo.entities.sampling.django import SamplingBranchModel
+from chatddx.repo.entities.stack.django import StackBranchModel
+from chatddx.repo.entities.toolset.django import ToolsetBranchModel
 
 __all__ = ["ControlsModel", "JobModel", "WorkerStateModel"]
 
@@ -83,23 +88,78 @@ class JobModel(Model):
     owner_id: int
     batch = UUIDField(db_index=True)
 
-    configuration = CharField(max_length=255)
-    stack = CharField(max_length=255, db_index=True)
-    set: JSONField[dict[str, str]] = JSONField(default=dict, blank=True)
-    label = CharField(max_length=255)
-    fingerprint = CharField(max_length=128)
-    case = CharField(max_length=255)
-    case_trail = ForeignKey(
-        CaseTrailModel,
+    trial = ForeignKey(
+        TrialModel,
+        on_delete=PROTECT,
+        related_name="jobs",
+    )
+    trial_id: int
+    configuration_branch = ForeignKey(
+        ConfigurationBranchModel,
         on_delete=PROTECT,
         related_name="+",
     )
-    case_trail_id: int
-    seed = BigIntegerField(
+    configuration_branch_id: int
+    stack_branch = ForeignKey(
+        StackBranchModel,
+        on_delete=PROTECT,
+        related_name="+",
+    )
+    stack_branch_id: int
+    instruction_branch = ForeignKey(
+        InstructionBranchModel,
         default=None,
         null=True,
         blank=True,
+        on_delete=PROTECT,
+        related_name="+",
     )
+    instruction_branch_id: int | None
+    output_branch = ForeignKey(
+        OutputBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="+",
+    )
+    output_branch_id: int | None
+    coercion_branch = ForeignKey(
+        CoercionBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="+",
+    )
+    coercion_branch_id: int | None
+    reasoning_branch = ForeignKey(
+        ReasoningBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="+",
+    )
+    reasoning_branch_id: int | None
+    sampling_branch = ForeignKey(
+        SamplingBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="+",
+    )
+    sampling_branch_id: int | None
+    toolset_branch = ForeignKey(
+        ToolsetBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="+",
+    )
+    toolset_branch_id: int | None
 
     status = CharField(max_length=16, default=Status.QUEUED.value, db_index=True)
     reason = TextField(
@@ -138,21 +198,6 @@ class JobModel(Model):
         related_name="+",
     )
     run_id: int | None
-
-    @property
-    def kept(self) -> Kept:
-        return Kept(
-            self.configuration,
-            self.stack,
-            self.set,
-            self.label,
-            self.fingerprint,
-            self.seed,
-        )
-
-    @property
-    def cell(self) -> str:
-        return f"{self.label} × {self.stack}"
 
     @property
     def tallied(self) -> str:

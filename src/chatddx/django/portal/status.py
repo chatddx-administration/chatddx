@@ -1,5 +1,4 @@
 # pyright: basic
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -11,13 +10,12 @@ from django.utils.translation import gettext as _, gettext_lazy, ngettext
 
 from chatddx.bench.bench import Bench
 from chatddx.django.portal.configurations import (
-    page_named as configuration_page_named,
+    page_of_made,
     page_of_run as configuration_page_of,
 )
 from chatddx.django.portal.models import BatchModel
-from chatddx.django.portal.stacks import page_named, page_of_run
+from chatddx.django.portal.stacks import page_of as stack_page_of, page_of_run
 from chatddx.history.models import RunModel, RunStatus
-from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 from chatddx.worker import control, queue
 from chatddx.worker.models import JobModel, Status, Stopping
 
@@ -81,8 +79,12 @@ class Link:
 
 @dataclass(frozen=True)
 class Now:
-    job: JobModel
-    running_for: str
+    case: str
+    label: str
+    stack: str
+    tokens: int
+    tallied: str
+    running_for: str = ""
     configuration_page: str | None = None
     stack_page: str | None = None
 
@@ -112,9 +114,7 @@ class Ran:
 class Shown:
     state: control.State
     running: list[Now]
-    up_next: JobModel | None
-    up_next_configuration: str | None
-    up_next_stack: str | None
+    up_next: Now | None
     outstanding: int
     waiting: list[queue.Waiting]
     batches: list[Link]
@@ -173,6 +173,7 @@ class Shown:
 
 
 def shown(owner: str) -> Shown:
+    bench = Bench(owner)
     batches = queue.under_way(owner)
 
     if not batches:
@@ -181,45 +182,31 @@ def shown(owner: str) -> Shown:
 
     latest = queue.latest(owner, LATEST)
     links = links_of(owner, [*batches, *(job.batch for job in latest)])
-    pages = Pages(owner)
     up_next = queue.up_next(owner)
 
     return Shown(
         state=control.state(owner),
-        running=[
-            Now(job, running_for(job), pages.configuration(job), pages.stack(job.stack))
-            for job in queue.running(owner)
-        ],
-        up_next=up_next,
-        up_next_configuration=pages.configuration(up_next) if up_next else None,
-        up_next_stack=pages.stack(up_next.stack) if up_next else None,
+        running=[now(bench, job) for job in queue.running(owner)],
+        up_next=now(bench, up_next) if up_next is not None else None,
         outstanding=queue.outstanding(owner),
-        waiting=queue.waiting(owner, max_jobs_of(owner)),
+        waiting=queue.waiting(owner),
         batches=[links[batch] for batch in batches],
         progress=Progress(queue.counts(batches)),
-        latest=[ran(job, links[job.batch], pages) for job in latest],
+        latest=[ran(bench, job, links[job.batch]) for job in latest],
     )
 
 
-class Pages:
-    def __init__(self, owner: str):
-        self.owner: str = owner
-        self._found: dict[Any, str | None] = {}
-
-    def stack(self, name: str) -> str | None:
-        return self._once(("stack", name), lambda: page_named(self.owner, name))
-
-    def configuration(self, job: JobModel) -> str | None:
-        return self._once(
-            ("configuration", job.configuration, tuple(sorted(job.set.items()))),
-            lambda: configuration_page_named(self.owner, job.configuration, job.set),
-        )
-
-    def _once(self, key: Any, found: Callable[[], str | None]) -> str | None:
-        if key not in self._found:
-            self._found[key] = found()
-
-        return self._found[key]
+def now(bench: Bench, job: JobModel) -> Now:
+    return Now(
+        case=bench.name_of("case", job.trial.case),
+        label=bench.label_of(job),
+        stack=job.stack_branch.name,
+        tokens=job.tokens,
+        tallied=job.tallied,
+        running_for=running_for(job),
+        configuration_page=page_of_made(job),
+        stack_page=stack_page_of(job.stack_branch_id),
+    )
 
 
 def links_of(owner: str, batches: list[UUID]) -> dict[UUID, Link]:
@@ -232,18 +219,6 @@ def links_of(owner: str, batches: list[UUID]) -> dict[UUID, Link]:
     return {batch: Link(str(batch)[:8], pks.get(batch)) for batch in batches}
 
 
-def max_jobs_of(owner: str) -> Any:
-    bench = Bench(owner)
-
-    def max_jobs(stack: str) -> int:
-        try:
-            return bench.max_jobs(stack)
-        except (BranchNotFoundError, AmbiguousBranchError):
-            return 1
-
-    return max_jobs
-
-
 def running_for(job: JobModel) -> str:
     if job.started is None:
         return ""
@@ -254,7 +229,7 @@ def running_for(job: JobModel) -> str:
     return f"{minutes}:{seconds:02}" if minutes else f"{seconds} s"
 
 
-def ran(job: JobModel, batch: Link, pages: Pages) -> Ran:
+def ran(bench: Bench, job: JobModel, batch: Link) -> Ran:
     run = job.run
     outcome, trouble, reason = _outcome(job, run)
     latest: dict[str, str] = {}
@@ -264,9 +239,9 @@ def ran(job: JobModel, batch: Link, pages: Pages) -> Ran:
 
     return Ran(
         when=job.finished,
-        case=job.case,
-        configuration=job.label,
-        stack=job.stack,
+        case=bench.name_of("case", job.trial.case),
+        configuration=bench.label_of(job),
+        stack=job.stack_branch.name,
         batch=batch,
         outcome=outcome,
         trouble=trouble,
@@ -274,9 +249,10 @@ def ran(job: JobModel, batch: Link, pages: Pages) -> Ran:
         tokens=job.tallied,
         scores=sorted(latest.items()),
         run=run.uuid if run else None,
-        configuration_page=(configuration_page_of(run, job) if run else None)
-        or pages.configuration(job),
-        stack_page=(page_of_run(run) if run else None) or pages.stack(job.stack),
+        configuration_page=(configuration_page_of(run) if run else None)
+        or page_of_made(job),
+        stack_page=(page_of_run(run) if run else None)
+        or stack_page_of(job.stack_branch_id),
     )
 
 
@@ -402,15 +378,18 @@ def batch_shown(owner: str, batch: Any) -> BatchShown:
     behind = False
 
     if state == BatchState.QUEUED:
-        waiting = next(
-            (
-                waits
-                for waits in queue.waiting(owner, max_jobs_of(owner))
-                if waits.stack == batch.stack
-            ),
-            None,
+        first = (
+            queue.in_turn(JobModel.objects.filter(batch=batch.uuid))
+            .select_related("stack_branch")
+            .first()
         )
-        up_next = queue.up_next(owner, batch.stack)
-        behind = up_next is not None and up_next.batch != batch.uuid
+
+        if first is not None:
+            slot = queue.slot_of(first.stack_branch)
+            waiting = next(
+                (waits for waits in queue.waiting(owner) if waits.slot == slot), None
+            )
+            up_next = queue.up_next(owner, slot)
+            behind = up_next is not None and up_next.batch != batch.uuid
 
     return BatchShown(counts, state, control.state(owner).paused, waiting, behind)

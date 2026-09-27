@@ -28,11 +28,20 @@ from django.db.models import (
 from chatddx.core.models import IdentityModel
 from chatddx.repo.entities.case.django import CaseBranchModel, CaseTrailModel
 from chatddx.repo.entities.client.django import ClientTrailModel
-from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
+from chatddx.repo.entities.coercion.django import CoercionBranchModel
+from chatddx.repo.entities.configuration.django import (
+    ConfigurationBranchModel,
+    ConfigurationTrailModel,
+)
+from chatddx.repo.entities.instruction.django import InstructionBranchModel
 from chatddx.repo.entities.llm.django import LLMBranchModel
+from chatddx.repo.entities.output.django import OutputBranchModel
+from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
+from chatddx.repo.entities.sampling.django import SamplingBranchModel
 from chatddx.repo.entities.scorer.django import ScorerTrailModel
 from chatddx.repo.entities.stack.django import StackBranchModel, StackTrailModel
 from chatddx.repo.entities.tool.django import ToolBranchModel
+from chatddx.repo.entities.toolset.django import ToolsetBranchModel
 from chatddx.repo.families.django import OrderedJSONField
 
 __all__ = [
@@ -206,6 +215,69 @@ class RunModel(Model):
         related_name="runs",
     )
     llm_branch_id: int | None
+    configuration_branch = ForeignKey(
+        ConfigurationBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    configuration_branch_id: int | None
+    instruction_branch = ForeignKey(
+        InstructionBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    instruction_branch_id: int | None
+    output_branch = ForeignKey(
+        OutputBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    output_branch_id: int | None
+    coercion_branch = ForeignKey(
+        CoercionBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    coercion_branch_id: int | None
+    reasoning_branch = ForeignKey(
+        ReasoningBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    reasoning_branch_id: int | None
+    sampling_branch = ForeignKey(
+        SamplingBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    sampling_branch_id: int | None
+    toolset_branch = ForeignKey(
+        ToolsetBranchModel,
+        default=None,
+        null=True,
+        blank=True,
+        on_delete=PROTECT,
+        related_name="runs",
+    )
+    toolset_branch_id: int | None
     scores: QuerySet[ScoreModel]
     tool_branches: ManyToManyField[ToolBranchModel, Any] = ManyToManyField(
         ToolBranchModel,

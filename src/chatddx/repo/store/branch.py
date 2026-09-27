@@ -12,10 +12,11 @@ from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import (
     BranchDetails,
     TrailIn,
+    TrailOut,
     dump_details,
     relation_fields,
 )
-from chatddx.repo.names import closure_branch_name
+from chatddx.repo.names import closure_branch_name, short_fingerprint
 from chatddx.repo.queries import (
     deleted,
     head_of,
@@ -23,6 +24,7 @@ from chatddx.repo.queries import (
     qs_head,
     qs_head_visible,
     qs_with_relations,
+    visible_to,
 )
 from chatddx.repo.store.trail import dump_trail
 from chatddx.repo.utils import (
@@ -92,6 +94,7 @@ def get_visible_branch_model(
     branch_name: str | None = None,
     trail: TrailModel | int | None = None,
     shared_by: str | None = None,
+    resolved: bool = True,
 ) -> BranchModel:
     assert branch_name or trail
 
@@ -124,9 +127,87 @@ def get_visible_branch_model(
         raise AmbiguousBranchError(f"{what} is shared by more than one: {owners}")
 
     model = candidates[0]
-    model.trail = resolve_trail(model.trail)
+
+    if resolved:
+        model.trail = resolve_trail(model.trail)
 
     return model
+
+
+def find_visible_branch_model(
+    entity_name: EntityName,
+    identity_name: str,
+    branch_name: str | None = None,
+    trail: TrailModel | int | None = None,
+    shared_by: str | None = None,
+    resolved: bool = True,
+) -> BranchModel | None:
+    try:
+        return get_visible_branch_model(
+            entity_name, identity_name, branch_name, trail, shared_by, resolved
+        )
+    except (BranchNotFoundError, AmbiguousBranchError):
+        return None
+
+
+def readable(model: BranchModel, identity_name: str) -> bool:
+    if model.owner.name == identity_name:
+        return True
+
+    return (
+        type(model)
+        .objects.filter(owner_id=model.owner_id, name=model.name)
+        .filter(visible_to(identity_name))
+        .exists()
+    )
+
+
+def trail_id_of(trail: TrailModel | TrailOut | int) -> int:
+    if isinstance(trail, int):
+        return trail
+
+    return trail.pk if isinstance(trail, TrailModel) else trail.id
+
+
+def branch_named(
+    entity_name: EntityName, identity_name: str, trail: TrailModel | TrailOut | int
+) -> str | None:
+    found = find_visible_branch_model(
+        entity_name, identity_name, trail=trail_id_of(trail), resolved=False
+    )
+
+    return None if found is None else found.name
+
+
+def name_of(
+    entity_name: EntityName, identity_name: str, trail: TrailModel | TrailOut
+) -> str:
+    return branch_named(entity_name, identity_name, trail) or short_fingerprint(
+        trail.fingerprint
+    )
+
+
+def holders_of(
+    entity_name: EntityName,
+    identity_name: str,
+    fingerprint: str,
+    shared_by: str | None = None,
+) -> list[BranchModel]:
+    trail_id = (
+        entity_of(entity_name)
+        .trail_model.objects.filter(fingerprint=fingerprint)
+        .values_list("pk", flat=True)
+        .first()
+    )
+
+    if trail_id is None:
+        return []
+
+    return [
+        model
+        for model in select_visible_branch_models(entity_name, identity_name, shared_by)
+        if model.trail_id == trail_id
+    ]
 
 
 def get_shared_branch_model(

@@ -1,14 +1,20 @@
-from collections.abc import Callable, Collection, Iterable, Sequence
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Protocol
+from typing import Any
 from uuid import UUID
 
 from django.db.models import Count, Min, Q, QuerySet
 from django.utils import timezone
 
-from chatddx.bench.cell import Kept
+from chatddx.bench.bench import Trial
 from chatddx.core.models import IdentityModel
+from chatddx.history.record import trial_of
+from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
+from chatddx.repo.entities.configuration.pydantic import SLICES
+from chatddx.repo.entities.stack.django import StackBranchModel
+from chatddx.repo.entities.stack.pydantic import StackDetails
+from chatddx.repo.store.trail import dump_trail
 from chatddx.worker.models import (
     FAILED,
     STOPPED_BY,
@@ -22,42 +28,78 @@ from chatddx.worker.models import (
 
 LOST = 30
 
+type Slot = tuple[int, str]
 
-class Case(Protocol):
-    @property
-    def name(self) -> Any: ...
+SLOT = ("stack_branch__owner_id", "stack_branch__name")
 
-    @property
-    def trail_id(self) -> int: ...
+READ = (
+    "owner",
+    "trial__case",
+    "trial__configuration",
+    "configuration_branch__owner",
+    "configuration_branch__trail",
+    "stack_branch__owner",
+    *(f"{entity}_branch" for entity in SLICES),
+)
 
 
-def put(
-    owner: str,
-    batch: UUID,
-    cells: Sequence[Kept],
-    cases: Sequence[Case],
-    run: bool = True,
-) -> int:
+def with_read(jobs: QuerySet[JobModel]) -> QuerySet[JobModel]:
+    return jobs.select_related(*READ)
+
+
+def slot_of(stack: StackBranchModel) -> Slot:
+    return (stack.owner_id, stack.name)
+
+
+def on(jobs: QuerySet[JobModel], slot: Slot) -> QuerySet[JobModel]:
+    owner_id, name = slot
+    return jobs.filter(stack_branch__owner_id=owner_id, stack_branch__name=name)
+
+
+def slots(slot: Slot) -> int:
+    owner_id, name = slot
+    details = (
+        StackBranchModel.objects.filter(owner_id=owner_id, name=name)
+        .order_by("-timestamp", "-id")
+        .values_list("details", flat=True)
+        .first()
+    )
+
+    return 1 if details is None else StackDetails.model_validate(details).max_jobs
+
+
+def put(owner: str, batch: UUID, trials: Iterable[Trial], run: bool = True) -> int:
     identity = IdentityModel.objects.get(name=owner)
     queued = timezone.now() if run else None
-    jobs = [
-        JobModel(
-            owner=identity,
-            batch=batch,
-            configuration=kept.configuration,
-            stack=kept.stack,
-            set=dict(kept.set),
-            label=kept.label,
-            fingerprint=kept.fingerprint,
-            case=case.name,
-            case_trail_id=case.trail_id,
-            seed=kept.seed,
-            status=Status.QUEUED if run else Status.STORED,
-            queued=queued,
+    configurations: dict[str, ConfigurationTrailModel] = {}
+    jobs: list[JobModel] = []
+
+    for trial in trials:
+        cell = trial.ready.cell
+        assert cell.configuration and cell.stack
+        made = cell.trail
+
+        if made.fingerprint not in configurations:
+            configurations[made.fingerprint] = dump_trail(ConfigurationTrailModel, made)
+
+        jobs.append(
+            JobModel(
+                owner=identity,
+                batch=batch,
+                trial=trial.planned
+                or trial_of(
+                    configurations[made.fingerprint],
+                    cell.stack.trail.id,
+                    trial.case,
+                    trial.seed,
+                ),
+                configuration_branch_id=cell.configuration.id,
+                stack_branch_id=cell.stack.id,
+                **{f"{entity}_branch_id": pk for entity, pk in cell.set_ids.items()},
+                status=Status.QUEUED if run else Status.STORED,
+                queued=queued,
+            )
         )
-        for kept in cells
-        for case in cases
-    ]
 
     return len(JobModel.objects.bulk_create(jobs))
 
@@ -166,7 +208,7 @@ def last(owner: str) -> UUID | None:
     )
 
 
-def running(owner: str | None = None, stack: str | None = None) -> list[JobModel]:
+def running(owner: str | None = None, slot: Slot | None = None) -> list[JobModel]:
     jobs = JobModel.objects.filter(
         status=Status.RUNNING,
         beat__gte=timezone.now() - timedelta(seconds=LOST),
@@ -175,29 +217,29 @@ def running(owner: str | None = None, stack: str | None = None) -> list[JobModel
     if owner is not None:
         jobs = jobs.filter(owner__name=owner)
 
-    if stack is not None:
-        jobs = jobs.filter(stack=stack)
+    if slot is not None:
+        jobs = on(jobs, slot)
 
-    return list(jobs.select_related("owner").order_by("started", "pk"))
+    return list(with_read(jobs).order_by("started", "pk"))
 
 
 def in_turn(jobs: QuerySet[JobModel]) -> QuerySet[JobModel]:
     return jobs.filter(status=Status.QUEUED).order_by("queued", "pk")
 
 
-def up_next(owner: str, stack: str | None = None) -> JobModel | None:
+def up_next(owner: str, slot: Slot | None = None) -> JobModel | None:
     jobs = JobModel.objects.filter(owner__name=owner)
 
-    return in_turn(jobs if stack is None else jobs.filter(stack=stack)).first()
+    return with_read(in_turn(jobs if slot is None else on(jobs, slot))).first()
 
 
 def outstanding(owner: str) -> int:
-    """How many of the owner's jobs are queued."""
     return JobModel.objects.filter(owner__name=owner, status=Status.QUEUED).count()
 
 
 @dataclass(frozen=True)
 class Waiting:
+    slot: Slot
     stack: str
     max_jobs: int
     running: int
@@ -208,26 +250,30 @@ class Waiting:
         return self.running + self.queued
 
 
-def waiting(owner: str, max_jobs: Callable[[str], int]) -> list[Waiting]:
+def waiting(owner: str) -> list[Waiting]:
     holding = ControlsModel.holding()
     found: list[Waiting] = []
     mine = JobModel.objects.filter(owner__name=owner)
     others = JobModel.objects.exclude(owner__name=owner).exclude(owner_id__in=holding)
-    stacks = in_turn(mine).order_by().values_list("stack", flat=True).distinct()
+    queued_on: list[Slot] = sorted(
+        set(in_turn(mine).order_by().values_list(*SLOT)),
+        key=lambda slot: (slot[1], slot[0]),
+    )
 
-    for stack in sorted(stacks):
-        if running(owner, stack):
+    for slot in queued_on:
+        if running(owner, slot):
             continue
 
-        first = in_turn(mine.filter(stack=stack)).first()
+        first = in_turn(on(mine, slot)).first()
         assert first is not None and first.queued is not None
-        ahead = in_turn(others.filter(stack=stack)).filter(
+        ahead = in_turn(on(others, slot)).filter(
             Q(queued__lt=first.queued) | Q(queued=first.queued, pk__lt=first.pk)
         )
         waits = Waiting(
-            stack,
-            max_jobs(stack),
-            running=len(running(stack=stack)),
+            slot,
+            slot[1],
+            slots(slot),
+            running=len(running(slot=slot)),
             queued=ahead.count(),
         )
 
@@ -239,8 +285,8 @@ def waiting(owner: str, max_jobs: Callable[[str], int]) -> list[Waiting]:
 
 def latest(owner: str, count: int = 10) -> list[JobModel]:
     return list(
-        JobModel.objects.filter(owner__name=owner, status__in=TAKEN_UP)
-        .select_related("owner", "run")
+        with_read(JobModel.objects.filter(owner__name=owner, status__in=TAKEN_UP))
+        .select_related("run")
         .prefetch_related("run__scores")
         .order_by("-finished", "-pk")[:count]
     )

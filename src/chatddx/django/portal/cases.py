@@ -1,7 +1,7 @@
 # pyright: basic
 import difflib
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Protocol
 
@@ -10,7 +10,9 @@ from django.db.models import F, Func, TextField, Value
 from django.db.models.functions import Replace
 from django.utils.translation import gettext, gettext_lazy as _
 
-from chatddx.bench.bench import Bench
+from chatddx.bench.held import held
+from chatddx.django.portal import records
+from chatddx.django.portal.records import Change, Said, Sharer
 from chatddx.django.portal.status import value_of
 from chatddx.history.models import RunModel, ScoreModel
 from chatddx.repo.entities.case.django import CaseBranchModel, CaseTrailModel
@@ -23,11 +25,11 @@ from chatddx.repo.entities.case.pydantic import (
     Target,
     TargetKind,
 )
-from chatddx.repo.queries import deleted, head_of
+from chatddx.repo.queries import deleted
 from chatddx.repo.store.branch import commit
+from chatddx.repo.store.timeline import select_versions
 from chatddx.scoring.score import Scoring
 from chatddx.scoring.scorers.patterns import unread_pattern
-from chatddx.worker.models import JobModel
 
 KINDS: dict[TargetKind, Any] = {
     "diagnosis": _("Diagnosis"),
@@ -46,13 +48,8 @@ REWRITTEN = 0.4
 _WORD = re.compile(r"\w+")
 
 
-def versions_of(owner: str, name: str) -> list[CaseBranchModel]:
-    return list(
-        CaseBranchModel.objects.filter(owner__name=owner, name=name)
-        .select_related("owner", "trail")
-        .prefetch_related("tags")
-        .order_by("timestamp", "id")
-    )
+def versions_of(owner: str, name: str) -> list[Any]:
+    return select_versions("case", owner, name)
 
 
 @dataclass(frozen=True)
@@ -178,15 +175,6 @@ class Timeline:
         return self.version(version.number + 1) if not version.is_head else None
 
 
-@dataclass(frozen=True)
-class Change:
-    label: Any
-    before: str = ""
-    after: str = ""
-    words: list[tuple[str, str]] = field(default_factory=list)
-    whole: bool = False
-
-
 def changes(before: Content | None, after: Content) -> list[Change]:
     if before is None:
         return []
@@ -247,7 +235,7 @@ def vignette_change(before: str, after: str) -> Change:
     ).ratio()
 
     if kept < REWRITTEN:
-        return Change(_("Vignette"), whole=True)
+        return Change(_("Vignette"), "", "", whole=True)
 
     was, now = _TOKEN.findall(before), _TOKEN.findall(after)
     matcher = difflib.SequenceMatcher(None, was, now, autojunk=False)
@@ -265,7 +253,7 @@ def vignette_change(before: str, after: str) -> Change:
         if j2 > j1:
             found.append(("new", "".join(now[j1:j2])))
 
-    return Change(_("Vignette"), words=found)
+    return Change(_("Vignette"), "", "", words=found)
 
 
 def needs_of(details: dict[str, Any]) -> dict[str, list[TargetKind]]:
@@ -289,110 +277,19 @@ def needs_of(details: dict[str, Any]) -> dict[str, list[TargetKind]]:
     return needs
 
 
-class Saving(StrEnum):
-    SAME = "same"
-    NEW = "new"
-    ONTO = "onto"
-    BACK = "back"
-
-
-@dataclass(frozen=True)
-class Said:
-    saving: Saving
-    name: str
-    version: int
-    onto: CaseBranchModel | None = None
-    since: int | None = None
-    edited: str | None = None
-    capitals: list[str] = field(default_factory=list)
-
-    @property
-    def line(self) -> str:
-        said = {"name": self.name, "version": self.version, "since": self.since}
-
-        match self.saving:
-            case _ if not self.name:
-                return gettext("Name the case to save it.")
-            case Saving.SAME if self.since is not None:
-                return (
-                    gettext(
-                        "Saving makes version %(version)d of this case, from version "
-                        + "%(since)d."
-                    )
-                    % said
-                )
-            case Saving.SAME:
-                return gettext("Saving makes version %(version)d of this case.") % said
-            case Saving.NEW if self.edited is not None:
-                return (
-                    gettext(
-                        "Saving makes a new case, %(name)s, and this one stays as it is."
-                    )
-                    % said
-                )
-            case Saving.NEW:
-                return gettext("Saving makes a new case, %(name)s.") % said
-            case Saving.ONTO:
-                return (
-                    gettext(
-                        "Saving makes version %(version)d of %(name)s, another case of "
-                        + "yours, replacing its vignette and targets."
-                    )
-                    % said
-                )
-            case Saving.BACK:
-                return (
-                    gettext(
-                        "Saving brings back %(name)s, which you deleted, as its "
-                        + "version %(version)d, replacing its vignette and targets."
-                    )
-                    % said
-                )
-
-    @property
-    def button(self) -> str:
-        said = {"name": self.name, "version": self.version}
-
-        match self.saving:
-            case Saving.SAME:
-                return gettext("Save as version %(version)d") % said
-            case Saving.NEW:
-                return gettext("Save as a new case")
-            case Saving.ONTO:
-                return gettext("Save onto %(name)s…") % said
-            case Saving.BACK:
-                return gettext("Bring %(name)s back…") % said
-
-
 def said(
     owner: str, name: str, edited: str | None = None, since: int | None = None
 ) -> Said:
-    name = name.strip()
-    rows = CaseBranchModel.objects.filter(owner__name=owner)
-    count = rows.filter(name=name).count() if name else 0
-    capitals = sorted(
-        other
-        for other in set(
-            rows.filter(name__iexact=name)
-            .exclude(name=name)
-            .values_list("name", flat=True)
-        )
-        if other != edited
-        and (head := head_of(rows, owner, other)) is not None
-        and not deleted(head)
+    return records.said_of(
+        "case",
+        owner,
+        name,
+        what=gettext("case"),
+        content=gettext("its vignette and targets"),
+        replaces=True,
+        edited=edited,
+        since=since,
     )
-
-    if edited is not None and name == edited:
-        return Said(Saving.SAME, name, count + 1, None, since, edited, capitals)
-
-    head = head_of(rows, owner, name) if count else None
-
-    if head is None:
-        return Said(Saving.NEW, name, 1, None, None, edited, capitals)
-
-    saving = Saving.BACK if deleted(head) else Saving.ONTO
-
-    return Said(saving, name, count + 1, head, None, edited, capitals)
 
 
 def vignette_of(owner: str, vignette: str) -> str:
@@ -410,11 +307,11 @@ def vignette_of(owner: str, vignette: str) -> str:
         )
     ).filter(bare=bare)
 
-    for held in (
+    for among in (
         trails.filter(branches__owner__name=owner),
         trails.filter(branches__collaborators__name=owner),
     ):
-        found = held.order_by("pk").values_list("vignette", flat=True).first()
+        found = among.order_by("pk").values_list("vignette", flat=True).first()
 
         if found is not None:
             return found
@@ -426,44 +323,12 @@ def _plain(text: str) -> str:
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
-@dataclass(frozen=True)
-class Sharer:
-    name: str
-    owner: str
-    pk: int
-    own: bool
-    tagged: bool
-
-
 def sharers(
     owner: str, vignette: str, name: str, edited: str | None = None
 ) -> list[Sharer]:
-    trail = (
-        CaseTrailModel.objects.filter(
-            fingerprint=CaseTrailIn(vignette=vignette).fingerprint
-        )
-        .values_list("pk", flat=True)
-        .first()
+    return records.sharers(
+        "case", owner, CaseTrailIn(vignette=vignette).fingerprint, name, edited
     )
-
-    if trail is None:
-        return []
-
-    found: list[Sharer] = []
-
-    for head in Bench(owner).usable("case"):
-        own = head.owner.name == owner
-
-        if head.trail_id != trail or head.name == name or (own and head.name == edited):
-            continue
-
-        found.append(
-            Sharer(
-                head.name, head.owner.name, head.pk, own, bool(list(head.tags.all()))
-            )
-        )
-
-    return found
 
 
 @dataclass(frozen=True)
@@ -477,7 +342,6 @@ class Held:
 
 
 def version_held(row: CaseBranchModel) -> Held:
-    scores = ScoreModel.objects.filter(case_branch=row).count()
     another = (
         CaseBranchModel.objects.filter(
             owner_id=row.owner_id, name=row.name, trail_id=row.trail_id
@@ -485,22 +349,20 @@ def version_held(row: CaseBranchModel) -> Held:
         .exclude(pk=row.pk)
         .exists()
     )
+    found = held(row.owner.name, "case", () if another else {row.trail_id}, [row.pk])
 
-    return Held(scores) if another else Held(scores, *_on(row.owner_id, {row.trail_id}))
+    return Held(found.scores, found.runs, found.jobs)
 
 
 def case_held(rows: list[CaseBranchModel]) -> Held:
-    return Held(
-        ScoreModel.objects.filter(case_branch__in=rows).count(),
-        *_on(rows[0].owner_id, {row.trail_id for row in rows}),
+    found = held(
+        rows[0].owner.name,
+        "case",
+        {row.trail_id for row in rows},
+        [row.pk for row in rows],
     )
 
-
-def _on(owner_id: int, trails: set[int]) -> tuple[int, int]:
-    return (
-        RunModel.objects.filter(owner_id=owner_id, trial__case_id__in=trails).count(),
-        JobModel.objects.filter(owner_id=owner_id, case_trail_id__in=trails).count(),
-    )
+    return Held(found.scores, found.runs, found.jobs)
 
 
 class Deleted(StrEnum):

@@ -211,8 +211,8 @@ def shown(run: RunModel) -> Shown:
             (entity, bench.name_of(entity, getattr(trial.configuration, entity)))
             for entity in SLICES
         ],
-        configuration=description_of(run).split(" × ")[0],
-        configuration_page=configuration_page_of(run, job),
+        configuration=bench.label_of(run),
+        configuration_page=configuration_page_of(run),
         answer=None if answer is None else _written(answer),
         views=[
             (view, [str(item) for item in output.view(view, answer)])

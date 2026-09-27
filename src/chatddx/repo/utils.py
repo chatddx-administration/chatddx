@@ -1,8 +1,9 @@
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from typing import Any, cast
 
-from django.db.models import ForeignKey, OneToOneField
+from django.db.models import ForeignKey, Model, OneToOneField
 
 from chatddx.core.django_fields import RelatedArrayField
 from chatddx.repo.families.django import TrailModel
@@ -16,7 +17,7 @@ def _key(model: TrailModel) -> _Key:
     return (model._meta.concrete_model, model.pk)
 
 
-def _array_fields(model_cls: type[TrailModel]) -> list[RelatedArrayField]:
+def _array_fields(model_cls: type[Model]) -> list[RelatedArrayField]:
     return [
         field
         for field in model_cls._meta.concrete_fields
@@ -24,7 +25,7 @@ def _array_fields(model_cls: type[TrailModel]) -> list[RelatedArrayField]:
     ]
 
 
-def _relation_fields(model_cls: type[TrailModel]) -> list[_TrailFK]:
+def _relation_fields(model_cls: type[Model]) -> list[_TrailFK]:
     relations: list[_TrailFK] = []
 
     for field in model_cls._meta.concrete_fields:
@@ -180,3 +181,37 @@ def trail_closure(model: TrailModel) -> list[TrailModel]:
             queue.append(related)
 
     return closure
+
+
+@dataclass(frozen=True)
+class Reach:
+    path: str
+    array: bool = False
+
+    @property
+    def lookup(self) -> str:
+        return f"{self.path}__{'overlap' if self.array else 'in'}"
+
+
+def _same(model_cls: type[Model], other: type[Model]) -> bool:
+    return model_cls._meta.concrete_model is other._meta.concrete_model
+
+
+def reaches(
+    root: type[Model], trail_model: type[TrailModel], prefix: str = ""
+) -> list[Reach]:
+    found: list[Reach] = []
+
+    for array in _array_fields(root):
+        if _same(array.associated_model, trail_model):
+            found.append(Reach(f"{prefix}{array.name}", array=True))
+
+    for relation in _relation_fields(root):
+        path = f"{prefix}{relation.name}"
+
+        if _same(relation.related_model, trail_model):
+            found.append(Reach(path))
+
+        found += reaches(relation.related_model, trail_model, f"{path}__")
+
+    return found

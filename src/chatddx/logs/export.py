@@ -58,11 +58,7 @@ from chatddx.repo.entities.output.pydantic import VIEWS, OutputTrailOut
 from chatddx.repo.entities.stack.django import StackTrailModel
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.names import short_fingerprint
-from chatddx.repo.store.branch import (
-    AmbiguousBranchError,
-    BranchNotFoundError,
-    get_visible_branch_model,
-)
+from chatddx.repo.store.branch import name_of
 from chatddx.repo.store.trail import load_trail
 from chatddx.scoring.score import Scoring
 
@@ -209,12 +205,7 @@ class _Names:
         key = (entity, trail.pk)
 
         if key not in self._names:
-            try:
-                self._names[key] = get_visible_branch_model(
-                    entity, self.identity, trail=trail.pk
-                ).name
-            except (BranchNotFoundError, AmbiguousBranchError):
-                self._names[key] = short_fingerprint(trail.fingerprint)
+            self._names[key] = name_of(entity, self.identity, trail)
 
         return self._names[key]
 

@@ -7,11 +7,13 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
+from chatddx.bench.bench import Bench
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.django.portal.admin import CONFIRM, LATER, RUN
 from chatddx.django.portal.models import BatchModel
 from chatddx.django.portal.stacks import page_of_run
 from chatddx.history.models import RunModel, RunStatus
+from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.worker import control, worker
 from chatddx.worker.models import JobModel, Status, Stopping, WorkerStateModel
@@ -48,6 +50,19 @@ def jobs(**filters: Any) -> list[JobModel]:
     return list(JobModel.objects.filter(**filters).order_by("pk"))
 
 
+def case_of(job: JobModel) -> str:
+    return Bench(job.owner.name).name_of("case", job.trial.case)
+
+
+def label_of(job: JobModel) -> str:
+    return Bench(job.owner.name).label_of(job)
+
+
+def on_case(name: str, owner: str = "alice") -> Any:
+    trail = CaseBranchModel.objects.filter(owner__name=owner, name=name).latest("pk")
+    return JobModel.objects.filter(owner__name=owner, trial__case_id=trail.trail_id)
+
+
 def tabs(response: Any) -> list[tuple[str, bool]]:
     [nav] = re.findall(
         r'<nav id="tabs-items".*?</nav>', response.content.decode(), re.DOTALL
@@ -72,7 +87,7 @@ def at_once(max_jobs: int, stack: str = FAKE) -> None:
 def under_way(case: str, owner: str = "alice", tokens: int = 0) -> None:
     now = timezone.now()
     _ = WorkerStateModel.objects.update_or_create(pk=1, defaults={"seen": now})
-    _ = JobModel.objects.filter(owner__name=owner, case=case).update(
+    _ = on_case(case, owner).update(
         status=Status.RUNNING, started=now, beat=now, tokens=tokens
     )
 
@@ -86,7 +101,7 @@ def test_a_batch_run_now_puts_its_trials_in_the_worker_s_queue(alice: Client):
     batch = kept(alice, reasoning=["default", "off"])
     queued = jobs()
 
-    assert [(job.label, job.case) for job in queued] == [
+    assert [(label_of(job), case_of(job)) for job in queued] == [
         ("free-text", "case-1"),
         ("free-text", "case-2"),
         ("free-text+reasoning=off", "case-1"),
@@ -95,9 +110,12 @@ def test_a_batch_run_now_puts_its_trials_in_the_worker_s_queue(alice: Client):
     assert {(job.batch, job.owner.name, job.status) for job in queued} == {
         (batch.uuid, "alice", Status.QUEUED)
     }
-    assert [job.fingerprint for job in queued[::2]] == [
+    assert [job.trial.configuration.fingerprint for job in queued[::2]] == [
         cell["fingerprint"] for cell in batch.cells
     ]
+    assert {job.trial.seed for job in queued} == {42}
+    assert {job.configuration_branch.name for job in queued} == {"free-text"}
+    assert {job.stack_branch.owner.name for job in queued} == {"archive"}
 
 
 def test_a_batch_run_now_leads_to_the_status_page(alice: Client):
@@ -173,7 +191,7 @@ def test_the_status_shows_the_owner_s_own_alone(
 
     assert shown.latest == []
     assert shown.progress.counted == "0 running · 0 completed · 2 total"
-    assert shown.up_next is not None and shown.up_next.owner.name == "alice"
+    assert shown.up_next is not None and shown.up_next.case == "case-1"
 
     changelist = bob.get(CHANGELIST)
 
@@ -211,7 +229,7 @@ def test_the_owner_s_cases_running_are_shown_with_their_tallies_live(alice: Clie
     response = alice.get(PANEL)
     shown = response.context["shown"]
 
-    assert [now.job.case for now in shown.running] == ["case-1"]
+    assert [now.case for now in shown.running] == ["case-1"]
     assert shown.progress.counted == "1 running · 0 completed · 2 total"
     assert b"~12 tokens" in response.content
     assert b"Running." in response.content
@@ -319,7 +337,7 @@ def test_a_batch_kept_before_the_queue_was_runs_from_its_page(alice: Client):
 
     _ = alice.post(page_of(batch, "run"), {"action": "resume"})
 
-    assert [(job.case, job.status) for job in jobs()] == [
+    assert [(case_of(job), job.status) for job in jobs()] == [
         ("case-1", Status.QUEUED),
         ("case-2", Status.QUEUED),
     ]
@@ -331,7 +349,7 @@ def test_more_cases_join_a_batch_stored_or_queued_as_the_batch_stands(
     batch = kept(alice, LATER, case_tags=["tag-1"])
     cases = page_of(batch, "cases")
 
-    assert [job.case for job in jobs()] == ["case-1"]
+    assert [case_of(job) for job in jobs()] == ["case-1"]
 
     nothing = alice.post(cases, {}, follow=True)
     held = alice.post(cases, {"case_tags": ["tag-1"]}, follow=True)
@@ -345,13 +363,13 @@ def test_more_cases_join_a_batch_stored_or_queued_as_the_batch_stands(
     assert said(added) == ["1 case added: 1 trial stored till the batch is run."]
     assert [case["name"] for case in batch.cases] == ["case-1", "case-2"]
     assert batch.tags == ["tag-1", "tag-2"]
-    assert [(job.case, job.status) for job in jobs()] == [
+    assert [(case_of(job), job.status) for job in jobs()] == [
         ("case-1", Status.STORED),
         ("case-2", Status.STORED),
     ]
 
     _ = alice.post(page_of(batch, "run"), {"action": "resume"}, follow=True)
-    _ = JobModel.objects.filter(case="case-2").delete()
+    _ = on_case("case-2").delete()
     batch.cases = batch.cases[:1]
     batch.save()
     queued = alice.post(cases, {"cases": ["case-2"]}, follow=True)
@@ -407,7 +425,7 @@ def test_a_case_that_went_wrong_is_told_once(
 ):
     _ = kept(alice)
     _ = worker.run(fake)
-    job = JobModel.objects.get(case="case-2")
+    job = on_case("case-2").get()
     _ = JobModel.objects.filter(pk=job.pk).update(status=status)
     _ = RunModel.objects.filter(pk=job.run_id).update(
         status=RunStatus.ERRORED, error=error

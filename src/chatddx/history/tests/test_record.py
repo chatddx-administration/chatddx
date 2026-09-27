@@ -17,7 +17,7 @@ from chatddx.history.models import (
     RunToolModel,
     TrialModel,
 )
-from chatddx.history.record import Outcome, Read, record
+from chatddx.history.record import Outcome, Read, record, trial_of
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
@@ -68,11 +68,12 @@ def written(
 ) -> RunModel:
     own = ConfigurationBranchOut.model_validate(branch("configuration", configuration))
     slices: dict[str, Any] = {entity: getattr(own.trail, entity) for entity in SLICES}
+    variations: dict[str, int] = {}
 
     if reasoning is not None:
-        slices["reasoning"] = ReasoningBranchOut.model_validate(
-            branch("reasoning", reasoning)
-        ).trail
+        set_in = branch("reasoning", reasoning)
+        slices["reasoning"] = ReasoningBranchOut.model_validate(set_in).trail
+        variations["reasoning"] = set_in.pk
 
     cell = ConfigurationTrailIn.model_validate(slices, from_attributes=True)
 
@@ -102,13 +103,16 @@ def written(
 
     return record(
         user,
-        cell,
+        trial_of(cell, stack.trail.id, case.trail_id, seed),
         Read(
-            stack.id,
-            llm.pk,
-            {tool.id: run.implementations[tool.trail.name].blob for tool in tools},
+            stack=stack.id,
+            llm=llm.pk,
+            configuration=own.id,
+            variations=variations,
+            tools={
+                tool.id: run.implementations[tool.trail.name].blob for tool in tools
+            },
         ),
-        case.trail_id,
         run,
         outcome,
         started,
@@ -144,6 +148,8 @@ def test_a_run_is_written_down_with_its_trial_conversation_and_messages():
     )
     assert run.stack_branch_id == stack.pk
     assert run.llm_branch == branch("llm", "qwen3-8b-awq")
+    assert run.configuration_branch == branch("configuration", "free-text")
+    assert run.reasoning_branch is None and run.toolset_branch is None
 
     assert run.client_id == branch("client", "chatddx-dev").trail_id
     assert run.client_rev is not None
@@ -189,6 +195,9 @@ def test_a_variation_set_in_a_cell_runs_a_configuration_with_no_branch():
     configuration = run.trial.configuration
     assert configuration.reasoning_id == branch("reasoning", "off").trail_id
     assert not ConfigurationBranchModel.objects.filter(trail=configuration).exists()
+    assert run.configuration_branch == branch("configuration", "free-text")
+    assert run.reasoning_branch == branch("reasoning", "off")
+    assert run.sampling_branch is None
 
 
 def test_a_run_keeps_its_tools_branches_and_every_round():

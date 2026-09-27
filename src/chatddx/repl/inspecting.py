@@ -13,6 +13,7 @@ from chatddx.repl.shell import Repl
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.case.pydantic import TARGET_KINDS, Expected
 from chatddx.repo.entities.coercion.pydantic import SLOT as SCHEMA_PROMPT
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.entities.output.pydantic import VIEWS
 from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningBranchOut
 from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
@@ -29,7 +30,6 @@ from chatddx.runtime.resolution import (
     Resolution,
     Sampling,
     SliceRefusal,
-    Slices,
     Tool,
     realize,
 )
@@ -109,10 +109,10 @@ def _show_cell(repl: Repl, tags: tuple[str, ...] = ()) -> None:
         table.add_row("stack", cell.stack.name, _outcome("stack", refusals, where))
 
     if cell.configuration:
-        slices = cell.slices
+        trail = cell.trail
 
         for entity in SLICES:
-            realized = _realized(entity, slices, parts) if parts else ""
+            realized = _realized(entity, trail, parts) if parts else ""
             table.add_row(
                 entity,
                 _variation(repl, entity),
@@ -350,11 +350,12 @@ def reasoning(repl: Repl) -> None:
             v.name,
         ),
     )
-    slices = cell.slices if cell.configuration else None
+    trail = cell.trail if cell.configuration else None
 
     caption = (
-        f"sampling as '{repl.name_of('sampling', slices.sampling)}' pulls it in"
-        if slices
+        f"sampling as '{repl.name_of('sampling', cell.variation('sampling'))}' "
+        + "pulls it in"
+        if trail
         else "the cell has no configuration: no sampling is pulled in"
     )
     columns: dict[tuple[str, ...], tuple[list[str], list[Text]]] = {}
@@ -364,7 +365,7 @@ def reasoning(repl: Repl) -> None:
             _effort(
                 *realize(
                     variation.trail,
-                    slices.sampling if slices else None,
+                    trail.sampling if trail else None,
                     repl.facts_of(stack),
                     stack.trail.serving,
                 )
@@ -384,7 +385,7 @@ def reasoning(repl: Repl) -> None:
         table.add_column("\n".join(names), overflow="fold")
 
     for i, variation in enumerate(variations):
-        current = slices is not None and _same(slices.reasoning, variation.trail)
+        current = trail is not None and _same(trail.reasoning, variation.trail)
         table.add_row(
             f"▸ {variation.name}" if current else variation.name,
             *(efforts[i] for _, efforts in columns.values()),
@@ -426,10 +427,10 @@ def _outcome(entity: str, refusals: list[SliceRefusal], realized: str) -> Text:
     return text
 
 
-def _realized(entity: str, slices: Slices, parts: Parts) -> str:
+def _realized(entity: str, trail: ConfigurationTrailIn, parts: Parts) -> str:
     reasoning, sampling, coercion, tools, slots = parts
-    free_text = slices.output.answer_schema is None
-    views = ", ".join(v for v in VIEWS if v in slices.output.views) or "none"
+    free_text = trail.output.answer_schema is None
+    views = ", ".join(v for v in VIEWS if v in trail.output.views) or "none"
 
     match entity:
         case "reasoning" if reasoning:

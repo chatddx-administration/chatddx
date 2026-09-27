@@ -1,3 +1,5 @@
+from typing import cast
+
 from chatddx.repo.entities.coercion import (
     CoercionTrailIn,
     CoercionTrailOut,
@@ -22,6 +24,7 @@ from chatddx.repo.entities.toolset import (
     ToolsetTrailIn,
     ToolsetTrailOut,
 )
+from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families import (
     BaseTrail,
     BranchOut,
@@ -55,3 +58,17 @@ class ConfigurationTrailOut(ConfigurationTrailBase, TrailOut):
 
 class ConfigurationBranchOut(BranchOut[ConfigurationTrailOut, Details]):
     pass
+
+
+SLICES: tuple[EntityName, ...] = cast(
+    tuple[EntityName, ...], tuple(ConfigurationTrailIn.model_fields)
+)
+
+OPTIONAL: tuple[EntityName, ...] = cast(
+    tuple[EntityName, ...],
+    tuple(
+        name
+        for name, field in ConfigurationTrailIn.model_fields.items()
+        if not field.is_required()
+    ),
+)

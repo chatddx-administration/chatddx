@@ -11,7 +11,7 @@ from chatddx.conftest import Recommit
 from chatddx.core.utils import ensure_identity
 from chatddx.dev.fake_vllm import FakeTransport, stream
 from chatddx.history.models import RunModel, RunStatus, ScoreModel
-from chatddx.history.record import Outcome, Read, record
+from chatddx.history.record import Outcome, Read, record, trial_of
 from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
@@ -79,9 +79,8 @@ def ran(
 
     return record(
         user,
-        cell,
-        Read(stack.id, llm.pk),
-        case_model.trail_id,
+        trial_of(cell, stack.trail.id, case_model.trail_id, None),
+        Read(stack=stack.id, llm=llm.pk),
         run,
         outcome,
         started,

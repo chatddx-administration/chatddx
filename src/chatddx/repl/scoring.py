@@ -48,7 +48,7 @@ def score(repl: Repl, prefix: str | None = None) -> None:
 
 def scorers(repl: Repl) -> None:
     scoring = Scoring(repl.identity)
-    offered = repl.cell.slices.output.views if repl.cell.configuration else None
+    offered = repl.cell.trail.output.views if repl.cell.configuration else None
     table = Table(box=None, header_style="bold")
 
     for column in ("scorer", "function", "reads", "held to", "metrics", "owner"):

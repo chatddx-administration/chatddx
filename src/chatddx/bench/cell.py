@@ -1,36 +1,79 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
-from typing import Any
+from typing import Any, Protocol
 
 from chatddx.repo.entities.configuration.pydantic import (
+    OPTIONAL,
+    SLICES,
     ConfigurationBranchOut,
     ConfigurationTrailIn,
 )
 from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.entity_names import EntityName
-from chatddx.runtime.resolution import Slices
 
-SLICES: tuple[EntityName, ...] = (
-    "instruction",
-    "output",
-    "coercion",
-    "reasoning",
-    "sampling",
-    "toolset",
-)
-
-OPTIONAL: tuple[EntityName, ...] = ("toolset",)
 NONE = "none"
 
 
-@dataclass(frozen=True)
-class Kept:
-    configuration: str
-    stack: str
-    set: Mapping[str, str]
-    label: str
-    fingerprint: str
-    seed: int | None
+def labelled(name: str, set_names: Mapping[str, str]) -> str:
+    return name + "".join(
+        f"+{entity}={set_names[entity]}" for entity in SLICES if entity in set_names
+    )
+
+
+class Made(Protocol):
+    @property
+    def trial(self) -> Any: ...
+
+    @property
+    def configuration_branch(self) -> Any: ...
+
+    @property
+    def stack_branch(self) -> Any: ...
+
+    @property
+    def instruction_branch(self) -> Any: ...
+
+    @property
+    def output_branch(self) -> Any: ...
+
+    @property
+    def coercion_branch(self) -> Any: ...
+
+    @property
+    def reasoning_branch(self) -> Any: ...
+
+    @property
+    def sampling_branch(self) -> Any: ...
+
+    @property
+    def toolset_branch(self) -> Any: ...
+
+
+def set_in(made: Made) -> dict[EntityName, Any]:
+    found: dict[EntityName, Any] = {
+        entity: branch
+        for entity in SLICES
+        if (branch := getattr(made, f"{entity}_branch")) is not None
+    }
+    configuration = made.configuration_branch
+
+    for entity in OPTIONAL:
+        if (
+            entity not in found
+            and configuration is not None
+            and getattr(configuration.trail, f"{entity}_id") is not None
+            and getattr(made.trial.configuration, f"{entity}_id") is None
+        ):
+            found[entity] = None
+
+    return found
+
+
+def set_names_of(made: Made) -> dict[str, str]:
+    return {
+        entity: NONE if branch is None else branch.name
+        for entity, branch in set_in(made).items()
+    }
 
 
 @dataclass(frozen=True, eq=False)
@@ -60,12 +103,7 @@ class Cell:
         if not self.configuration:
             return ""
 
-        set_ = "".join(
-            f"+{entity}={self.set_name(entity)}"
-            for entity in SLICES
-            if entity in self.variations
-        )
-        return f"{self.name}{set_}"
+        return labelled(self.name, self.set_names)
 
     def set_name(self, entity: str) -> str:
         variation = self.variations[entity]
@@ -77,6 +115,14 @@ class Cell:
             entity: self.set_name(entity)
             for entity in SLICES
             if entity in self.variations
+        }
+
+    @property
+    def set_ids(self) -> dict[str, int]:
+        return {
+            entity: variation.id
+            for entity, variation in self.variations.items()
+            if variation is not None
         }
 
     def holds(self, entity: str, variation: Any) -> bool:
@@ -105,14 +151,15 @@ class Cell:
         return replace(self, variations=variations)
 
     @property
-    def slices(self) -> Slices:
-        return Slices(**{entity: self.variation(entity) for entity in SLICES})
+    def trail(self) -> ConfigurationTrailIn:
+        return ConfigurationTrailIn.model_validate(
+            {entity: self.variation(entity) for entity in SLICES},
+            from_attributes=True,
+        )
 
     @property
     def fingerprint(self) -> str:
-        return ConfigurationTrailIn.model_validate(
-            self.slices, from_attributes=True
-        ).fingerprint
+        return self.trail.fingerprint
 
     def variation(self, entity: str) -> Any:
         assert self.configuration
@@ -122,18 +169,6 @@ class Cell:
             return None if variation is None else variation.trail
 
         return getattr(self.configuration.trail, entity)
-
-    def kept(self, seed: int | None) -> Kept:
-        assert self.configuration and self.stack
-
-        return Kept(
-            self.name,
-            self.stack.name,
-            self.set_names,
-            self.label,
-            self.fingerprint,
-            seed,
-        )
 
     def described(self, case: str, seed: int | None) -> str:
         assert self.stack

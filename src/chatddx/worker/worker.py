@@ -107,18 +107,18 @@ class Worker:
         _heeded(self._running)
         holding = ControlsModel.holding()
         taken = 0
-        waiting = (
+        waiting: list[queue.Slot] = sorted(
             queue.in_turn(JobModel.objects.exclude(owner_id__in=holding))
             .order_by()
-            .values_list("stack", flat=True)
+            .values_list(*queue.SLOT)
             .distinct()
         )
 
-        for stack in sorted(waiting):
-            free = self._max_jobs(stack, holding) - len(queue.running(stack=stack))
+        for slot in waiting:
+            free = queue.slots(slot) - len(queue.running(slot=slot))
 
             while free > 0:
-                job = _taken(stack, holding)
+                job = _taken(slot, holding)
 
                 if job is None:
                     break
@@ -130,25 +130,6 @@ class Worker:
 
         return taken
 
-    def _max_jobs(self, stack: str, holding: list[int]) -> int:
-        first = (
-            queue.in_turn(
-                JobModel.objects.filter(stack=stack).exclude(owner_id__in=holding)
-            )
-            .select_related("owner")
-            .first()
-        )
-
-        if first is None:
-            return 0
-
-        bench, _ = self._bench(first.owner.name)
-
-        try:
-            return bench.max_jobs(stack)
-        except (BranchNotFoundError, AmbiguousBranchError):
-            return 1
-
     def _start(self, job: JobModel, relay: Relay[int]) -> bool:
         bench, scoring = self._bench(job.owner.name)
 
@@ -156,7 +137,7 @@ class Worker:
             trial = _trial(bench, job)
             sending = Sending(bench, trial, ConversationContext.WORKER, scoring)
         except UNSENT as e:
-            _skipped(job, e)
+            _skipped(bench, job, e)
             return False
 
         logger.info("%s", trial.description)
@@ -255,15 +236,13 @@ def _heeded(running: dict[int, Running]) -> None:
         )
 
 
-def _taken(stack: str, holding: list[int]) -> JobModel | None:
+def _taken(slot: queue.Slot, holding: list[int]) -> JobModel | None:
     with transaction.atomic():
-        job = (
-            queue.in_turn(
-                JobModel.objects.select_for_update(skip_locked=True, of=("self",))
-                .select_related("owner", "case_trail")
-                .filter(stack=stack)
-                .exclude(owner_id__in=holding)
-            )
+        job = queue.in_turn(
+            queue.on(
+                JobModel.objects.select_for_update(skip_locked=True, of=("self",)),
+                slot,
+            ).exclude(owner_id__in=holding)
         ).first()
 
         if job is None:
@@ -277,19 +256,22 @@ def _taken(stack: str, holding: list[int]) -> JobModel | None:
 
 
 def _trial(bench: Bench, job: JobModel) -> Trial:
-    cell = bench.cell_as_kept(job.kept)
+    ready = bench.ready(bench.cell_read(job))
+    trial = job.trial
 
-    return Trial.of(bench.ready(cell), job.case_trail, job.case, job.seed)
+    return Trial.of(
+        ready, trial.case, bench.name_of("case", trial.case), trial.seed, trial
+    )
 
 
-def _skipped(job: JobModel, error: Exception) -> None:
+def _skipped(bench: Bench, job: JobModel, error: Exception) -> None:
     match error:
         case NotReady() | CellRefused():
             reason = "; ".join(reasons(error))
         case _:
             reason = str(error)
 
-    logger.info("skipped: %s × %s: %s", job.cell, job.case, reason)
+    logger.info("skipped: %s: %s", bench.described(job), reason)
     _finished(job, Status.SKIPPED, reason)
 
 

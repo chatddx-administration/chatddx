@@ -4,7 +4,7 @@ from itertools import product
 from typing import Any
 
 from chatddx.bench.bench import Bench, NotReady, Ready, Trial
-from chatddx.bench.cell import SLICES, Cell, Kept
+from chatddx.bench.cell import SLICES, Cell
 from chatddx.repo.families.django import BranchModel
 from chatddx.runtime.resolution import CellRefused
 
@@ -93,10 +93,6 @@ class Plan:
 
     def seed_of(self, ready: Ready) -> int | None:
         return None if ready.greedy else self.seed
-
-    @property
-    def kept(self) -> list[Kept]:
-        return [ready.cell.kept(self.seed_of(ready)) for ready in self.ready]
 
     @property
     def trials(self) -> list[Trial]:

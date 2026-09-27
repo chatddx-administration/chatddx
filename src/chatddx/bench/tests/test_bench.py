@@ -1,8 +1,6 @@
-from dataclasses import replace
-
 import pytest
 
-from chatddx.bench.bench import Bench, Drifted, Incomplete, NoSecret, NotOwn, Trial
+from chatddx.bench.bench import Bench, Incomplete, NoSecret, NotOwn, Trial
 from chatddx.bench.cell import Cell
 from chatddx.conftest import Recommit
 from chatddx.core.models import IdentityModel
@@ -25,8 +23,8 @@ def test_a_cell_is_put_together_from_names_as_use_on_and_set_would(bench: Bench)
 
     assert cell.label == "plan+reasoning=off"
     assert cell.stack is not None and cell.stack.name == "qwen3-8b-awq@fake"
-    assert cell.slices.reasoning.effort == "off"
-    assert cell.slices.toolset is None
+    assert cell.trail.reasoning.effort == "off"
+    assert cell.trail.toolset is None
 
 
 def test_what_a_cell_can_t_hold_is_said_before_anything_is_put_in(bench: Bench):
@@ -53,26 +51,16 @@ def test_a_cell_never_changes_each_change_is_another(bench: Bench):
     assert plan.fingerprint == back.fingerprint != off.fingerprint
 
 
-def test_a_kept_cell_comes_back_as_it_was_or_not_at_all(bench: Bench):
-    cell = bench.cell_of("plan", "qwen3-8b-awq@fake", {"reasoning": "off"})
-    kept = cell.kept(42)
+def test_a_cell_comes_to_a_configuration_trail_with_what_is_set_in_it(bench: Bench):
+    plan = bench.cell_of("plan", "qwen3-8b-awq@fake")
+    off = bench.variation_named("reasoning", "off")
+    cell = plan.set("reasoning", off)
 
-    assert (kept.configuration, kept.stack, dict(kept.set), kept.label) == (
-        "plan",
-        "qwen3-8b-awq@fake",
-        {"reasoning": "off"},
-        "plan+reasoning=off",
-    )
-    assert (kept.fingerprint, kept.seed) == (cell.fingerprint, 42)
-    assert bench.cell_as_kept(kept).fingerprint == cell.fingerprint
-
-    with pytest.raises(Drifted, match=r"plan\+reasoning=off is another configuration"):
-        _ = bench.cell_as_kept(replace(kept, fingerprint="cddx-trail/1:sha256:0"))
-
-
-def test_a_stack_takes_as_many_jobs_at_once_as_its_details_say(bench: Bench):
-    assert bench.max_jobs("qwen3-8b-awq@fake") == 4
-    assert bench.max_jobs("qwen3-8b-awq@pelle") == 1
+    assert cell.trail.reasoning.effort == "off"
+    assert cell.trail.instruction.fingerprint == plan.trail.instruction.fingerprint
+    assert cell.trail.fingerprint == cell.fingerprint != plan.fingerprint
+    assert cell.set_ids == {"reasoning": off.id}
+    assert cell.set("toolset", None).set_ids == {"reasoning": off.id}
 
 
 def test_a_ready_cell_is_resolved_with_its_tools(bench: Bench):

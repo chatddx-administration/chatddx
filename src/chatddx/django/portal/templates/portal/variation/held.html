@@ -20,6 +20,6 @@
     {% endif %}
 
     {% if holds.trials %}
-        <li>{% blocktranslate count counter=holds.trials %}{{ counter }} trial of your batches sets it by name{% plural %}{{ counter }} trials of your batches set it by name{% endblocktranslate %}</li>
+        <li>{% blocktranslate count counter=holds.trials %}{{ counter }} trial of your batches holds it{% plural %}{{ counter }} trials of your batches hold it{% endblocktranslate %}</li>
     {% endif %}
 </ul>

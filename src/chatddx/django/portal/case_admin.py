@@ -31,6 +31,7 @@ from chatddx.django.portal import cases
 from chatddx.django.portal.forms import CaseForm, initial_of
 from chatddx.django.portal.models import Case
 from chatddx.django.portal.owners import identity_of
+from chatddx.django.portal.records import Said, Saving
 from chatddx.repo.queries import qs_head
 from chatddx.repo.store.branch import commit
 
@@ -425,7 +426,7 @@ class CaseAdmin(ModelAdmin):
         edited = timeline.name if timeline else None
         said = cases.said(owner, cleaned["name"], edited, cleaned["since"])
 
-        if said.saving == cases.Saving.NEW and not self.has_add_permission(request):
+        if said.saving == Saving.NEW and not self.has_add_permission(request):
             raise PermissionDenied
 
         if timeline is not None and timeline.head.row.pk != cleaned["head"]:
@@ -468,7 +469,7 @@ class CaseAdmin(ModelAdmin):
         )
 
     def _confirmation(
-        self, request: HttpRequest, form: CaseForm, said: cases.Said
+        self, request: HttpRequest, form: CaseForm, said: Said
     ) -> TemplateResponse:
         assert said.onto is not None
         theirs = cases.Timeline.of(said.onto).head
@@ -698,7 +699,7 @@ def _back_to(request: HttpRequest, row: Case) -> str:
 
 
 def _said_of(
-    said: cases.Said, changed: bool, tags_before: list[str] | None, tags: list[str]
+    said: Said, changed: bool, tags_before: list[str] | None, tags: list[str]
 ) -> str:
     values = {"name": said.name, "version": said.version, "was": said.version - 1}
 
@@ -715,11 +716,11 @@ def _said_of(
         return gettext("Nothing changed: %(name)s stays at version %(was)d.") % values
 
     match said.saving:
-        case cases.Saving.SAME:
+        case Saving.SAME:
             return gettext("Saved as version %(version)d of %(name)s.") % values
-        case cases.Saving.NEW:
+        case Saving.NEW:
             return gettext("Saved as a new case, %(name)s.") % values
-        case cases.Saving.ONTO:
+        case Saving.ONTO:
             return gettext("Saved onto %(name)s, as its version %(version)d.") % values
-        case cases.Saving.BACK:
+        case Saving.BACK:
             return gettext("%(name)s is back, as its version %(version)d.") % values

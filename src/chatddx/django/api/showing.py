@@ -5,6 +5,7 @@ from django.db.models import prefetch_related_objects
 from pydantic import JsonValue
 
 from chatddx.bench.bench import Bench
+from chatddx.bench.cell import set_in
 from chatddx.django.api.schemas import (
     BranchRow,
     ReadOut,
@@ -124,6 +125,8 @@ def run_of(run: RunModel, scoring: Scoring) -> RunOut:
         read=ReadOut(
             stack=_row(run.stack_branch),
             llm=_row(run.llm_branch),
+            configuration=_row(run.configuration_branch),
+            set={entity: _row(branch) for entity, branch in set_in(run).items()},
             tools=[
                 ToolRan(
                     id=link.tool_branch.pk,

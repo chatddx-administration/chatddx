@@ -1,5 +1,4 @@
 # pyright: basic
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -8,17 +7,14 @@ from urllib.parse import urlencode
 from django.urls import reverse
 
 from chatddx.bench.bench import Bench
-from chatddx.bench.cell import NONE, SLICES, Cell
-from chatddx.core import settings
+from chatddx.bench.cell import NONE, SLICES, Cell, Made, set_in
 from chatddx.django.portal.records import (
     Change,
     Field,
     Newer,
     Version,
-    branch_of,
     name_of,
     owner_of,
-    readable,
     timeline_of,
     version_of,
 )
@@ -28,11 +24,14 @@ from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.names import short_fingerprint
-from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
+from chatddx.repo.store.branch import (
+    AmbiguousBranchError,
+    BranchNotFoundError,
+    find_visible_branch_model,
+    name_of as named,
+    readable,
+)
 from chatddx.repo.utils import resolve_trail
-from chatddx.worker.models import JobModel
-
-_SET = re.compile(r"\+(" + "|".join(SLICES) + r")=([^+]*)$")
 
 
 @dataclass(frozen=True)
@@ -104,82 +103,34 @@ def page_named(
     return page_of(row.pk, pins)
 
 
-def page_of_run(run: RunModel, job: JobModel | None = None) -> str | None:
-    identity = run.owner.name
-    trial = run.trial.configuration
-    job = job or JobModel.objects.filter(run=run).first()
-    entities: list[EntityName] = []
-
-    if job is not None:
-        name = job.configuration
-        entities = [entity for entity in SLICES if entity in job.set]
-    else:
-        description = run.conversation.description if run.conversation else ""
-        name, entities = (
-            parsed(description.split(" × ")[0]) if description else ("", [])
-        )
-
-    base = _base(identity, name, entities, trial) if name else None
-
-    if base is None:
-        held = branch_of("configuration", trial, identity)
-        return None if held is None else page_of(held.pk)
-
-    pins: dict[str, int | str] = {}
-
-    for entity in entities:
-        variation = getattr(trial, entity)
-
-        if variation is None:
-            pins[entity] = NONE
-            continue
-
-        row = branch_of(entity, variation, identity)
-
-        if row is None:
-            return page_of(base.pk)
-
-        pins[entity] = row.pk
-
-    return page_of(base.pk, pins)
+def pins_of(made: Made) -> dict[str, int | str]:
+    return {
+        entity: NONE if branch is None else branch.pk
+        for entity, branch in set_in(made).items()
+    }
 
 
-def parsed(label: str) -> tuple[str, list[EntityName]]:
-    named: list[str] = []
+def page_of_made(made: Made) -> str | None:
+    if made.configuration_branch is None:
+        return None
 
-    while (found := _SET.search(label)) is not None:
-        named.insert(0, found.group(1))
-        label = label[: found.start()]
-
-    return label, [entity for entity in SLICES if entity in named]
+    return page_of(made.configuration_branch.pk, pins_of(made))
 
 
-def _base(
-    identity: str, name: str, entities: list[EntityName], trial: Any
-) -> ConfigurationBranchModel | None:
-    owner, slash, bare = name.partition("/")
-    owners = [owner] if slash else [identity, settings.ARCHIVE_IDENTITY_NAME]
-    rows = (
-        ConfigurationBranchModel.objects.filter(
-            name=bare if slash else name, owner__name__in=owners
-        )
-        .select_related("owner", "trail")
-        .order_by("-timestamp", "-id")
+def page_of_run(run: RunModel) -> str | None:
+    page = page_of_made(run)
+
+    if page is not None:
+        return page
+
+    held = find_visible_branch_model(
+        "configuration",
+        run.owner.name,
+        trail=run.trial.configuration_id,
+        resolved=False,
     )
-    matching = [
-        row
-        for row in rows
-        if all(
-            getattr(row.trail, f"{entity}_id") == getattr(trial, f"{entity}_id")
-            for entity in SLICES
-            if entity not in entities
-        )
-        and readable(row, identity)
-    ]
 
-    matching.sort(key=lambda row: row.owner.name != identity)
-
-    return matching[0] if matching else None
+    return None if held is None else page_of(held.pk)
 
 
 def pinned(identity: str, asked: Mapping[str, str]) -> dict[EntityName, Any]:
@@ -275,7 +226,11 @@ def _slice(
             fields,
             page=page_of_variation(
                 entity,
-                branch_of(entity, trail, identity) if trail is not None else None,
+                find_visible_branch_model(
+                    entity, identity, trail=trail.id, resolved=False
+                )
+                if trail is not None
+                else None,
                 identity,
             ),
         )
@@ -311,11 +266,7 @@ def _slice(
 
 
 def _named(entity: EntityName, trail: Any, identity: str) -> str:
-    if trail is None:
-        return NONE
-
-    row = branch_of(entity, trail, identity)
-    return row.name if row is not None else short_fingerprint(trail.fingerprint)
+    return NONE if trail is None else named(entity, identity, trail)
 
 
 def _short(trail: Any) -> str | None:

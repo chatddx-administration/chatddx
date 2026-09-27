@@ -11,7 +11,7 @@ from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.store.branch import get_shared_branch_model, get_visible_branch_model
-from chatddx.repo.utils import resolve_trails
+from chatddx.repo.store.timeline import select_versions
 from chatddx.scoring.score import Scoring
 
 router = Router(tags=["registry"])
@@ -45,17 +45,8 @@ def _routes(entity: EntityName) -> None:
     def versions(request: HttpRequest, name: str, owner: str | None = None):
         bench = Bench(identity_of(request))
         head = named(bench, entity, name, owner)
-        rows = entity_of(entity).branch_model.objects.filter(
-            owner=head.owner, name=head.name
-        )
-
-        if head.owner.name != bench.identity:
-            rows = rows.filter(collaborators__name=bench.identity)
-
-        found = list(
-            rows.select_related("owner", "trail").order_by("-timestamp", "-pk")
-        )
-        _ = resolve_trails([row.trail for row in found])
+        found = select_versions(entity, head.owner.name, head.name, bench.identity)
+        found.reverse()
         return found
 
     def runs(

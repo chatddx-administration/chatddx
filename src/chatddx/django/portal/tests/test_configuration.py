@@ -11,7 +11,7 @@ from chatddx.conftest import Recommit
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.dev.samples import sample
 from chatddx.django.portal.admin import CONFIRM, RUN
-from chatddx.django.portal.configurations import page_of, page_of_run, parsed
+from chatddx.django.portal.configurations import page_of, page_of_run
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.names import short_fingerprint
 from chatddx.worker import worker
@@ -239,10 +239,27 @@ def test_a_configuration_another_keeps_to_themselves_is_not_found(
     )
 
 
-def test_a_label_is_read_from_its_end(alice: Client):
-    assert parsed("plan-web+coercion=tool+reasoning=high") == (
-        "plan-web",
-        ["coercion", "reasoning"],
+def test_a_run_s_page_is_the_version_it_ran_though_a_newer_one_is_saved(
+    alice: Client,
+):
+    run = sample("alice", "rich", case="case-1")
+    earlier = head("plan-web")
+    bench = Bench("alice")
+    _ = bench.save(bench.cell_of("plan-web", None, {"sampling": "fixed"}), "plan-web")
+    pins = {
+        "coercion": variation("coercion", "tool"),
+        "reasoning": variation("reasoning", "high"),
+    }
+    url = page_of_run(run)
+
+    assert url is not None
+    assert url == page_of(earlier.pk, pins) != page_of(head("plan-web").pk, pins)
+    assert (run.configuration_branch_id, run.coercion_branch_id) == (
+        earlier.pk,
+        pins["coercion"],
     )
-    assert parsed("archive/plan+toolset=none") == ("archive/plan", ["toolset"])
-    assert parsed("plan+more") == ("plan+more", [])
+
+    page = shown(alice, url)
+
+    assert (page.version.number, page.version.of) == (1, 2)
+    assert page.label == "plan-web+coercion=tool+reasoning=high"

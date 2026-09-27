@@ -3,14 +3,15 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from chatddx.bench.bench import Bench, HeldTo
-from chatddx.bench.cell import SLICES, Kept
+from chatddx.bench.bench import Bench, Drifted, HeldTo, Ready, Trial
+from chatddx.bench.cell import SLICES
 from chatddx.bench.plan import Plan
 from chatddx.django.portal.configurations import page_named
 from chatddx.repo.entities.case.django import CaseTrailModel
 from chatddx.repo.families.django import BranchModel
 from chatddx.scoring.score import Scoring
 from chatddx.worker import queue
+from chatddx.worker.models import JobModel
 
 SHOWN = 12
 
@@ -18,26 +19,12 @@ SHOWN = 12
 def cells_of(plan: Plan) -> list[dict[str, Any]]:
     return [
         {
-            "label": kept.label,
-            "set": dict(kept.set),
-            "fingerprint": kept.fingerprint,
-            "seed": kept.seed,
+            "label": ready.cell.label,
+            "set": ready.cell.set_names,
+            "fingerprint": ready.cell.fingerprint,
+            "seed": plan.seed_of(ready),
         }
-        for kept in plan.kept
-    ]
-
-
-def kept_of(batch: Any) -> list[Kept]:
-    return [
-        Kept(
-            batch.configuration,
-            batch.stack,
-            cell["set"],
-            cell["label"],
-            cell["fingerprint"],
-            cell["seed"],
-        )
-        for cell in batch.cells
+        for ready in plan.ready
     ]
 
 
@@ -61,21 +48,61 @@ def cases_of(cases: Iterable[BranchModel]) -> list[dict[str, str]]:
 @dataclass(frozen=True)
 class Case:
     name: str
-    trail_id: int
+    trail: CaseTrailModel
 
 
 def held(batch: Any) -> list[Case]:
-    trails = dict(
-        CaseTrailModel.objects.filter(
+    trails = {
+        trail.fingerprint: trail
+        for trail in CaseTrailModel.objects.filter(
             fingerprint__in=[case["fingerprint"] for case in batch.cases]
-        ).values_list("fingerprint", "pk")
-    )
+        )
+    }
 
     return [Case(case["name"], trails[case["fingerprint"]]) for case in batch.cases]
 
 
-def put(batch: Any, run: bool) -> int:
-    return queue.put(batch.owner.name, batch.uuid, kept_of(batch), held(batch), run)
+def readies_of(bench: Bench, batch: Any) -> list[tuple[Ready, int | None]]:
+    found: list[tuple[Ready, int | None]] = []
+    seen: set[str] = set()
+
+    for job in queue.with_read(JobModel.objects.filter(batch=batch.uuid)).order_by(
+        "pk"
+    ):
+        cell = bench.cell_read(job)
+
+        if cell.fingerprint not in seen:
+            seen.add(cell.fingerprint)
+            found.append((bench.ready(cell), job.trial.seed))
+
+    if found:
+        return found
+
+    for cell in batch.cells:
+        ready = bench.ready(
+            bench.cell_of(batch.configuration, batch.stack, cell["set"])
+        )
+
+        if ready.cell.fingerprint != cell["fingerprint"]:
+            raise Drifted(f"{cell['label']} is another configuration than was planned")
+
+        found.append((ready, cell["seed"]))
+
+    return found
+
+
+def trials_of(bench: Bench, batch: Any, cases: Iterable[Any]) -> list[Trial]:
+    cases = list(cases)
+
+    return [
+        Trial.of(ready, case.trail, case.name, seed)
+        for ready, seed in readies_of(bench, batch)
+        for case in cases
+    ]
+
+
+def put(bench: Bench, batch: Any, cases: Iterable[Any], run: bool) -> int:
+    return queue.put(batch.owner.name, batch.uuid, trials_of(bench, batch, cases), run)
 
 
 def unheld(

@@ -13,11 +13,9 @@ from chatddx.django.portal.records import (
     Field,
     Newer,
     Version,
-    branch_of,
     name_of,
     or_none,
     owner_of,
-    readable,
     said,
     timeline_of,
     version_of,
@@ -46,7 +44,9 @@ from chatddx.repo.names import short_fingerprint
 from chatddx.repo.store.branch import (
     AmbiguousBranchError,
     BranchNotFoundError,
+    find_visible_branch_model,
     get_visible_branch_model,
+    readable,
 )
 from chatddx.repo.utils import resolve_trail
 
@@ -186,7 +186,7 @@ def _pinned(llm: int | None, stack: StackBranchOut, identity: str) -> Any:
 
 
 def _llm_out(pinned: Any, stack: StackBranchOut, identity: str) -> LLMBranchOut | None:
-    row = pinned or branch_of("llm", stack.trail.llm, identity)
+    row = pinned or find_visible_branch_model("llm", identity, trail=stack.trail.llm.id)
     return None if row is None else LLMBranchOut.model_validate(row)
 
 
@@ -198,7 +198,9 @@ def _part(
     pinned: Any,
     stack_row: StackBranchModel,
 ) -> Part:
-    row = (pinned if key == "llm" else None) or branch_of(entity, trail, identity)
+    row = (pinned if key == "llm" else None) or find_visible_branch_model(
+        entity, identity, trail=trail.id
+    )
     details: Any = (
         entity_of(entity).branch_out.model_validate(row).details
         if row is not None

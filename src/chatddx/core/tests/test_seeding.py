@@ -17,7 +17,7 @@ from chatddx.repo.names import short_fingerprint
 from chatddx.repo.parsers.inventory import ParseError, parse
 from chatddx.repo.store.branch import commit
 from chatddx.scoring.score import Scoring
-from chatddx.worker import queue, worker
+from chatddx.worker import queue
 
 pytestmark = pytest.mark.django_db
 
@@ -49,7 +49,7 @@ def sent(owner: str) -> RunModel:
 def queued(owner: str) -> None:
     bench = Bench(owner)
     plan = Plan.of(bench, [bench.cell_of("free-text", FAKE)], ["tag-2"], 42)
-    _ = queue.put(owner, uuid4(), plan.kept, plan.cases)
+    _ = queue.put(owner, uuid4(), plan.trials)
 
 
 def test_the_giftbag_gives_what_is_asked_and_nothing_else():
@@ -120,7 +120,7 @@ def test_what_the_archive_changes_later_reaches_its_owners_at_once(
     stack = next(stack for stack in Bench("alice").stacks() if stack.name == FAKE)
 
     assert str(stack.details.endpoint) == "http://localhost:12100/v1/"
-    assert worker.Worker()._max_jobs(FAKE, []) == 8  # pyright: ignore[reportPrivateUsage]
+    assert queue.slots((stack.owner.id, stack.name)) == 8
     assert "dont_miss_mentions" not in {s.name for s in Scoring("alice").scorers}
 
 

@@ -25,16 +25,18 @@ from pydantic_ai import (
 )
 
 from chatddx.bench.outcome import failed, holds, unheeded
-from chatddx.repo.entities.coercion.pydantic import CoercionTrailBase
-from chatddx.repo.entities.instruction.pydantic import InstructionTrailBase
+from chatddx.repo.entities.coercion.pydantic import CoercionTrailIn
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
+from chatddx.repo.entities.instruction.pydantic import InstructionTrailIn
 from chatddx.repo.entities.llm.pydantic import LLMBranchOut, LLMFacts, LLMSpecs, Refusal
-from chatddx.repo.entities.output.pydantic import OutputTrailBase
-from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningTrailBase
-from chatddx.repo.entities.sampling.pydantic import SamplingTrailBase
+from chatddx.repo.entities.output.pydantic import OutputTrailIn
+from chatddx.repo.entities.reasoning.pydantic import Effort, ReasoningTrailIn
+from chatddx.repo.entities.sampling.pydantic import SamplingTrailIn
 from chatddx.repo.entities.stack.pydantic import StackBranchOut
-from chatddx.repo.entities.tool.pydantic import ToolTrailBase
+from chatddx.repo.entities.tool.pydantic import ToolTrailIn
+from chatddx.repo.entities.toolset.pydantic import ToolsetTrailIn
 from chatddx.repo.families.fields import STORE_PATH
-from chatddx.runtime.resolution import CellRefused, Resolution, Slices, resolve
+from chatddx.runtime.resolution import CellRefused, Resolution, resolve
 from chatddx.runtime.run import Run, invalid
 
 logger = logging.getLogger(__name__)
@@ -70,7 +72,7 @@ SPEC_SCHEMA: dict[str, Any] = {
 
 READY = "Answer with one word: ready."
 
-PROBE = ToolTrailBase(
+PROBE = ToolTrailIn(
     name="probe",
     description="This tool takes two arguments and performs an operation on them",
     parameters={
@@ -91,16 +93,16 @@ TOOL_DESCRIPTION = (
     "Give your answer by calling this tool, with the answer as its arguments."
 )
 
-INSTRUCTION = InstructionTrailBase(
+INSTRUCTION = InstructionTrailIn(
     system="{{schema_prompt}}",
     user="{{case}}",
     variables=["case", "schema_prompt"],
 )
 
-COERCIONS: dict[str, CoercionTrailBase] = {
-    "native": CoercionTrailBase(mode="native"),
-    "tool": CoercionTrailBase(mode="tool", tool_description=TOOL_DESCRIPTION),
-    "prompted": CoercionTrailBase(mode="prompted", schema_prompt=SCHEMA_PROMPT),
+COERCIONS: dict[str, CoercionTrailIn] = {
+    "native": CoercionTrailIn(mode="native"),
+    "tool": CoercionTrailIn(mode="tool", tool_description=TOOL_DESCRIPTION),
+    "prompted": CoercionTrailIn(mode="prompted", schema_prompt=SCHEMA_PROMPT),
 }
 
 ANSWER_TOKENS = 4096
@@ -162,12 +164,6 @@ CHECKS: tuple[Checked, ...] = (
     Checked("prompted", "llm", _("Prompted: shown the schema"), streams=True),
     Checked("tools", "llm", _("Calls a tool"), streams=True),
 )
-
-
-@dataclass(frozen=True)
-class _Toolset:
-    tools: tuple[ToolTrailBase, ...]
-    guidance: str | None = None
 
 
 class Checking:
@@ -501,7 +497,9 @@ class Checking:
             async for event in self._sent(mode, slices, SPEC):
                 yield event
 
-        slices = self._slices(quick, BRIEF_TOKENS, toolset=_Toolset((PROBE,)))
+        slices = self._slices(
+            quick, BRIEF_TOKENS, toolset=ToolsetTrailIn(tools=[PROBE])
+        )
 
         async for event in self._sent("tools", slices, CALL, {PROBE.name: PROBE_RUNS}):
             yield event
@@ -519,20 +517,20 @@ class Checking:
         self,
         effort: Effort,
         max_tokens: int,
-        coercion: CoercionTrailBase | None = None,
+        coercion: CoercionTrailIn | None = None,
         schema: dict[str, Any] | None = None,
-        toolset: _Toolset | None = None,
-    ) -> Slices:
-        return Slices(
+        toolset: ToolsetTrailIn | None = None,
+    ) -> ConfigurationTrailIn:
+        return ConfigurationTrailIn(
             instruction=INSTRUCTION,
-            output=OutputTrailBase(answer_schema=schema),
+            output=OutputTrailIn(answer_schema=schema),
             coercion=coercion or COERCIONS["native"],
-            reasoning=ReasoningTrailBase(effort=effort),
-            sampling=SamplingTrailBase(defaults="recommended", max_tokens=max_tokens),
+            reasoning=ReasoningTrailIn(effort=effort),
+            sampling=SamplingTrailIn(defaults="recommended", max_tokens=max_tokens),
             toolset=toolset,
         )
 
-    def _resolved(self, slices: Slices) -> Resolution:
+    def _resolved(self, slices: ConfigurationTrailIn) -> Resolution:
         stack = self.stack
 
         try:
@@ -544,7 +542,7 @@ class Checking:
         sampling = slices.sampling.model_copy(update={"defaults": "generation_config"})
 
         return resolve(
-            replace(slices, sampling=sampling),
+            slices.model_copy(update={"sampling": sampling}),
             stack.details,
             self.facts,
             stack.trail.serving,
@@ -553,7 +551,7 @@ class Checking:
     async def _sent(
         self,
         key: str,
-        slices: Slices,
+        slices: ConfigurationTrailIn,
         asked: str,
         implementations: dict[str, str] | None = None,
     ) -> AsyncIterator[Event]:

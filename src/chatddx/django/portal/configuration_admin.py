@@ -12,10 +12,11 @@ from unfold.admin import ModelAdmin
 
 from chatddx.bench.bench import Bench
 from chatddx.bench.cell import SLICES
-from chatddx.django.portal import configurations, records, slices
+from chatddx.django.portal import configurations, slices
 from chatddx.django.portal.models import Configuration
 from chatddx.django.portal.owners import identity_of
 from chatddx.repo.queries import qs_head
+from chatddx.repo.store.branch import readable
 
 Configuration._meta.verbose_name = _("configuration")
 Configuration._meta.verbose_name_plural = _("configurations")
@@ -82,7 +83,7 @@ class ConfigurationAdmin(ModelAdmin):
             else None
         )
 
-        if row is None or not records.readable(row, identity_of(request)):
+        if row is None or not readable(row, identity_of(request)):
             raise Http404
 
         return row

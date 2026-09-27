@@ -59,9 +59,9 @@
             <div class="flex flex-col gap-2">
                 {% for now in shown.running %}
                     <div class="portal-running">
-                        <span class="font-semibold text-font-important-light dark:text-font-important-dark">{{ now.job.case }}</span>
-                        <span>{% include "portal/widgets/linked.html" with text=now.job.label page=now.configuration_page %} × {% include "portal/widgets/linked.html" with text=now.job.stack page=now.stack_page %}</span>
-                        <span class="portal-tally">{% blocktranslate count counter=now.job.tokens with tokens=now.job.tallied %}{{ tokens }} token{% plural %}{{ tokens }} tokens{% endblocktranslate %}</span>
+                        <span class="font-semibold text-font-important-light dark:text-font-important-dark">{{ now.case }}</span>
+                        <span>{% include "portal/widgets/linked.html" with text=now.label page=now.configuration_page %} × {% include "portal/widgets/linked.html" with text=now.stack page=now.stack_page %}</span>
+                        <span class="portal-tally">{% blocktranslate count counter=now.tokens with tokens=now.tallied %}{{ tokens }} token{% plural %}{{ tokens }} tokens{% endblocktranslate %}</span>
                         <span class="portal-missing">{{ now.running_for }}</span>
                     </div>
                 {% endfor %}
@@ -77,7 +77,7 @@
 
             <div class="portal-running">
                 <span class="font-semibold text-font-important-light dark:text-font-important-dark">{{ shown.up_next.case }}</span>
-                <span>{% include "portal/widgets/linked.html" with text=shown.up_next.label page=shown.up_next_configuration %} × {% include "portal/widgets/linked.html" with text=shown.up_next.stack page=shown.up_next_stack %}</span>
+                <span>{% include "portal/widgets/linked.html" with text=shown.up_next.label page=shown.up_next.configuration_page %} × {% include "portal/widgets/linked.html" with text=shown.up_next.stack page=shown.up_next.stack_page %}</span>
                 <span class="portal-missing">{% blocktranslate count counter=shown.outstanding %}{{ counter }} outstanding{% plural %}{{ counter }} outstanding{% endblocktranslate %}</span>
             </div>
         </section>

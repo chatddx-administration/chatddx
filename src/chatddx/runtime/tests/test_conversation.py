@@ -8,7 +8,7 @@ from pydantic_ai import AgentRunResult, ModelMessagesTypeAdapter
 
 from chatddx.dev.fake_vllm import ANSWER, FakeTransport
 from chatddx.history.models import ConversationModel, RunModel, RunStatus
-from chatddx.history.record import Outcome, Read, record
+from chatddx.history.record import Outcome, Read, record, trial_of
 from chatddx.repo.inventories import ParsedInventory
 from chatddx.repo.store.branch import get_visible_branch_model
 from chatddx.runtime.resolution import Resolution
@@ -53,9 +53,8 @@ def test_a_run_takes_a_conversation_up_where_it_was_left(
 
         return record(
             "alice",
-            configuration,
-            Read(stack.pk, llm.pk),
-            case.trail_id,
+            trial_of(configuration, stack.trail_id, case.trail_id, None),
+            Read(stack=stack.pk, llm=llm.pk),
             run,
             Outcome(RunStatus.COMPLETED, answer=result.output),
             started,

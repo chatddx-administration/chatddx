@@ -7,22 +7,22 @@ from typing import Any, Literal
 from django.db import transaction
 from django.db.models import Q, prefetch_related_objects
 
-from chatddx.bench.cell import NONE, SLICES, Cell, Kept
+from chatddx.bench.cell import NONE, SLICES, Cell, Made, labelled, set_in, set_names_of
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
-from chatddx.history.models import ConversationContext, RunModel
-from chatddx.history.record import Outcome, Read, record
+from chatddx.history.models import ConversationContext, RunModel, TrialModel
+from chatddx.history.record import Outcome, Read, record, trial_of
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.case.pydantic import pattern_of
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
-from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.entities.llm.pydantic import LLMBranchOut, LLMFacts
+from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entities.stack.pydantic import StackBranchOut
 from chatddx.repo.entities.tool.pydantic import ToolBranchOut
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel
 from chatddx.repo.families.pydantic import BranchOut
-from chatddx.repo.names import short_fingerprint
+from chatddx.repo.queries import head_of, reaching
 from chatddx.repo.store.branch import (
     AmbiguousBranchError,
     BranchNotFoundError,
@@ -31,26 +31,17 @@ from chatddx.repo.store.branch import (
     get_branch_model,
     get_shared_branch_model,
     get_visible_branch_model,
+    name_of,
     select_visible_branch_models,
 )
 from chatddx.repo.store.trail import dump_trail
+from chatddx.repo.utils import resolve_trail
 from chatddx.runtime.resolution import Resolution, Sampling, resolve
 from chatddx.runtime.run import Run
 from chatddx.scoring.score import Scoring, VisibleScorer
 from chatddx.scoring.scorers.patterns import unread_pattern
 
 SHARED_BY: dict[str, str] = {"configuration": settings.ARCHIVE_IDENTITY_NAME}
-
-HELD_AT: dict[str, str] = {
-    "case": "trial__case",
-    "configuration": "trial__configuration",
-    "stack": "trial__stack",
-    "client": "client",
-    "machine": "trial__stack__machine",
-    "llm": "trial__stack__llm",
-    "serving": "trial__stack__serving",
-    **{entity: f"trial__configuration__{entity}" for entity in SLICES},
-}
 
 SEEDS = 100_000
 
@@ -113,10 +104,18 @@ class Trial:
     called: str
     vignette: str
     seed: int | None
+    planned: TrialModel | None = None
 
     @classmethod
-    def of(cls, ready: Ready, case: Any, called: str, seed: int | None) -> "Trial":
-        return cls(ready, case.pk, called, case.vignette, seed)
+    def of(
+        cls,
+        ready: Ready,
+        case: Any,
+        called: str,
+        seed: int | None,
+        planned: TrialModel | None = None,
+    ) -> "Trial":
+        return cls(ready, case.pk, called, case.vignette, seed, planned)
 
     @classmethod
     def on(cls, ready: Ready, case: BranchModel, seed: int | None) -> "Trial":
@@ -215,16 +214,26 @@ class Bench:
         key = (entity, trail.id)
 
         if key not in self._names:
-            try:
-                name = get_visible_branch_model(
-                    entity, self.identity, trail=trail.id
-                ).name
-            except (BranchNotFoundError, AmbiguousBranchError):
-                name = short_fingerprint(trail.fingerprint)
-
-            self._names[key] = name
+            self._names[key] = name_of(entity, self.identity, trail)
 
         return self._names[key]
+
+    def label_of(self, made: Made) -> str:
+        configuration = made.configuration_branch
+        name = (
+            configuration.name
+            if configuration is not None
+            else self.name_of("configuration", made.trial.configuration)
+        )
+
+        return labelled(name, set_names_of(made))
+
+    def described(self, made: Made) -> str:
+        trial = made.trial
+        seeded = f" (seed {trial.seed})" if trial.seed is not None else ""
+        case = self.name_of("case", trial.case)
+
+        return f"{self.label_of(made)} × {made.stack_branch.name} × {case}{seeded}"
 
     def run_named(self, prefix: str | None) -> RunModel:
         runs = RunModel.objects.filter(owner__name=self.identity).select_related(
@@ -268,10 +277,6 @@ class Bench:
     def stack_named(self, name: str) -> BranchModel:
         return get_visible_branch_model("stack", self.identity, name)
 
-    def max_jobs(self, stack: str) -> int:
-        """How many jobs the stack takes at once, as the identity's branch says."""
-        return StackBranchOut.model_validate(self.stack_named(stack)).details.max_jobs
-
     def cell_of(
         self,
         configuration: str | None = None,
@@ -305,11 +310,38 @@ class Bench:
 
         return cell
 
-    def cell_as_kept(self, kept: Kept) -> Cell:
-        cell = self.cell_of(kept.configuration, kept.stack, kept.set)
+    def cell_read(self, made: Made) -> Cell:
+        configuration = made.configuration_branch
+        assert configuration is not None
 
-        if cell.fingerprint != kept.fingerprint:
-            raise Drifted(f"{kept.label} is another configuration than was planned")
+        configuration.trail = resolve_trail(configuration.trail)
+        owner = configuration.owner.name
+        name = (
+            configuration.name
+            if owner in (self.identity, SHARED_BY["configuration"])
+            else f"{owner}/{configuration.name}"
+        )
+        cell = Cell().using(configuration, name)
+
+        for entity, branch in set_in(made).items():
+            if branch is None:
+                cell = cell.set(entity, None)
+                continue
+
+            branch.trail = resolve_trail(branch.trail)
+            cell = cell.set(entity, entity_of(entity).branch_out.model_validate(branch))
+
+        stack = made.stack_branch
+        head = head_of(StackBranchModel.objects.all(), stack.owner.name, stack.name)
+
+        if head is None or head.trail_id != made.trial.stack_id:
+            raise Drifted(f"{stack.name} is another stack than was planned")
+
+        head.trail = resolve_trail(head.trail)
+        cell = cell.on(head)
+
+        if cell.fingerprint != made.trial.configuration.fingerprint:
+            raise Drifted(f"{cell.label} is another configuration than was planned")
 
         return cell
 
@@ -350,7 +382,7 @@ class Bench:
         assert cell.configuration and cell.stack
 
         return resolve(
-            cell.slices,
+            cell.trail,
             cell.stack.details,
             self.facts_of(cell.stack),
             cell.stack.trail.serving,
@@ -388,7 +420,7 @@ class Bench:
         cases: list[BranchModel],
         scoring: Scoring | None = None,
     ) -> list[HeldTo]:
-        views = cell.slices.output.views
+        views = cell.trail.output.views
         found: list[HeldTo] = []
 
         for scorer in (scoring or Scoring(self.identity)).scorers:
@@ -439,20 +471,25 @@ class Bench:
     ) -> RunModel:
         ready = trial.ready
         cell = ready.cell
-        assert cell.stack
+        assert cell.configuration and cell.stack
+
+        planned = trial.planned or trial_of(
+            cell.trail, cell.stack.trail.id, trial.case, trial.seed
+        )
 
         return record(
             self.identity,
-            ConfigurationTrailIn.model_validate(cell.slices, from_attributes=True),
+            planned,
             Read(
                 stack=cell.stack.id,
                 llm=self.llm_of(cell.stack)[1],
+                configuration=cell.configuration.id,
+                variations=cell.set_ids,
                 tools={
                     ready.tools[tool].id: ran.blob
                     for tool, ran in run.implementations.items()
                 },
             ),
-            trial.case,
             run,
             outcome,
             started,
@@ -462,16 +499,14 @@ class Bench:
         )
 
     def runs_with(self, entity: EntityName, trail: int) -> list[RunModel]:
-        """The identity's runs with the trail, the latest first."""
-        match entity:
-            case "os":
-                with_it = Q(trial__stack__os=trail) | Q(trial__stack__host_os=trail)
-            case "tool":
-                with_it = Q(trial__configuration__toolset__tools__contains=[trail])
-            case "scorer":
-                with_it = Q(scores__scorer=trail, scores__owner__name=self.identity)
-            case _:
-                with_it = Q(**{HELD_AT[entity]: trail})
+        trail_model = entity_of(entity).trail_model
+
+        if entity == "scorer":
+            with_it = Q(scores__scorer=trail, scores__owner__name=self.identity)
+        else:
+            with_it = reaching(RunModel, trail_model, [trail]) | reaching(
+                TrialModel, trail_model, [trail], through="trial"
+            )
 
         return list(
             RunModel.objects.filter(with_it, owner__name=self.identity)
@@ -490,7 +525,7 @@ class Bench:
             )
 
         entity = entity_of("configuration")
-        schema = ConfigurationTrailIn.model_validate(cell.slices, from_attributes=True)
+        schema = cell.trail
         had = entity.branch_model.objects.filter(
             owner__name=self.identity, name=name
         ).exists()

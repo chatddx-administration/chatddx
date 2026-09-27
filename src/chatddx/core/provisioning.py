@@ -59,7 +59,7 @@ def _wipe_history(user_name: str) -> list[str]:
         MessageModel.objects.filter(conversation__owner__name=user_name)
     )
     conversations = _removed(ConversationModel.objects.filter(owner__name=user_name))
-    trials = _removed(TrialModel.objects.filter(runs__isnull=True))
+    trials = _removed(TrialModel.objects.filter(runs__isnull=True, jobs__isnull=True))
 
     return [
         f"[job]: removed {jobs}",

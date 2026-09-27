@@ -8,18 +8,23 @@ import pytest
 from django.utils import timezone
 from typer.testing import CliRunner
 
-from chatddx.bench.bench import Bench
+from chatddx.bench.bench import Bench, Drifted
 from chatddx.bench.plan import Plan, crossed
-from chatddx.conftest import Provision, Stalling
+from chatddx.conftest import Provision, Recommit, Stalling
+from chatddx.core.utils import ensure_identity
 from chatddx.dev.fake_vllm import FakeTransport
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entity_names import EntityName
+from chatddx.repo.queries import head_of
+from chatddx.repo.store.branch import get_branch_model
 from chatddx.worker import control, queue, worker
 from chatddx.worker.models import JobModel, Status, Stopping, WorkerStateModel
 
 pytestmark = pytest.mark.django_db
 
 FAKE = "qwen3-8b-awq@fake"
+
+ARCHIVE = "archive"
 
 
 @pytest.fixture(autouse=True)
@@ -61,21 +66,56 @@ def planned(
 def put(plan: Plan | None = None, owner: str = "alice", run: bool = True) -> UUID:
     plan = plan or planned(owner)
     batch = uuid4()
-    _ = queue.put(owner, batch, plan.kept, plan.cases, run=run)
+    _ = queue.put(owner, batch, plan.trials, run=run)
 
     return batch
 
 
 def jobs(**filters: Any) -> list[JobModel]:
     return list(
-        JobModel.objects.filter(**filters).select_related("run", "owner").order_by("pk")
+        queue.with_read(JobModel.objects.filter(**filters))
+        .select_related("run")
+        .order_by("pk")
     )
+
+
+def case_of(job: JobModel) -> str:
+    return Bench(job.owner.name).name_of("case", job.trial.case)
+
+
+def label_of(job: JobModel) -> str:
+    return Bench(job.owner.name).label_of(job)
+
+
+def stack_of(owner: str = ARCHIVE, stack: str = FAKE) -> StackBranchModel:
+    head = head_of(StackBranchModel.objects.all(), owner, stack)
+    assert head is not None
+
+    return head
+
+
+def slot(owner: str = ARCHIVE, stack: str = FAKE) -> queue.Slot:
+    return queue.slot_of(stack_of(owner, stack))
 
 
 def at_once(max_jobs: int, stack: str = FAKE) -> None:
     for model in StackBranchModel.objects.filter(name=stack):
         model.details = {**model.details, "max_jobs": max_jobs}
         model.save()
+
+
+def restacked(
+    owner: str, stack: str, trail: Any, like: StackBranchModel, **details: Any
+) -> None:
+    made = StackBranchModel.objects.create(
+        owner=ensure_identity(owner),
+        name=stack,
+        trail=trail,
+        details={**like.details, **details},
+    )
+
+    if like.owner_id == made.owner_id:
+        made.collaborators.set(like.collaborators.all())
 
 
 def beaten(
@@ -111,11 +151,14 @@ def test_the_worker_runs_a_batch_s_jobs_writing_each_down(fake: FakeTransport):
 
     first, second = jobs()
 
-    assert [(job.case, job.status, job.batch) for job in (first, second)] == [
+    assert [(case_of(job), job.status, job.batch) for job in (first, second)] == [
         ("case-1", Status.COMPLETED, batch),
         ("case-2", Status.COMPLETED, batch),
     ]
     assert first.run is not None and first.run.status == "completed"
+    assert first.run.trial_id == first.trial_id
+    assert first.run.configuration_branch_id == first.configuration_branch_id
+    assert first.run.stack_branch_id == first.stack_branch_id
     assert first.run.conversation is not None
     assert first.run.conversation.context == "worker"
     assert first.run.owner.name == "alice"
@@ -143,21 +186,51 @@ def test_a_stack_s_slots_go_first_come_first_served_whosever_the_jobs(bob: str):
     _ = put(owner="alice")
     _ = put(planned(bob), owner=bob)
 
-    assert queue.waiting(bob, lambda _: 1) == [
-        queue.Waiting(FAKE, max_jobs=1, running=0, queued=2)
+    assert queue.waiting(bob) == [
+        queue.Waiting(slot(), FAKE, max_jobs=1, running=0, queued=2)
     ]
-    assert queue.waiting("alice", lambda _: 1) == []
+    assert queue.waiting("alice") == []
 
     _ = worker.run(FakeTransport())
 
     started = sorted(jobs(), key=lambda job: cast(Any, job.started))
 
-    assert [(job.owner.name, job.case) for job in started] == [
+    assert [(job.owner.name, case_of(job)) for job in started] == [
         ("alice", "case-1"),
         ("alice", "case-2"),
         (bob, "case-1"),
         (bob, "case-2"),
     ]
+
+
+def test_a_stack_s_slots_are_its_own_timeline_s_whatever_its_name(
+    bob: str, monkeypatch: pytest.MonkeyPatch
+):
+    at_once(1)
+    archived = get_branch_model("stack", ARCHIVE, FAKE)
+    restacked(bob, FAKE, archived.trail, like=stack_of(), max_jobs=2)
+    _ = put(owner="alice")
+    _ = put(planned(bob, reasoning=["default", "off"]), owner=bob)
+    counted = beaten(monkeypatch, lambda _: None)
+
+    assert (queue.slots(slot()), queue.slots(slot(bob))) == (1, 2)
+    assert {job.stack_branch.owner.name for job in jobs(owner__name="alice")} == {
+        ARCHIVE
+    }
+    assert {job.stack_branch.owner.name for job in jobs(owner__name=bob)} == {bob}
+    assert queue.waiting("alice") == queue.waiting(bob) == []
+    assert worker.run(Slow()) == 6
+    assert max(counted) == 3
+
+
+def test_the_slots_of_a_stack_are_its_head_s():
+    assert queue.slots(slot()) == 4
+    assert queue.slots(slot(ARCHIVE, "qwen3-8b-awq@pelle")) == 1
+
+    at_once(2)
+
+    assert queue.slots(slot()) == 2
+    assert queue.slots((0, "nowhere@fake")) == 1
 
 
 def test_an_owner_paused_waits_while_others_run_and_comes_before_no_one(
@@ -167,7 +240,7 @@ def test_an_owner_paused_waits_while_others_run_and_comes_before_no_one(
     _ = put(planned(bob), owner=bob)
     _ = control.pause("alice")
 
-    assert queue.waiting(bob, lambda _: 4) == []
+    assert queue.waiting(bob) == []
     assert worker.run(fake) == 2
     assert {(job.owner.name, job.status) for job in jobs()} == {
         ("alice", Status.QUEUED),
@@ -233,14 +306,15 @@ def test_stop_again_stops_the_jobs_running_too_written_down_stopped(
 def test_a_trial_that_can_t_be_sent_when_its_turn_comes_is_skipped_with_why(
     fake: FakeTransport,
 ):
-    _ = put()
-    _ = JobModel.objects.filter(case="case-1").update(
-        fingerprint="cddx-trail/1:sha256:0"
-    )
+    qwen = stack_of()
+    other = get_branch_model("stack", ARCHIVE, "gpt-oss-20b@fake").trail
+    _ = put(planned(tags=("tag-1",)))
+    restacked(ARCHIVE, FAKE, other, like=qwen)
+    _ = put(planned(tags=("tag-1",)))
+    restacked(ARCHIVE, FAKE, other, like=qwen, credential="fake-key")
 
-    for stack in StackBranchModel.objects.filter(name=FAKE):
-        stack.details = {**stack.details, "credential": "fake-key"}
-        stack.save()
+    with pytest.raises(Drifted, match=f"{FAKE} is another stack than was planned"):
+        _ = Bench("alice").cell_read(jobs()[0])
 
     assert worker.run(fake) == 2
 
@@ -248,13 +322,39 @@ def test_a_trial_that_can_t_be_sent_when_its_turn_comes_is_skipped_with_why(
 
     assert (drifted.status, drifted.reason) == (
         Status.SKIPPED,
-        "free-text is another configuration than was planned",
+        f"{FAKE} is another stack than was planned",
     )
     assert (secretless.status, secretless.reason) == (
         Status.SKIPPED,
         "alice has no secret 'fake-key'",
     )
     assert fake.requests == []
+
+
+def test_a_job_runs_the_trial_it_planned_whatever_its_names_come_to_mean(
+    fake: FakeTransport, recommit: Recommit
+):
+    _ = put(planned(tags=("tag-1",), reasoning=["off"]))
+    [job] = jobs()
+    recommit("reasoning", "on", name="off")
+    recommit("case", "case-2", name="case-1", tags=["tag-1"])
+
+    assert (
+        Bench("alice").described(job)
+        == f"free-text+reasoning=off × {FAKE} × case-1 (seed 42)"
+    )
+    assert worker.run(fake) == 1
+
+    [job] = jobs()
+    [request] = fake.requests
+
+    assert job.status == Status.COMPLETED
+    assert request["chat_template_kwargs"] == {"enable_thinking": False}
+    assert request["messages"][-1]["content"] == "case vignette 1"
+    assert job.run is not None and job.run.trial_id == job.trial_id
+    assert job.run.reasoning_branch_id == job.reasoning_branch_id
+    assert job.run.reasoning_branch is not None
+    assert job.run.reasoning_branch.trail.effort == "off"
 
 
 def test_a_job_whose_worker_went_away_is_lost(fake: FakeTransport):
@@ -310,7 +410,7 @@ def test_the_greedy_cells_of_a_plan_go_unseeded(fake: FakeTransport):
     _ = put(planned(tags=("tag-1",), sampling=["recommended", "greedy"]))
     _ = worker.run(fake)
 
-    assert [(job.label, job.seed) for job in jobs()] == [
+    assert [(label_of(job), job.trial.seed) for job in jobs()] == [
         ("free-text", 42),
         ("free-text+sampling=greedy", None),
     ]
@@ -327,7 +427,7 @@ def test_the_latest_jobs_come_last_one_first_with_their_scores_the_owner_s(
 
     latest = queue.latest("alice")
 
-    assert [job.case for job in latest] == ["case-2", "case-1"]
+    assert [case_of(job) for job in latest] == ["case-2", "case-1"]
     assert all(job.run and job.run.scores.all() for job in latest)
     assert [job.owner.name for job in queue.latest(bob)] == [bob]
     assert queue.running() == []

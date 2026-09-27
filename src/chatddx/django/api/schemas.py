@@ -204,6 +204,8 @@ class ToolRan(BranchRow):
 class ReadOut(Schema):
     stack: BranchRow | None
     llm: BranchRow | None
+    configuration: BranchRow | None
+    set: dict[str, BranchRow | None]
     tools: list[ToolRan]
 
 

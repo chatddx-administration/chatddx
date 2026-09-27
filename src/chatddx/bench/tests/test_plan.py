@@ -125,7 +125,10 @@ def test_trials_go_cell_by_cell_case_by_case_greedy_ones_unseeded(bench: Bench):
         ("free-text+sampling=greedy", "case-1", None),
         ("free-text+sampling=greedy", "case-2", None),
     ]
-    assert [(kept.label, dict(kept.set), kept.seed) for kept in plan.kept] == [
+    assert [
+        (ready.cell.label, ready.cell.set_names, plan.seed_of(ready))
+        for ready in plan.ready
+    ] == [
         ("free-text", {}, 42),
         ("free-text+sampling=greedy", {"sampling": "greedy"}, None),
     ]

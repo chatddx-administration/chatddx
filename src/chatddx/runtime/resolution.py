@@ -1,7 +1,6 @@
 import json
-from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Literal
 
 from pydantic import JsonValue
 from pydantic_ai import TemplateStr
@@ -12,6 +11,7 @@ from chatddx.repo.entities.coercion.pydantic import (
     CoercionTrailBase,
     Mode,
 )
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
 from chatddx.repo.entities.instruction.pydantic import InstructionTrailBase
 from chatddx.repo.entities.llm.pydantic import (
     BudgetFact,
@@ -27,44 +27,14 @@ from chatddx.repo.entities.reasoning.pydantic import Effort, Intent, ReasoningTr
 from chatddx.repo.entities.sampling.pydantic import SamplingFields, SamplingTrailBase
 from chatddx.repo.entities.serving.pydantic import Requirement, ServingTrailBase
 from chatddx.repo.entities.stack.pydantic import StackDetails
-from chatddx.repo.entities.tool.pydantic import ToolTrailBase
-from chatddx.repo.entities.toolset.pydantic import SLOT as TOOL_GUIDANCE
+from chatddx.repo.entities.toolset.pydantic import (
+    SLOT as TOOL_GUIDANCE,
+    ToolsetTrailIn,
+)
 
 type Slice = Literal[
     "stack", "reasoning", "sampling", "output", "coercion", "instruction", "toolset"
 ]
-
-
-class Toolset(Protocol):
-    @property
-    def guidance(self) -> str | None: ...
-    @property
-    def tools(self) -> Sequence[ToolTrailBase]: ...
-
-
-class Configuration(Protocol):
-    @property
-    def instruction(self) -> InstructionTrailBase: ...
-    @property
-    def output(self) -> OutputTrailBase: ...
-    @property
-    def coercion(self) -> CoercionTrailBase: ...
-    @property
-    def reasoning(self) -> ReasoningTrailBase: ...
-    @property
-    def sampling(self) -> SamplingTrailBase: ...
-    @property
-    def toolset(self) -> Toolset | None: ...
-
-
-@dataclass(frozen=True)
-class Slices:
-    instruction: InstructionTrailBase
-    output: OutputTrailBase
-    coercion: CoercionTrailBase
-    reasoning: ReasoningTrailBase
-    sampling: SamplingTrailBase
-    toolset: Toolset | None
 
 
 @dataclass(frozen=True)
@@ -154,7 +124,7 @@ class Resolution:
 
 
 def resolve(
-    configuration: Configuration,
+    configuration: ConfigurationTrailIn,
     stack: StackDetails,
     facts: LLMFacts,
     serving: ServingTrailBase | None,
@@ -344,7 +314,7 @@ def _budget_fits(
 
 
 def _output(
-    configuration: Configuration,
+    configuration: ConfigurationTrailIn,
     reasoning: Reasoning | None,
     facts: LLMFacts,
     serving: ServingTrailBase | None,
@@ -373,7 +343,7 @@ def _output(
 
 
 def _toolset(
-    toolset: Toolset | None,
+    toolset: ToolsetTrailIn | None,
     serving: ServingTrailBase | None,
     refusals: list[SliceRefusal],
 ) -> list[Tool]:

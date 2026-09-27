@@ -135,7 +135,7 @@ def _resolved(bench: Bench, cell: Cell) -> Resolved:
 @router.get("/reasoning", response=ReasoningTable)
 def reasoning(request: HttpRequest, cell: Query[CellIn]):
     bench, held_cell = held(request, cell)
-    slices: Any = held_cell.slices if held_cell.configuration else None
+    trail = held_cell.trail if held_cell.configuration else None
     variations = sorted(
         (
             ReasoningBranchOut.model_validate(model)
@@ -145,8 +145,8 @@ def reasoning(request: HttpRequest, cell: Query[CellIn]):
     )
 
     return ReasoningTable(
-        sampling=slices.sampling if slices else None,
-        current=slices.reasoning.fingerprint if slices else None,
+        sampling=held_cell.variation("sampling") if trail else None,
+        current=trail.reasoning.fingerprint if trail else None,
         variations=variations,
         stacks=[
             StackRealizations(
@@ -157,7 +157,7 @@ def reasoning(request: HttpRequest, cell: Query[CellIn]):
                     _realization(
                         realize(
                             variation.trail,
-                            slices.sampling if slices else None,
+                            trail.sampling if trail else None,
                             bench.facts_of(stack),
                             stack.trail.serving,
                         )
@@ -178,7 +178,7 @@ def _realization(realized: Any) -> Realization:
 @router.get("/scorers", response=list[ScorerOut])
 def scorers(request: HttpRequest, cell: Query[CellIn]):
     bench, held_cell = held(request, cell)
-    offered = held_cell.slices.output.views if held_cell.configuration else None
+    offered = held_cell.trail.output.views if held_cell.configuration else None
 
     return [
         ScorerOut(

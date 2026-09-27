@@ -19,6 +19,7 @@ from chatddx.repo.entities.llm.django import LLMBranchModel
 from chatddx.repo.entities.sampling.django import SamplingBranchModel
 from chatddx.repo.entities.sampling.pydantic import SamplingTrailOut
 from chatddx.repo.queries import head_of
+from chatddx.repo.store.timeline import select_versions
 from chatddx.worker import worker
 
 pytestmark = pytest.mark.django_db
@@ -29,8 +30,8 @@ CHECK = reverse("admin:portal_sampling_check")
 BATCH = reverse("admin:portal_batch_add")
 
 
-def versions(name: str, owner: str = "alice") -> list[SamplingBranchModel]:
-    return variations.versions_of("sampling", owner, name)
+def versions(name: str, owner: str = "alice") -> list[Any]:
+    return select_versions("sampling", owner, name)
 
 
 def page(row: SamplingBranchModel, *query: str) -> str:

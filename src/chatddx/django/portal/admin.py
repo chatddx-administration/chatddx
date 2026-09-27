@@ -28,6 +28,7 @@ from django.utils.translation import gettext_lazy as _, ngettext
 from unfold.admin import ModelAdmin
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
+from chatddx.bench.bench import NotReady
 from chatddx.bench.cell import SLICES
 from chatddx.django.portal import batches, status
 from chatddx.django.portal.case_admin import CaseAdmin
@@ -45,8 +46,18 @@ from chatddx.django.portal.owners import bench_of, identity_of
 from chatddx.django.portal.run_admin import RunAdmin
 from chatddx.django.portal.sampling_admin import SamplingAdmin
 from chatddx.django.portal.stack_admin import StackAdmin
+from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
+from chatddx.runtime.resolution import CellRefused
 from chatddx.worker import control, queue
 from chatddx.worker.models import STOPPED_BY, JobModel, Status
+
+UNPLANNED = (
+    NotReady,
+    CellRefused,
+    BranchNotFoundError,
+    AmbiguousBranchError,
+    ValueError,
+)
 
 CONFIRM = "_confirm"
 RUN, LATER = "run", "later"
@@ -350,7 +361,12 @@ class BatchAdmin(ModelAdmin):
         super().save_model(request, obj, form, change)
 
         if not change:
-            _ = batches.put(obj, run=request.POST.get(CONFIRM) == RUN)
+            _ = queue.put(
+                obj.owner.name,
+                obj.uuid,
+                form.plan.trials,
+                run=request.POST.get(CONFIRM) == RUN,
+            )
 
     @override
     def response_add(
@@ -484,15 +500,23 @@ class BatchAdmin(ModelAdmin):
 
         owner = identity_of(request)
 
-        match request.POST.get("action"):
-            case "resume" if not JobModel.objects.filter(batch=batch.uuid).exists():
-                queued = batches.put(batch, run=True)
-            case "resume":
-                queued = queue.resume(owner, batch.uuid)
-            case "rerun":
-                queued = queue.rerun(owner, batch.uuid)
-            case _:
-                queued = 0
+        try:
+            match request.POST.get("action"):
+                case "resume" if not JobModel.objects.filter(batch=batch.uuid).exists():
+                    queued = batches.put(
+                        bench_of(request), batch, batches.held(batch), run=True
+                    )
+                case "resume":
+                    queued = queue.resume(owner, batch.uuid)
+                case "rerun":
+                    queued = queue.rerun(owner, batch.uuid)
+                case _:
+                    queued = 0
+        except UNPLANNED as e:
+            self.message_user(request, str(e), messages.WARNING)
+            return HttpResponseRedirect(
+                reverse("admin:portal_batch_change", args=[batch.pk])
+            )
 
         self.message_user(
             request,
@@ -533,13 +557,15 @@ class BatchAdmin(ModelAdmin):
         added = form.unheld
         run = queue.counts([batch.uuid]).under_way > 0
 
-        with transaction.atomic():
-            batch.cases = batch.cases + batches.cases_of(added)
-            batch.tags = sorted({*batch.tags, *form.cleaned_data["case_tags"]})
-            batch.save(update_fields=["cases", "tags"])
-            trials = queue.put(
-                batch.owner.name, batch.uuid, batches.kept_of(batch), added, run
-            )
+        try:
+            with transaction.atomic():
+                batch.cases = batch.cases + batches.cases_of(added)
+                batch.tags = sorted({*batch.tags, *form.cleaned_data["case_tags"]})
+                batch.save(update_fields=["cases", "tags"])
+                trials = batches.put(bench_of(request), batch, added, run)
+        except UNPLANNED as e:
+            self.message_user(request, str(e), messages.WARNING)
+            return back
 
         cases = ngettext(
             "%(cases)d case added", "%(cases)d cases added", len(added)

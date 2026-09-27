@@ -23,6 +23,7 @@ from chatddx.repo.bundles import entity_of
 from chatddx.repo.entity_names import EntityName
 from chatddx.repo.queries import qs_head
 from chatddx.repo.store.branch import commit
+from chatddx.repo.store.timeline import select_versions
 
 
 class VariationAdmin(ModelAdmin):
@@ -74,11 +75,7 @@ class VariationAdmin(ModelAdmin):
         return reverse(f"admin:{self._name(view)}", args=args)
 
     def _versions(self, owner: str, name: str) -> list[Any]:
-        return list(
-            self.model.objects.filter(owner__name=owner, name=name)
-            .select_related("owner", "trail")
-            .order_by("timestamp", "id")
-        )
+        return select_versions(self.entity, owner, name, model=self.model)
 
     def _row(self, request: HttpRequest, object_id: str) -> Any:
         row = (
@@ -227,23 +224,40 @@ class VariationAdmin(ModelAdmin):
         since: int | None,
         fingerprint: str | None,
     ) -> dict[str, Any]:
-        said = variations.said(self.entity, owner, name, edited, since, fingerprint)
+        said = self._said(owner, name, edited, since, fingerprint)
         sharers = (
-            variations.sharers(self.entity, owner, fingerprint, name, edited)
+            records.sharers(self.entity, owner, fingerprint, name, edited)
             if fingerprint
             else []
         )
 
         return {
             "said": said,
-            "taken_url": (
-                self._url("change", said.taken.pk) if said.taken is not None else None
-            ),
+            "taken_url": self._url("change", said.onto.pk) if said.taken else None,
             "sharers": [
                 (sharer, self._url("change", sharer.pk) if sharer.own else None)
                 for sharer in sharers
             ],
         }
+
+    def _said(
+        self,
+        owner: str,
+        name: str,
+        edited: str | None,
+        since: int | None = None,
+        fingerprint: str | None = None,
+    ) -> records.Said:
+        return records.said_of(
+            self.entity,
+            owner,
+            name,
+            what=gettext("variation"),
+            edited=edited,
+            since=since,
+            fingerprint=fingerprint,
+            why=variations.refused(name.strip()) if name.strip() else None,
+        )
 
     def _trail(self, trail: Any) -> Any:
         return entity_of(self.entity).trail_out.model_validate(trail)
@@ -289,18 +303,16 @@ class VariationAdmin(ModelAdmin):
 
         cleaned = form.cleaned_data
         edited = rows[-1].name if rows else None
-        said = variations.said(self.entity, owner, cleaned["name"], edited)
+        said = self._said(owner, cleaned["name"], edited)
 
-        if said.saving == variations.Saving.TAKEN:
+        if said.taken:
             form.add_error("name", said.line)
             return self._page(request, owner, form, rows, began)
 
-        if said.saving == variations.Saving.NEW and not self.has_add_permission(
-            request
-        ):
+        if said.saving == records.Saving.NEW and not self.has_add_permission(request):
             raise PermissionDenied
 
-        if said.saving == variations.Saving.SAME and rows[-1].pk != cleaned["head"]:
+        if said.saving == records.Saving.SAME and rows[-1].pk != cleaned["head"]:
             data = form.data.copy()
             data["head"] = str(rows[-1].pk)
             self.message_user(
@@ -328,7 +340,7 @@ class VariationAdmin(ModelAdmin):
 
         if not changed:
             line = gettext("Nothing changed: %(name)s stays at version %(was)d.")
-        elif said.saving == variations.Saving.SAME:
+        elif said.saving == records.Saving.SAME:
             line = gettext("Saved as version %(version)d of %(name)s.")
         else:
             line = gettext("Saved as a new variation, %(name)s.")

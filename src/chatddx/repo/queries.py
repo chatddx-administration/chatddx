@@ -1,10 +1,18 @@
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from typing import Any
 
-from django.db.models import Count, OuterRef, Prefetch, Q, QuerySet, Subquery
+from django.db.models import (
+    Count,
+    Model,
+    OuterRef,
+    Prefetch,
+    Q,
+    QuerySet,
+    Subquery,
+)
 
 from chatddx.repo.families.django import BranchModel, TrailModel
-from chatddx.repo.utils import trail_paths
+from chatddx.repo.utils import reaches, trail_paths
 
 
 def qs_owned[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
@@ -66,11 +74,27 @@ def live_first[T: BranchModel](models: Sequence[T]) -> list[T]:
     ]
 
 
+def visible_to(identity_name: str) -> Q:
+    return Q(owner__name=identity_name) | Q(collaborators__name=identity_name)
+
+
 def qs_head_visible[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
-    return _head(
-        qs,
-        qs.filter(Q(owner__name=owner_name) | Q(collaborators__name=owner_name)),
-    )
+    return _head(qs, qs.filter(visible_to(owner_name)))
+
+
+def reaching(
+    root: type[Model],
+    trail_model: type[TrailModel],
+    trails: Collection[int],
+    through: str = "",
+) -> Q:
+    held = Q(pk__in=[])
+    prefix = f"{through}__" if through else ""
+
+    for reach in reaches(root, trail_model, prefix):
+        held |= Q(**{reach.lookup: list(trails)})
+
+    return held
 
 
 def _head[T: BranchModel](qs: QuerySet[T], owned: QuerySet[T]) -> QuerySet[T]:
