@@ -3,16 +3,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.conf import settings
 from django.db.models import (
     PROTECT,
     CharField,
     ForeignKey,
     JSONField,
     Model,
-    OneToOneField,
     UniqueConstraint,
-    UUIDField,
 )
 from encrypted_fields import EncryptedJSONField
 
@@ -31,18 +28,6 @@ class IdentityModel(Model):
         unique=True,
     )
     secrets: JSONField[Any] = EncryptedJSONField(default=dict)
-    guest_id = UUIDField(
-        default=None,
-        null=True,
-        blank=True,
-    )
-    auth_user = OneToOneField(
-        settings.AUTH_USER_MODEL,
-        default=None,
-        null=True,
-        blank=True,
-        on_delete=PROTECT,
-    )
 
 
 class TagModel(Model):
