@@ -23,9 +23,6 @@ from chatddx.repo.parsers.inventory import parse
 from chatddx.repo.queries import head_of
 from chatddx.repo.store.branch import commit
 
-# the old portal and its worker, kept for reference: nothing runs them
-collect_ignore = ["django-old-ref"]
-
 PORTAL = Path(__file__).parent / "django" / "portal"
 
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
