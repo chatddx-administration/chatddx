@@ -1,2 +1,7 @@
-# The giftbag the tests give an owner: the live one, which holds no cases.
-extends = ["giftbag-inventory.toml"]
+# The giftbag the tests give an owner: the live one and the tests' own
+# records, which hold no cases.
+extends = [
+  "giftbag-inventory.toml",
+  "test-inventory/slices.toml",
+  "test-inventory/configurations.toml",
+]

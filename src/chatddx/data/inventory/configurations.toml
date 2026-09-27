@@ -44,32 +44,3 @@ coercion = "auto"
 reasoning = "default"
 sampling = "recommended"
 tags = ["ddx"]
-
-# TODO: Configuratins below this line should move into a dedicated test inventory ---------------------------
-[configuration.baseline]
-instruction = "bare"
-output = "raw"
-coercion = "native"
-reasoning = "default"
-sampling = "generation-config"
-tags = ["test"]
-
-[configuration.test-tools]
-extends = "baseline"
-toolset = "sentinel"
-
-[configuration.challenge-coercion-native]
-instruction = "challenge-coercion"
-output = "type-check"
-coercion = "native"
-reasoning = "default"
-sampling = "generation-config"
-tags = ["test"]
-
-[configuration.challenge-coercion-prompted]
-extends = "challenge-coercion-native"
-coercion = "prompted"
-
-[configuration.challenge-coercion-tool]
-extends = "challenge-coercion-native"
-coercion = "tool"

@@ -33,7 +33,7 @@ from chatddx.dev.fake_vllm import (
 QWEN = "Qwen/Qwen3-8B-AWQ"
 GPT_OSS = "openai/gpt-oss-20b"
 
-SCHEMAS = sorted((settings.INVENTORY_PATH / "inventory/schemas").glob("*.json"))
+SCHEMAS = sorted(settings.INVENTORY_PATH.glob("*inventory/schemas/*.json"))
 
 
 def body(model: str = QWEN, **fields: Any) -> dict[str, Any]:
