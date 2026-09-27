@@ -18,6 +18,10 @@ from django.utils import timezone
 from django.utils.translation import gettext as _, gettext_lazy, ngettext
 
 from chatddx.bench.bench import Bench
+from chatddx.django.portal.configurations import (
+    page_named as configuration_page_named,
+    page_of_run as configuration_page_of,
+)
 from chatddx.django.portal.models import BatchModel
 from chatddx.django.portal.stacks import page_named, page_of_run
 from chatddx.history.models import RunModel, RunStatus
@@ -96,7 +100,8 @@ class Now:
 
     job: JobModel
     running_for: str
-    # the page of the stack it runs on, as the stack is now
+    # the pages of the configuration and the stack it runs on, as they are now
+    configuration_page: str | None = None
     stack_page: str | None = None
 
 
@@ -118,7 +123,9 @@ class Ran:
     scores: list[tuple[str, str]]
     # the run it came to, where it came to one
     run: Any = None
-    # the page of the stack as the run read it, or as it is now, run or not
+    # the pages of the configuration and the stack as the run had them, or as
+    # they are now, run or not
+    configuration_page: str | None = None
     stack_page: str | None = None
 
     @property
@@ -133,6 +140,7 @@ class Shown:
     state: control.State
     running: list[Now]
     up_next: JobModel | None
+    up_next_configuration: str | None
     up_next_stack: str | None
     outstanding: int
     waiting: list[queue.Waiting]
@@ -204,16 +212,18 @@ def shown(owner: str) -> Shown:
 
     latest = queue.latest(owner, LATEST)
     links = links_of(owner, [*batches, *(job.batch for job in latest)])
-    pages = stack_pages(owner)
+    pages = Pages(owner)
     up_next = queue.up_next(owner)
 
     return Shown(
         state=control.state(owner),
         running=[
-            Now(job, running_for(job), pages(job.stack)) for job in queue.running(owner)
+            Now(job, running_for(job), pages.configuration(job), pages.stack(job.stack))
+            for job in queue.running(owner)
         ],
         up_next=up_next,
-        up_next_stack=pages(up_next.stack) if up_next else None,
+        up_next_configuration=pages.configuration(up_next) if up_next else None,
+        up_next_stack=pages.stack(up_next.stack) if up_next else None,
         outstanding=queue.outstanding(owner),
         waiting=queue.waiting(owner, max_jobs_of(owner)),
         batches=[links[batch] for batch in batches],
@@ -222,17 +232,30 @@ def shown(owner: str) -> Shown:
     )
 
 
-def stack_pages(owner: str) -> Callable[[str], str | None]:
-    """The page of each stack, by name, as the owner has it now: looked up once each."""
-    found: dict[str, str | None] = {}
+class Pages:
+    """
+    The pages of the configurations and the stacks of an owner's jobs, as the
+    owner has them now: each looked up once.
+    """
 
-    def page(name: str) -> str | None:
-        if name not in found:
-            found[name] = page_named(owner, name)
+    def __init__(self, owner: str):
+        self.owner: str = owner
+        self._found: dict[Any, str | None] = {}
 
-        return found[name]
+    def stack(self, name: str) -> str | None:
+        return self._once(("stack", name), lambda: page_named(self.owner, name))
 
-    return page
+    def configuration(self, job: JobModel) -> str | None:
+        return self._once(
+            ("configuration", job.configuration, tuple(sorted(job.set.items()))),
+            lambda: configuration_page_named(self.owner, job.configuration, job.set),
+        )
+
+    def _once(self, key: Any, found: Callable[[], str | None]) -> str | None:
+        if key not in self._found:
+            self._found[key] = found()
+
+        return self._found[key]
 
 
 def links_of(owner: str, batches: list[UUID]) -> dict[UUID, Link]:
@@ -270,7 +293,7 @@ def running_for(job: JobModel) -> str:
     return f"{minutes}:{seconds:02}" if minutes else f"{seconds} s"
 
 
-def ran(job: JobModel, batch: Link, pages: Callable[[str], str | None]) -> Ran:
+def ran(job: JobModel, batch: Link, pages: Pages) -> Ran:
     run = job.run
     outcome, trouble, reason = _outcome(job, run)
     latest: dict[str, str] = {}
@@ -290,7 +313,9 @@ def ran(job: JobModel, batch: Link, pages: Callable[[str], str | None]) -> Ran:
         tokens=job.tallied,
         scores=sorted(latest.items()),
         run=run.uuid if run else None,
-        stack_page=(page_of_run(run) if run else None) or pages(job.stack),
+        configuration_page=(configuration_page_of(run, job) if run else None)
+        or pages.configuration(job),
+        stack_page=(page_of_run(run) if run else None) or pages.stack(job.stack),
     )
 
 

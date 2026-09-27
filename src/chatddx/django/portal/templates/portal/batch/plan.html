@@ -18,7 +18,12 @@
                     {% for cell in shown.cells %}
                         <tr>
                             <td>
-                                <span class="font-medium">{{ shown.configuration }}</span>
+                                {# a new tab: the plan stays as it is, confirmed or not #}
+                                {% if cell.page %}
+                                    <a class="font-medium underline" href="{{ cell.page }}" target="_blank" rel="noopener">{{ shown.configuration }}</a>
+                                {% else %}
+                                    <span class="font-medium">{{ shown.configuration }}</span>
+                                {% endif %}
                                 {% for slice, name in cell.set.items %}
                                     <span class="portal-chip portal-chip-set">{{ slice }}={{ name }}</span>
                                 {% endfor %}

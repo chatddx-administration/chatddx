@@ -2,8 +2,9 @@
 """
 A batch, as the portal keeps it for whoever asked for it: what was asked,
 and the plan they confirmed. Nothing outside the portal refers to it; a run
-never points at a batch (backlog/post-endgame.md). And a case, a stack
-and a run, the repo's and the history's, as the portal's pages are of them.
+never points at a batch (backlog/post-endgame.md). And a case, a
+configuration, a stack and a run, the repo's and the history's, as the
+portal's pages are of them.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from django.db.models import (
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import RunModel
 from chatddx.repo.entities.case.django import CaseBranchModel
+from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.stack.django import StackBranchModel
 
 
@@ -87,6 +89,17 @@ class Batch(BatchModel):
 
 class Case(CaseBranchModel):
     """A version of a case: the portal's pages are of the owner's timelines."""
+
+    class Meta:
+        app_label = "portal"
+        proxy = True
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Configuration(ConfigurationBranchModel):
+    """A version of a configuration: its page shows it, and any variation set in it."""
 
     class Meta:
         app_label = "portal"

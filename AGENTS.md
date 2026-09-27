@@ -1,5 +1,5 @@
 NOTE:
-The project is under a heavy refactor. The portal (src/chatddx/django/portal) is being ported to the new datamodel page by page, its Cases, Batch, Runs and Stacks pages first, from src/chatddx/django-old-ref: stale, loaded by nothing, and named only by conftest.py's collect_ignore. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
+The project is under a heavy refactor. The portal (src/chatddx/django/portal) is being ported to the new datamodel page by page, its Cases, Batch, Runs, Configurations and Stacks pages first, from src/chatddx/django-old-ref: stale, loaded by nothing, and named only by conftest.py's collect_ignore. The API (src/chatddx/django/api) is on the new datamodel, and in the baseline.
 
 Devenv in flake.nix devShell
 

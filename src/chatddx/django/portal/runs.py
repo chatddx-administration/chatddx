@@ -18,6 +18,9 @@ from django.utils.translation import gettext, gettext_lazy as _, ngettext
 
 from chatddx.bench.bench import Bench
 from chatddx.bench.cell import SLICES
+from chatddx.django.portal.configurations import (
+    page_of_run as configuration_page_of,
+)
 from chatddx.django.portal.models import BatchModel
 from chatddx.django.portal.stacks import page_of_run
 from chatddx.django.portal.status import value_of
@@ -132,6 +135,9 @@ class Shown:
     took: str | None
     details: list[Detail]
     slices: list[tuple[str, str]]
+    # the configuration as it ran: its cell's label, and the page of it
+    configuration: str
+    configuration_page: str | None
     answer: str | None
     views: list[tuple[str, list[str]]]
     unheld: str | None
@@ -235,6 +241,8 @@ def shown(run: RunModel) -> Shown:
             (entity, bench.name_of(entity, getattr(trial.configuration, entity)))
             for entity in SLICES
         ],
+        configuration=description_of(run).split(" × ")[0],
+        configuration_page=configuration_page_of(run, job),
         answer=None if answer is None else _written(answer),
         views=[
             (view, [str(item) for item in output.view(view, answer)])

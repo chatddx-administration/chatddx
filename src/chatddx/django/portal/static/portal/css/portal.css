@@ -705,3 +705,28 @@
         transform: rotate(360deg);
     }
 }
+
+/* A configuration's page: the variations set in it, and the slices they set */
+.portal-variations {
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.portal-variations > li + li {
+    margin-top: 0.5rem;
+}
+
+.portal-variations .portal-facts {
+    margin-left: 1.25rem;
+    margin-top: 0.25rem;
+}
+
+.portal-box-set {
+    border-left: 3px solid var(--color-primary-500);
+}
+
+/* a template or a prompt, as it is written */
+.portal-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8125rem;
+}

@@ -5,8 +5,9 @@ The portal is chatddx in a browser: Django's admin, dressed by unfold, at
 so far are the Cases, where clinicians go through each case and work with
 its vignette and targets; the Batch: the repl's `batch`, with its slices
 varied, run by a worker beside the portal, and watched and held from its
-Status page; the Runs, each run with all it holds; and the Stacks, each
-at a version, and tried live.
+Status page; the Runs, each run with all it holds; the Configurations,
+each at a version, with any variation set in it; and the Stacks, each at a
+version, and tried live.
 
 The portal shows you what is yours: your cases, configurations and
 variations. The one exception is what answers, the stacks and their parts,
@@ -185,7 +186,9 @@ batch crosses into 100 cells at most.
 - how many trials it plans: its cells, times its cases;
 - each cell, as the configuration and what it sets in place of the
   configuration's own, and its seed: a cell whose sampling is greedy runs
-  unseeded, since a seed would change nothing;
+  unseeded, since a seed would change nothing. The configuration opens its
+  page, in a tab of its own, with what the cell sets in it (see
+  [Configurations](#configurations));
 - each cell held back and why: what its stack refuses, as `show` says it,
   or a secret you don't have;
 - the cases;
@@ -257,8 +260,11 @@ of your batches they came from. It follows along every second.
 - Up next: the case your queue runs next, and how many are outstanding.
 - The ten cases taken up last, the latest first: when, the case, the
   configuration and the stack, the batch, how it went and why, its tokens,
-  and its scores. The when opens the run the case came to, and the stack
-  its page as the run read it (see [Stacks](#stacks)).
+  and its scores. The when opens the run the case came to, the
+  configuration its page as the run ran it, and the stack its page as the
+  run read it (see [Configurations](#configurations) and
+  [Stacks](#stacks)). The configurations and stacks of the cases running
+  and up next open as they are now.
 
 Watching takes the view permission on batches, and running, adding cases,
 pausing and stopping the add permission.
@@ -287,7 +293,9 @@ on the Status page.
   - the client it was sent from;
   - its tokens, over how many requests;
   - its conversation;
-  - the configuration's slices, as it ran them.
+  - the configuration as it ran, with each variation set in it, which
+    opens its page (see [Configurations](#configurations)), and its
+    slices.
 - **Answer:** each of the output's views of it, and the answer as
   written. Where the schema refuses it, why.
 - **Scores:** each scorer's latest score: what it rests on, and the
@@ -332,6 +340,43 @@ code runs, and each run is written down and scored as any other.
 `--sample NAME` makes one of them, `--case NAME` runs them on another
 case, and `--pace` sets the seconds between the tokens streamed.
 The scripts are `src/chatddx/dev/samples/*.toml`.
+
+## Configurations
+
+**Configurations** in the sidebar lists your configurations, each at its
+latest version: the variation of each slice it holds, how many versions it
+has, and when it was saved.
+
+### A configuration's page
+
+A configuration's page shows a version of it, read only, with whatever
+variations were set in place of its own, and never changes it. The list
+opens the latest; a run's page, and the cases taken up last on the Status
+page, open the version the run's cell was put together from, with each
+variation set in it as the run's trial holds them; a batch's plan opens
+each cell's as it would run now.
+
+- ◀ and ▶ step through the configuration's versions, with what is set in
+  it kept. On an earlier one, a note says a newer one is saved, when, and
+  which slices it changed; **Open the latest** opens it.
+- **A variation.** Where a cell sets variations in place of the
+  configuration's own, as `plan-web+coercion=tool+reasoning=high` does,
+  the page says it is a variation of the configuration, which opens it as
+  it is saved, and, for each variation set: the slice, the variation in
+  place of the configuration's own, and what that changes, field by field
+  (Effort: default → high). The slices set are marked, and one whose
+  variation has a newer version says so.
+- **Each slice**, by the name you have for its variation:
+  - the instruction: its system and user templates, and the variables they
+    place;
+  - the output: its guidance, the views scorers read and where, and its
+    answer schema, or free text;
+  - the coercion: its mode, the schema prompt, and the tool description;
+  - the reasoning: its effort and budget;
+  - the sampling: what a setting left out means, and what it sets outright;
+  - the toolset: its tools, and its guidance, or none.
+
+Reading configurations takes the view permission on them.
 
 ## Stacks
 

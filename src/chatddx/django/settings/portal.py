@@ -175,6 +175,11 @@ UNFOLD = {
                         "icon": "dns",
                         "link": reverse_lazy("admin:portal_stack_changelist"),
                     },
+                    {
+                        "title": _("Configurations"),
+                        "icon": "tune",
+                        "link": reverse_lazy("admin:portal_configuration_changelist"),
+                    },
                 ],
             },
             {

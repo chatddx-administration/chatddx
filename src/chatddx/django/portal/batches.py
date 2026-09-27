@@ -12,6 +12,7 @@ from typing import Any
 from chatddx.bench.bench import Bench, HeldTo
 from chatddx.bench.cell import SLICES, Kept
 from chatddx.bench.plan import Plan
+from chatddx.django.portal.configurations import page_named
 from chatddx.repo.entities.case.django import CaseTrailModel
 from chatddx.repo.families.django import BranchModel
 from chatddx.scoring.score import Scoring
@@ -122,6 +123,8 @@ class CellRow:
     seed: int | None
     # unseeded for greedy sampling, though the batch has a seed
     greedy: bool
+    # the page of the configuration with what the cell sets in it, as it is now
+    page: str | None = None
 
 
 @dataclass(frozen=True)
@@ -181,6 +184,7 @@ class Shown:
         held_back: list[dict[str, Any]],
         cases: list[dict[str, Any]],
         seed: int | None,
+        identity: str | None = None,
     ) -> "Shown":
         return cls(
             configuration=configuration,
@@ -195,6 +199,9 @@ class Shown:
                     },
                     cell["seed"],
                     cell["seed"] is None and seed is not None,
+                    page_named(identity, configuration, cell["set"])
+                    if identity
+                    else None,
                 )
                 for cell in cells
             ],
@@ -205,7 +212,7 @@ class Shown:
         )
 
 
-def shown(plan: Plan) -> Shown:
+def shown(plan: Plan, identity: str | None = None) -> Shown:
     configuration = plan.cells[0].cell.name if plan.cells else ""
 
     return Shown.of(
@@ -214,6 +221,7 @@ def shown(plan: Plan) -> Shown:
         held_back_of(plan),
         cases_of(plan.cases),
         plan.seed,
+        identity,
     )
 
 

@@ -37,6 +37,8 @@
 
                 <dt>{% translate "Configuration" %}</dt>
                 <dd class="portal-chips">
+                    {% include "portal/widgets/linked.html" with text=shown.configuration page=shown.configuration_page %}
+
                     {% for entity, name in shown.slices %}
                         <span class="portal-chip portal-chip-set portal-slice">{{ entity }} <strong>{{ name }}</strong></span>
                     {% endfor %}

@@ -1,12 +1,13 @@
 # pyright: basic
 """
-The portal's pages: the cases (case_admin.py), the runs (run_admin.py)
-and the stacks (stack_admin.py); the Batch, which plans the repl's batch
-with its slices varied, confirms the plan and keeps it, to run now or
-later; a batch's own page, which shows how it stands, runs it, resumes it
-or runs it again, and takes more cases; the status of the worker at the
-owner's jobs, to pause, resume and stop them; and the admin's users and
-groups, in unfold's dress.
+The portal's pages: the cases (case_admin.py), the configurations
+(configuration_admin.py), the runs (run_admin.py) and the stacks
+(stack_admin.py); the Batch, which plans the repl's batch with its slices
+varied, confirms the plan and keeps it, to run now or later; a batch's
+own page, which shows how it stands, runs it, resumes it or runs it
+again, and takes more cases; the status of the worker at the owner's jobs,
+to pause, resume and stop them; and the admin's users and groups, in
+unfold's dress.
 """
 
 from typing import Any, ClassVar, override
@@ -41,8 +42,9 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 from chatddx.bench.cell import SLICES
 from chatddx.django.portal import batches, status
 from chatddx.django.portal.case_admin import CaseAdmin
+from chatddx.django.portal.configuration_admin import ConfigurationAdmin
 from chatddx.django.portal.forms import CASES_FORM, BatchForm, CasesForm
-from chatddx.django.portal.models import Batch, Case, Run, Stack
+from chatddx.django.portal.models import Batch, Case, Configuration, Run, Stack
 from chatddx.django.portal.owners import bench_of, identity_of
 from chatddx.django.portal.run_admin import RunAdmin
 from chatddx.django.portal.stack_admin import StackAdmin
@@ -70,6 +72,7 @@ Batch._meta.verbose_name_plural = _("batches")
 admin.site.unregister(User)
 admin.site.unregister(Group)
 admin.site.register(Case, CaseAdmin)
+admin.site.register(Configuration, ConfigurationAdmin)
 admin.site.register(Run, RunAdmin)
 admin.site.register(Stack, StackAdmin)
 
@@ -348,7 +351,7 @@ class BatchAdmin(ModelAdmin):
             "opts": self.opts,
             "plan": plan,
             "description": plan.description,
-            "shown": batches.shown(plan),
+            "shown": batches.shown(plan, identity_of(request)),
             "scorers": batches.scorers_of(form.bench, plan),
             "asked": asked,
             "back_url": f"{reverse('admin:portal_batch_add')}?{urlencode(asked)}",
@@ -468,6 +471,7 @@ class BatchAdmin(ModelAdmin):
                 batch.held_back,
                 batch.cases,
                 batch.seed,
+                identity_of(request),
             ),
             "cases_form": cases,
             "cases_form_id": CASES_FORM,
