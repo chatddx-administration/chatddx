@@ -70,8 +70,8 @@ SPEC_SCHEMA: dict[str, Any] = {
 
 READY = "Answer with one word: ready."
 
-SENTINEL = ToolTrailBase(
-    name="sentinel_op",
+PROBE = ToolTrailBase(
+    name="probe",
     description="This tool takes two arguments and performs an operation on them",
     parameters={
         "type": "object",
@@ -80,8 +80,8 @@ SENTINEL = ToolTrailBase(
         "additionalProperties": False,
     },
 )
-SENTINEL_RUNS = "chatddx.runtime.tools.sentinel_op:sentinel_op"
-CALL = "Call sentinel_op with v1 = 1234 and v2 = 97, and say what it returned."
+PROBE_RUNS = "chatddx.runtime.tools.probe:probe"
+CALL = "Call probe with v1 = 1234 and v2 = 97, and say what it returned."
 
 SCHEMA_PROMPT = (
     "Answer with a JSON object that matches this JSON Schema, and nothing else:\n"
@@ -501,11 +501,9 @@ class Checking:
             async for event in self._sent(mode, slices, SPEC):
                 yield event
 
-        slices = self._slices(quick, BRIEF_TOKENS, toolset=_Toolset((SENTINEL,)))
+        slices = self._slices(quick, BRIEF_TOKENS, toolset=_Toolset((PROBE,)))
 
-        async for event in self._sent(
-            "tools", slices, CALL, {SENTINEL.name: SENTINEL_RUNS}
-        ):
+        async for event in self._sent("tools", slices, CALL, {PROBE.name: PROBE_RUNS}):
             yield event
 
     def _quickest(self) -> Effort:
@@ -715,14 +713,14 @@ class Checking:
             for message in run.new_messages
             if isinstance(message, ModelResponse)
             for part in message.parts
-            if isinstance(part, ToolCallPart) and part.tool_name == SENTINEL.name
+            if isinstance(part, ToolCallPart) and part.tool_name == PROBE.name
         ]
         returns = [
             part
             for message in run.new_messages
             if isinstance(message, ModelRequest)
             for part in message.parts
-            if isinstance(part, ToolReturnPart) and part.tool_name == SENTINEL.name
+            if isinstance(part, ToolReturnPart) and part.tool_name == PROBE.name
         ]
 
         if not calls:
@@ -730,7 +728,7 @@ class Checking:
                 "tools",
                 state="failed",
                 said=gettext("it answered without calling %(tool)s")
-                % {"tool": SENTINEL.name},
+                % {"tool": PROBE.name},
             )
 
         call = calls[0]

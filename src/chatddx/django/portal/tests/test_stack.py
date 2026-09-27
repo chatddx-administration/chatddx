@@ -254,7 +254,7 @@ def test_the_test_checks_the_stack_live_and_streams_how_it_goes(
     }
     assert checks["served"][1] == "serves Qwen/Qwen3-8B-AWQ"
     assert checks["context"][1] == "32768 tokens, the whole of what the LLM takes"
-    assert checks["tools"][1] == "sentinel_op(v1=1, v2=1) returned 0, and it answered"
+    assert checks["tools"][1] == "probe(v1=1, v2=1) returned 0, and it answered"
     assert [event["stream"] for event in streamed if event["check"] == "answers"][
         :1
     ] == ["thinking"]
