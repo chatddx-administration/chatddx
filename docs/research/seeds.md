@@ -1,7 +1,7 @@
 # Seeds
 
 Why chatddx seeds its runs by default, what that costs, and what was learned
-in building it. What is built is in `datamodel.md` §8 and `repl.md`; what a
+in building it. What is built is in `datamodel.md` §10 and `repl.md`; what a
 seed can say of a batch is in `design/post-endgame.md`.
 
 ## What was decided

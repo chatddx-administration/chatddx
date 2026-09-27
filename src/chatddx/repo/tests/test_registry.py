@@ -46,7 +46,7 @@ from chatddx.repo.registry import CASE, CONFIGURATION, LLM
 
 
 def test_the_registry_is_the_new_datamodel_s():
-    """datamodel.md §1, in its commit order."""
+    """datamodel.md §5, in its commit order."""
     assert ENTITY_NAMES == (
         "machine",
         "os",
@@ -131,7 +131,7 @@ def test_the_request_time_slices_have_no_details():
     Details are description: what the things below a request are, what a
     tool runs, what a case is expected to yield, and how a scorer's values are
     summed up. The request-time slices have none: all they say is content
-    (datamodel.md §3, §6).
+    (datamodel.md §5).
     """
     described = {
         entity.name: plain_detail_fields(entity.branch_details)

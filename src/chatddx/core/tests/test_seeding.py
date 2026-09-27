@@ -31,7 +31,7 @@ pytestmark = pytest.mark.django_db
 
 FAKE = "qwen3-8b-awq@fake"
 
-# the archive's alone (datamodel.md §1): what answers, and what is asked
+# the archive's alone (datamodel.md §5): what answers, and what is asked
 # about and how it is judged
 KEPT = ("machine", "os", "llm", "serving", "client", "stack", "case", "scorer")
 
