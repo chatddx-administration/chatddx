@@ -24,7 +24,7 @@ Django is used for ORM (throughout) and admin (portal only)
 
 ### Inventory
 Seeding configurations has a dedicated infrastructure: the `inventory`, with tomls, a parser and the commands `init-data`/`wipe-data`.
-Tests share one inventory, `src/chatddx/data/test-inventory.toml`, and its giftbag, through the fixtures in `src/chatddx/conftest.py`.
+Tests share one inventory, `src/chatddx/data/test-inventory/inventory.toml`, and its giftbag, through the fixtures in `src/chatddx/conftest.py`.
 Alice is seeded once per session and every test starts from that seed and rolls back to it.
 
 * `recommit` varies an archived branch,
@@ -48,31 +48,8 @@ For docs in (`docs/*`), the same rule applies as to this document: Humans write,
 * `agents/*` are exempt from the "Humans write, agents propose` rule and agents are free to use it for whatever purpose they deem fit.
 
 ## Misc
-* Identity resolution throughout the app uses Identity.name == request.user.username, not the auth_user FK.
+* Identity resolution throughout the app uses Identity.name == request.user.username.
 * For placeholder usernames in docs and tests, use alice, bob, carol... or semantic names (archive, guest, nobody, other, collaborator-one, admin),
 * Besides the proxy-models' verbose_name and verbose_name_plural, never put help_text or any other user facing data in django models or migrations.
 
 ## Proposed amendments
-
-### Identity by name alone
-
-- **By:** Claude (Claude Code), 2026-09-27 21:27 UTC
-- **Reason:** The identity's `auth_user` link and its `guest_id` are
-  dropped, since nothing read them. Under **Misc**, the first line would end
-  at `request.user.username`.
-- **Related:**
-  [core/models.py](https://github.com/chatddx-administration/chatddx/blob/ba9f49710a5c5d55480d91d5555192b5a6c29962/src/chatddx/core/models.py#L17-L30),
-  [its migration](https://github.com/chatddx-administration/chatddx/blob/ba9f49710a5c5d55480d91d5555192b5a6c29962/src/chatddx/django/core/migrations/0002_identity_by_name_alone.py)
-
-### The tests' own records
-
-- **By:** Claude (Claude Code), 2026-09-27 21:27 UTC
-- **Reason:** Records only the tests use (the sentinel tools, the coercion
-  challenge, `baseline` and the other test configurations) live in
-  `src/chatddx/data/test-inventory/` now, which `test-inventory.toml` and
-  `test-giftbag-inventory.toml` extend and the live inventory never does.
-  Under **Testing → Inventory**, a line would keep it so: "A record only the
-  tests use goes in `data/test-inventory/`, never in the live inventory."
-- **Related:**
-  [data/test-inventory/](https://github.com/chatddx-administration/chatddx/blob/12209b7bb17cd9056a75a075db716b6592d26aed/src/chatddx/data/test-inventory),
-  [test-inventory.toml](https://github.com/chatddx-administration/chatddx/blob/12209b7bb17cd9056a75a075db716b6592d26aed/src/chatddx/data/test-inventory.toml)
