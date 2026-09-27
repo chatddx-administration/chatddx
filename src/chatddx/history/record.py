@@ -25,7 +25,7 @@ from chatddx.history.models import (
     Role,
     RunModel,
     RunStatus,
-    RunToolBranchModel,
+    RunToolModel,
     TrialModel,
 )
 from chatddx.repo.entities.client.django import ClientTrailModel
@@ -38,7 +38,7 @@ from chatddx.runtime.run import Run
 
 
 @dataclass(frozen=True)
-class Branches:
+class Read:
     stack: int
     llm: int | None
     tools: dict[int, str] = field(default_factory=dict[int, str])
@@ -55,7 +55,7 @@ class Outcome:
 def record(
     owner: str,
     configuration: ConfigurationTrailIn,
-    branches: Branches,
+    read: Read,
     case: int,
     run: Run,
     outcome: Outcome,
@@ -70,7 +70,7 @@ def record(
 
     with transaction.atomic():
         identity = IdentityModel.objects.get(name=owner)
-        stack = StackBranchModel.objects.get(pk=branches.stack)
+        stack = StackBranchModel.objects.get(pk=read.stack)
         trial_model = _trial(configuration, stack.trail_id, case, run.seed)
 
         conversation = conversation or ConversationModel.objects.create(
@@ -90,7 +90,7 @@ def record(
             conversation=conversation,
             status=outcome.status,
             stack_branch=stack,
-            llm_branch_id=branches.llm,
+            llm_branch_id=read.llm,
             client=dump_trail(ClientTrailModel, client.trail),
             client_rev=client.rev,
             client_packages=client.packages,
@@ -103,9 +103,9 @@ def record(
             finish_reason=_finish_reason(run.new_messages),
             error=outcome.error,
         )
-        _ = RunToolBranchModel.objects.bulk_create(
-            RunToolBranchModel(run=recorded, tool_branch_id=tool, blob=blob)
-            for tool, blob in branches.tools.items()
+        _ = RunToolModel.objects.bulk_create(
+            RunToolModel(run=recorded, tool_branch_id=tool, blob=blob)
+            for tool, blob in read.tools.items()
         )
 
     return recorded

@@ -14,10 +14,10 @@ from chatddx.dev.fake_vllm import ANSWER, FakeTransport, stream
 from chatddx.history.models import (
     RunModel,
     RunStatus,
-    RunToolBranchModel,
+    RunToolModel,
     TrialModel,
 )
-from chatddx.history.record import Branches, Outcome, record
+from chatddx.history.record import Outcome, Read, record
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
@@ -103,7 +103,7 @@ def written(
     return record(
         user,
         cell,
-        Branches(
+        Read(
             stack.id,
             llm.pk,
             {tool.id: run.implementations[tool.trail.name].blob for tool in tools},
@@ -199,8 +199,7 @@ def test_a_run_keeps_its_tools_branches_and_every_round():
         "sentinel_string",
     ]
     assert {
-        row.tool_branch.name: row.blob
-        for row in RunToolBranchModel.objects.filter(run=run)
+        row.tool_branch.name: row.blob for row in RunToolModel.objects.filter(run=run)
     } == {
         name: blob_of(Path(tools.__file__).parent.joinpath(f"{name}.py").read_bytes())
         for name in ("sentinel_op", "sentinel_string")

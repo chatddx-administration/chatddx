@@ -21,7 +21,7 @@ from chatddx.history.models import (
     MessageModel,
     RunModel,
     RunStatus,
-    RunToolBranchModel,
+    RunToolModel,
     ScoreModel,
 )
 from chatddx.repo.entities.output.pydantic import VIEWS
@@ -135,7 +135,7 @@ def shown(run: RunModel) -> Shown:
     ]
     tokens_in = sum(_usage(payload, "input_tokens") for payload in responses)
     tokens_out = sum(_usage(payload, "output_tokens") for payload in responses)
-    tools = RunToolBranchModel.objects.filter(run=run).select_related("tool_branch")
+    tools = RunToolModel.objects.filter(run=run).select_related("tool_branch")
     stack = run.stack_branch
     answer = run.answer
     held = scoring.case_of(run)

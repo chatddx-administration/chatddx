@@ -15,7 +15,7 @@ from chatddx.django.api.schemas import (
     ScorerSum,
     ToolRan,
 )
-from chatddx.history.models import RunModel, RunStatus, RunToolBranchModel, ScoreModel
+from chatddx.history.models import RunModel, RunStatus, RunToolModel, ScoreModel
 from chatddx.repo.entities.case.pydantic import CaseTrailOut, pattern_of
 from chatddx.repo.entities.client.pydantic import ClientTrailOut
 from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailOut
@@ -99,9 +99,7 @@ def summary_of(run: RunModel, scoring: Scoring) -> RunSummary:
 
 def run_of(run: RunModel, scoring: Scoring) -> RunOut:
     trial = run.trial
-    ran = RunToolBranchModel.objects.filter(run=run).select_related(
-        "tool_branch__owner"
-    )
+    ran = RunToolModel.objects.filter(run=run).select_related("tool_branch__owner")
 
     return RunOut(
         **summary_of(run, scoring).model_dump(),

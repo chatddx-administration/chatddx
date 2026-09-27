@@ -39,7 +39,7 @@ __all__ = [
     "ConversationModel",
     "MessageModel",
     "RunModel",
-    "RunToolBranchModel",
+    "RunToolModel",
     "ScoreModel",
     "TrialModel",
 ]
@@ -209,7 +209,7 @@ class RunModel(Model):
     scores: QuerySet[ScoreModel]
     tool_branches: ManyToManyField[ToolBranchModel, Any] = ManyToManyField(
         ToolBranchModel,
-        through="RunToolBranchModel",
+        through="RunToolModel",
         blank=True,
         related_name="runs",
     )
@@ -279,10 +279,10 @@ class RunModel(Model):
     )
 
 
-class RunToolBranchModel(Model):
+class RunToolModel(Model):
     class Meta:
         app_label = "history"
-        db_table = "history_run_tool_branch"
+        db_table = "history_run_tool"
 
     run = ForeignKey(
         RunModel,

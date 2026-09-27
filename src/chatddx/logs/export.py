@@ -43,7 +43,7 @@ from chatddx.history.models import (
     MessageModel,
     RunModel,
     RunStatus,
-    RunToolBranchModel,
+    RunToolModel,
 )
 from chatddx.logs.messages import (
     body,
@@ -319,7 +319,7 @@ def _sample(
             },
             "tools": {
                 link.tool_branch.name: link.blob
-                for link in RunToolBranchModel.objects.filter(run=run).select_related(
+                for link in RunToolModel.objects.filter(run=run).select_related(
                     "tool_branch"
                 )
             },

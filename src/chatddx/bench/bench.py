@@ -11,7 +11,7 @@ from chatddx.bench.cell import NONE, SLICES, Cell, Kept
 from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.history.models import ConversationContext, RunModel
-from chatddx.history.record import Branches, Outcome, record
+from chatddx.history.record import Outcome, Read, record
 from chatddx.repo.bundles import entity_of
 from chatddx.repo.entities.case.pydantic import pattern_of
 from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
@@ -444,7 +444,7 @@ class Bench:
         return record(
             self.identity,
             ConfigurationTrailIn.model_validate(cell.slices, from_attributes=True),
-            Branches(
+            Read(
                 stack=cell.stack.id,
                 llm=self.llm_of(cell.stack)[1],
                 tools={
