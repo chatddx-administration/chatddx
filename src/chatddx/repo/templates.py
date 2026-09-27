@@ -12,9 +12,7 @@ class TemplateError(ValueError):
 
 @dataclass(frozen=True)
 class Placements:
-    # `{{name}}` and `{{{name}}}`: where a variable's value lands
     values: frozenset[str] = field(default_factory=frozenset)
-    # `{{#if name}}`, `{{^name}}` and the like: what the template branches on
     conditions: frozenset[str] = field(default_factory=frozenset)
 
     def __or__(self, other: "Placements") -> "Placements":

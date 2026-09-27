@@ -1,10 +1,7 @@
 # The chatddx initial data inventory
 
-The inventory is a set of TOML files that say what chatddx works with: the
-clinical cases and what each is expected to yield, the scorers that judge
-the answers, what the model is asked and how, and the models and machines
-that answer. This manual goes through every key the files take and what it
-means.
+The inventory is an initial set of configurations and cases that is used to
+bootstrap new users and testing the code.
 
 The files live in `src/chatddx/data/`:
 
@@ -21,38 +18,21 @@ The files live in `src/chatddx/data/`:
 
 ## How it is used
 
-Nothing reads these files while chatddx runs. They are loaded into the
-database with:
+Load into database with:
 
 ```
 chatddx init-data alice
 ```
 
-This loads everything as the archive's, the shared owner, and lets alice use
-it. Run it again after an edit.
+This will setup the archive if it doesn't exist already and share full inventory
+with alice but not add anything. Useful to update shared resources without
+interfering with existing owned data.
 
-`--with-giftbag` also gives alice, as her own, what
-`giftbag-inventory.toml` names: what is asked, the configurations and the
-variations they name, for a new owner to start from. What answers (the
-machines, the models and the stacks) is a class of record apart, which the
-archive keeps for everyone and no owner is given; the cases and the
-scorers stay the archive's too, shared.
+To bootstrap a user, a `--with-giftbag` also gives alice everything in
+`giftbag-inventory.toml`.
 
-Keys come in two sorts, and the difference matters:
-
-- **Keys that make a thing what it is,** such as a case's vignette or an
-  instruction's text. Change one, and chatddx sees a new thing: earlier
-  runs belong to the old one, and stay as they were.
-- **Keys that describe a thing,** such as a case's targets or language.
-  Change one, and chatddx keeps a new version of the same thing: earlier
-  runs of it are scored again against the new version with `score` in the
-  shell.
-
-Each entry below says which sort its keys are, where it isn't plain.
-
-A comment `# guessed` after a value is a note for people: a target no
-clinician has written, or a machine detail no one has read off the
-machine. Nothing reads it; the value is used as it is.
+A comment `# guessed` after a value is a note to people that the value has been
+guessed by an llm.
 
 ## Writing a record
 
@@ -63,9 +43,8 @@ A record is a table named by its kind and its name:
 tags = ["dutch-fall"]
 ```
 
-The name is the key after the kind. A name with dots or `@` in it is
-quoted: `[stack."qwen3-8b-awq@pelle"]`. A record names other records by
-their names: `llm = "qwen3-8b-awq"`.
+* A name with dots or `@` in it is quoted: `[stack."qwen3-8b-awq@pelle"]`.
+* A record names other records by their names: `llm = "qwen3-8b-awq"`.
 
 Every record can also have:
 
@@ -90,28 +69,17 @@ A case is a clinical vignette and what the model is expected to make of it.
 [case.Dutchfall14w]
 tags = ["dutch-fall"]
 language = "en"
+targets.diagnosis.text = "Acute exacerbation of COPD"
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"  # guessed
 targets.disposition.pattern = "admit* | admission | hospital*"  # guessed
 ```
 
-A target can also say in plain words what is expected, beside its pattern:
-
-```toml
-targets.diagnosis.text = "Acute exacerbation of COPD"
-targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
-```
-
-- **The vignette** is the text of `cases/<name>.txt`, sent to the model as
-  it is. It makes the case what it is: an edited vignette is a new case.
-- **`tags`:** the set the case comes from: `dutch-fall`, `edn` or
-  `openxddx`.
+- **The vignette** is the text of `cases/<name>.txt`, sent to the model as it is.
+- **`tags`:** the set the case comes from: `dutch-fall`, `edn` or `openxddx`.
 - **`language`:** the language the vignette is written in, `en` or `sv`.
-  The EDN cases are Swedish; Dutch Fall's were translated into English.
-- **`targets`:** what a good answer names, one per kind. They describe the
-  case: a changed target is a new version, and earlier runs are scored
-  again. Each kind has two keys, and either may be left out:
-  - `text`: what is expected, in plain words, for people to read;
+- **`targets`:**
+  - `text`: what is expected, in plain words, for people (or possibly llm judges) to read.
   - `pattern`: what the scorers look for in an answer (below).
 
   A case may leave a kind out, or give a target no pattern. The scorers of
@@ -155,8 +123,8 @@ target_kind = "diagnosis"
 metrics = ["mean", "stderr"]
 ```
 
-- **`function`:** the code that scores, one of chatddx's own. The
-  inventory's are:
+- **`function`:** a hard-coded function that scores, which needs to be predefined in the code itself.
+  The current functions are preliminary and awaits clinical input.
   - `reciprocal_rank`: 1 if the diagnosis is first in the differential,
     1/2 if second, and so on; 0 if it isn't there.
   - `first_mention`: in the first sentence or line of the answer that
@@ -170,10 +138,7 @@ metrics = ["mean", "stderr"]
 - **`metrics`:** how its scores are summed up over runs: `mean`, `stderr`,
   `std`, `var`. These describe the scorer; the others make it what it is.
 
-## What the model is asked
-
-These are the slices: each is one choice about the request, and a
-configuration picks one of each.
+## The components of a configuration
 
 ### Outputs
 
@@ -189,19 +154,12 @@ views.disposition = "$.management.disposition"
 views.critical = "$.diagnoses[?(@.critical)].diagnosis"
 ```
 
-- **`guidance`:** the words that ask for the answer. The instruction
-  places them in the prompt.
+- **`guidance`:** Are inserted into the main instruction (sometimes called system prompt)
 - **`answer_schema`** (or `answer_schema_path`): the shape a structured answer
   must have. Each field's `description` in the schema is read by the
   model, so its wording is part of what the model is asked. Leave it out
   for a free-text answer.
-- **`views`:** where each part of the answer is found, for the scorers:
-  - `differential`: the ranked diagnoses;
-  - `warning`: the red flags;
-  - `disposition`: where the patient goes;
-  - `critical`: the diagnoses the answer marks critical;
-  - `text`: the answer as written.
-
+- **`views`:** tells the scorer where in the response the answer is expected.
   In a structured answer a view is a path into it: `$.acute_warning` is a
   field, `$.diagnoses[*]` every item of a list, `$.diagnoses[*].diagnosis`
   a field of every item, and `$.diagnoses[?(@.critical)].diagnosis` that
@@ -211,7 +169,7 @@ views.critical = "$.diagnoses[?(@.critical)].diagnosis"
 
 ### Instructions
 
-The prompt's frame.
+The prompt's template.
 
 ```toml
 [instruction.ddx]
@@ -235,8 +193,8 @@ variables = ["case", "output_guidance", "schema_prompt", "tool_guidance"]
 
 ### Coercions
 
-How the answer is held to the output's shape. With free text, none of this
-applies.
+How tells what mechanism is used to tell the LLM the expected output's shape.
+With free text, none of this applies.
 
 - **`mode`:**
   - `native`: the server itself only lets the model write text that fits
@@ -300,7 +258,7 @@ parameters = { type = "object", properties.query = { type = "string" }, required
 
 ## Configurations
 
-A named choice of one variation of each slice.
+Configuration combines all components into a complete ask.
 
 ```toml
 [configuration.plan]
@@ -321,8 +279,6 @@ required; `toolset` is optional. A configuration names no model: it runs
 on whichever stack it is paired with.
 
 ## Models and machines
-
-A stack is what answers: a model, served on a machine.
 
 ### Stacks
 
@@ -351,12 +307,12 @@ api = "vllm"
 
 ### Models (`llm`)
 
-- **`snapshot`:** the exact files loaded, by their store path. This makes
-  the model what it is.
+- **`snapshot`:** the exact files loaded, by their store path.
 - **`source`:** where they came from: repository and revision.
 - **`specs`:** family, size, quantization, context length, licence.
-- **`facts`:** what the model can do, which decides what each slice turns
-  into on it:
+- **`facts`:** Details from the model's specification (called "model card").
+  It comes from the manufacturer and is needed in order to know in advance
+  what the model will do with a configuration:
   - `facts.reasoning`: for each effort, what to send, another effort it
     becomes (`minimal = "on"`), or `{ refused = "why" }`; `default` names
     the effort it thinks at by default; `budget` says where a thinking

@@ -1,12 +1,4 @@
 # pyright: basic
-"""
-A slice's variation as its page edits it, whichever the slice: its
-timeline; what saving the page under a name does, a new version of it or a
-new variation; the other variations holding what the page would save; what
-of the owner's goes by its name, their configurations, their runs and their
-batches' trials; and deleting it, where nothing does.
-"""
-
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -24,13 +16,10 @@ from chatddx.repo.entity_names import EntityName
 from chatddx.repo.queries import head_of, qs_head
 from chatddx.worker.models import JobModel
 
-# what a variation's name can't hold: what parts an owner from a name, and
-# what parts a cell's label and a trial's description
 HELD_APART = ("/", "+", "=", "×")
 
 
 def versions_of(entity: EntityName, owner: str, name: str) -> list[Any]:
-    """The owner's variation of the name: its timeline, the first version first."""
     return list(
         entity_of(entity)
         .branch_model.objects.filter(owner__name=owner, name=name)
@@ -40,7 +29,6 @@ def versions_of(entity: EntityName, owner: str, name: str) -> list[Any]:
 
 
 def refused(name: str) -> str | None:
-    """Why a variation can't go by `name`, if it can't."""
     for apart in HELD_APART:
         if apart in name:
             return gettext(
@@ -55,31 +43,20 @@ def refused(name: str) -> str | None:
 
 
 class Saving(StrEnum):
-    # a new version of the variation the page is of
     SAME = "same"
-    # a new variation, the page's own staying as it is
     NEW = "new"
-    # the name of another variation of the owner's: not saved over
     TAKEN = "taken"
 
 
 @dataclass(frozen=True)
 class Said:
-    """What saving the page under a name does, said before it is done."""
-
     saving: Saving
     name: str
-    # the version the save makes of the variation it saves to
     version: int
-    # the version the page began from, where it is an earlier one
     since: int | None = None
-    # the page's variation, where it is of one
     edited: str | None = None
-    # why the name can't be one, where it can't
     why: str | None = None
-    # the head of the other variation the name is taken by
     taken: Any = None
-    # whether the latest version holds what the page would save already
     unchanged: bool = False
 
     @property
@@ -152,10 +129,6 @@ def said(
     since: int | None = None,
     fingerprint: str | None = None,
 ) -> Said:
-    """
-    What saving under `name` does, the page being of `edited` where it is,
-    and holding what comes to `fingerprint`, where that is known.
-    """
     name = name.strip()
     why = refused(name) if name else None
     rows = entity_of(entity).branch_model.objects.filter(owner__name=owner)
@@ -178,8 +151,6 @@ def said(
 
 @dataclass(frozen=True)
 class Sharer:
-    """Another variation whose latest version holds what the page would save."""
-
     name: str
     owner: str
     pk: int
@@ -193,12 +164,6 @@ def sharers(
     name: str,
     edited: str | None = None,
 ) -> list[Sharer]:
-    """
-    The variations, the owner's own and those shared with them, whose head
-    holds what comes to `fingerprint`, bar the page's own and the one it
-    saves to: a shared one named as the page names its variation gives way
-    to it.
-    """
     trail = (
         entity_of(entity)
         .trail_model.objects.filter(fingerprint=fingerprint)
@@ -220,24 +185,13 @@ def sharers(
 
 @dataclass(frozen=True)
 class Holding:
-    """A configuration of the owner's whose latest version holds the variation."""
-
     name: str
     page: str
-    # the version of the variation it holds
     version: int
 
 
 @dataclass(frozen=True)
 class Holds:
-    """
-    What of the owner's goes by the variation's name: their configurations,
-    those whose latest version holds a version of it and how many earlier
-    versions do; their runs; and their batches' trials that set it. What
-    holds a version another variation of theirs holds too goes by that one's
-    name as much, and is not the variation's alone.
-    """
-
     configurations: list[Holding] = field(default_factory=list[Holding])
     earlier: int = 0
     runs: int = 0
@@ -249,13 +203,11 @@ class Holds:
 
 
 def holds_of(entity: EntityName, owner: str, rows: list[Any]) -> Holds:
-    """What of the owner's goes by the name of the variation whose timeline `rows` is."""
     if not rows:
         return Holds()
 
     name = rows[-1].name
     numbers = {row.trail_id: number for number, row in enumerate(rows, 1)}
-    # the versions no other variation of the owner's holds
     alone = set(numbers) - set(
         entity_of(entity)
         .branch_model.objects.filter(owner__name=owner, trail_id__in=numbers)
@@ -290,10 +242,6 @@ def holds_of(entity: EntityName, owner: str, rows: list[Any]) -> Holds:
 
 
 def delete_variation(entity: EntityName, owner: str, name: str) -> bool:
-    """
-    The owner's variation of the name gone for good, every version of it,
-    where nothing of theirs goes by its name; and else left as it is.
-    """
     with transaction.atomic():
         rows = versions_of(entity, owner, name)
 

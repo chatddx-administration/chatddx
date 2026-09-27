@@ -1,11 +1,4 @@
 # pyright: basic
-"""
-A sampling variation as its page shows what it does: on each LLM the owner
-runs on, for each reasoning its facts realize, what a request carries of
-it, where the settings it leaves out come from, and what is refused; and
-whether it is greedy, which leaves a batch's trials unseeded.
-"""
-
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,24 +11,16 @@ from chatddx.runtime.resolution import realize
 
 @dataclass(frozen=True)
 class Realized:
-    """What a sampling comes to on an LLM, reasoning any of the ways it does so."""
-
     llm: str
-    # what the request carries of it, a setting each, and where what it
-    # leaves out comes from
     writes: list[str] | None = None
     source: str | None = None
-    # why it can't be sent so, where it can't
     refused: str | None = None
     greedy: bool = False
-    # the reasonings it comes to this on, each with whether it is the LLM's default
     intents: list[tuple[str, bool]] = field(default_factory=list[tuple[str, bool]])
 
 
 @dataclass(frozen=True)
 class Realizing:
-    """What a sampling comes to on each LLM, and whether it is greedy on all, some or none."""
-
     rows: list[Realized]
 
     @property
@@ -49,7 +34,6 @@ class Realizing:
 
 
 def realized_on(identity: str, sampling: SamplingTrailBase) -> Realizing:
-    """The sampling on each LLM of the stacks the identity runs on, each reasoning it realizes."""
     bench = Bench(identity)
     llms: dict[int, tuple[str, Any, Any]] = {}
 
@@ -79,7 +63,6 @@ def realized_on(identity: str, sampling: SamplingTrailBase) -> Realizing:
             )
             default = facts.reasoning.default == intent
 
-            # one row for the reasonings it comes to the same on
             if previous is not None and _same(previous, row):
                 previous.intents.append((intent, default))
                 continue

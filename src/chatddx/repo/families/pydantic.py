@@ -41,8 +41,8 @@ class TrailIn(BaseTrail):
     def canonical_input(self) -> dict[str, Any]:
         relations: dict[str, Any] = {}
 
-        # sibling in src/chatddx/repo/store/trail.py
         for field_name, value in self:
+            # sibling in src/chatddx/repo/store/trail.py
             match value:
                 case TrailIn():
                     relations[field_name] = value.fingerprint
@@ -104,7 +104,6 @@ def plain_detail_fields(details: type[BaseModel]) -> list[str]:
 
 
 def dump_details(details: BaseModel) -> dict[str, JsonValue]:
-    """The plain details of `details`, as the branch's `details` column holds them."""
     return details.model_dump(
         mode="json",
         include=set(plain_detail_fields(type(details))),

@@ -32,7 +32,6 @@ def test_trail_schema(trails: InventoryTrailIn):
 
 
 def test_a_committed_inventory_reads_back_as_models_specs_and_form_data():
-    # the archive, as the session's seed committed the test inventory
     models = owned_inventory(settings.ARCHIVE_IDENTITY_NAME)
     specs = InventoryBranchOut.model_validate(models)
     form_data = form_data_out(specs)

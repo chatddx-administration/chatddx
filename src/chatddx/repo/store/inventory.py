@@ -20,10 +20,6 @@ def owned_inventory(
     owner_name: str,
     index_key: Literal["branch_name", "trail_id"] = "branch_name",
 ) -> InventoryBranchModel:
-    """
-    Get inventory of branch-canons owned by `owner_name` as an `InventoryBranchModel`
-    Dictionary keys kan be either name or pk.
-    """
     inventory: dict[str, Any] = {}
 
     for entity_name in ENTITY_NAMES:
@@ -46,14 +42,6 @@ def owned_inventory(
 
 
 def commit_parsed_inventory(inventory: ParsedInventory) -> InventoryCommitReceipt:
-    """
-    Commit a parsed inventory to database and use the attached BranchDetails.
-
-    Returns a bool for each branch in the inventory
-    True: the head was updated
-    False: the trail was already the head
-    """
-
     owners = _Owners()
 
     return {
@@ -69,15 +57,6 @@ def commit_trails_in(
     inventory: InventoryTrailIn,
     owner_name: str,
 ) -> InventoryCommitReceipt:
-    """
-    Commit an inventory of trail schemas to database.
-    Use dict-keys as branch name and passed owner_name as owner name.
-
-    Returns a bool for each branch in the inventory
-    True: the head was updated
-    False: the trail was already the head
-    """
-
     owner = ensure_identity(owner_name)
 
     return {
@@ -90,8 +69,6 @@ def commit_trails_in(
 
 
 class _Owners(dict[str, IdentityModel]):
-    """Each owner an inventory names, read the first time it is named."""
-
     def __missing__(self, name: str) -> IdentityModel:
         self[name] = ensure_identity(name)
         return self[name]

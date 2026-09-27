@@ -18,7 +18,6 @@
                     {% for cell in shown.cells %}
                         <tr>
                             <td>
-                                {# a new tab: the plan stays as it is, confirmed or not #}
                                 {% if cell.page %}
                                     <a class="font-medium underline" href="{{ cell.page }}" target="_blank" rel="noopener">{{ shown.configuration }}</a>
                                 {% else %}

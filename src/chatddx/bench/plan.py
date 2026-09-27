@@ -1,9 +1,3 @@
-"""
-A batch, planned before anything is sent: its cells, each ready or held back
-with why, on the cases with any of its tags, under one seed. The repl's and
-the API's batch plan one cell; the portal's crosses variations into many.
-"""
-
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from itertools import product
@@ -16,12 +10,6 @@ from chatddx.runtime.resolution import CellRefused
 
 
 def crossed(cell: Cell, variations: Mapping[str, Sequence[Any]]) -> list[Cell]:
-    """
-    The cell with each combination of the slices' variations held in it, a
-    variation None taking the toolset out; a slice given none keeps the
-    cell's own. Combinations that come to one configuration are one cell, and
-    the configuration's own variations come first, so its own cell does.
-    """
     axes = [
         [
             (entity, variation)
@@ -47,7 +35,6 @@ def crossed(cell: Cell, variations: Mapping[str, Sequence[Any]]) -> list[Cell]:
 
 
 def reasons(error: NotReady | CellRefused) -> list[str]:
-    """What stands in a cell's way, each refusal with its slice."""
     match error:
         case CellRefused(refusals=refusals):
             return [
@@ -61,8 +48,6 @@ def reasons(error: NotReady | CellRefused) -> list[str]:
 
 @dataclass(frozen=True)
 class Planned:
-    """A cell of a plan: ready, or held back by what stands in its way."""
-
     cell: Cell
     ready: Ready | None = None
     held_back: NotReady | CellRefused | None = None
@@ -87,7 +72,6 @@ class Plan:
         tags: Iterable[str],
         seed: int | None,
     ) -> "Plan":
-        """Each cell made ready, or held back, on the cases with any of `tags`."""
         tags = tuple(tags)
         planned: list[Planned] = []
 
@@ -108,17 +92,14 @@ class Plan:
         return [planned for planned in self.cells if planned.held_back]
 
     def seed_of(self, ready: Ready) -> int | None:
-        """The plan's seed, or none where sampling is greedy: it would change nothing."""
         return None if ready.greedy else self.seed
 
     @property
     def kept(self) -> list[Kept]:
-        """The cells the plan runs, as a batch keeps them."""
         return [ready.cell.kept(self.seed_of(ready)) for ready in self.ready]
 
     @property
     def trials(self) -> list[Trial]:
-        """What the plan runs: cell by cell, case by case."""
         return [
             Trial.on(ready, case, self.seed_of(ready))
             for ready in self.ready
@@ -131,10 +112,6 @@ class Plan:
 
     @property
     def description(self) -> str:
-        """
-        What runs: the cell, or how many cells, on how many cases; what was
-        planned, where nothing runs.
-        """
         many = "s" if len(self.cases) > 1 else ""
         cases = f"{len(self.cases)} case{many} tagged {self.tagged}"
         cells = [ready.cell for ready in self.ready] or [

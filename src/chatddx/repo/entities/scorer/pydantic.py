@@ -20,7 +20,6 @@ from chatddx.repo.families import (
 )
 from chatddx.repo.families.fields import EntryPoint, distinct
 
-# inspect's metrics, by name and formula, over the values a scorer made
 type Metric = Literal["mean", "stderr", "std", "var"]
 
 
@@ -33,7 +32,6 @@ class ScorerDetails(Details):
 class ScorerTrailBase(BaseTrail):
     function: EntryPoint
     view: View
-    # none for a scorer that needs no target
     target_kind: TargetKind | None = None
     args: dict[str, JsonValue] = Field(default_factory=dict)
 

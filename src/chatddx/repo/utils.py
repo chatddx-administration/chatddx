@@ -18,7 +18,6 @@ def _key(model: TrailModel) -> _Key:
 
 
 def _array_fields(model_cls: type[TrailModel]) -> list[RelatedArrayField]:
-    """The fields of `model_cls` that hold a list of trails as ids."""
     return [
         field
         for field in model_cls._meta.concrete_fields

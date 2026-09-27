@@ -1,9 +1,4 @@
 # pyright: basic
-"""
-Runs and what came of them: the repl's run, batch, runs, replay and score. A
-run or a trial is named by its id, or the start of it.
-"""
-
 from typing import Any
 
 from django.http import HttpRequest
@@ -35,7 +30,6 @@ from chatddx.repo.entities.stack.pydantic import StackTrailOut
 from chatddx.repo.utils import resolve_trail
 from chatddx.scoring.score import Scoring
 
-# where runs go in place of each stack's endpoint: the fake vLLM, in tests
 TRANSPORT: Any = None
 
 router = Router(tags=["runs"])
@@ -56,7 +50,6 @@ BATCHED = {"responses": {200: {"description": "the runs' events", "content": EVE
 
 @router.post("/runs", response=RunOut, openapi_extra=STREAMED)
 def run(request: HttpRequest, spec: RunIn):
-    """Run the cell on a case or a vignette, stream it, record it and score it."""
     sending = Sending.of(*held(request, spec, TRANSPORT), spec)
 
     if spec.stream:
@@ -67,14 +60,12 @@ def run(request: HttpRequest, spec: RunIn):
 
 @router.post("/batch", openapi_extra=BATCHED)
 def batch(request: HttpRequest, spec: BatchIn):
-    """Run the cell on each case with any of the tags, then sum up the scores."""
     batched = Batch(*held(request, spec, TRANSPORT), spec)
     return EventStream(batched.sendings, [batched.batched], batched.summarized)
 
 
 @router.get("/runs", response=list[RunSummary])
 def runs(request: HttpRequest, page: Query[Page]):
-    """The identity's runs, the latest first."""
     identity = identity_of(request)
     scoring = Scoring(identity)
     found = (
@@ -89,14 +80,12 @@ def runs(request: HttpRequest, page: Query[Page]):
 
 @router.get("/runs/{run}", response=RunOut)
 def one(request: HttpRequest, run: str):
-    """The run as it is recorded: replay it with its messages."""
     bench = Bench(identity_of(request))
     return run_of(bench.run_named(run), Scoring(bench.identity))
 
 
 @router.get("/runs/{run}/messages", response=list[MessageOut])
 def messages(request: HttpRequest, run: str):
-    """The run's messages, as pydantic-ai keeps them."""
     found = Bench(identity_of(request)).run_named(run)
 
     return [
@@ -115,14 +104,12 @@ def messages(request: HttpRequest, run: str):
 
 @router.get("/runs/{run}/exchange", response=Exchange)
 def exchange(request: HttpRequest, run: str):
-    """What the run sent and got back, byte for byte."""
     found = Bench(identity_of(request)).run_named(run)
     return Exchange(requests=found.requests, responses=found.responses)
 
 
 @router.post("/scores", response=ScoringOut)
 def score(request: HttpRequest, spec: ScoreIn):
-    """Hold the outstanding runs, or the one named, to the scorers that apply."""
     bench = Bench(identity_of(request))
     scoring = Scoring(bench.identity)
     held_to = (
@@ -159,7 +146,6 @@ def score(request: HttpRequest, spec: ScoreIn):
 
 @router.get("/trials/{trial}", response=TrialOut)
 def trial(request: HttpRequest, trial: str):
-    """A trial the identity ran, and its runs of it."""
     bench = Bench(identity_of(request))
     found = list(
         TrialModel.objects.filter(

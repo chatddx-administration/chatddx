@@ -1,16 +1,3 @@
-# LLMs. An LLM is the directory vLLM loads: weights, config.json, the
-# tokenizer, the chat template and generation_config.json, fetched as a Nix
-# fixed-output derivation. Its store path, the snapshot, is all that
-# identifies it. Everything else is description, and `facts` is the part of the
-# description that resolution reads to realize each slice's intent on it
-# (datamodel.md §7).
-#
-# A fact translates an intent in one of three ways:
-#   - a request fragment, which is what the intent writes into the request;
-#   - the name of another intent, which it collapses into;
-#   - { refused = "why" }, when the LLM can't honour it.
-# An intent with no fact is refused too, for want of a fact.
-
 [llm.qwen3-8b-awq]
 snapshot = "/nix/store/vmm0f85gk4i6ymz1j8hlk9mfyjy5jq8a-Qwen3-8B-AWQ"  # guessed
 source = "Qwen/Qwen3-8B-AWQ@d8dfb663dd1029e5ca5cf984c2ed338bcba077d3"  # guessed
@@ -48,16 +35,11 @@ top_k = 20
 
 [llm.qwen3-8b-awq.facts.coercion]
 default = "native"  # guessed: what `auto` resolves to
-# vLLM's grammar finds the end of the reasoning through the parser, and
-# constrains only what follows. Without one it holds from the first token,
-# and the LLM can't think: a mode that needs the parser needs it only
-# while the LLM reasons. Tool mode sends tool_choice = required, which
-# vLLM holds with a grammar too.
 native = { needs = "reasoning_parser" }
 tool = { needs = "reasoning_parser" }
 prompted = {}
 
-# pydantic-ai profile overrides, so nothing hangs on the served name
+# pydantic-ai profile overrides
 [llm.qwen3-8b-awq.facts.profile]
 supports_json_schema_output = true
 ignore_streamed_leading_whitespace = true
@@ -86,7 +68,6 @@ high = { reasoning_effort = "high" }
 xhigh = { refused = "harmony has no xhigh effort, only low, medium and high" }
 budget = { refused = "no thinking budget is documented for harmony" }
 
-# OpenAI's guidance for gpt-oss, the same at every effort
 [llm.gpt-oss-20b.facts.sampling.recommended]
 low = { temperature = 1.0, top_p = 1.0 }
 medium = { temperature = 1.0, top_p = 1.0 }
@@ -105,7 +86,5 @@ prompted = {}
 [llm.gpt-oss-20b.facts.profile]
 supports_json_schema_output = true
 ignore_streamed_leading_whitespace = true
-# pydantic-ai's vLLM provider declares thinking for Qwen3 but not for gpt-oss,
-# and drops `thinking` from an LLM it doesn't declare it for
 supports_thinking = true  # guessed
 thinking_always_enabled = true  # guessed

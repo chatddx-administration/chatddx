@@ -223,13 +223,11 @@ def test_an_llm_that_runs_away_is_stopped_and_what_came_before_scored(
 
     written = say("cell plan qwen3-8b-awq@fake", "run case-1")
 
-    # no trail of blank lines between the answer, unclosed, and why it stopped
     assert re.search(rf"\]\n+{re.escape(RAN_AWAY)}\nvalid\n", written)
     assert "differential\n  1. fake diagnosis 1" in written
     assert "recorded as run 1 of trial" in written
     assert fake.aborted == fake.requests
 
-    # the answer is the document the fake would have written whole
     [request] = fake.requests
     whole = json.loads(completion(request)["choices"][0]["message"]["content"])
 
@@ -408,8 +406,6 @@ def test_a_run_that_fails_is_said_on_its_line_and_the_batch_goes_on(
 
 
 class RunningAway(FakeTransport):
-    """The fake vLLM, running away on case-1 alone."""
-
     @override
     def runs_away(self, body: dict[str, Any], /) -> bool:
         return body["messages"][-1]["content"] == "case vignette 1"

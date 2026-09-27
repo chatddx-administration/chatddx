@@ -46,7 +46,6 @@ from chatddx.repo.registry import CASE, CONFIGURATION, LLM
 
 
 def test_the_registry_is_the_new_datamodel_s():
-    """datamodel.md §5, in its commit order."""
     assert ENTITY_NAMES == (
         "machine",
         "os",
@@ -69,11 +68,6 @@ def test_the_registry_is_the_new_datamodel_s():
 
 
 def test_what_an_entity_references_is_committed_before_it():
-    """
-    A commit gives every trail in a closure a branch unless the owner has one.
-    Committed in this order, the parts of a composition already have the
-    names their records gave them when the composition reaches them.
-    """
     for entity in ENTITY_NAMES:
         for relation in _relations(entity).values():
             assert ENTITY_NAMES.index(relation.entity) < ENTITY_NAMES.index(entity), (
@@ -109,9 +103,6 @@ def test_every_entity_has_a_presentation_of_its_name():
 
 
 def test_the_flat_form_is_the_configuration_s():
-    """
-    The configuration's form is flat: each slice is a template chosen from.
-    """
     assert presentation_of(Configuration).form_data_out is ConfigurationFormDataOut
 
     jsonschema = ConfigurationFormDataOut.model_json_schema(mode="serialization")
@@ -127,12 +118,6 @@ def test_the_flat_form_is_the_configuration_s():
 
 
 def test_the_request_time_slices_have_no_details():
-    """
-    Details are description: what the things below a request are, what a
-    tool runs, what a case is expected to yield, and how a scorer's values are
-    summed up. The request-time slices have none: all they say is content
-    (datamodel.md §5).
-    """
     described = {
         entity.name: plain_detail_fields(entity.branch_details)
         for entity in ALL_ENTITIES
@@ -169,11 +154,6 @@ def test_details_and_their_patch_say_the_same():
 
 
 def test_content_and_details_share_no_key_but_a_tool_s_name():
-    """
-    A key is routed to one or the other. `name` is the one both have: a
-    branch's name is its record's key, so a tool's `name` can only be the
-    name the LLM sees.
-    """
     for entity in ALL_ENTITIES:
         shared = set(entity.trail_in.model_fields) & set(
             entity.branch_details_patch.model_fields

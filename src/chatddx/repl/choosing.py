@@ -17,7 +17,6 @@ def on(repl: Repl, name: str) -> None:
 
 
 def cell(repl: Repl, configuration: str, stack: str) -> None:
-    """Both, each looked up before either is put in the cell."""
     repl.cell = repl.cell_of(configuration, stack)
     repl.say_cell()
 

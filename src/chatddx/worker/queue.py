@@ -1,13 +1,3 @@
-# pyright: basic
-"""
-The worker's queue, for the worker and for whoever watches it: a batch's
-jobs put in, stored for later or queued, and queued again; how a batch's
-jobs stand, and an owner's; what runs on a stack, and how many jobs are
-ahead of an owner's there; an owner's job up next, and the jobs they had
-the worker take up last. The queue is first come, first served, on each
-stack's slots: its max_jobs.
-"""
-
 from collections.abc import Callable, Collection, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
@@ -30,14 +20,10 @@ from chatddx.worker.models import (
     Status,
 )
 
-# seconds without a beat after which a job running is lost
 LOST = 30
 
 
 class Case(Protocol):
-    """A case as a job holds it: by its name, and its trail. A branch is one."""
-
-    # a str, and a branch's CharField
     @property
     def name(self) -> Any: ...
 
@@ -52,7 +38,6 @@ def put(
     cases: Sequence[Case],
     run: bool = True,
 ) -> int:
-    """The cells' trials on the cases, cell by cell and case by case: queued, or stored."""
     identity = IdentityModel.objects.get(name=owner)
     queued = timezone.now() if run else None
     jobs = [
@@ -78,14 +63,12 @@ def put(
 
 
 def resume(owner: str, batch: UUID) -> int:
-    """What of the batch hasn't completed, and isn't on its way, queued again."""
     return _queued(
         JobModel.objects.filter(owner__name=owner, batch=batch, status__in=UNFINISHED)
     )
 
 
 def rerun(owner: str, batch: UUID) -> int:
-    """The batch queued again, all of it that isn't on its way."""
     return _queued(
         JobModel.objects.filter(owner__name=owner, batch=batch).exclude(
             status__in=UNDER_WAY
@@ -94,7 +77,6 @@ def rerun(owner: str, batch: UUID) -> int:
 
 
 def _queued(jobs: QuerySet[JobModel]) -> int:
-    # in the queue behind what is there, in the order the batch put them in
     return jobs.update(
         status=Status.QUEUED,
         reason=None,
@@ -109,17 +91,12 @@ def _queued(jobs: QuerySet[JobModel]) -> int:
 
 
 def stop(owner: str, reason: str) -> int:
-    """What of the owner's is queued, taken out of the queue before its turn."""
     return JobModel.objects.filter(owner__name=owner, status=Status.QUEUED).update(
         status=Status.STOPPED, reason=reason, finished=timezone.now()
     )
 
 
 def lose(sparing: Collection[int] = ()) -> int:
-    """
-    What ran without a beat for long enough, lost with its worker: all but
-    `sparing`, what the worker asking runs itself.
-    """
     now = timezone.now()
 
     return (
@@ -137,20 +114,15 @@ def lose(sparing: Collection[int] = ()) -> int:
 
 @dataclass(frozen=True)
 class Counts:
-    """How jobs stand: in all, and by where each is at."""
-
     total: int = 0
     stored: int = 0
     queued: int = 0
     running: int = 0
     completed: int = 0
-    # taken out, or stopped as they ran
     stopped: int = 0
-    # errored, skipped or lost
     failed: int = 0
 
     def share(self, count: int) -> float:
-        """A count, as a share of all, in percent."""
         return 100 * count / self.total if self.total else 0.0
 
     @property
@@ -170,14 +142,12 @@ COUNTED: dict[str, Any] = {
 
 
 def counts(batches: Iterable[UUID]) -> Counts:
-    """How the jobs of `batches` stand, together."""
     return Counts(
         **JobModel.objects.filter(batch__in=list(batches)).aggregate(**COUNTED)
     )
 
 
 def under_way(owner: str) -> list[UUID]:
-    """The owner's batches with jobs on their way, the one queued earliest first."""
     return [
         row["batch"]
         for row in JobModel.objects.filter(owner__name=owner, status__in=UNDER_WAY)
@@ -188,7 +158,6 @@ def under_way(owner: str) -> list[UUID]:
 
 
 def last(owner: str) -> UUID | None:
-    """The batch of the owner's job that went its way last."""
     return (
         JobModel.objects.filter(owner__name=owner, finished__isnull=False)
         .order_by("-finished", "-pk")
@@ -198,7 +167,6 @@ def last(owner: str) -> UUID | None:
 
 
 def running(owner: str | None = None, stack: str | None = None) -> list[JobModel]:
-    """The jobs running, their beat fresh: the owner's, on the stack, where given."""
     jobs = JobModel.objects.filter(
         status=Status.RUNNING,
         beat__gte=timezone.now() - timedelta(seconds=LOST),
@@ -214,12 +182,10 @@ def running(owner: str | None = None, stack: str | None = None) -> list[JobModel
 
 
 def in_turn(jobs: QuerySet[JobModel]) -> QuerySet[JobModel]:
-    """The jobs queued of `jobs`, first come first: the queue's order."""
     return jobs.filter(status=Status.QUEUED).order_by("queued", "pk")
 
 
 def up_next(owner: str, stack: str | None = None) -> JobModel | None:
-    """The owner's job queued first: on the stack, where one is given."""
     jobs = JobModel.objects.filter(owner__name=owner)
 
     return in_turn(jobs if stack is None else jobs.filter(stack=stack)).first()
@@ -232,14 +198,8 @@ def outstanding(owner: str) -> int:
 
 @dataclass(frozen=True)
 class Waiting:
-    """
-    An owner's jobs on a stack, waiting for their turn: others' run in its
-    slots, or are queued ahead of theirs.
-    """
-
     stack: str
     max_jobs: int
-    # others' jobs running on the stack, and queued ahead of the owner's first
     running: int
     queued: int
 
@@ -249,11 +209,6 @@ class Waiting:
 
 
 def waiting(owner: str, max_jobs: Callable[[str], int]) -> list[Waiting]:
-    """
-    Each stack the owner's jobs wait on for their turn: none of theirs runs
-    on it, and its slots are taken, or others' jobs come before theirs. The
-    jobs of an owner who paused or stopped come before no one's.
-    """
     holding = ControlsModel.holding()
     found: list[Waiting] = []
     mine = JobModel.objects.filter(owner__name=owner)
@@ -283,7 +238,6 @@ def waiting(owner: str, max_jobs: Callable[[str], int]) -> list[Waiting]:
 
 
 def latest(owner: str, count: int = 10) -> list[JobModel]:
-    """The owner's jobs the worker took up last, the latest first, with their scores."""
     return list(
         JobModel.objects.filter(owner__name=owner, status__in=TAKEN_UP)
         .select_related("owner", "run")

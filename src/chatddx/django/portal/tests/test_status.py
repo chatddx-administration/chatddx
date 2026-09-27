@@ -34,7 +34,6 @@ FREE_TEXT = {
 
 
 def kept(client: Client, how: str = RUN, **asked: Any) -> BatchModel:
-    """A batch planned, confirmed and kept, to run now or later: its page seen."""
     response = client.post(ADD, FREE_TEXT | asked | {CONFIRM: how}, follow=True)
     assert response.redirect_chain, response.content
 
@@ -50,7 +49,6 @@ def jobs(**filters: Any) -> list[JobModel]:
 
 
 def tabs(response: Any) -> list[tuple[str, bool]]:
-    """The Batches' tabs on a page: where each leads, and whether it is the one."""
     [nav] = re.findall(
         r'<nav id="tabs-items".*?</nav>', response.content.decode(), re.DOTALL
     )
@@ -72,7 +70,6 @@ def at_once(max_jobs: int, stack: str = FAKE) -> None:
 
 
 def under_way(case: str, owner: str = "alice", tokens: int = 0) -> None:
-    """The owner's `case` taken up by a worker at work: seen just now, its beat fresh."""
     now = timezone.now()
     _ = WorkerStateModel.objects.update_or_create(pk=1, defaults={"seen": now})
     _ = JobModel.objects.filter(owner__name=owner, case=case).update(
@@ -154,17 +151,14 @@ def test_the_status_counts_the_owner_s_batches_and_shows_their_cases_taken_up_la
         ("case-1", "free-text × qwen3-8b-awq@fake", "completed"),
         ("case-2", "free-text × qwen3-8b-awq@fake", "completed"),
     }
-    # case-2's, which comes last or not as the two run side by side
     [second] = [ran for ran in shown.latest if ran.case == "case-2"]
 
     assert dict(second.scores) == {"first_mention": "—", "reciprocal_rank": "0"}
     assert b"Idle: nothing of yours is queued." in response.content
     assert b"reciprocal_rank 0" in response.content
     assert f'href="{page_of(batch)}"'.encode() in response.content
-    # each case taken up leads to the run it came to
     run = reverse("admin:portal_run_change", args=[second.run])
     assert f'href="{run}"'.encode() in response.content
-    # and to its stack, as the run read it: the stack's version, and its LLM's
     assert second.stack_page == page_of_run(RunModel.objects.get(uuid=second.run))
     assert f'href="{second.stack_page}"'.encode() in response.content
 
@@ -208,7 +202,6 @@ def test_behind_another_s_jobs_the_owner_s_wait_for_their_turn(
     assert alice.get(page_of(batch)).context["batch_shown"].said == (
         "Waiting for our turn on qwen3-8b-awq@fake: 2 cases ahead of ours."
     )
-    # bob, whose turn it is, waits for no one
     assert bob.get(PANEL).context["shown"].said == "Running."
 
 

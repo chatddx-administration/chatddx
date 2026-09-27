@@ -269,9 +269,6 @@ def test_the_owner_s_own_branch_keeps_what_it_carries(
     assert machine.details["unreliable"] is True
 
 
-# the archive, as the session's seed committed the test inventory
-
-
 def test_the_test_inventory_leaves_nothing_branchless():
     assert dangling_trails(settings.ARCHIVE_IDENTITY_NAME) == []
 

@@ -1,14 +1,4 @@
 # pyright: basic
-"""
-The portal's forms. The Batch form: the repl's cell and batch, with its
-slices varied. Use and On put a configuration and a stack in the cell, the
-case tags say which cases it runs on, the variations ticked on each slice
-are crossed into the batch's cells, and the seed is each trial's, a greedy
-cell's aside. The case form: a case as its page saves it, a new version of
-whichever case its name names. The sampling form: a sampling variation, so
-saved.
-"""
-
 import json
 from dataclasses import dataclass
 from math import prod
@@ -53,16 +43,10 @@ from chatddx.repo.families.django import BranchModel
 from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.scoring.scorers.patterns import unread_pattern
 
-# the most cells a batch crosses its variations into
 MOST_CELLS = 100
 
 
 class HeardSelect2MultipleWidget(UnfoldAdminSelect2MultipleWidget):
-    """
-    Unfold's select2 multiple, its choice told to the form's Alpine data as
-    unfold tells it a select2 single's: select2 tells jQuery, not the DOM.
-    """
-
     def get_context(self, name: str, value: Any, attrs: Any) -> dict[str, Any]:
         context = super().get_context(name, value, attrs)
         attrs = context["widget"]["attrs"]
@@ -75,8 +59,6 @@ class HeardSelect2MultipleWidget(UnfoldAdminSelect2MultipleWidget):
 
 
 class ChipsWidget(forms.CheckboxSelectMultiple):
-    """A slice's few variations, as a row of chips to tick."""
-
     template_name = "portal/widgets/chips.html"
     option_template_name = "portal/widgets/chip.html"
 
@@ -97,7 +79,6 @@ class BatchForm(forms.ModelForm):
     class Media:
         js = ("portal/js/batch_form.js",)
 
-    # the identity's bench, which the admin gives each form of a request
     bench: Bench
 
     configuration = forms.ChoiceField(
@@ -136,7 +117,6 @@ class BatchForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.plan: Plan | None = None
 
-        # a batch kept is shown, never changed
         if self.instance.pk:
             return
 
@@ -154,8 +134,6 @@ class BatchForm(forms.ModelForm):
             optional = [NONE] if entity in OPTIONAL else []
             self._choose(entity, _names(visible[entity]) + optional, blank=False)
 
-        # what each configuration has of each slice, which the form ticks as
-        # the configuration is put in (js/batch_form.js)
         self.fields["configuration"].widget.attrs["data-variations"] = json.dumps(own)
 
         if not self.is_bound:
@@ -207,7 +185,6 @@ class BatchForm(forms.ModelForm):
         return cleaned
 
     def save(self, commit: bool = True) -> Any:
-        """The batch, as asked and as its plan stands."""
         plan = self.plan
         assert plan is not None
 
@@ -225,13 +202,10 @@ class BatchForm(forms.ModelForm):
         return super().save(commit)
 
 
-# the form a batch's page adds cases with, apart from the page's own
 CASES_FORM = "batch-cases"
 
 
 class CasesForm(forms.Form):
-    """The cases to add to a kept batch: those with any of the tags, and those named."""
-
     case_tags = forms.MultipleChoiceField(
         label=_("With the case tags"),
         required=False,
@@ -251,7 +225,6 @@ class CasesForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.bench: Bench = bench
         self.batch: Batch = batch
-        # the cases found once the form is valid
         self.unheld: list[BranchModel] = []
 
         for name, choices in (
@@ -282,8 +255,6 @@ class CasesForm(forms.Form):
 
 
 class TagsField(forms.MultipleChoiceField):
-    """Tags: those the owner's cases have, or new ones, each a word."""
-
     def to_python(self, value: Any) -> list[str]:
         tags = (str(tag).strip() for tag in super().to_python(value) or [])
         return list(dict.fromkeys(tag for tag in tags if tag))
@@ -294,8 +265,6 @@ class TagsField(forms.MultipleChoiceField):
 
 @dataclass(frozen=True)
 class TargetRow:
-    """A kind of target's fields, as the page lays them out."""
-
     kind: TargetKind
     label: Any
     none: forms.BoundField | None
@@ -304,13 +273,6 @@ class TargetRow:
 
 
 class CaseForm(forms.Form):
-    """
-    A case as its page saves it: the name it is saved under, its language,
-    vignette and targets, and its tags. What the page began from rides
-    along: the case it is of, the head it found, and the version it began
-    from, where it is an earlier one.
-    """
-
     class Media:
         js = ("portal/js/case_form.js",)
 
@@ -347,11 +309,9 @@ class CaseForm(forms.Form):
     def __init__(self, owner: str, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.owner: str = owner
-        # what the form comes to once it is valid
         self.targets: dict[TargetKind, Target] = {}
 
         for kind in TARGET_KINDS:
-            # none expected, the text and the pattern are off, and not sent
             off = {":disabled": "none"} if kind in EXPECTS_NONE else {}
 
             if kind in EXPECTS_NONE:
@@ -372,7 +332,6 @@ class CaseForm(forms.Form):
                 widget=UnfoldAdminTextInputWidget(attrs=off),
             )
 
-        # the tags the owner's cases have, and those the page holds already
         held: list[str] = (
             self.data.getlist("tags")
             if isinstance(self.data, QueryDict)
@@ -444,7 +403,6 @@ class CaseForm(forms.Form):
 
     @property
     def draft(self) -> cases.Draft:
-        """The case as it would be saved, beside the one it would replace."""
         cleaned = self.cleaned_data
 
         return cases.Draft(
@@ -470,7 +428,6 @@ class CaseForm(forms.Form):
 
 
 def initial_of(version: cases.Version, timeline: cases.Timeline) -> dict[str, Any]:
-    """The case form, as a version fills it: the head's, or an earlier one's."""
     initial: dict[str, Any] = {
         "edited": timeline.name,
         "head": timeline.head.row.pk,
@@ -494,7 +451,6 @@ def _names(models: list[BranchModel]) -> list[str]:
 
 
 def _own(visible: dict[str, list[BranchModel]]) -> dict[str, dict[str, str]]:
-    """Each configuration's variation of each slice, as the identity names it."""
     named: dict[str, dict[int, str]] = {}
 
     for entity in SLICES:
@@ -523,7 +479,6 @@ def _own(visible: dict[str, list[BranchModel]]) -> dict[str, dict[str, str]]:
     return own
 
 
-# what a sampling sets outright, in the order its form asks
 SAMPLING_SET = (
     "temperature",
     "top_p",
@@ -535,14 +490,6 @@ SAMPLING_SET = (
 
 
 class SamplingForm(forms.Form):
-    """
-    A sampling variation as its page saves it: the name it is saved under,
-    what a setting left out means, and what it sets outright. What the page
-    began from rides along: the variation it is of, the head it found, and
-    the version it began from, where it is an earlier one.
-    """
-
-    # a new variation, as its page starts it
     BLANK: ClassVar[dict[str, Any]] = {"defaults": "recommended"}
 
     edited = forms.CharField(required=False, widget=forms.HiddenInput)
@@ -594,7 +541,6 @@ class SamplingForm(forms.Form):
     def __init__(self, owner: str, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.owner: str = owner
-        # what the form's values come to, once they hold, whatever its name
         self.made: SamplingTrailIn | None = None
 
     def clean_name(self) -> str:
@@ -637,7 +583,6 @@ class SamplingForm(forms.Form):
 
     @staticmethod
     def initial_of(trail: Any) -> dict[str, Any]:
-        """The form's values, as a version of a variation fills them."""
         return {
             "defaults": trail.defaults,
             **{name: getattr(trail, name) for name in SAMPLING_SET},
@@ -646,7 +591,6 @@ class SamplingForm(forms.Form):
 
 
 def _stops(text: str) -> list[str] | None:
-    """Stop sequences, as the form takes them: one a line, or a JSON list."""
     if text.lstrip().startswith("["):
         try:
             listed = json.loads(text)
@@ -660,7 +604,6 @@ def _stops(text: str) -> list[str] | None:
 
 
 def _stops_written(stop: list[str] | None) -> str:
-    """Stop sequences, as the form shows them: a JSON list where lines can't hold them."""
     if stop is None:
         return ""
 

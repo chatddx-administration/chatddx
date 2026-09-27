@@ -1,54 +1,12 @@
 # The chatddx portal
 
-The portal is chatddx in a browser: Django's admin, dressed by unfold, at
-`/admin/`. It is being ported to the new datamodel page by page. Its pages
-so far are the Cases, where clinicians go through each case and work with
-its vignette and targets; the Batch: the repl's `batch`, with its slices
-varied, run by a worker beside the portal, and watched and held from its
-Status page; the Runs, each run with all it holds; the Configurations,
-each at a version, with any variation set in it; the Stacks, each at a
-version, and tried live; and the Variations, where a slice's variations
-are edited, sampling first.
-
 The portal shows you what is yours: your cases, configurations and
-variations. The one exception is what answers, the stacks and their parts,
+variations. The one exception is the stacks and their parts,
 a class of record the archive keeps for everyone.
-
-## Serving it
-
-The portal has settings of its own, `chatddx.django.settings.portal`: the
-minimal settings the CLI, the repl, the worker and the API's tests keep
-to, and what serving the portal takes on top of them (unfold, the portal's
-app, the web's middleware, languages, CORS for the API). Nothing but the
-portal's server and its tests reads them. The time zone, the lab's, is the
-minimal settings', so the repl and the worker tell time as the portal does.
-
-```
-export DJANGO_SETTINGS_MODULE=chatddx.django.settings.portal
-django migrate                        # the portal's own table too
-chatddx init-data alice               # alice, and the archive's inventory
-django createsuperuser --username alice
-django runserver
-```
-
-and beside it, on the minimal settings, the worker that runs the batches:
-`chatddx worker serve` (see [The worker](#the-worker)).
-
-A user signs in as the identity of their name, as the API's session does.
-`DJANGO_MODE=main` serves it for real: the secret key from
-`SECRET_KEY_FILE`, `HOST` as the allowed host, and secure cookies.
-
-A stack's Test (see [Testing a stack](#testing-a-stack)) streams its checks
-back as one response, which takes as long as the stack's LLM takes to
-answer them: seconds on the fake, a minute or two on a slow stack. A proxy
-in front is not to buffer it (the portal asks so, with
-`X-Accel-Buffering: no`), and the server is to hold a request that long:
-gunicorn's `gthread` workers do, and its sync workers kill one after their
-timeout, 30 seconds by default.
 
 ## Cases
 
-**Cases** in the sidebar lists your cases, as a to-do list:
+**Cases** in the sidebar lists your cases.
 
 - each case's language;
 - what its targets still want: a text, a pattern, or a pattern that
@@ -87,8 +45,8 @@ it stay in the timeline.
 ### Saving
 
 One save makes one new version, and that version becomes the head. Saving
-what is there already makes none, and a change of tags alone is saved on
-the head as it is.
+what is there already does nothing, and a change of tags alone is saved on
+the head as it is and does not make a new case.
 
 The name decides where the save goes. A line under the vignette says so as
 you type, and the button says the same:
@@ -103,11 +61,6 @@ The tags go with the page. A name can't hold `/`, and the page says when a
 name differs from one of yours in capitals alone. If the case has a newer
 version since you opened the page, the page says so, and saving again
 saves yours on top of it.
-
-The vignette is what the model reads, so a changed vignette is another
-case to the runs: the runs of the old vignette keep the targets they had.
-A vignette that differs only in its line endings, or in the whitespace
-around it, is the same vignette.
 
 Where another case has the page's vignette, the page says so:
 
@@ -130,18 +83,9 @@ to now. A score not yet made for a changed target is **outstanding**, and
 
 **Delete this version** deletes a version for good. Deleting the latest
 version is an undo: the version before it becomes the head again. A
-version can't be deleted if scores were held to it, or if runs or trials
-of your batches read its vignette and no other version of the case has
-it.
-
-**Delete the cases ticked**, in the list, deletes whole cases:
-
-- a case nothing has read is gone for good;
-- any other case is taken out of sight. It leaves every list and batch,
-  and its runs keep its name and targets.
-
-Deleting a case's only version deletes the case. Right after, **Undo**
-brings it back, and so does saving a case under its name.
+version that has been used in a run can't be deleted proper, so deleting
+it will set its deleted flag to True and never show up anywhere except
+where it has been used.
 
 Reading cases takes the view permission on them; saving a new version of
 one takes the change permission, a new case the add permission, and
@@ -154,31 +98,22 @@ plans a new one.
 
 ### Planning
 
-The form begins as the repl's cell does, on what is yours: the portal
-shows you your own configurations, variations and cases, and the
-archive's stacks, what answers being a class of record the archive keeps
-for everyone.
+The portal shows you your own configurations, variations and cases, and the
+archive's stacks.
 
 - **Use:** a configuration of yours.
 - **On:** a stack.
-- **Case tags:** the cases of yours to run, those with any of the tags. A
-  vignette under two names runs once.
-- **Seed:** drawn as the repl draws one. Empty, the trials go unseeded.
-
-`chatddx init-data USER --with-giftbag` gives a new owner the archive's
-configurations and variations to start from; their cases they add under
-**Cases**.
+- **Case tags:** the cases with any of the tags (de-duped).
+- **Seed:** A random seed is chosen automatically. Change it or remove it for
+the trials run unseeded.
 
 Once there are case tags, the slices come in: instruction, output,
 coercion, reasoning, sampling and toolset, each a row of your variations of
-it, with the configuration's own ticked. Putting in another configuration
-ticks its own instead, forgetting what was ticked, as `use` forgets what
-`set` held.
+it, with the configuration's own ticked.
 
 Tick more, and the batch runs every combination of what is ticked:
 reasoning `off` and `on` with sampling `recommended` and `greedy` are four
-cells. A slice with nothing ticked keeps the configuration's own, and a
-batch crosses into 100 cells at most.
+cells. A slice with nothing ticked keeps the configuration's own.
 
 ### Confirming
 
@@ -201,19 +136,6 @@ now** keeps the batch and puts its trials in the worker's queue; **Keep it
 for later** keeps it with its trials stored, to run from its page. A plan
 with nothing to run can't be kept.
 
-### What a batch keeps
-
-A batch keeps what was asked (the configuration and the stack by name, the
-case tags, the variations ticked, the seed) and the plan confirmed: each
-cell to run, with what it sets, the fingerprint of the configuration it
-comes to and its seed; each cell held back and why; and each case, by name
-and fingerprint. Its trials are the worker's jobs, cell by cell and case by
-case.
-
-The batch is the portal's own. No run points at one, and nothing outside
-the portal refers to it (`backlog/post-endgame.md`). Batches are their
-owner's alone: **Batches** lists yours, and the status page follows yours.
-
 ### A batch's page
 
 A batch's page shows what it keeps, and never changes it. It says how the
@@ -231,11 +153,6 @@ batch stands, and follows it every few seconds while it is on its way:
 A trial queued again goes behind what is in the queue, and its runs are
 new ones: the runs it had stay in the history.
 
-Its only input is **More cases**: the cases of yours with any of the case
-tags picked, or the cases picked, that the batch doesn't hold. The batch's cells
-run on them, queued behind its trials while it is on its way, and stored
-till it is run otherwise.
-
 ### Status
 
 **Status**, the tab beside **Batches**, is the worker at your jobs, whichever
@@ -248,24 +165,15 @@ of your batches they came from. It follows along every second.
 - **Pause** holds your queue once the cases running are done, and
   **Resume** lets it go on. Others' jobs go on meanwhile, and yours hold
   no one up.
-- **Stop** takes your queue out, as Ctrl-C ends the repl's batch: pressed
-  once, what is queued is stopped at once and the cases running finish;
+- **Stop** takes your queue out. Pressed once let the cases running finish,
   pressed again, as **Stop now**, they are stopped too, written down as
   stopped. Everything that didn't complete is stopped, to resume from its
   batch's page.
-- The progress bar counts your batches on their way, or the last one:
-  running, completed, in all, and those that failed and those stopped.
-- The cases running: their cells, how long each has run, and their tokens
-  as the repl tallies them, `~N` as they stream and `N` once the server has
-  counted them.
+- The progress bar counts your batches on their way.
+- The cases running, how long each has run, and their tokens.
 - Up next: the case your queue runs next, and how many are outstanding.
-- The ten cases taken up last, the latest first: when, the case, the
-  configuration and the stack, the batch, how it went and why, its tokens,
-  and its scores. The when opens the run the case came to, the
-  configuration its page as the run ran it, and the stack its page as the
-  run read it (see [Configurations](#configurations) and
-  [Stacks](#stacks)). The configurations and stacks of the cases running
-  and up next open as they are now.
+- The ten cases taken up last, the latest first with links to
+  [Configurations](#configurations) and [Stacks](#stacks)).
 
 Watching takes the view permission on batches, and running, adding cases,
 pausing and stopping the add permission.
@@ -278,33 +186,24 @@ scorer's latest score. Search them by their trials.
 
 ### A run's page
 
-A run's page shows all a run holds, and never changes it. It opens from
-the list, from a case's runs on its page, and from the cases taken up last
-on the Status page.
+A run's page shows a read-only view of the run.
 
 - **The run:** its trial (the cell, the case and the seed), how it came
   out (valid, invalid, completed, errored or stopped), when it was sent
   and how long it took. Then its details:
-  - why it went wrong, where it did, and how its last response finished;
-  - the case: a case of yours opens at the version the run is held to;
-  - the batch it came from, and which of its trial's runs it is;
-  - the stack and the LLM, as it read them, and the name and endpoint it
-    was served at: each opens the stack's page at the versions it read;
-  - the tools it ran, each with its file;
-  - the client it was sent from;
-  - its tokens, over how many requests;
-  - its conversation;
+  - why it went wrong, where it did, and how its last response finished.
+  - the case: a case of yours opens at the version the run used.
+  - the batch it came from, and which of its trial's runs it is.
+  - the stack and the LLM, as it read them.
+  - the tools it ran, each with its file.
+  - the client it was sent from.
+  - its tokens, over how many requests.
+  - its conversation.
   - the configuration as it ran, with each variation set in it, which
-    opens its page (see [Configurations](#configurations)), and its
-    slices.
-- **Answer:** each of the output's views of it, and the answer as
-  written. Where the schema refuses it, why.
-- **Scores:** each scorer's latest score: what it rests on, and the
-  pattern it was held to. The scores made before are shown below, greyed.
-- **Messages:** each message, folded to a line of what it says: the
-  user's vignette; the assistant thinking, writing, answering, or calling
-  a tool with what it asks; what a tool returned; the error that ended the
-  run. A message with something gone wrong in it is marked.
+    opens its page (see [Configurations](#configurations))
+- **Answer:** each of the output's views of it, and the answer as written.
+- **Scores:** each scorer's latest score.
+- **Messages:** each message, folded to a line of what it says.
   - Opened, a message shows itself part by part: the instructions where
     they are new, the thinking folded, the text, the answer and each
     call's arguments as JSON, and each return, by the id of the call it
@@ -312,50 +211,19 @@ on the Status page.
   - **Open all** and **Close all** open and close every message.
   - A message can be linked to as `#message-N`.
 - **What it sent and got back:** each request as it was sent, and each
-  response as it streamed back, byte for byte, with its size and events.
-  Each is loaded as it is opened.
+  response as it streamed back with its size and events.
 
 The runs are their owner's alone: another's run is not found. Reading them
 takes the view permission on runs.
 
-### Sample runs
-
-`chatddx samples OWNER` makes three runs for OWNER to look at a run's page
-with. Each is answered by a script in place of an LLM, and searches a web
-the script cans, so no vLLM, fake or real, needs to be running:
-
-- **typical:** `plan` on `qwen3-8b-awq@fake`. It thinks once and answers
-  with the plan: valid, and scored.
-- **broken:** `plan-web` on `qwen3-8b-awq@fake`, gone wrong every way it
-  could. Its search fails with a 503, its next one has arguments
-  `web_search` doesn't take, and the server goes away as it writes its
-  answer. It ends errored, with no answer and no scores.
-- **rich:** `plan-web` on `gpt-oss-20b@fake`, with reasoning high and the
-  tool coercion. It thinks hard before each of its five turns, and
-  searches six times: twice two searches at once, one with an argument of
-  the wrong type, and one finding nothing. It says a word to the user
-  beside its calls, and answers through `final_result`.
-
-They are sent as a batch's trial is, through the bench: the tools' own
-code runs, and each run is written down and scored as any other.
-`--sample NAME` makes one of them, `--case NAME` runs them on another
-case, and `--pace` sets the seconds between the tokens streamed.
-The scripts are `src/chatddx/dev/samples/*.toml`.
-
 ## Configurations
 
-**Configurations** in the sidebar lists your configurations, each at its
-latest version: the variation of each slice it holds, how many versions it
-has, and when it was saved.
+**Configurations** in the sidebar lists your configurations.
 
 ### A configuration's page
 
 A configuration's page shows a version of it, read only, with whatever
-variations were set in place of its own, and never changes it. The list
-opens the latest; a run's page, and the cases taken up last on the Status
-page, open the version the run's cell was put together from, with each
-variation set in it as the run's trial holds them; a batch's plan opens
-each cell's as it would run now.
+variations were set in place of its own.
 
 - ◀ and ▶ step through the configuration's versions, with what is set in
   it kept. On an earlier one, a note says a newer one is saved, when, and
@@ -363,94 +231,14 @@ each cell's as it would run now.
 - **A variation.** Where a cell sets variations in place of the
   configuration's own, as `plan-web+coercion=tool+reasoning=high` does,
   the page says it is a variation of the configuration, which opens it as
-  it is saved, and, for each variation set: the slice, the variation in
-  place of the configuration's own, and what that changes, field by field
-  (Effort: default → high). The slices set are marked, and one whose
-  variation has a newer version says so.
-- **Each slice**, by the name you have for its variation:
-  - the instruction: its system and user templates, and the variables they
-    place;
-  - the output: its guidance, the views scorers read and where, and its
-    answer schema, or free text;
+  it is saved.
+- **Each component**, by the name you have for its variation:
+  - the instruction: its system and user templates.
+  - the output: its guidance, the views scorers read.
   - the coercion: its mode, the schema prompt, and the tool description;
   - the reasoning: its effort and budget;
   - the sampling: what a setting left out means, and what it sets outright;
   - the toolset: its tools, and its guidance, or none.
-
-  A slice whose variations are edited in the portal, the sampling for now,
-  opens the variation's page by its name, at the version the configuration
-  holds, where the variation is yours.
-
-Reading configurations takes the view permission on them.
-
-## Variations
-
-**Variations** in the sidebar has a page for each slice whose variations
-are edited in the portal, **Sampling** for now. Its list shows your
-sampling variations, each at its latest version: what a setting left out
-means, what it sets outright, how many versions it has, and when it was
-saved. **+** starts a blank one, which leaves every setting to the
-recommended.
-
-### A variation's page
-
-A variation's page shows one version of it, in its timeline, as a case's
-does: ◀ and ▶ step through the versions, and it lists what that version
-changed of the one before, field by field. The latest version is a form:
-
-- **Name**, and **A setting left out**: `recommended`, what the LLM's
-  facts recommend for the reasoning it comes to, or `generation_config`,
-  the LLM's own, as its server applies them;
-- the settings given outright, which win over those: **Temperature**,
-  **Top p**, **Top k** (-1 turns it off), **Max tokens**, **Presence
-  penalty** and **Frequency penalty**, each left empty to leave it to the
-  defaults;
-- **Stop**, the stop sequences: one a line, or a JSON list, where one
-  holds a line's end or is blank.
-
-An earlier version is shown as it was. **Edit from here** puts it in the
-form, and saving it makes a new version from it.
-
-**What it does** says, on each LLM your stacks serve and for each way its
-facts realize reasoning, what a request carries of the variation, and
-where the settings it leaves out come from; the reasonings it comes to the
-same on share a row. What an LLM's facts can't give it is refused, with
-the reason, and a greedy variation is said to be: a seed changes nothing
-of it, so its trials run unseeded. It is said again as the form is typed.
-
-**What goes by its name** lists what of yours holds the variation: your
-configurations whose latest version holds a version of it, and which;
-how many earlier versions of your configurations do; your runs; and the
-trials of your batches that set it by name. What holds values another of
-your variations holds too goes by neither name, so it is neither's alone.
-
-### Saving a variation
-
-One save makes one version, as a case's does. The name decides where it
-goes, and a line under the form says so as you type, the button the same:
-
-- **the variation's own name:** a new version of it; saving what the
-  latest version holds already makes none;
-- **a new name:** a new variation, and this one stays as it is;
-- **the name of another variation of yours:** refused, with a link to open
-  it.
-
-A name can't hold `/`, `+`, `=` or `×`, which part names from owners and
-cells, and can't be `none`. Where another variation holds the values
-typed, the page says so. If the variation has a newer version since you
-opened the page, the page says so, and saving again saves yours as the
-version after it.
-
-### Deleting a variation
-
-**Delete the variation** deletes every version of it for good, where
-nothing of yours goes by its name. Where something does, the page lists
-it, and nothing is deleted: a variation a configuration holds, or a batch
-has tried, stays.
-
-Reading variations takes the view permission on them; saving a new version
-of one takes the change permission, a new variation the add permission,
-and deleting the delete permission.
 
 ## Stacks
 
@@ -520,62 +308,3 @@ each check went as it goes. Nothing is written down.
   A check the facts or the serving refuse isn't tried, and says why.
 
 Reading stacks, and testing them, take the view permission on stacks.
-
-## The worker
-
-The worker runs the queue the batches fill: each job a trial run as the
-repl's batch runs one, on the bench of the identity whose batch it is,
-sent, streamed back, written down in the history (in a conversation held
-in `worker`) and scored.
-
-```
-chatddx worker serve    # the queue as it fills, till stopped: the host's service
-chatddx worker run      # what is queued, then stop
-```
-
-It needs no more than the minimal settings, as the rest of the CLI. The
-host runs `chatddx worker serve` as a service beside the portal's server,
-and SIGTERM stops it as Ctrl-C would: the cases running are written down as
-stopped, and what is queued waits for the worker to come back.
-
-- **Slots.** A stack takes as many jobs at once as its `max_jobs` says
-  (`inventory.md`), one by default; the worker runs jobs on different
-  stacks side by side. A stack's jobs go first queued, first run, whosever
-  they are: a batch queued behind another's waits for its turn.
-- **Isolation.** Nothing is shared between owners: two who run the same
-  trial (the same greedy cell on the same case, say) each get runs of
-  their own, with their own times.
-- A trial runs what was confirmed, or not at all: a configuration changed
-  since is skipped, and so is a trial its stack now refuses, or whose
-  secret is gone, each with why. Its case runs as it was planned.
-- While jobs run, the worker beats every half second: the tallies the
-  status page shows, and a stop pressed. A job whose worker went away and
-  has not beaten for 30 seconds is lost.
-- Not seen at its queue for 10 seconds, the worker is taken not to be
-  running.
-
-The queue is the worker's own table, `worker_job`: each job stored,
-queued, running, or come out completed, errored, aborted (stopped as it
-ran), stopped (before its turn), skipped or lost. Beside it are each
-owner's controls, `worker_controls` (paused, stopping), and the worker's
-`worker_state`, when it was last seen. `chatddx wipe-data` takes an
-identity's jobs out with the rest of its history.
-
-## Beside the repl and the API
-
-The repl, the API, the portal and its worker plan and run a cell the same
-way, through `chatddx.bench`: a bench is the registry as an identity sees
-it, a cell is a configuration and a stack with what is set in them, a plan
-is a batch's cells, each ready or held back, on its cases under one seed,
-and a sending is a trial on its way: sent, streamed back, come to an
-outcome, and written down once and scored.
-
-| repl | portal |
-| --- | --- |
-| `use`, `on` | Use, On |
-| `set SLICE VARIATION` | a variation ticked in place of the configuration's |
-| `seed [SEED]` | Seed |
-| `show tag TAG...` | the confirmation |
-| `batch TAG...` | a batch of one cell |
-| Ctrl-C | Stop |
-| Ctrl-C again | Stop now |

@@ -21,7 +21,6 @@
 {% block form_after %}
     {{ block.super }}
 
-    {# a kept batch is shown, never changed: what its page asks goes by forms of their own #}
     {% if batch_shown %}
         <form id="{{ run_form_id }}" method="post" action="{{ run_url }}">{% csrf_token %}</form>
         <form id="{{ cases_form_id }}" method="post" action="{{ cases_url }}">{% csrf_token %}</form>

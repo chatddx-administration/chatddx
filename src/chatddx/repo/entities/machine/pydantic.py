@@ -22,7 +22,6 @@ from chatddx.repo.families import (
 class GPU(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
-    # as `nvidia-smi` names it: "NVIDIA GeForce RTX 3070"
     model: str
     memory_mib: int = Field(gt=0)
     uuid: Annotated[str, StringConstraints(pattern=r"^GPU-[0-9a-f-]{36}$")]

@@ -1,13 +1,3 @@
-"""
-Runs to look at, made as any run is: a trial sent through the bench,
-streamed back, written down and scored. What answers them is a vLLM that
-streams a sample's script (dev/samples/NAME.toml) turn by turn, a turn to a
-request, and what their searches reach is a web the script cans. There are
-three: a typical run, one that went wrong every way it could and broke off,
-and one rich in thinking and calls to tools. `chatddx samples OWNER` makes
-them for an owner.
-"""
-
 import asyncio
 import hashlib
 import json

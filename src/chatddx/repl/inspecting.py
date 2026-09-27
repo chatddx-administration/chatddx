@@ -51,7 +51,6 @@ def _missing() -> Text:
     return Text("missing", style=LATER)
 
 
-# the most cases a scorer's line names as missing a target
 NAMED = 10
 
 
@@ -204,7 +203,6 @@ def _show_branch(repl: Repl, entity: EntityName, name: str | None) -> None:
             _add_rows(repl, table, field, getattr(branch.trail, field))
 
     for field in type(branch.details).model_fields:
-        # a case shown is never deleted: a lookup passes a deleted one by
         if field != "deleted":
             _add_rows(repl, table, field, getattr(branch.details, field))
 
@@ -256,7 +254,6 @@ def _in_cell(repl: Repl, entity: EntityName) -> Any:
 
 
 def _add_rows(repl: Repl, table: Table, field: str, value: Any) -> None:
-    """A field as rows: a flat mapping a row per key, anything else one."""
     if field == "targets":
         _add_targets(table, value)
         return
@@ -320,7 +317,6 @@ def _text(repl: Repl, value: Any) -> Text:
 
 
 def _show_runs(repl: Repl, entity: EntityName, trail: int) -> None:
-    """Your runs with the trail, and each scorer's latest scores of them."""
     runs = repl.runs_with(entity, trail)
 
     if not runs:

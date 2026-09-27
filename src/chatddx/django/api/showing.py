@@ -1,6 +1,4 @@
 # pyright: basic
-"""The history the repo has no schemas of, and what came of the identity's runs."""
-
 from typing import Any
 
 from django.db.models import prefetch_related_objects
@@ -31,7 +29,6 @@ from chatddx.scoring.scorers.patterns import unread_pattern
 
 
 def detail_of(bench: Bench, entity: EntityName, model: BranchModel) -> dict[str, Any]:
-    """A branch, as its entity's Detail has it, and the identity's runs with it."""
     runs = bench.runs_with(entity, model.trail_id)
     scoring = Scoring(bench.identity)
     made = [score for run in runs for score in scoring.latest(run)]

@@ -24,7 +24,6 @@ FAKE = "qwen3-8b-awq@fake"
 
 @pytest.fixture(autouse=True)
 def beats(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Beats and looks that come quickly, for tests that wait on one."""
     monkeypatch.setattr(worker, "BEAT", 0.01)
     monkeypatch.setattr(worker, "POLL", 0.01)
 
@@ -36,8 +35,6 @@ def bob(provision: Provision) -> str:
 
 
 class Slow(FakeTransport):
-    """The fake vLLM, a little slow, so that runs sent together overlap."""
-
     @override
     async def next_token(self, generated: int, /) -> None:
         await asyncio.sleep(0.002)
@@ -62,7 +59,6 @@ def planned(
 
 
 def put(plan: Plan | None = None, owner: str = "alice", run: bool = True) -> UUID:
-    """A batch of the plan's, put in the queue, or stored for later."""
     plan = plan or planned(owner)
     batch = uuid4()
     _ = queue.put(owner, batch, plan.kept, plan.cases, run=run)
@@ -77,7 +73,6 @@ def jobs(**filters: Any) -> list[JobModel]:
 
 
 def at_once(max_jobs: int, stack: str = FAKE) -> None:
-    """The stack taking `max_jobs` at once, as its details would say."""
     for model in StackBranchModel.objects.filter(name=stack):
         model.details = {**model.details, "max_jobs": max_jobs}
         model.save()
@@ -86,10 +81,6 @@ def at_once(max_jobs: int, stack: str = FAKE) -> None:
 def beaten(
     monkeypatch: pytest.MonkeyPatch, then: Callable[[worker.Worker], None]
 ) -> list[int]:
-    """
-    What the worker runs at each beat, `then` done at the first, as someone
-    watching does.
-    """
     beat = worker.Worker._beat  # pyright: ignore[reportPrivateUsage]
     counted: list[int] = []
 

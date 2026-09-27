@@ -24,7 +24,6 @@ ADD = reverse("admin:portal_case_add")
 CHANGELIST = reverse("admin:portal_case_changelist")
 CHECK = reverse("admin:portal_case_check")
 
-# case-1 as the seed gives it to alice: the test inventory's
 CASE_1 = {
     "name": "case-1",
     "language": "en",
@@ -54,7 +53,6 @@ def page_of(row: CaseBranchModel, of: str = "change") -> str:
 
 
 def opened(client: Client, name: str = "case-1") -> dict[str, Any]:
-    """The case's page, as its form holds it: what a save posts, unchanged."""
     form = client.get(page_of(head(name))).context["form"]
 
     return {
@@ -69,7 +67,6 @@ def said(response: Any) -> list[str]:
 
 
 def ran(owner: str = "alice", case: str = "case-1") -> RunModel:
-    """free-text on the owner's case, sent and written down, and scored."""
     bench = Bench(owner, FakeTransport())
     ready = bench.ready(bench.cell_of("free-text", FAKE))
     [found] = [each for each in bench.cases() if each.name == case]
@@ -202,13 +199,11 @@ def test_a_save_of_what_is_there_already_makes_no_version(alice: Client):
 
 
 def test_a_vignette_is_as_it_was_but_for_the_whitespace_around_it(alice: Client):
-    # as the archive's are, read from files written with CRLF
     _ = commit(
         CaseTrailIn(vignette="case vignette 3,\r\non two lines\r\n"),
         CaseBranchDetails.model_validate({"name": "spaced", "owner": "alice"}),
     )
     row = head("spaced")
-    # as a browser posts it back
     asked = opened(alice, "spaced") | {
         "vignette": "  case vignette 3,\r\non two lines \r\n\r\n"
     }
@@ -230,7 +225,6 @@ def test_a_new_name_is_a_new_case_and_the_old_one_stays(alice: Client):
     assert said(response) == ["Saved as a new case, case-one."]
     assert versions("case-1") == [row]
     assert renamed.trail_id == row.trail_id
-    # the two hold one vignette: the page says so, and offers to untag the old
     assert [(sharer.name, sharer.own, sharer.tagged) for sharer in sharers] == [
         ("case-1", True, True)
     ]
@@ -480,7 +474,6 @@ def test_a_case_s_page_shows_its_runs_with_the_scores_for_its_targets_now(
     assert runs.rows[0].scores == ["17", "0.5"]
     assert runs.outstanding == 0
 
-    # a pattern changed: the run's score for it is outstanding, the old one aside
     asked = opened(alice) | {"diagnosis_pattern": "fake & diagnosis & a"}
     _ = alice.post(page_of(row), asked)
     runs = alice.get(page_of(head("case-1"))).context["runs"]
@@ -520,7 +513,6 @@ def test_a_case_s_page_leads_to_the_cases_beside_it_in_its_list(alice: Client):
 
     assert first[0] is None and first[1][0] == "case-2"
     assert second[0][0] == "case-1" and second[1] is None
-    # the list's filters ride along
     assert "_changelist_filters=wanting%3Dtext" in first[1][1]
     assert neighbours("case-1", "tag=tag-1") == (None, None)
 

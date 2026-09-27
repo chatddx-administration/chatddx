@@ -1,12 +1,4 @@
 # pyright: basic
-"""
-A run as its page shows it: what was tried (the cell, the case and the
-seed), how it came out and how long it took, what it read (the stack's and
-the LLM's versions, the tools and their files, the client), what it
-answered and what the scorers made of it, and every message of it, part by
-part; and, as it is asked for, what it sent and got back, byte for byte.
-"""
-
 import json
 import re
 from dataclasses import dataclass, field
@@ -37,13 +29,10 @@ from chatddx.runtime.run import FINAL_RESULT, invalid
 from chatddx.scoring.score import Scoring
 from chatddx.worker.models import JobModel
 
-# what a tool's return says where its call failed: the arguments, or the tool
 _FAILED = re.compile(r"^(invalid arguments: |[A-Z]\w*(Error|Exception): )")
 
-# what a message's line says of it at most, before it is opened
 PREVIEW = 120
 
-# what the page says each role is
 ROLES: dict[str, Any] = {
     "system": _("System"),
     "user": _("User"),
@@ -55,38 +44,26 @@ ROLES: dict[str, Any] = {
 
 @dataclass(frozen=True)
 class Detail:
-    """A line of the run's details: what it is, and its value."""
-
     label: Any
     value: str
-    # a value to look into: what went wrong
     trouble: bool = False
-    # the page of what the value names
     link: str | None = None
 
 
 @dataclass(frozen=True)
 class Part:
-    """A part of a message: what it is, what it holds, and how to show it."""
-
     kind: str
     label: str
     text: str
-    # shown as code: JSON, arguments
     code: bool = False
-    # shown folded, to open: thinking
     folded: bool = False
-    # a failure it tells of
     trouble: bool = False
     note: str | None = None
-    # the tool it calls, or that returned
     tool: str | None = None
 
 
 @dataclass(frozen=True)
 class Message:
-    """A message of the run's, as its line says it and its parts show it."""
-
     number: int
     role: str
     kind: str
@@ -116,8 +93,6 @@ class Score:
 
 @dataclass(frozen=True)
 class Exchanged:
-    """A request the run sent, or a response it got back: which, and how much."""
-
     number: int
     which: str
     size: str
@@ -126,8 +101,6 @@ class Exchanged:
 
 @dataclass(frozen=True)
 class Shown:
-    """The run, as its page shows it."""
-
     run: RunModel
     description: str
     outcome: str
@@ -135,7 +108,6 @@ class Shown:
     took: str | None
     details: list[Detail]
     slices: list[tuple[str, str]]
-    # the configuration as it ran: its cell's label, and the page of it
     configuration: str
     configuration_page: str | None
     answer: str | None
@@ -147,7 +119,6 @@ class Shown:
 
 
 def shown(run: RunModel) -> Shown:
-    """The run, gathered for its page."""
     owner = run.owner.name
     bench = Bench(owner)
     scoring = Scoring(owner)
@@ -169,7 +140,6 @@ def shown(run: RunModel) -> Shown:
     answer = run.answer
     held = scoring.case_of(run)
     job = JobModel.objects.filter(run=run).first()
-    # the stack's page as the run read it: the stack's version, and its LLM's
     stack_page = page_of_run(run)
 
     details = [
@@ -263,7 +233,6 @@ def shown(run: RunModel) -> Shown:
 
 
 def outcome_of(run: RunModel) -> tuple[str, bool]:
-    """How the run came out, in a word, and whether it is one to look into."""
     if run.status == RunStatus.ERRORED:
         return gettext("stopped" if run.error == "stopped" else "errored"), True
 
@@ -277,7 +246,6 @@ def outcome_of(run: RunModel) -> tuple[str, bool]:
 
 
 def scores_of(run: RunModel, scoring: Scoring) -> list[Score]:
-    """The run's scores of the owner's, each scorer's latest first, and those before."""
     latest = {score.pk for score in scoring.latest(run)}
     made: list[ScoreModel] = [
         score for score in run.scores.all() if score.owner_id == scoring.owner_id
@@ -298,11 +266,6 @@ def scores_of(run: RunModel, scoring: Scoring) -> list[Score]:
 
 
 def messages_of(stored: list[MessageModel]) -> list[Message]:
-    """
-    The run's messages, as the page shows them: a request's instructions
-    where they are new, as the first request brings them or one changes
-    them, not again with every request after.
-    """
     found: list[Message] = []
     instructions: str | None = None
 
@@ -315,7 +278,6 @@ def messages_of(stored: list[MessageModel]) -> list[Message]:
 
 
 def message_of(number: int, message: MessageModel, instructed: bool = True) -> Message:
-    """A stored message, as the page shows it: its line, and its parts."""
     payload = message.payload
 
     if message.kind == MessageKind.ERROR:
@@ -340,7 +302,6 @@ def message_of(number: int, message: MessageModel, instructed: bool = True) -> M
         message.timestamp,
         _said(parts),
         parts,
-        # a response broken off counted nothing
         usage=gettext("%(sent)d in, %(written)d out")
         % {"sent": sent, "written": written}
         if sent or written
@@ -352,7 +313,6 @@ def message_of(number: int, message: MessageModel, instructed: bool = True) -> M
 
 
 def parts_of(payload: dict[str, Any], instructed: bool = True) -> list[Part]:
-    """A message's parts, the instructions a request carries first, where asked."""
     found: list[Part] = []
 
     if instructed and payload.get("kind") == "request" and payload.get("instructions"):
@@ -425,13 +385,11 @@ def _part(part: dict[str, Any]) -> Part:
 
 
 def exchanged_of(run: RunModel) -> list[Exchanged]:
-    """What the run sent and got back, each by its size, to open one by one."""
     found: list[Exchanged] = []
 
     for number, request in enumerate(run.requests, 1):
         found.append(Exchanged(number, "request", _size(request)))
 
-        # a request that got no response back has none recorded
         if number <= len(run.responses):
             response = run.responses[number - 1]
             found.append(
@@ -442,7 +400,6 @@ def exchanged_of(run: RunModel) -> list[Exchanged]:
 
 
 def exchange_of(run: RunModel, number: int, which: str) -> str | None:
-    """A request as it was sent, indented, or a response as it came, stream and all."""
     held = run.requests if which == "request" else run.responses
 
     if not 0 < number <= len(held):
@@ -458,7 +415,6 @@ def exchange_of(run: RunModel, number: int, which: str) -> str | None:
 
 
 def _case_page(case: Any, owner: str) -> str | None:
-    """The page of the case version the run is held to, where it is the owner's."""
     if case is None or case.owner.name != owner:
         return None
 
@@ -474,7 +430,6 @@ def _batch_page(owner: str, batch: Any) -> str | None:
 
 
 def description_of(run: RunModel) -> str:
-    """What the run was a go at, as its trial was described when it was sent."""
     conversation = run.conversation
 
     if conversation is None or not conversation.description:
@@ -501,7 +456,6 @@ def _served(stack: Any) -> str:
 
 
 def _client(run: RunModel) -> str:
-    """The build the run was sent from, as the repl says it."""
     if run.client is None:
         return gettext("none recorded")
 
@@ -524,7 +478,6 @@ def _usage(payload: dict[str, Any], count: str) -> int:
 
 
 def _written(answer: Any) -> str:
-    """The answer as the page shows it: its text, or its document indented."""
     if isinstance(answer, str):
         return answer
 
@@ -532,10 +485,6 @@ def _written(answer: Any) -> str:
 
 
 def _said(parts: list[Part]) -> str:
-    """
-    A message in a line: its text, its calls with what they ask, what they
-    returned; else what its parts are.
-    """
     said: list[str] = []
 
     for part in parts:
@@ -562,7 +511,6 @@ def _said(parts: list[Part]) -> str:
 
 
 def _asked(call: Part) -> str:
-    """A call in a few words: the tool, and the first thing it is asked, quoted."""
     if call.tool == FINAL_RESULT:
         return gettext("%(tool)s: the answer") % {"tool": call.tool}
 
@@ -598,7 +546,6 @@ def _text(content: Any) -> str:
 
 
 def _json(text: str) -> str | None:
-    """`text` indented where it is a JSON document, else none."""
     stripped = text.strip()
 
     if not stripped.startswith(("{", "[")):

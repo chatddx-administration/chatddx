@@ -1,12 +1,3 @@
-# malborg: one RTX 5090 (32 GB). It serves gpt-oss-20b at
-# http://malborg.km:12009/v1, the endpoint chatddx uses today, and Qwen3-8B-AWQ
-# from a NixOS container beside it, so the one LLM can be compared across
-# pelle's card and this one.
-#
-# Everything marked "# guessed" waits for the script that collects it from
-# the machine: /etc/machine-id, `nvidia-smi -L`, /run/current-system and
-# the manifest the NixOS module writes beside the `vllm serve` unit.
-
 [machine.malborg]
 machine_id = "ce634da7-f312-4b47-b70a-862c83a30e5e"  # guessed
 unreliable = false
@@ -32,8 +23,6 @@ kernel = "6.18.12"  # guessed
 nvidia_driver = "580.95.05"  # guessed
 nixpkgs_rev = "c09727c23bd83e81248764ed6e2dd41aa3113972"  # guessed: the nixpkgs chatddx's own flake pins
 
-# A NixOS container has a system of its own, but runs on its host's kernel
-# and NVIDIA driver: its stack points at both (see `host_os` below).
 [os.vllm-qwen3]
 toplevel = "/nix/store/7ij2xxpr3hbxhdyn2n74rn699v21pj7v-nixos-system-vllm-qwen3-26.11.20260519.c09727c"  # guessed
 flake_rev = "c067699436f8692b395d1d7e6a297b6524e32f20"  # guessed
@@ -93,7 +82,7 @@ serving = "gpt-oss-20b@malborg"
 endpoint = "http://malborg.km:12009/v1"
 served_name = "openai/gpt-oss-20b"
 api = "vllm"
-# no credential: vLLM runs without --api-key  # guessed
+# no credential: vLLM runs without --api-key
 tags = ["rtx-5090"]
 
 [stack."qwen3-8b-awq@malborg"]
@@ -102,8 +91,8 @@ os = "vllm-qwen3"  # guessed
 host_os = "malborg"  # guessed
 llm = "qwen3-8b-awq"
 serving = "qwen3-8b-awq@malborg"
-endpoint = "http://malborg.km:12010/v1/"  # guessed
+endpoint = "http://malborg.km:12010/v1/"
 served_name = "Qwen/Qwen3-8B-AWQ"
 api = "vllm"
-# no credential: vLLM runs without --api-key  # guessed
+# no credential: vLLM runs without --api-key
 tags = ["rtx-5090"]

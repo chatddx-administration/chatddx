@@ -1,12 +1,4 @@
 # pyright: basic
-"""
-A stack as its page shows it: the version asked for, which of its timeline
-it is, and what the latest changed of it; what it is, part by part, the
-LLM, the serving, the machine and its system, each as the version the
-stack reads has it, the LLM as a run read it where the page is a run's; and
-where the pages are, a run's the version it read.
-"""
-
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -58,7 +50,6 @@ from chatddx.repo.store.branch import (
 )
 from chatddx.repo.utils import resolve_trail
 
-# the stack's parts, as its trail holds them: the field, and the kind of each
 PARTS: tuple[tuple[str, EntityName], ...] = (
     ("llm", "llm"),
     ("serving", "serving"),
@@ -67,7 +58,6 @@ PARTS: tuple[tuple[str, EntityName], ...] = (
     ("host_os", "os"),
 )
 
-# what the page calls each part
 LABELS: dict[str, Any] = {
     "llm": _("LLM"),
     "serving": _("Serving"),
@@ -76,7 +66,6 @@ LABELS: dict[str, Any] = {
     "host_os": _("Host system"),
 }
 
-# what describes each kind of part, where the identity has no branch of it
 BLANK: dict[str, Any] = {
     "llm": LLMDetails,
     "serving": ServingDetails,
@@ -84,14 +73,12 @@ BLANK: dict[str, Any] = {
     "os": OsDetails,
 }
 
-# what the page calls each of an LLM's details, where a later version changed it
 LLM_DETAILS: dict[str, Any] = {
     "source": _("Source"),
     "specs": _("Specs"),
     "facts": _("Facts"),
 }
 
-# what the page calls each of the stack's details, in the order it shows them
 DETAILS: dict[str, Any] = {
     "endpoint": _("Endpoint"),
     "served_name": _("Served name"),
@@ -103,22 +90,17 @@ DETAILS: dict[str, Any] = {
 
 @dataclass(frozen=True)
 class Part:
-    """A part of the stack, as the version the stack reads has it."""
-
     key: str
     label: Any
     name: str
     fingerprint: str
     fields: list[Field]
-    # which of its timeline it is, where the page shows a version of it asked for
     version: Version | None = None
     newer: Newer | None = None
 
 
 @dataclass(frozen=True)
 class Shown:
-    """The stack's version, as its page shows it."""
-
     row: StackBranchModel
     stack: StackBranchOut
     owner: str
@@ -129,20 +111,16 @@ class Shown:
     newer: Newer | None
     details: list[Field]
     parts: list[Part]
-    # the LLM the page shows, whose facts the Test sends by
     llm: LLMBranchOut | None
-    # what the page's address asks of it beside the version: its LLM's
     query: str
 
 
 def page_of(row: int, llm: int | None = None) -> str:
-    """The page of a version of a stack, with the version of its LLM where given."""
     url = reverse("admin:portal_stack_change", args=[row])
     return f"{url}?llm={llm}" if llm else url
 
 
 def page_of_run(run: RunModel) -> str | None:
-    """The page of the stack as a run read it: the stack's version, and its LLM's."""
     if run.stack_branch_id is None:
         return None
 
@@ -150,7 +128,6 @@ def page_of_run(run: RunModel) -> str | None:
 
 
 def page_named(identity: str, name: str) -> str | None:
-    """The page of the stack of the name as the identity has it now: its latest."""
     try:
         row = get_visible_branch_model("stack", identity, name)
     except (BranchNotFoundError, AmbiguousBranchError):
@@ -160,10 +137,6 @@ def page_named(identity: str, name: str) -> str | None:
 
 
 def shown(row: StackBranchModel, identity: str, llm: int | None = None) -> Shown:
-    """
-    The stack's version, gathered for its page; its LLM the version `llm`
-    where that is one the identity reads of the LLM the stack holds.
-    """
     row.trail = resolve_trail(row.trail)
     stack = StackBranchOut.model_validate(row)
     bench = Bench(identity)
@@ -173,8 +146,6 @@ def shown(row: StackBranchModel, identity: str, llm: int | None = None) -> Shown
     latest = timeline[-1]
     pinned = _pinned(llm, stack, identity)
 
-    # the stack's other versions are as they are now, their LLM's latest too:
-    # the LLM a run read goes with the version it read alone
     return Shown(
         row=row,
         stack=stack,
@@ -202,7 +173,6 @@ def shown(row: StackBranchModel, identity: str, llm: int | None = None) -> Shown
 
 
 def _pinned(llm: int | None, stack: StackBranchOut, identity: str) -> Any:
-    """The LLM's version asked for, where it is one of the stack's LLM's to read."""
     if llm is None:
         return None
 
@@ -308,8 +278,6 @@ def _details(stack: StackBranchOut, bench: Bench) -> list[Field]:
 def _changes(
     row: StackBranchModel, latest: StackBranchModel, identity: str
 ) -> list[Change]:
-    """What the latest version holds in place of what `row` does."""
-    # each detail as it stands, one left out as its default: slots are 1
     was, now = (
         StackDetails.model_validate(each.details).model_dump(mode="json")
         for each in (row, latest)

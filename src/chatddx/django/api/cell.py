@@ -1,6 +1,4 @@
 # pyright: basic
-"""The cell a client names in each request: show, reasoning, scorers and save."""
-
 from typing import Any, get_args
 
 from django.http import HttpRequest
@@ -53,7 +51,6 @@ router = Router(tags=["cell"])
 def held(
     request: HttpRequest, cell: CellIn, transport: Any = None
 ) -> tuple[Bench, Cell]:
-    """The identity's bench, and the cell put together as `use`, `on` and `set` would."""
     bench = Bench(identity_of(request), transport)
 
     try:
@@ -68,10 +65,6 @@ def held(
 
 @router.get("/cell", response=CellOut)
 def show(request: HttpRequest, cell: Query[ShowIn]):
-    """
-    The cell, how it resolves on its stack, and the cases each scorer can hold
-    it to: those with any `tag`, or all.
-    """
     bench, held_cell = held(request, cell)
 
     if not (held_cell.configuration or held_cell.stack):
@@ -141,9 +134,7 @@ def _resolved(bench: Bench, cell: Cell) -> Resolved:
 
 @router.get("/reasoning", response=ReasoningTable)
 def reasoning(request: HttpRequest, cell: Query[CellIn]):
-    """What each reasoning variation does on each stack, with the cell's sampling."""
     bench, held_cell = held(request, cell)
-    # the cell's trails, as the repo's schemas have them
     slices: Any = held_cell.slices if held_cell.configuration else None
     variations = sorted(
         (
@@ -186,7 +177,6 @@ def _realization(realized: Any) -> Realization:
 
 @router.get("/scorers", response=list[ScorerOut])
 def scorers(request: HttpRequest, cell: Query[CellIn]):
-    """The scorers, what each reads, and whether the cell's output offers it."""
     bench, held_cell = held(request, cell)
     offered = held_cell.slices.output.views if held_cell.configuration else None
 
@@ -204,7 +194,6 @@ def scorers(request: HttpRequest, cell: Query[CellIn]):
 
 @router.post("/cell/save", response=Saved)
 def save(request: HttpRequest, cell: SaveIn):
-    """Save the cell's configuration as the identity's own; what it reaches too."""
     bench, held_cell = held(request, cell)
 
     if not held_cell.configuration:
@@ -229,7 +218,6 @@ def _part(entity: EntityName):
     return part
 
 
-# the cell's own of each entity it has, as show ENTITY shows it
 for _entity in ("configuration", "stack", *SLICES, *STACK_PARTS):
     router.add_api_operation(
         f"/cell/{_entity}",

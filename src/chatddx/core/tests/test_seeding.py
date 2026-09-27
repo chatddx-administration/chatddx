@@ -1,11 +1,3 @@
-"""
-An owner seeded as init-data's giftbag seeds them: what is asked, their own
-before they start; the rest the archive's, shared with them: what answers, a
-class of record no owner is given, and the cases and scorers. And what of
-the archive's changes, once they have started (test-later-inventory.toml),
-comes to them.
-"""
-
 from pathlib import Path
 from uuid import uuid4
 
@@ -31,18 +23,14 @@ pytestmark = pytest.mark.django_db
 
 FAKE = "qwen3-8b-awq@fake"
 
-# the archive's alone (datamodel.md §5): what answers, and what is asked
-# about and how it is judged
 KEPT = ("machine", "os", "llm", "serving", "client", "stack", "case", "scorer")
 
 
 def seeded(provision: Provision, user: str = "alice") -> None:
-    """`user` given the giftbag as their own, as a new owner is."""
     _ = provision("--with-giftbag", user=user)
 
 
 def sent(owner: str) -> RunModel:
-    """free-text on case-1 under seed 42, sent as the owner's bench has it."""
     bench = Bench(owner)
     ready = bench.ready(bench.cell_of("free-text", FAKE))
     [case] = [case for case in bench.cases() if case.name == "case-1"]
@@ -128,14 +116,11 @@ def test_what_the_archive_changes_later_reaches_its_owners_at_once(
 ):
     seeded(provision)
     queued("alice")
-    # init-data again, on the archive's inventory as it stands later, for bob
     _ = provision("--inventory", str(TEST_LATER), user="bob")
     stack = next(stack for stack in Bench("alice").stacks() if stack.name == FAKE)
 
     assert str(stack.details.endpoint) == "http://localhost:12100/v1/"
-    # the worker's slots on it are its one branch's, whoever is queued
     assert worker.Worker()._max_jobs(FAKE, []) == 8  # pyright: ignore[reportPrivateUsage]
-    # what the archive adds is shared with whom init-data is run for alone
     assert "dont_miss_mentions" not in {s.name for s in Scoring("alice").scorers}
 
 
@@ -143,7 +128,6 @@ def test_what_the_archive_adds_later_is_shared_by_init_data_run_again(
     provision: Provision,
 ):
     seeded(provision)
-    # init-data again for alice, on the archive's inventory as it stands later
     _ = provision("--inventory", str(TEST_LATER))
 
     assert ("dont_miss_mentions", "archive") in {
@@ -163,9 +147,7 @@ def test_an_owner_s_case_on_an_archive_vignette_under_another_name_is_unnamed():
 
     trail = CaseBranchModel.objects.filter(name="mine").latest("pk").trail
 
-    # beside the archive's case-1, shared with alice, hers is one of two names
     assert Bench("alice").name_of("case", trail) == short_fingerprint(trail.fingerprint)
-    # named as the archive names it, bob's shadows the archive's
     assert Bench("bob").name_of("case", trail) == "case-1"
 
 

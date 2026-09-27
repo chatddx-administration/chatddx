@@ -1,8 +1,4 @@
 # pyright: basic
-"""
-A ledger of everything.
-All models are immutable and append-only.
-"""
 
 from __future__ import annotations
 
@@ -55,8 +51,6 @@ class RunStatus(StrEnum):
 
 
 class ConversationContext(StrEnum):
-    """Where a conversation was held."""
-
     API = "api"
     CHAT = "chat"
     REPL = "repl"
@@ -326,7 +320,6 @@ class ScoreModel(Model):
     )
     scorer_id: int
     scorer_name = CharField(max_length=255)
-    # none for a scorer that needs no target
     case_branch = ForeignKey(
         CaseBranchModel,
         default=None,
@@ -336,7 +329,6 @@ class ScoreModel(Model):
         related_name="scores",
     )
     case_branch_id: int | None
-    # none where the case expects none, or the scorer needs none
     target = TextField(
         default=None,
         null=True,

@@ -1,10 +1,3 @@
-"""
-`chatddx init-data` and `chatddx wipe-data`, run as the command line runs
-them: on the test inventory and giftbag, and once on the live ones. The
-session's seed is the test inventory init-data gave alice; a test of seeding
-itself starts from an empty database.
-"""
-
 from pathlib import Path
 
 import pytest
@@ -39,14 +32,12 @@ NO_HISTORY = [
 
 
 def run(*args: str) -> list[str]:
-    """The lines a command prints, once it has run to completion."""
     result = CliRunner().invoke(app, args, catch_exceptions=False)
     assert result.exit_code == 0, result.output
     return result.output.splitlines()
 
 
 def receipts(parsed: ParsedInventory, label: str, receipt: str) -> list[str]:
-    """What init-data prints for every record of `parsed`."""
     return [
         f"[{label} {entity}]: {name} ({receipt} {short_fingerprint(trail.fingerprint)})"
         for entity in ENTITY_NAMES
@@ -55,18 +46,15 @@ def receipts(parsed: ParsedInventory, label: str, receipt: str) -> list[str]:
 
 
 def names(parsed: ParsedInventory) -> dict[str, set[str]]:
-    """The names of the records of `parsed`, by entity."""
     return {entity: set(getattr(parsed, entity)) for entity in ENTITY_NAMES}
 
 
 def owned(owner_name: str) -> dict[str, set[str]]:
-    """The names of the branches `owner_name` owns, by entity."""
     inventory = owned_inventory(owner_name)
     return {entity: set(inventory[entity]) for entity in ENTITY_NAMES}
 
 
 def shared_with(identity_name: str) -> dict[str, set[str]]:
-    """The names of the branches `identity_name` collaborates on, by entity."""
     return {
         entity: set(
             entity_of(entity)
@@ -78,7 +66,6 @@ def shared_with(identity_name: str) -> dict[str, set[str]]:
 
 
 def versions() -> dict[str, int]:
-    """How many versions there are of every entity's branches."""
     return {
         entity: entity_of(entity).branch_model.objects.count()
         for entity in ENTITY_NAMES
@@ -233,7 +220,6 @@ def test_wipe_data_of_nobody_removes_nothing():
 
 
 def ran_test_tools(say: Say) -> None:
-    """A run of test-tools, on the user's own tools, written down."""
     written = say("cell test-tools qwen3-8b-awq@fake", "run case-1")
 
     assert "recorded as run 1" in written

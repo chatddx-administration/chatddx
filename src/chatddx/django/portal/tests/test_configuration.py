@@ -30,7 +30,6 @@ def head(name: str, owner: str = "alice") -> ConfigurationBranchModel:
 
 
 def variation(entity: str, name: str, owner: str = "alice") -> int:
-    """The version of a variation of the owner's, as a page's address sets it."""
     return Bench(owner).variation_named(entity, name).id  # pyright: ignore[reportArgumentType]
 
 
@@ -141,8 +140,6 @@ def test_a_toolset_set_to_none_takes_the_tools_out(alice: Client):
 def test_what_an_address_can_t_set_is_set_aside(alice: Client):
     base = head("plan-web")
 
-    # a version of no variation, one set as the configuration's own, and none
-    # but for a toolset
     page = shown(
         alice,
         page_of(
@@ -178,7 +175,6 @@ def test_a_run_s_configuration_is_the_one_it_ran(alice: Client):
     page = shown(alice, url)
 
     assert page.label == "plan-web+coercion=tool+reasoning=high"
-    # it comes to the configuration the run's trial holds
     assert page.fingerprint == short_fingerprint(run.trial.configuration.fingerprint)
 
 
@@ -200,7 +196,6 @@ def test_a_batch_s_run_goes_by_its_job(alice: Client, fake: FakeTransport):
     [cell] = confirmation.context["shown"].cells
     off = page_of(head("free-text").pk, {"reasoning": variation("reasoning", "off")})
 
-    # the plan's cell, before it is kept, leads to the configuration it runs
     assert cell.page == off
 
     _ = alice.post(ADD, asked | {CONFIRM: RUN})
@@ -208,7 +203,6 @@ def test_a_batch_s_run_goes_by_its_job(alice: Client, fake: FakeTransport):
     panel = alice.get(PANEL)
     latest = panel.context["shown"].latest
 
-    # each case taken up leads to the configuration as it ran
     assert {ran.configuration for ran in latest} == {"free-text+reasoning=off"}
     assert {ran.configuration_page for ran in latest} == {off}
     assert f'href="{escape(off)}"' in panel.content.decode()
@@ -251,5 +245,4 @@ def test_a_label_is_read_from_its_end(alice: Client):
         ["coercion", "reasoning"],
     )
     assert parsed("archive/plan+toolset=none") == ("archive/plan", ["toolset"])
-    # a name that holds a + is none of what is set
     assert parsed("plan+more") == ("plan+more", [])

@@ -33,10 +33,6 @@ def dump_trail[T: TrailModel](
     model_cls: type[T],
     schema: TrailIn,
 ) -> T:
-    """
-    The trail of `schema`'s fingerprint: the one there, or a new one written
-    with each trail it relates to. A trail there has its relations there too.
-    """
     fingerprint = schema.fingerprint
     found = model_cls.objects.filter(fingerprint=fingerprint).first()
 
@@ -80,7 +76,6 @@ def dump_trail[T: TrailModel](
             for field_name, pks in m2m_values.items():
                 getattr(model, field_name).set(pks)
     except IntegrityError:
-        # written meanwhile, by another transaction
         found = model_cls.objects.filter(fingerprint=fingerprint).first()
 
         if found is None:
@@ -88,7 +83,6 @@ def dump_trail[T: TrailModel](
 
         return found
 
-    # as resolve_trails has them: what the trail relates to is at hand
     for field_name, related in arrays.items():
         setattr(model, field_name, related)
 

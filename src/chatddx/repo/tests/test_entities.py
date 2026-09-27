@@ -471,7 +471,6 @@ def test_free_text_is_read_a_line_at_a_time_its_list_markers_stripped():
 
 
 def test_a_schema_is_a_json_schema():
-    # the second time, read from what the first found
     for _ in range(2):
         with pytest.raises(ValidationError, match="not a valid JSON Schema"):
             _ = OutputTrailIn(answer_schema={"type": "objet"})

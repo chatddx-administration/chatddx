@@ -1,10 +1,3 @@
-# pelle: one RTX 3070 (8 GB). It serves Qwen3-8B-AWQ at
-# http://pelle.km:12009/v1/, the endpoint chatddx uses today.
-#
-# Everything marked "# guessed" waits for the script that collects it from
-# the machine: /etc/machine-id, `nvidia-smi -L`, /run/current-system and
-# the manifest the NixOS module writes beside the `vllm serve` unit.
-
 [machine.pelle]
 machine_id = "681655ac-1beb-4bfc-931c-d495f0624e31"  # guessed
 unreliable = false

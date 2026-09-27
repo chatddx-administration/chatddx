@@ -39,7 +39,6 @@ LATER = "yellow"
 TOKENS = len("tokens")
 OUTCOME = len("completed")
 
-# what a run streams back, as pydantic-ai has it, and what it came to
 type Events = AsyncIterable[AgentStreamEvent | AgentRunResultEvent[Any]]
 
 
@@ -54,8 +53,6 @@ class Transcript:
         self.console: Console = console
         self.at_start: bool = True
         self.labelled: bool = False
-        # whitespace, written once more comes: a runaway cut off in it leaves
-        # none behind
         self.held: str = ""
 
     def write(self, text: str, style: str = "") -> None:

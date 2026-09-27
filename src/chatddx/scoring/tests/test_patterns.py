@@ -65,7 +65,6 @@ INVENTORIES = ["inventory.toml", "test-inventory.toml"]
 
 @pytest.mark.parametrize("path", INVENTORIES, ids=lambda path: path)
 def test_every_target_reads(path: str):
-    """What the pattern scorers read of a case's targets: each a pattern."""
     for _, details in parse(settings.INVENTORY_PATH / path).case.values():
         for target in details.targets.values():
             if target is not False and target.pattern is not None:

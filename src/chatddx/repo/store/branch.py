@@ -52,14 +52,6 @@ def get_branch_model(
     fingerprint: str | None = None,
     qs: QuerySet[Any] | None = None,
 ) -> BranchModel:
-    """
-    Get latest branch model of `entity_name` owned by `owner_name` (its head).
-
-    `branch_name`: Choose which name to select from
-    `fingerprint`: Look-up the branch by it's trail's fingerprint
-    `qs`: Start from custom queryset (default: all)
-    """
-
     assert branch_name or fingerprint
 
     if not qs:
@@ -89,10 +81,6 @@ def select_branch_models(
     owner_name: str,
     qs: QuerySet[Any] | None = None,
 ) -> list[BranchModel]:
-    """
-    Find all branch models of `entity_name` directly owned by `owner_name`
-    `qs`: Start from custom queryset (default: all)
-    """
     if qs is None:
         model_cls = entity_of(entity_name).branch_model
         qs = qs_with_relations(qs_head(model_cls.objects.all(), owner_name))
@@ -112,12 +100,6 @@ def select_visible_branch_models(
     identity_name: str,
     shared_by: str | None = None,
 ) -> list[BranchModel]:
-    """
-    The head of every branch of `entity_name` that `identity_name` can use,
-    by name: its own, and those shared with it, by `shared_by` alone where
-    it is given. Its own shadows a shared one of the same name, and a
-    deleted one is as if it weren't.
-    """
     model_cls = entity_of(entity_name).branch_model
     qs = _shared_by(model_cls.objects.all(), identity_name, shared_by)
     heads = [
@@ -138,13 +120,6 @@ def get_visible_branch_model(
     trail: TrailModel | int | None = None,
     shared_by: str | None = None,
 ) -> BranchModel:
-    """
-    The head of the branch of `entity_name` that `identity_name` means by
-    `branch_name`, or the newest version holding `trail`: its own if it has
-    one, else the one shared with it, by `shared_by` alone where it is given.
-    A deleted branch is as if it weren't, but for holding a trail no other
-    branch of its owner's holds.
-    """
     assert branch_name or trail
 
     qs = entity_of(entity_name).branch_model.objects.all()
@@ -159,7 +134,6 @@ def get_visible_branch_model(
     found = list(qs_head_visible(qs, identity_name))
 
     if trail:
-        # the newest version of each branch holding it, the head or not
         held = live_first(found) if _deletable(entity_name) else found
         candidates = _prefer_own(held, identity_name)
     else:
@@ -188,10 +162,6 @@ def get_shared_branch_model(
     owner_name: str,
     branch_name: str,
 ) -> BranchModel:
-    """
-    The head of `owner_name`'s branch `branch_name` of `entity_name`, as
-    `identity_name` sees it: its own, or shared with it.
-    """
     qs = entity_of(entity_name).branch_model.objects.filter(
         owner__name=owner_name, name=branch_name
     )
@@ -217,7 +187,6 @@ def _shared_by(
 
 
 def _deletable(entity_name: EntityName) -> bool:
-    """Whether a branch of the kind can be deleted: taken out of sight, kept."""
     return "deleted" in entity_of(entity_name).branch_details.model_fields
 
 
@@ -238,14 +207,6 @@ def get_branch_out(
     fingerprint: str | None = None,
     qs: QuerySet[Any] | None = None,
 ) -> BranchOut[Any, Any]:
-    """
-    Get latest branch spec of `entity_name` owned by `owner_name` (its head).
-
-    `branch_name`: Choose which name to select from
-    `fingerprint`: Look-up the branch by it's trail's fingerprint
-    `qs`: Start from custom queryset (default: all)
-    """
-
     model = get_branch_model(
         entity_name,
         owner_name,
@@ -274,11 +235,6 @@ def select_branch_outs(
     owner_name: str,
     qs: QuerySet[Any] | None = None,
 ) -> list[BranchOut[Any, Any]]:
-    """
-    Find all branch specs of `entity_name` directly owned by `owner_name`
-    `qs`: Start from custom queryset (default: all)
-    """
-
     models = select_branch_models(entity_name, owner_name, qs)
     spec_cls = entity_of(entity_name).branch_out
 
@@ -297,12 +253,6 @@ def commit(
     branch_details: BranchDetails,
     owner: IdentityModel | None = None,
 ) -> bool:
-    """
-    Embed trail in a branch and make it the head
-    True: the head changed
-    False: the head didn't, the trail was already the branch's head
-    `owner`: the identity the details name, where the caller has it
-    """
     return _commit(trail, branch_details, owner, closure=True)
 
 
@@ -361,10 +311,6 @@ def _commit(
 
 
 def commit_closure(root: TrailModel, owner_name: str) -> list[str]:
-    """
-    A branch of `owner_name`'s on each trail `root` reaches that has none,
-    named for it: the names, in the order the walk reached them.
-    """
     return _commit_closure(root, ensure_identity(owner_name))
 
 
@@ -378,7 +324,6 @@ def _commit_closure(root: TrailModel, owner: IdentityModel) -> list[str]:
     for trail in closure:
         by_entity[entity_of(trail).name].append(trail)
 
-    # the whole closure is walked here: what a branch of it reaches, too
     branched = {
         (entity, trail_id)
         for entity, trails in by_entity.items()
@@ -498,5 +443,4 @@ def _commit_relation(
     if again:
         getattr(branch_model, field_name).set(related)
     elif related:
-        # a new version relates to nothing yet
         getattr(branch_model, field_name).add(*related)

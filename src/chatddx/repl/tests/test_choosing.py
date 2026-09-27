@@ -13,7 +13,6 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def bobs(repl: Repl, recommit: Recommit) -> None:
-    """The archive's plan and free-text as bob's own, shared with alice."""
     shared = [repl.identity]
     recommit(
         "configuration", "plan", name="bobs-plan", owner="bob", collaborators=shared

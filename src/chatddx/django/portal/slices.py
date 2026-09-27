@@ -1,11 +1,4 @@
 # pyright: basic
-"""
-A slice's variation as the portal's pages say it: what each slice and each
-of its fields is called; its fields, a line each; what one variation does
-in place of another, field by field; and the page of its own a variation
-has, where its slice's are edited in the portal.
-"""
-
 import json
 from typing import Any
 
@@ -16,7 +9,6 @@ from chatddx.django.portal.records import Change, Field, or_none, said
 from chatddx.repo.entities.output.pydantic import VIEWS
 from chatddx.repo.entity_names import EntityName
 
-# what the page calls each slice
 LABELS: dict[str, Any] = {
     "instruction": _("Instruction"),
     "output": _("Output"),
@@ -26,7 +18,6 @@ LABELS: dict[str, Any] = {
     "toolset": _("Toolset"),
 }
 
-# what the page calls each of a slice's fields, in the order it shows them
 FIELDS: dict[str, dict[str, Any]] = {
     "instruction": {
         "system": _("System"),
@@ -63,21 +54,17 @@ FIELDS: dict[str, dict[str, Any]] = {
     },
 }
 
-# what a sampling's defaults are, in words
 DEFAULTS: dict[str, Any] = {
     "recommended": _("what the LLM's facts recommend for the reasoning it comes to"),
     "generation_config": _("the LLM's generation config, as its server has it"),
 }
 
-# a change of a text too long for a line: its start, and that there is more
 BRIEF = 60
 
-# the slices whose variations have a page of their own, where they are edited
 PAGES: dict[str, str] = {"sampling": "admin:portal_sampling_change"}
 
 
 def page_of_variation(entity: EntityName, row: Any, identity: str) -> str | None:
-    """The page of a version of a variation, where it has one and is the identity's."""
     if entity not in PAGES or row is None or row.owner.name != identity:
         return None
 
@@ -85,7 +72,6 @@ def page_of_variation(entity: EntityName, row: Any, identity: str) -> str | None
 
 
 def values_of(entity: EntityName, trail: Any) -> dict[str, Any]:
-    """A slice's fields, as the page compares them: a toolset's tools by name."""
     if trail is None:
         return {name: None for name in FIELDS[entity]}
 
@@ -98,7 +84,6 @@ def values_of(entity: EntityName, trail: Any) -> dict[str, Any]:
 
 
 def done(entity: EntityName, own: Any, set_: Any) -> list[Change]:
-    """What a variation set does in place of the configuration's own: each field it changes."""
     before, after = values_of(entity, own), values_of(entity, set_)
 
     if entity == "toolset" and (own is None or set_ is None):
@@ -110,7 +95,6 @@ def done(entity: EntityName, own: Any, set_: Any) -> list[Change]:
             )
         ]
 
-    # a schema takes more than a line to say: that it changed
     return [
         Change(label)
         if name == "answer_schema" and before[name] and after[name]
@@ -121,7 +105,6 @@ def done(entity: EntityName, own: Any, set_: Any) -> list[Change]:
 
 
 def brief(value: Any) -> str:
-    """A value in a line: a text by its start, where it is longer than one."""
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
         return ", ".join(value) or gettext("none")
 
@@ -160,7 +143,6 @@ def fields_of(entity: EntityName, trail: Any) -> list[Field]:
                 Field(labels["guidance"], or_none(trail.guidance), text=True),
                 Field(
                     labels["views"],
-                    # in the order the outputs' views go, which the database doesn't keep
                     items=[
                         f"{view}: {trail.views[view]}"
                         for view in VIEWS

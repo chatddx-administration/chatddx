@@ -77,7 +77,6 @@ def test_a_broken_run_s_page_shows_everything_that_went_wrong(alice: Client):
     assert (page.outcome, page.trouble) == ("errored", True)
     assert details["Why"].value == f"RemoteProtocolError: {BROKEN_OFF}"
     assert page.scores == []
-    # the failed search, the call it didn't take, and the break
     assert troubled == [3, 5, 7]
     assert page.messages[2].said.startswith(
         "web_search → HTTPStatusError: Server error '503 Service Unavailable'"
@@ -85,7 +84,6 @@ def test_a_broken_run_s_page_shows_everything_that_went_wrong(alice: Client):
     assert page.messages[3].said == (
         "thinking · web_search(“infected aortic aneurysm presentation”)"
     )
-    # what it got out before the server went away, and what counted nothing
     [text] = [part for part in page.messages[5].parts if part.kind == "text"]
     assert text.text.endswith("masks peritonism, and") and not text.code
     assert page.messages[5].usage is None
@@ -101,7 +99,6 @@ def test_a_rich_run_s_page_holds_every_message_and_part(alice: Client):
     assert kinds.count("thinking") == 5
     assert kinds.count("call") == 7
     assert kinds.count("return") == 7
-    # the instructions once, with the first request, not again with each after
     assert kinds.count("instructions") == 1
     assert page.messages[1].said.startswith(
         "thinking · “Before settling on an exacerbation"

@@ -7,7 +7,6 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 class ServingTrailModel(TrailModel):
     engine = TextField()
-    # order-free: vLLM reads its arguments and environment as sets
     args = JSONField(default=dict, blank=True)
     env = JSONField(default=dict, blank=True)
 

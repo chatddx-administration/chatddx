@@ -1,6 +1,4 @@
 # pyright: basic
-"""What the API takes and gives beside the repo's, runtime's and pydantic-ai's."""
-
 from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
@@ -23,12 +21,10 @@ from chatddx.repo.entities.scorer.pydantic import Metric, ScorerTrailOut
 from chatddx.repo.entities.stack.pydantic import StackBranchOut, StackTrailOut
 from chatddx.runtime.resolution import Coercion, Reasoning, Sampling, SliceRefusal, Tool
 
-# where the case goes in the messages a cell is shown to make
 CASE = "‹case›"
 
 type Name = Annotated[str, StringConstraints(min_length=1)]
 
-# a seed; none runs unseeded, and none given draws one, unless sampling is greedy
 type Seed = Annotated[int, Field(ge=0, le=MAX_SEED)] | Literal["none"] | None
 
 
@@ -51,20 +47,12 @@ class RunsWith(Schema):
 
 
 class Detail[B](Schema):
-    """A branch, the identity's runs with it, and why a case's patterns don't parse."""
-
     branch: B
     runs: RunsWith
     unread: dict[TargetKind, str]
 
 
 class CellIn(Schema):
-    """
-    A cell, as the repl holds one: a configuration, OWNER/NAME where another
-    shares it, a stack, and any slice's variation set in place of the
-    configuration's, `none` taking the toolset out.
-    """
-
     configuration: Name | None = None
     stack: Name | None = None
     instruction: Name | None = None
@@ -84,8 +72,6 @@ class SaveIn(CellIn):
 
 
 class RunIn(CellIn):
-    """A case, or a vignette of the client's own."""
-
     case: Name | None = None
     vignette: str | None = None
     seed: Seed = None
@@ -103,8 +89,6 @@ class RunIn(CellIn):
 
 
 class BatchIn(CellIn):
-    """The cases with any of the tags, one after another, under one seed."""
-
     tags: list[Name] = Field(min_length=1)
     seed: Seed = None
 
@@ -119,8 +103,6 @@ class Page(Schema):
 
 
 class Resolved(Schema):
-    """How the cell resolves on its stack, a refused one as far as it goes."""
-
     refusals: list[SliceRefusal]
     reasoning: Reasoning | None
     sampling: Sampling | None
@@ -134,8 +116,6 @@ class Resolved(Schema):
 
 
 class HeldTo(Schema):
-    """Of the cases, how many a scorer can hold the cell to, and which it can't."""
-
     scorer: str
     view: View
     target_kind: TargetKind | None
@@ -146,8 +126,6 @@ class HeldTo(Schema):
 
 
 class CellOut(Schema):
-    """`set`: each slice's variation held in place of the configuration's, or none."""
-
     label: str | None
     configuration: ConfigurationBranchOut | None
     set: dict[str, Any]
@@ -171,16 +149,12 @@ class Realization(Schema):
 
 
 class StackRealizations(Schema):
-    """Each variation on the stack, in the table's order."""
-
     stack: str
     current: bool
     realizations: list[Realization]
 
 
 class ReasoningTable(Schema):
-    """`sampling` and `current` are the cell's, the variation by its fingerprint."""
-
     sampling: SamplingTrailOut | None
     current: str | None
     variations: list[ReasoningBranchOut]
@@ -188,8 +162,6 @@ class ReasoningTable(Schema):
 
 
 class ScorerOut(Schema):
-    """`offered`: whether the cell's output offers the view it reads."""
-
     name: str
     owner: str
     trail: ScorerTrailOut
@@ -230,16 +202,12 @@ class ToolRan(BranchRow):
 
 
 class ReadOut(Schema):
-    """The branch rows whose details resolution read."""
-
     stack: BranchRow | None
     llm: BranchRow | None
     tools: list[ToolRan]
 
 
 class RunOut(RunSummary):
-    """`number`: the run's place among its trial's runs."""
-
     number: int
     started: datetime | None
     finished: datetime | None
@@ -289,10 +257,6 @@ class ScoringOut(Schema):
     summary: list[ScorerSum]
 
 
-# A run streams pydantic-ai's own events as they come, by their `event_kind`,
-# between these of the API's own, by their `type`.
-
-
 class Batched(Schema):
     type: Literal["batch"] = "batch"
     description: str
@@ -315,14 +279,11 @@ class Answered(Schema):
 
 
 class Judged(Schema):
-    """Whether the LLM reasoned as asked, and the answer held; what the views read."""
-
     type: Literal["judged"] = "judged"
     warning: str | None
     valid: bool | None
     problem: str | None
     views: dict[str, list[JsonValue]]
-    # why the run was stopped short, its answer what came before
     stopped: str | None = None
 
 

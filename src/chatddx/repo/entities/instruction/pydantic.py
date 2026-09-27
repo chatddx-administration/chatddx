@@ -23,7 +23,6 @@ VARIABLES: tuple[Variable, ...] = get_args(Variable.__value__)
 
 class InstructionTrailBase(BaseTrail):
     system: str = ""
-    # `{{case}}` sends the case as it is, as chatddx always has
     user: str
     variables: list[Variable]
 

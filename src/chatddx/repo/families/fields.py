@@ -42,7 +42,6 @@ def _json_schema(value: dict[str, JsonValue]) -> dict[str, JsonValue]:
 
 @functools.lru_cache(maxsize=256)
 def _schema_problem(written: str) -> str | None:
-    """What keeps the schema `written` from being a JSON Schema: each is read once."""
     value = json.loads(written)
     validator = validator_for(value, default=jsonschema.Draft202012Validator)
 

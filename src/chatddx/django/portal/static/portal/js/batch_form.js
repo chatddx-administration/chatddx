@@ -1,6 +1,4 @@
-// The Batch form ticks the variations of the configuration put in, on every
-// slice, forgetting what was ticked before, as `use` forgets what was set.
-(function () {
+(function() {
     "use strict";
 
     function tick(select) {
@@ -16,19 +14,17 @@
 
                 if (box.checked !== ticked) {
                     box.checked = ticked;
-                    // so that the form's Alpine data hears of it
                     box.dispatchEvent(new Event("change", { bubbles: true }));
                 }
             }
         }
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         const select = document.querySelector("select[data-variations]");
 
         if (select) {
-            // select2 tells jQuery of a choice, not the DOM
-            django.jQuery(select).on("change", function () {
+            django.jQuery(select).on("change", function() {
                 tick(select);
             });
         }

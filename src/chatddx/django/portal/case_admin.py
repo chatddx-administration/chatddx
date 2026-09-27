@@ -1,12 +1,4 @@
 # pyright: basic
-"""
-The cases' pages: the owner's cases, to go through one by one; a case's own
-page, its timeline to step through, where a save makes a new version of
-whichever case its name names, asking first where that is another; deleting
-a version, or cases, gone where nothing reads them and out of sight where
-something does; and, as a page is typed, what saving it would do.
-"""
-
 from copy import copy
 from typing import Any, override
 
@@ -42,12 +34,9 @@ from chatddx.django.portal.owners import identity_of
 from chatddx.repo.queries import qs_head
 from chatddx.repo.store.branch import commit
 
-# what the confirmation of a save onto another case posts: the head it showed
 ONTO = "_onto"
-# what its Back posts: the form again, as it was
 BACK = "_back"
 
-# what the portal calls a case, for the model holds no words of the portal's
 Case._meta.verbose_name = _("case")
 Case._meta.verbose_name_plural = _("cases")
 
@@ -87,8 +76,6 @@ class LanguageFilter(SimpleListFilter):
 
 
 class TargetsFilter(SimpleListFilter):
-    """The cases still wanting something of their targets: the clinicians' to-do list."""
-
     title = _("targets")
     parameter_name = "wanting"
 
@@ -167,7 +154,6 @@ class CaseAdmin(ModelAdmin):
 
     @override
     def get_queryset(self, request: HttpRequest) -> Any:
-        """The head of each of the owner's cases, the deleted aside."""
         return (
             qs_head(super().get_queryset(request), identity_of(request))
             .exclude(details__contains={"deleted": True})
@@ -180,18 +166,12 @@ class CaseAdmin(ModelAdmin):
         request: HttpRequest,
         action_location: Any = options.ActionLocation.CHANGE_LIST,  # pyright: ignore[reportAttributeAccessIssue]
     ) -> Any:
-        # the admin's since Django 6.1, which the stubs don't know yet
         actions = super().get_actions(request, action_location)  # pyright: ignore[reportCallIssue]
-        # deleting cases is the portal's own: gone, or out of sight
         _ = actions.pop("delete_selected", None)
         return actions
 
     @admin.action(description=_("Delete the cases ticked"), permissions=["delete"])
     def delete_cases(self, request: HttpRequest, queryset: Any) -> Any:
-        """
-        The cases ticked deleted, once their owner has seen what that does:
-        each gone where nothing reads it, and out of sight where something does.
-        """
         owner = identity_of(request)
         names = sorted(queryset.values_list("name", flat=True))
 
@@ -225,7 +205,6 @@ class CaseAdmin(ModelAdmin):
 
     @override
     def get_urls(self) -> Any:
-        # before the admin's own, whose object_id would take these for one
         return [
             path(
                 "check/",
@@ -251,7 +230,6 @@ class CaseAdmin(ModelAdmin):
         ]
 
     def _row(self, request: HttpRequest, object_id: str) -> Case:
-        """A version of one of the owner's cases, or none to be found."""
         row = (
             Case.objects.filter(owner__name=identity_of(request), pk=object_id)
             .select_related("owner", "trail")
@@ -269,7 +247,6 @@ class CaseAdmin(ModelAdmin):
     def add_view(
         self, request: HttpRequest, form_url: str = "", extra_context: Any = None
     ) -> Any:
-        """A blank case, or a name to start one under."""
         if not self.has_add_permission(request):
             raise PermissionDenied
 
@@ -290,10 +267,6 @@ class CaseAdmin(ModelAdmin):
         form_url: str = "",
         extra_context: Any = None,
     ) -> Any:
-        """
-        A version of the case, in its timeline: the head to edit, and an
-        earlier one to read, or to edit from.
-        """
         if not self.has_view_permission(request):
             raise PermissionDenied
 
@@ -327,13 +300,11 @@ class CaseAdmin(ModelAdmin):
         timeline: cases.Timeline | None,
         version: cases.Version | None,
     ) -> TemplateResponse:
-        """A case's page: a version in its timeline, and the form, where it is edited."""
         name, vignette, since = _asked(form)
         edited = timeline.name if timeline else None
         shown = version or (timeline.head if timeline else None)
         vignette = cases.vignette_of(owner, vignette) if vignette.strip() else ""
 
-        # what saving would do, said again as the name and the vignette are typed
         for field, delay in (("name", 300), ("vignette", 800)):
             if form is not None:
                 form.fields[field].widget.attrs.update(
@@ -348,7 +319,6 @@ class CaseAdmin(ModelAdmin):
             **self.admin_site.each_context(request),
             "title": timeline.name if timeline else _("Add case"),
             "opts": self.opts,
-            # what the header names: the case, where the page is of one
             "original": shown.row.as_proxy(Case) if shown else None,
             "timeline": timeline,
             "version": version,
@@ -382,7 +352,6 @@ class CaseAdmin(ModelAdmin):
         return TemplateResponse(request, "portal/case/change_form.html", context)
 
     def _kept(self, request: HttpRequest, url: str) -> str:
-        """`url`, keeping the filters of the list the page came from."""
         return add_preserved_filters(
             {
                 "preserved_filters": self.get_preserved_filters(request),
@@ -397,11 +366,6 @@ class CaseAdmin(ModelAdmin):
         timeline: cases.Timeline | None,
         version: cases.Version | None,
     ) -> dict[str, Any]:
-        """
-        Where the page leads: the list, the versions before and after, the
-        cases before and after in the list it came from, filtered as it was.
-        """
-
         def change(row: Any, *query: str) -> str:
             url = reverse("admin:portal_case_change", args=[row.pk])
             return self._kept(request, f"{url}?{'&'.join(query)}" if query else url)
@@ -435,7 +399,6 @@ class CaseAdmin(ModelAdmin):
         }
 
     def _listed(self, request: HttpRequest) -> list[tuple[int, str]]:
-        """The cases of the list the page came from, in its order, filtered as it was."""
         listed = copy(request)
         listed.GET = QueryDict(request.GET.get("_changelist_filters", ""))
 
@@ -453,11 +416,6 @@ class CaseAdmin(ModelAdmin):
         form: CaseForm,
         timeline: cases.Timeline | None,
     ) -> Any:
-        """
-        The page's case saved as a new version of whichever case its name
-        names, once nothing stands in the way: the page's own case having
-        moved on since it was opened, or another case's content it replaces.
-        """
         began = _began(timeline, form.data.get("since", ""))
 
         if BACK in request.POST or not form.is_valid():
@@ -467,7 +425,6 @@ class CaseAdmin(ModelAdmin):
         edited = timeline.name if timeline else None
         said = cases.said(owner, cleaned["name"], edited, cleaned["since"])
 
-        # a new case, from whichever page, is an add
         if said.saving == cases.Saving.NEW and not self.has_add_permission(request):
             raise PermissionDenied
 
@@ -513,7 +470,6 @@ class CaseAdmin(ModelAdmin):
     def _confirmation(
         self, request: HttpRequest, form: CaseForm, said: cases.Said
     ) -> TemplateResponse:
-        """A save onto another case, shown before it is done: its head beside the page."""
         assert said.onto is not None
         theirs = cases.Timeline.of(said.onto).head
         ours = form.draft
@@ -543,10 +499,6 @@ class CaseAdmin(ModelAdmin):
     def delete_view(
         self, request: HttpRequest, object_id: str, extra_context: Any = None
     ) -> Any:
-        """
-        A version deleted, once its owner has seen what that does: where it
-        is the case's only one, the case with it.
-        """
         if not self.has_delete_permission(request):
             raise PermissionDenied
 
@@ -632,7 +584,6 @@ class CaseAdmin(ModelAdmin):
         return changelist
 
     def restore_view(self, request: HttpRequest, object_id: str) -> Any:
-        """A deleted case brought back, as its Undo asks."""
         if request.method != "POST":
             return HttpResponseNotAllowed(["POST"])
 
@@ -648,7 +599,6 @@ class CaseAdmin(ModelAdmin):
         return HttpResponseRedirect(reverse("admin:portal_case_change", args=[head.pk]))
 
     def untag_view(self, request: HttpRequest, object_id: str) -> Any:
-        """Another case's tags taken off, as a page sharing its vignette offers."""
         if request.method != "POST":
             return HttpResponseNotAllowed(["POST"])
 
@@ -658,7 +608,6 @@ class CaseAdmin(ModelAdmin):
         row = self._row(request, object_id)
         cases.untagged(row)
 
-        # from a page being typed: what it says, said again, the typing kept
         if request.headers.get("HX-Request"):
             return self.check_view(request)
 
@@ -671,7 +620,6 @@ class CaseAdmin(ModelAdmin):
         return HttpResponseRedirect(_back_to(request, row))
 
     def score_view(self, request: HttpRequest, object_id: str) -> Any:
-        """The runs of the version's vignette scored where they are outstanding."""
         if request.method != "POST":
             return HttpResponseNotAllowed(["POST"])
 
@@ -689,7 +637,6 @@ class CaseAdmin(ModelAdmin):
         return HttpResponseRedirect(_back_to(request, row))
 
     def check_view(self, request: HttpRequest) -> TemplateResponse | Any:
-        """What saving the page would do, as it is typed."""
         if request.method != "POST":
             return HttpResponseNotAllowed(["POST"])
 
@@ -718,7 +665,6 @@ class CaseAdmin(ModelAdmin):
 
 
 def _began(timeline: cases.Timeline | None, since: str) -> cases.Version | None:
-    """The version a page began from: the one it says, or else the head."""
     if timeline is None:
         return None
 
@@ -729,7 +675,6 @@ def _began(timeline: cases.Timeline | None, since: str) -> cases.Version | None:
 
 
 def _asked(form: CaseForm | None) -> tuple[str, str, int | None]:
-    """The name, the vignette and the version begun from, as the form holds them."""
     if form is None:
         return "", "", None
 
@@ -744,7 +689,6 @@ def _asked(form: CaseForm | None) -> tuple[str, str, int | None]:
 
 
 def _back_to(request: HttpRequest, row: Case) -> str:
-    """Where a button on a page goes back to: the page, or the version's."""
     back = request.POST.get("next", "")
 
     if back and url_has_allowed_host_and_scheme(back, {request.get_host()}):
@@ -756,7 +700,6 @@ def _back_to(request: HttpRequest, row: Case) -> str:
 def _said_of(
     said: cases.Said, changed: bool, tags_before: list[str] | None, tags: list[str]
 ) -> str:
-    """What a save did, as its message says."""
     values = {"name": said.name, "version": said.version, "was": said.version - 1}
 
     if not changed:

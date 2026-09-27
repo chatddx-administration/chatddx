@@ -5,7 +5,6 @@ from chatddx.repo.bundles import entity_of
 from chatddx.repo.queries import qs_head
 from chatddx.repo.store.configuration import get_configuration, select_configurations
 
-# the archive, as the session's seed committed the test inventory
 pytestmark = pytest.mark.django_db
 
 ARCHIVE = settings.ARCHIVE_IDENTITY_NAME

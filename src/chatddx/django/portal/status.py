@@ -1,12 +1,4 @@
 # pyright: basic
-"""
-The worker as an owner's pages show it: the status page, what the worker is
-at with the owner's jobs, how far their batches under way have come, what
-waits its turn behind others' and how many cases are ahead, their jobs
-running and up next, and those taken up last; and a batch's page, how the
-batch stands and what it can do next.
-"""
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -29,19 +21,15 @@ from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 from chatddx.worker import control, queue
 from chatddx.worker.models import JobModel, Status, Stopping
 
-# how many of the jobs taken up last the status page shows
 LATEST = 10
 
 
 @dataclass(frozen=True)
 class Progress:
-    """How far jobs have come, as a bar and its label show it."""
-
     counts: queue.Counts
 
     @property
     def counted(self) -> str:
-        """The counts: running, completed, in all; and failed, and stopped."""
         counts = self.counts
 
         if not counts.total:
@@ -66,7 +54,6 @@ class Progress:
         return said
 
     def _share(self, count: int) -> str:
-        """A count's share, in percent, as CSS reads it."""
         return f"{self.counts.share(count):.2f}"
 
     @property
@@ -88,43 +75,31 @@ class Progress:
 
 @dataclass(frozen=True)
 class Link:
-    """A batch, as a page links to it: by its short name, to its own page."""
-
     name: str
     pk: int | None
 
 
 @dataclass(frozen=True)
 class Now:
-    """A job running: what it is, and how long it has run."""
-
     job: JobModel
     running_for: str
-    # the pages of the configuration and the stack it runs on, as they are now
     configuration_page: str | None = None
     stack_page: str | None = None
 
 
 @dataclass(frozen=True)
 class Ran:
-    """A job the worker took up: when, what, how it went, and its scores."""
-
     when: datetime | None
     case: str
-    # the cell: the configuration with what is set in it, and the stack
     configuration: str
     stack: str
     batch: Link
     outcome: str
-    # an outcome to look into: errored, stopped or not run
     trouble: bool
     reason: str | None
     tokens: str
     scores: list[tuple[str, str]]
-    # the run it came to, where it came to one
     run: Any = None
-    # the pages of the configuration and the stack as the run had them, or as
-    # they are now, run or not
     configuration_page: str | None = None
     stack_page: str | None = None
 
@@ -135,8 +110,6 @@ class Ran:
 
 @dataclass(frozen=True)
 class Shown:
-    """The status page: the worker at an owner's jobs."""
-
     state: control.State
     running: list[Now]
     up_next: JobModel | None
@@ -144,14 +117,12 @@ class Shown:
     up_next_stack: str | None
     outstanding: int
     waiting: list[queue.Waiting]
-    # the batches the progress is of: those on their way, or the last
     batches: list[Link]
     progress: Progress
     latest: list[Ran]
 
     @property
     def said(self) -> str:
-        """What the worker is at with the owner's jobs, in a few words."""
         state, running = self.state, len(self.running)
 
         if not state.alive:
@@ -191,12 +162,10 @@ class Shown:
 
     @property
     def stoppable(self) -> bool:
-        """Whether there is anything a stop would stop."""
         return bool(self.running) or bool(self.outstanding)
 
     @property
     def stop_attrs(self) -> dict[str, str]:
-        """The stop button's, off where a stop stops nothing, or nothing more."""
         if not self.stoppable or self.state.stopping == Stopping.NOW:
             return {"disabled": "disabled"}
 
@@ -233,11 +202,6 @@ def shown(owner: str) -> Shown:
 
 
 class Pages:
-    """
-    The pages of the configurations and the stacks of an owner's jobs, as the
-    owner has them now: each looked up once.
-    """
-
     def __init__(self, owner: str):
         self.owner: str = owner
         self._found: dict[Any, str | None] = {}
@@ -259,7 +223,6 @@ class Pages:
 
 
 def links_of(owner: str, batches: list[UUID]) -> dict[UUID, Link]:
-    """The owner's batches, as a page links to them."""
     pks = dict(
         BatchModel.objects.filter(owner__name=owner, uuid__in=batches).values_list(
             "uuid", "pk"
@@ -270,7 +233,6 @@ def links_of(owner: str, batches: list[UUID]) -> dict[UUID, Link]:
 
 
 def max_jobs_of(owner: str) -> Any:
-    """How many jobs a stack takes at once, as the owner's branch of it says."""
     bench = Bench(owner)
 
     def max_jobs(stack: str) -> int:
@@ -283,7 +245,6 @@ def max_jobs_of(owner: str) -> Any:
 
 
 def running_for(job: JobModel) -> str:
-    """How long the job has run, as a clock says it."""
     if job.started is None:
         return ""
 
@@ -320,7 +281,6 @@ def ran(job: JobModel, batch: Link, pages: Pages) -> Ran:
 
 
 def value_of(value: float | None) -> str:
-    """A score, as the repl writes it."""
     if value is None:
         return "—"
 
@@ -328,7 +288,6 @@ def value_of(value: float | None) -> str:
 
 
 def _outcome(job: JobModel, run: RunModel | None) -> tuple[str, bool, str | None]:
-    """How a job went, whether it is one to look into, and why, where told."""
     if run is None or job.status == Status.SKIPPED:
         return job.status, True, job.reason
 
@@ -356,7 +315,6 @@ class BatchState(StrEnum):
     COMPLETED = "completed"
 
 
-# what the batches' pages call each
 STATES: dict[BatchState, Any] = {
     BatchState.STORED: gettext_lazy("stored"),
     BatchState.QUEUED: gettext_lazy("queued"),
@@ -368,7 +326,6 @@ STATES: dict[BatchState, Any] = {
 
 
 def state_of(counts: queue.Counts) -> BatchState:
-    """Where a batch stands, by how its jobs do."""
     if counts.running:
         return BatchState.RUNNING
 
@@ -384,7 +341,6 @@ def state_of(counts: queue.Counts) -> BatchState:
     return BatchState.STOPPED if counts.stopped else BatchState.UNFINISHED
 
 
-# what each state's button asks of the queue, and what it says
 ACTIONS: dict[BatchState, tuple[str, Any]] = {
     BatchState.STORED: ("resume", gettext_lazy("Run the batch")),
     BatchState.STOPPED: ("resume", gettext_lazy("Resume the batch")),
@@ -395,13 +351,10 @@ ACTIONS: dict[BatchState, tuple[str, Any]] = {
 
 @dataclass(frozen=True)
 class BatchShown:
-    """A batch's page: how the batch stands, and what it can do next."""
-
     counts: queue.Counts
     state: BatchState
     paused: bool
     waiting: queue.Waiting | None
-    # queued behind another batch of the owner's
     behind: bool = False
 
     @property
@@ -457,7 +410,6 @@ def batch_shown(owner: str, batch: Any) -> BatchShown:
             ),
             None,
         )
-        # a stack's jobs go in turn, whosever they are, the owner's too
         up_next = queue.up_next(owner, batch.stack)
         behind = up_next is not None and up_next.batch != batch.uuid
 

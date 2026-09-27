@@ -1,14 +1,3 @@
-# Configurations: one variation of each request-time slice, and optionally a
-# toolset. A configuration holds no LLM. The stack is chosen per trial, so
-# one configuration runs on every LLM; where an LLM can't honour a
-# variation, the cell is refused with the reason (datamodel.md §6).
-#
-# Today's agents paired an LLM with a reasoning switch written for it
-# (`disable-thinking` for Qwen3, `low-reasoning` for gpt-oss). Here reasoning
-# is `default`, the LLM's own, and a batch varies it across LLMs.
-
-# ------------------------------------------------------------------ clinical
-
 # the management plan, as the medical-assistant agents ask for it
 [configuration.plan]
 instruction = "ddx"
@@ -18,7 +7,7 @@ reasoning = "default"
 sampling = "recommended"
 tags = ["ddx"]
 
-# the same, with the schema shown to the LLM through its slot
+# the same, with the schema shown to the LLM in the instructions
 [configuration.plan-shown]
 extends = "plan"
 coercion = "native-shown"
@@ -56,11 +45,7 @@ reasoning = "default"
 sampling = "recommended"
 tags = ["ddx"]
 
-# --------------------------------------------------------------------- tests
-#
-# From chatddx/test-inventory.toml: the case alone, tools the answer can't be
-# known without, and an instruction that fights the answer's format.
-
+# TODO: Configuratins below this line should move into a dedicated test inventory ---------------------------
 [configuration.baseline]
 instruction = "bare"
 output = "raw"

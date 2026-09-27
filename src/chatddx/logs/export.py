@@ -220,7 +220,6 @@ class _Names:
 
 
 def _draws(runs: list[RunModel]) -> list[tuple[RunModel, int]]:
-    """Each draw, by the run that stands for it, and its epoch."""
     by_trial: dict[int, list[RunModel]] = defaultdict(list)
 
     for run in runs:
@@ -341,7 +340,6 @@ def _sample(
 
 
 def _stored(run: RunModel) -> tuple[list[ModelMessage], list[ModelMessage]]:
-    """The conversation the run continued, if any, and what the run added to it."""
     if run.conversation is None:
         return [], []
 

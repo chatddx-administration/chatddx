@@ -124,7 +124,6 @@ class Pattern:
 
 
 def unread_pattern(pattern: str) -> str | None:
-    """Why a target's pattern doesn't parse, if it doesn't."""
     try:
         _ = Pattern(pattern)
     except ValueError as e:

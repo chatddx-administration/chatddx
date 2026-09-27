@@ -1,6 +1,5 @@
 {% load i18n %}
 
-{# the case's timeline, stepped through a version at a time; and the cases beside it in the list #}
 <nav class="portal-navigator" aria-label="{% translate 'Versions' %}">
     {% if before_url %}
         <a href="{{ before_url }}" title="{% translate 'The version before' %}">

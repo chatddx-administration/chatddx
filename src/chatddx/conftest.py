@@ -30,13 +30,7 @@ PORTAL = Path(__file__).parent / "django" / "portal"
 
 TEST_INVENTORY = settings.INVENTORY_PATH / "test-inventory.toml"
 TEST_GIFTBAG = settings.INVENTORY_PATH / "test-giftbag-inventory.toml"
-# the test inventory as the archive has it later, once its owners have started
 TEST_LATER = settings.INVENTORY_PATH / "test-later-inventory.toml"
-
-# The tests' people come on in alphabetical order: alice, whom the seed is
-# for and a repl or a client speaks as unless told otherwise, then bob, carol,
-# dave and erin. No one real: an identity whose part matters more than who it
-# is goes by that part (archive, guest, nobody, other).
 
 type Provision = Callable[..., list[str]]
 type Say = Callable[..., str]
@@ -45,10 +39,6 @@ type Recommit = Callable[..., None]
 
 
 def pytest_ignore_collect(collection_path: Path) -> bool | None:
-    """
-    The portal's tests run under its settings, the rest's under the minimal
-    ones, and each run leaves the other's out (AGENTS.md).
-    """
     inside = collection_path == PORTAL or PORTAL in collection_path.parents
 
     if apps.is_installed("chatddx.django.portal"):
@@ -59,7 +49,6 @@ def pytest_ignore_collect(collection_path: Path) -> bool | None:
 
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_setup: None, django_db_blocker: DjangoDbBlocker) -> None:
-    # seeded once: each test's transaction starts from it, and rolls back to it
     with django_db_blocker.unblock():
         _ = _init_data()
 
@@ -82,7 +71,6 @@ def test_giftbag() -> ParsedInventory:
 
 @pytest.fixture
 def unseeded() -> None:
-    """An empty database, for a test of seeding itself: rolled back with the test."""
     from django.db import connection
 
     tables = connection.introspection.django_table_names(only_existing=True)
@@ -99,7 +87,6 @@ def provision() -> Provision:
 
 
 def _init_data(*options: str, user: str = "alice") -> list[str]:
-    """init-data for `user` on the test inventory and giftbag: what it printed."""
     from chatddx.manage import app
 
     result = CliRunner().invoke(
@@ -120,13 +107,10 @@ def _init_data(*options: str, user: str = "alice") -> list[str]:
 
 @pytest.fixture
 def fake() -> FakeTransport:
-    """The fake vLLM: it answers what a run sends it, as vLLM would."""
     return FakeTransport()
 
 
 class Stalling(FakeTransport):
-    """The fake vLLM, stalling after a few tokens as a busy server can."""
-
     def __init__(self, after: int = 3):
         super().__init__()
         self.after: int = after
@@ -141,16 +125,11 @@ class Stalling(FakeTransport):
 
 @pytest.fixture
 def stalling() -> Stalling:
-    """The fake vLLM, stalling mid-answer: a run is still on its way when stopped."""
     return Stalling()
 
 
 @pytest.fixture
 def say_as(fake: FakeTransport) -> SayAs:
-    """
-    A repl of `identity`'s, unseeded, its runs sent through `transport` or the
-    fake vLLM: say lines to it, and read what it wrote since.
-    """
 
     def say_as(identity: str = "alice", transport: Any = None) -> Say:
         return say_to(
@@ -178,11 +157,6 @@ def recommit() -> Recommit:
 
 
 def _recommit(entity: EntityName, archived: str, /, **details: Any) -> None:
-    """
-    The trail of the archive's `archived` of `entity`, committed again as
-    `details` have it: a new version of the archive's, or, named or owned
-    otherwise, a copy.
-    """
     bundle = entity_of(entity)
     head = head_of(
         bundle.branch_model.objects.all(), settings.ARCHIVE_IDENTITY_NAME, archived

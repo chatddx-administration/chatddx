@@ -1,15 +1,4 @@
 # pyright: basic
-"""
-A stack tried live, as the Test on its page tries it. First its server:
-reached where the stack says, serving the LLM under the stack's served
-name, loaded from the snapshot the LLM names, with the context its serving
-says, on the engine its serving names. Then the LLM, sent to as a run is,
-by the facts the page shows: an answer, streamed as it comes; its
-reasoning turned off; its answer held to a schema each way the facts say
-holds; and a tool called. Each check says how it went as it goes, and
-nothing is written down.
-"""
-
 import json
 import logging
 import re
@@ -50,17 +39,14 @@ from chatddx.runtime.run import Run, invalid
 
 logger = logging.getLogger(__name__)
 
-# where the Test goes in place of the stack's endpoint: the fake vLLM, in tests
 TRANSPORT: Any = None
 
-# what each check asks the LLM: its spec, as the Test was first thought of
 SPEC = (
     "Print your spec: which model you are, who made you, your size in billions "
     + "of parameters, how many tokens of context you take in, whether you reason "
     + "before you answer, and the languages you know best."
 )
 
-# the spec as a document, one field of each JSON type
 SPEC_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -84,7 +70,6 @@ SPEC_SCHEMA: dict[str, Any] = {
 
 READY = "Answer with one word: ready."
 
-# a tool the answer can't be known without, the inventory's sentinel_op
 SENTINEL = ToolTrailBase(
     name="sentinel_op",
     description="This tool takes two arguments and performs an operation on them",
@@ -98,7 +83,6 @@ SENTINEL = ToolTrailBase(
 SENTINEL_RUNS = "chatddx.runtime.tools.sentinel_op:sentinel_op"
 CALL = "Call sentinel_op with v1 = 1234 and v2 = 97, and say what it returned."
 
-# the words the inventory's coercions use (inventory/slices.toml)
 SCHEMA_PROMPT = (
     "Answer with a JSON object that matches this JSON Schema, and nothing else:\n"
     + "{{schema}}"
@@ -107,35 +91,27 @@ TOOL_DESCRIPTION = (
     "Give your answer by calling this tool, with the answer as its arguments."
 )
 
-# the case alone, and the schema, where a coercion shows it, in the system
-# message, where the inventory's instructions have it
 INSTRUCTION = InstructionTrailBase(
     system="{{schema_prompt}}",
     user="{{case}}",
     variables=["case", "schema_prompt"],
 )
 
-# how each coercion holds the answer: the server, with the LLM never shown the
-# schema; a call of the answer tool; the LLM shown the schema, nothing more
 COERCIONS: dict[str, CoercionTrailBase] = {
     "native": CoercionTrailBase(mode="native"),
     "tool": CoercionTrailBase(mode="tool", tool_description=TOOL_DESCRIPTION),
     "prompted": CoercionTrailBase(mode="prompted", schema_prompt=SCHEMA_PROMPT),
 }
 
-# the most an LLM writes for a check: an answer with room to think, and a brief one
 ANSWER_TOKENS = 4096
 BRIEF_TOKENS = 1024
 
-# how long the server has to answer a GET
 SERVER_TIMEOUT = 10.0
 
-# the vLLM a serving's engine is, by its store path's name
 _VLLM = re.compile(r"(?:^|-)vllm-(\d[\w.+-]*)$")
 
 type State = Literal["waiting", "running", "passed", "failed", "warned", "skipped"]
 
-# how each state is drawn: a Material Symbol
 ICONS: dict[str, str] = {
     "waiting": "radio_button_unchecked",
     "running": "progress_activity",
@@ -148,19 +124,14 @@ ICONS: dict[str, str] = {
 
 @dataclass(frozen=True)
 class Checked:
-    """A check as it stands: what it is, how it went, and what the LLM wrote."""
-
     key: str
     group: Literal["server", "llm"]
     title: Any
     state: State = "waiting"
     said: str = ""
-    # what the LLM was asked, and what it wrote: its thinking, its answer
     asked: str | None = None
     thinking: str = ""
     answer: str = ""
-    # whether what the LLM writes streams in as it comes, and stays open once
-    # it is done: its spec, which the Test was first thought of for
     streams: bool = False
     open: bool = False
 
@@ -171,8 +142,6 @@ class Checked:
 
 @dataclass(frozen=True)
 class Streamed:
-    """What the LLM wrote for a check since, as it comes."""
-
     key: str
     kind: Literal["thinking", "answer"]
     text: str
@@ -180,7 +149,6 @@ class Streamed:
 
 type Event = Checked | Streamed
 
-# the checks, in the order they go
 CHECKS: tuple[Checked, ...] = (
     Checked("reached", "server", _("Reached")),
     Checked("served", "server", _("Serves the LLM")),
@@ -203,8 +171,6 @@ class _Toolset:
 
 
 class Checking:
-    """The checks of a stack's version, by the LLM's facts the page shows."""
-
     def __init__(
         self,
         stack: StackBranchOut,
@@ -217,14 +183,11 @@ class Checking:
         self.specs: LLMSpecs = (llm.details.specs if llm else None) or LLMSpecs()
         self.api_key: str | None = api_key
         self.transport: Any = transport
-        # the language the page was asked in, which the checks speak in too
         self.language: str | None = translation.get_language()
         self.checks: dict[str, Checked] = {check.key: check for check in CHECKS}
-        # why the LLM isn't tried, where its server fails it
         self.unserved: str | None = None
 
     async def events(self) -> AsyncIterator[Event]:
-        """Each check as it stands, as it goes, and what the LLM writes as it comes."""
         with translation.override(self.language):
             for check in self.checks.values():
                 yield check
@@ -240,7 +203,6 @@ class Checking:
                     for check in self._skipped("llm", self.unserved):
                         yield check
             except Exception as e:
-                # what broke the Test itself: the check it was at says so
                 logger.exception("the Test of %s broke off", self.stack.name)
 
                 for check in self._broken(f"{type(e).__name__}: {e}"):
@@ -267,10 +229,7 @@ class Checking:
             if check.group == group and check.state == "waiting"
         ]
 
-    # ---------------------------------------------------------------- the server
-
     def _unreached(self, why: str) -> list[Checked]:
-        """The server's checks left skipped for `why`, and the LLM's with them."""
         self.unserved = why
         return self._skipped("server", why)
 
@@ -498,7 +457,6 @@ class Checking:
 
         said["recorded"] = recorded.group(1)
 
-        # a build's local version aside: 0.24.0+cu128 is 0.24.0
         if served.partition("+")[0] == said["recorded"]:
             return self._set(
                 "engine",
@@ -512,8 +470,6 @@ class Checking:
             said=gettext("vLLM %(served)s, where its serving's engine is %(name)s")
             % said,
         )
-
-    # ------------------------------------------------------------------- the LLM
 
     async def _llm(self) -> AsyncIterator[Event]:
         quick = self._quickest()
@@ -553,7 +509,6 @@ class Checking:
             yield event
 
     def _quickest(self) -> Effort:
-        """The least reasoning the LLM's facts allow: none, where it can stop."""
         for effort in ("off", "minimal", "low"):
             resolved = self.facts.reasoning.resolve(effort)
 
@@ -580,7 +535,6 @@ class Checking:
         )
 
     def _resolved(self, slices: Slices) -> Resolution:
-        """The request, by the facts; sampled as the server would where none is recommended."""
         stack = self.stack
 
         try:
@@ -605,7 +559,6 @@ class Checking:
         asked: str,
         implementations: dict[str, str] | None = None,
     ) -> AsyncIterator[Event]:
-        """The check's request sent as a run's is, streamed back, and judged."""
         try:
             resolution = self._resolved(slices)
         except CellRefused as e:
@@ -625,7 +578,6 @@ class Checking:
                 implementations=implementations,
             )
         except ValueError as e:
-            # a tool that won't load
             yield self._set(key, state="failed", said=str(e))
             return
 
@@ -814,7 +766,6 @@ class Checking:
 
 
 def _unsendable(stack: StackBranchOut) -> str | None:
-    """Why the stack can't be sent to, as resolution would refuse it, if it can't."""
     details = stack.details
 
     if details.api is None:
@@ -835,7 +786,6 @@ def _unsendable(stack: StackBranchOut) -> str | None:
 
 
 def _listed(response: Any, took: float) -> tuple[str, list[dict[str, Any]] | None]:
-    """What the server's list of its models says, and the list, if there is one."""
     status = response.status_code
 
     if status in (401, 403):
@@ -863,7 +813,6 @@ def _listed(response: Any, took: float) -> tuple[str, list[dict[str, Any]] | Non
 
 
 async def _version(client: httpx2.AsyncClient, base: str) -> str | None:
-    """The vLLM version the server says it runs, where it is vLLM's /v1."""
     if not base.endswith("/v1"):
         return None
 

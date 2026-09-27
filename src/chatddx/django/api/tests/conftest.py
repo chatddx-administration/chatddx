@@ -14,14 +14,12 @@ type Events = list[dict[str, Any]]
 
 @pytest.fixture
 def fake(fake: FakeTransport, monkeypatch: pytest.MonkeyPatch) -> FakeTransport:
-    """The fake vLLM, which the API's runs are sent to."""
     monkeypatch.setattr(runs, "TRANSPORT", fake)
     return fake
 
 
 @pytest.fixture
 def through(monkeypatch: pytest.MonkeyPatch) -> Callable[[Any], None]:
-    """Send the API's runs through `transport`."""
 
     def through(transport: Any) -> None:
         monkeypatch.setattr(runs, "TRANSPORT", transport)
@@ -31,14 +29,12 @@ def through(monkeypatch: pytest.MonkeyPatch) -> Callable[[Any], None]:
 
 @pytest.fixture
 def alice(client: Client, django_user_model: Any) -> Client:
-    """alice's session, on the test inventory: the archive's is shared with alice."""
     client.force_login(django_user_model.objects.create_user(username="alice"))
     return client
 
 
 @pytest.fixture
 def run(alice: Client, fake: FakeTransport) -> Callable[..., Events]:
-    """Run a cell on a case, as alice, and answer with the events it streamed."""
 
     def run(**spec: Any) -> Events:
         response: Any = alice.post("/api/runs", spec, content_type="application/json")
@@ -50,7 +46,6 @@ def run(alice: Client, fake: FakeTransport) -> Callable[..., Events]:
 
 
 def events(streamed: bytes) -> Events:
-    """What a stream of server-sent events says, each event's name checked."""
     said: Events = []
 
     for block in streamed.decode().strip().split("\n\n"):
@@ -63,7 +58,6 @@ def events(streamed: bytes) -> Events:
 
 
 def kind_of(event: dict[str, Any]) -> str:
-    """The API's own events by their type, pydantic-ai's by their event_kind."""
     return event.get("type") or event["event_kind"]
 
 
@@ -72,7 +66,6 @@ def of(events: Events, kind: str) -> Events:
 
 
 def written(events: Events, part_kind: str) -> str:
-    """What the LLM wrote as parts of `part_kind`: thinking, or text."""
     said = ""
 
     for event in events:

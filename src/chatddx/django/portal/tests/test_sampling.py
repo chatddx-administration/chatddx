@@ -39,7 +39,6 @@ def page(row: SamplingBranchModel, *query: str) -> str:
 
 
 def asked(row: SamplingBranchModel, **changed: Any) -> dict[str, Any]:
-    """What the page of `row` posts, as it opens, with `changed` typed in."""
     trail = row.trail
     rows = versions(row.name, row.owner.name)
     number = next(i for i, each in enumerate(rows, 1) if each.pk == row.pk)
@@ -82,7 +81,6 @@ def configuration(name: str, owner: str = "alice") -> ConfigurationBranchModel:
 
 
 def tried(client: Client, fake: FakeTransport, sampling: str) -> None:
-    """A batch of alice's, run: free-text with `sampling` set in it, on a case."""
     batch = {
         "configuration": "free-text",
         "stack": "qwen3-8b-awq@fake",
@@ -120,7 +118,6 @@ def test_a_variation_s_page_edits_its_latest_version(alice: Client):
     assert form.initial["defaults"] == "generation_config"
     assert form.initial["temperature"] == 0
     assert form.initial["top_k"] is None
-    # what the page holds is what the latest does: nothing to save
     assert said(response) == "Nothing to save: the latest version holds this already."
     assert response.context["said"].button == "Save"
 
@@ -158,7 +155,6 @@ def test_saving_under_a_new_name_makes_a_new_variation(alice: Client):
     assert response.url == page(warm)
     assert warm.trail.temperature == 1.1
     assert warm.trail.top_k == 20
-    # the page's own stays as it is
     assert [row.pk for row in versions("fixed")] == [fixed.pk]
     assert said_to(alice.get(response.url)) == ["Saved as a new variation, warm."]
 
@@ -225,7 +221,6 @@ def test_stop_sequences_are_one_a_line_or_a_json_list(alice: Client):
     assert first.trail.stop is None
     assert lines.trail.stop == ["END", "###"]
     assert listed.trail.stop == ["\n\n", " "]
-    # a page shows what lines can't hold as the list it is
     assert alice.get(page(listed)).context["form"].initial["stop"] == '["\\n\\n", " "]'
 
 
@@ -289,7 +284,6 @@ def test_the_check_says_what_saving_does_as_it_is_typed(alice: Client):
     assert '<span id="variation-save-label" hx-swap-oob="true">Save as version 2' in (
         content
     )
-    # what it does, said again for the values typed
     assert 'id="sampling-realized" hx-swap-oob="true"' in content
     assert "temperature = 1.1" in content
     assert taken.context["taken_url"] == page(greedy)
@@ -331,7 +325,6 @@ def test_what_it_does_is_said_on_each_llm_for_each_reasoning(alice: Client):
         ("qwen3-8b-awq", ["off"], "recommended for 'off'"),
         ("qwen3-8b-awq", ["on"], "recommended for 'on'"),
     ]
-    # the LLM's own reasoning is marked
     assert [row.intents for row in rows if row.llm == "qwen3-8b-awq"] == [
         [("off", False)],
         [("on", True)],
@@ -437,7 +430,6 @@ def test_what_holds_values_another_variation_holds_goes_by_neither(
     _ = alice.post(page(greedy), asked(greedy, name="zero"))
     zero = variations.holds_of("sampling", "alice", versions("zero"))
 
-    # its runs are greedy's as much: deleting zero leaves them greedy's name
     assert (zero.runs, zero.trials) == (0, 0)
     assert variations.holds_of("sampling", "alice", versions("greedy")).runs == 0
     assert variations.delete_variation("sampling", "alice", "zero")
@@ -473,7 +465,6 @@ def test_the_configuration_page_leads_to_the_variation_its_sampling_is(
     pages = {each.entity: each.page for each in own.slices}
 
     assert pages["sampling"] == page(recommended)
-    # the slices with no page of their own yet
     assert {entity for entity, url in pages.items() if url is None} == {
         "instruction",
         "output",

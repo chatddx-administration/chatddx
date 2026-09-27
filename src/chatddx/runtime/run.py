@@ -52,12 +52,8 @@ FINAL_RESULT = "final_result"
 
 TOOL_ROUNDS = 5
 
-# tokens of nothing but whitespace in a row: an LLM that streams as many has
-# run away, as gpt-oss does on malborg at times, held to a schema (see
-# docs/vllm.md), and would go on till its context runs out
 RUNAWAY = 100
 
-# where vLLM's reasoning parser streams the thinking, as versions have it
 REASONING = ("reasoning", "reasoning_content")
 
 
@@ -148,11 +144,6 @@ class Run:
         return self.messages[len(self.history) :]
 
     def salvaged(self) -> Any:
-        """
-        The answer as far as the LLM wrote it before it ran away: the text, or
-        the JSON it wrote, closed where it stops. A string it hadn't finished
-        is left out.
-        """
         responses = [m for m in self.new_messages if isinstance(m, ModelResponse)]
 
         if not responses:
@@ -257,8 +248,6 @@ class Run:
 
 
 class _Copied(httpx2.AsyncByteStream):
-    """A response, copied as it is read, and cut off where the LLM runs away."""
-
     def __init__(self, stream: httpx2.AsyncByteStream, into: bytearray):
         self._stream: httpx2.AsyncByteStream = stream
         self._into: bytearray = into
@@ -292,7 +281,6 @@ class _Copied(httpx2.AsyncByteStream):
 
 
 def _streamed(event: bytes) -> str:
-    """What an event streams of the LLM's: content, thinking and arguments."""
     data = b"\n".join(
         line.removeprefix(b"data:").strip()
         for line in event.splitlines()
@@ -301,7 +289,6 @@ def _streamed(event: bytes) -> str:
 
     written: list[Any] = []
 
-    # anything but a chunk as vLLM sends one streams nothing
     try:
         chunk: dict[str, Any] = json.loads(data)
         choices: list[dict[str, Any]] = chunk.get("choices") or []

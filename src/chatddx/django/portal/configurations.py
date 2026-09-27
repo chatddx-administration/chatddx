@@ -1,13 +1,4 @@
 # pyright: basic
-"""
-A configuration as its page shows it: a version of one, with whatever
-variations were set in place of its own slices, as a run ran it or a
-batch's cell runs it; each slice, what it asks and how; each variation
-set, and what it does in place of the configuration's own; which of the
-configuration's timeline it is, and what its latest changed; and where the
-pages are, a run's the configuration as it ran.
-"""
-
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -41,27 +32,20 @@ from chatddx.repo.store.branch import AmbiguousBranchError, BranchNotFoundError
 from chatddx.repo.utils import resolve_trail
 from chatddx.worker.models import JobModel
 
-# a cell's label: a variation set in it, from its end
 _SET = re.compile(r"\+(" + "|".join(SLICES) + r")=([^+]*)$")
 
 
 @dataclass(frozen=True)
 class Slice:
-    """A slice of the configuration, as the page shows it: its variation, set or its own."""
-
     entity: str
     label: Any
     name: str
     fingerprint: str | None
     fields: list[Field]
-    # where it is set in place of the configuration's own: its own, and what
-    # the one set does in its place
     own: str | None = None
     changes: list[Change] = field(default_factory=list[Change])
-    # the version of the variation set, and its latest where it is an earlier
     version: Version | None = None
     newer: Newer | None = None
-    # the variation's own page, at the version shown, where it is the identity's
     page: str | None = None
 
     @property
@@ -71,21 +55,16 @@ class Slice:
 
 @dataclass(frozen=True)
 class Shown:
-    """A version of a configuration, with any variations set in it, as its page shows it."""
-
     row: ConfigurationBranchModel
     cell: Cell
-    # the cell's label: the configuration, and each variation set in it
     label: str
     owner: str
-    # the fingerprint of the configuration the page comes to, set or not
     fingerprint: str
     version: Version
     before: str | None
     after: str | None
     newer: Newer | None
     slices: list[Slice]
-    # the configuration's own page, its variations set aside, where any are set
     varies: str | None
 
     @property
@@ -94,10 +73,6 @@ class Shown:
 
 
 def page_of(row: int, pins: Mapping[str, int | str] | None = None) -> str:
-    """
-    The page of a version of a configuration, with each variation `pins`
-    sets in it: a slice's version, or `none` for no toolset.
-    """
     url = reverse("admin:portal_configuration_change", args=[row])
     pinned = pins or {}
     query = urlencode(
@@ -110,10 +85,6 @@ def page_of(row: int, pins: Mapping[str, int | str] | None = None) -> str:
 def page_named(
     identity: str, configuration: str, set_names: Mapping[str, str] | None = None
 ) -> str | None:
-    """
-    The page of a configuration and what is set in it, by their names, as
-    the identity has them now: what a batch's cell runs on.
-    """
     bench = Bench(identity)
 
     named = set_names or {}
@@ -134,11 +105,6 @@ def page_named(
 
 
 def page_of_run(run: RunModel, job: JobModel | None = None) -> str | None:
-    """
-    The page of the configuration as the run ran it: the version of the
-    configuration its cell was put together from, and each variation set in
-    it, as the run's trial holds them.
-    """
     identity = run.owner.name
     trial = run.trial.configuration
     job = job or JobModel.objects.filter(run=run).first()
@@ -156,7 +122,6 @@ def page_of_run(run: RunModel, job: JobModel | None = None) -> str | None:
     base = _base(identity, name, entities, trial) if name else None
 
     if base is None:
-        # no cell's configuration to be found: the configuration as it ran, where one holds it
         held = branch_of("configuration", trial, identity)
         return None if held is None else page_of(held.pk)
 
@@ -180,7 +145,6 @@ def page_of_run(run: RunModel, job: JobModel | None = None) -> str | None:
 
 
 def parsed(label: str) -> tuple[str, list[EntityName]]:
-    """A cell's label, as the configuration it names and the slices set in it."""
     named: list[str] = []
 
     while (found := _SET.search(label)) is not None:
@@ -193,11 +157,6 @@ def parsed(label: str) -> tuple[str, list[EntityName]]:
 def _base(
     identity: str, name: str, entities: list[EntityName], trial: Any
 ) -> ConfigurationBranchModel | None:
-    """
-    The version of the configuration of the name the cell was put together
-    from: the latest the identity reads whose slices, but for those set,
-    are the trial's; its own first, as a name means it.
-    """
     owner, slash, bare = name.partition("/")
     owners = [owner] if slash else [identity, settings.ARCHIVE_IDENTITY_NAME]
     rows = (
@@ -224,10 +183,6 @@ def _base(
 
 
 def pinned(identity: str, asked: Mapping[str, str]) -> dict[EntityName, Any]:
-    """
-    The variations the page's address sets, each the version of one the
-    identity reads, or None for no toolset; any other asked for aside.
-    """
     found: dict[EntityName, Any] = {}
 
     for entity in SLICES:
@@ -252,10 +207,6 @@ def pinned(identity: str, asked: Mapping[str, str]) -> dict[EntityName, Any]:
 def shown(
     row: ConfigurationBranchModel, identity: str, pins: Mapping[EntityName, Any]
 ) -> Shown:
-    """
-    The configuration's version, gathered for its page, with each variation
-    `pins` sets in place of its own.
-    """
     row.trail = resolve_trail(row.trail)
     cell = Cell().using(row, row.name)
 
@@ -267,8 +218,6 @@ def shown(
         )
         cell = cell.set(entity, variation_out)
 
-    # what is set in it, in the page's address: a variation equal to the
-    # configuration's own is none of it
     held = {
         entity: NONE if pins[entity] is None else pins[entity].pk
         for entity in SLICES
@@ -286,7 +235,6 @@ def shown(
         owner=owner_of(row.owner.name, identity),
         fingerprint=short_fingerprint(cell.fingerprint),
         version=version,
-        # the configuration's other versions, with the same set in them
         before=page_of(timeline[number - 2].pk, held) if number > 1 else None,
         after=page_of(timeline[number].pk, held) if number < len(timeline) else None,
         newer=None
@@ -377,7 +325,6 @@ def _short(trail: Any) -> str | None:
 def _changes(
     row: ConfigurationBranchModel, latest: ConfigurationBranchModel, identity: str
 ) -> list[Change]:
-    """What the configuration's latest version holds in place of what `row` does."""
     latest.trail = resolve_trail(latest.trail)
 
     return [

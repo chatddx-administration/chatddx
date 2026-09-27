@@ -25,7 +25,6 @@ class Repl(Bench):
     ):
         super().__init__(identity_name, transport)
         self.console: Console = console
-        # what use, on, cell and set put together, for run and batch to run
         self.cell: Cell = Cell()
         self.seed: int | None = drawn_seed() if seed is DRAWN else seed
 

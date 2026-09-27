@@ -75,7 +75,6 @@ def lines(text: str) -> list[str]:
 
 
 def whole(text: str) -> list[str]:
-    """The `whole` parser: the answer as written, unless it is blank."""
     return [text] if text.strip() else []
 
 

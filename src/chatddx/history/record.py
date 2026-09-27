@@ -117,7 +117,6 @@ def _trial(
     case: int,
     seed: int | None,
 ) -> TrialModel:
-    """The trial of the cell on the case with the seed: the one run before, or a new one."""
     trial, _ = TrialModel.objects.get_or_create(
         configuration=dump_trail(ConfigurationTrailModel, configuration),
         stack_id=stack,
@@ -180,6 +179,5 @@ def _role(message: ModelMessage) -> Role:
 
 
 def _finish_reason(messages: list[ModelMessage]) -> str | None:
-    """The last response's: a truncated answer is not a wrong one."""
     responses = [m for m in messages if isinstance(m, ModelResponse)]
     return responses[-1].finish_reason if responses else None

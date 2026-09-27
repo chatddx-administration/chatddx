@@ -1,5 +1,3 @@
-"""`chatddx worker`: the worker at the queue, as the host's service runs it."""
-
 import logging
 import os
 
@@ -15,7 +13,6 @@ app = typer.Typer(
 
 @app.command("serve")
 def serve() -> None:
-    """Run the queue as it fills, till stopped: what the host's service runs."""
     _logged()
 
     with worker.terminated_as_interrupted():
@@ -27,7 +24,6 @@ def serve() -> None:
 
 @app.command("run")
 def run() -> None:
-    """Run what is queued, then stop: a paused or stopped queue runs nothing."""
     _logged()
 
     with worker.terminated_as_interrupted():

@@ -1,11 +1,4 @@
 # pyright: basic
-"""
-The sampling variations' pages: the owner's variations, what each leaves to
-its defaults and what it sets outright; and a variation's own page, as each
-slice's is (variation_admin), showing what the variation does on each LLM
-the owner's stacks serve, reasoning each way its facts realize.
-"""
-
 from typing import Any, override
 
 from django.contrib import admin
@@ -17,7 +10,6 @@ from chatddx.django.portal.models import Sampling
 from chatddx.django.portal.records import said
 from chatddx.django.portal.variation_admin import VariationAdmin
 
-# what the portal calls a sampling, for the model holds no words of the portal's
 Sampling._meta.verbose_name = _("sampling variation")
 Sampling._meta.verbose_name_plural = _("sampling variations")
 

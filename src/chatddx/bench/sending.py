@@ -1,10 +1,3 @@
-"""
-A trial on its way, as the repl, the API and the worker send one: sent,
-streamed back, come to an outcome, written down once and scored. The stream
-touches no database, so a caller whose database is its thread's takes it
-in a thread of its own (Handed).
-"""
-
 import asyncio
 import logging
 import queue
@@ -33,19 +26,12 @@ from chatddx.scoring.score import Scoring
 
 logger = logging.getLogger(__name__)
 
-# what the LLM sends back, as pydantic-ai streams it, and what it came to
 type LLMEvent = AgentStreamEvent | AgentRunResultEvent[Any]
 
 
 @dataclass
 class Tokens:
-    """
-    What the LLM has written so far, as the repl's batch tallies it: a token
-    an event, till the server says how many.
-    """
-
     count: int = 0
-    # the count the server gave
     counted: bool = False
 
     def heard(self, event: LLMEvent) -> None:
@@ -65,8 +51,6 @@ class Tokens:
 
 @dataclass(frozen=True)
 class Written:
-    """The run as it was written down and scored, or why it wasn't."""
-
     run: RunModel | None = None
     scores: list[ScoreModel] = field(default_factory=list[ScoreModel])
     unrecorded: str | None = None
@@ -84,11 +68,9 @@ class Sending:
         self.bench: Bench = bench
         self.trial: Trial = trial
         self.context: ConversationContext = context
-        # a ValueError where the run can't be made, a tool that won't load
         self.run: Run = bench.made(trial)
 
         self.outcome: Outcome | None = None
-        # what the stream failed with, if it did
         self.error: Exception | None = None
         self.answer: Any = None
         self.thought: bool = False
@@ -107,7 +89,6 @@ class Sending:
         return self._scoring
 
     async def events(self) -> AsyncGenerator[LLMEvent]:
-        """What the LLM sends back, as it comes; what it came to, after."""
         self.started = timezone.now()
 
         try:
@@ -142,12 +123,10 @@ class Sending:
             self.finished = timezone.now()
 
     def stop(self) -> None:
-        """Stopped before it came to anything: written down as stopped."""
         if self.outcome is None:
             self.outcome = STOPPED
 
     def written(self) -> Written:
-        """The run written down, once, and scored; a run that never began isn't."""
         if self._written is not None:
             return self._written
 
@@ -183,27 +162,15 @@ class Sending:
         return self._written
 
 
-# what comes of a handed stream in place of an event where none came a while
 TICK: Any = object()
 
-# what a relay hands over for a stream last, once its task has ended
 ENDED: Any = object()
 
 
 class Relay[K: Hashable]:
-    """
-    Async streams, each a task of one loop in a thread of its own, their
-    events handed over to the caller's thread as they come, each with its
-    stream's key, so that the caller's database stays its own: over WSGI, to
-    Django's test client, and to the worker, a stream a job it runs. A
-    stream's last is ENDED, once its task is done: stopped, it has gone its
-    way by then, written down its outcome included.
-    """
-
     def __init__(self) -> None:
         self._loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
         self._handed: queue.Queue[tuple[K, Any]] = queue.Queue()
-        # touched in the loop's thread alone
         self._tasks: dict[K, asyncio.Task[None]] = {}
         self._thread: threading.Thread = threading.Thread(
             target=_serve, args=(self._loop,), daemon=True
@@ -211,25 +178,21 @@ class Relay[K: Hashable]:
         self._thread.start()
 
     def start(self, key: K, events: AsyncIterator[Any]) -> None:
-        """`events` relayed as they come, each with `key`."""
         _ = self._loop.call_soon_threadsafe(self._begin, key, events)
 
     def stop(self, key: K) -> None:
-        """The stream of `key` stopped where it is: its events end with what came."""
         try:
             _ = self._loop.call_soon_threadsafe(self._cancel, key)
         except RuntimeError:
-            pass  # the relay was closed, and every stream with it
+            pass
 
     def next(self, timeout: float | None = None) -> tuple[K, Any] | None:
-        """Any stream's next event, with its key; None where none came in time."""
         try:
             return self._handed.get(timeout=timeout)
         except queue.Empty:
             return None
 
     def taken(self, timeout: float | None = None) -> list[tuple[K, Any]]:
-        """What came, waiting `timeout` seconds at most for the first of it."""
         first = self.next(timeout)
         taken = [] if first is None else [first]
 
@@ -242,7 +205,6 @@ class Relay[K: Hashable]:
         return taken
 
     def close(self) -> None:
-        """Every stream stopped, and ended, and the loop's thread let go."""
         if not self._thread.is_alive():
             return
 
@@ -266,7 +228,6 @@ class Relay[K: Hashable]:
         self._handed.put((key, ENDED))
 
     def _cancel(self, key: K) -> None:
-        # a stream that ended before its stop came has nothing to stop
         if key in self._tasks:
             _ = self._tasks[key].cancel()
 
@@ -280,11 +241,6 @@ class Relay[K: Hashable]:
 
 
 class Handed:
-    """
-    One stream relayed, its events as they come, and a TICK where nothing
-    came for `tick` seconds, till it ends.
-    """
-
     def __init__(self, events: AsyncIterator[Any], tick: float | None = None):
         self._tick: float | None = tick
         self._done: bool = False
@@ -309,14 +265,12 @@ class Handed:
                 yield event
 
     def stop(self) -> None:
-        """Stop the stream where it is: its events end with what came."""
         self._relay.stop(0)
 
     def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> None:
-        # a caller that goes away before the stream ends takes it along
         self._relay.close()
 
 
@@ -337,6 +291,6 @@ async def _relayed(
         async for event in events:
             handed.put((key, event))
     except asyncio.CancelledError:
-        pass  # stopped: its events end with what came
+        pass
     except Exception as e:  # noqa: BLE001
         handed.put((key, e))

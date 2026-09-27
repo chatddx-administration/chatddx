@@ -1,12 +1,4 @@
 # pyright: basic
-"""
-Runs of the cell, as the repl's run and batch make them, streamed as
-server-sent events. What the LLM sends back is streamed without the
-database, from the server's loop or a loop of its own; a run is written down
-in the request's thread. A client that goes away stops the run, written down
-as stopped, and the batch.
-"""
-
 import asyncio
 import json
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
@@ -51,12 +43,10 @@ from chatddx.repo.store.trail import dump_trail
 from chatddx.runtime.run import Runaway, invalid
 from chatddx.scoring.score import Scoring
 
-# pydantic-ai's events, streamed as they come
 STREAMED: TypeAdapter[Any] = TypeAdapter(AgentStreamEvent)
 
 
 def seed_of(ready: Ready, seed: Seed) -> int | None:
-    """The seed given, or one drawn where none is and sampling isn't greedy."""
     if seed == NONE:
         return None
 
@@ -74,15 +64,12 @@ def seed_of(ready: Ready, seed: Seed) -> int | None:
 
 
 class Sending(BenchSending):
-    """A trial on its way, told in the API's events."""
-
     def __init__(self, bench: Bench, trial: Trial, scoring: Scoring | None = None):
         super().__init__(bench, trial, ConversationContext.API, scoring)
         self._told: bool = False
 
     @classmethod
     def of(cls, bench: Bench, cell: Cell, spec: RunIn) -> "Sending":
-        # what stands in the way is answered with its error
         ready = bench.ready(cell)
         seed = seed_of(ready, spec.seed)
 
@@ -91,7 +78,6 @@ class Sending(BenchSending):
             trial = Trial.on(ready, case, seed)
         else:
             assert spec.vignette is not None
-            # a vignette of the client's own is a case without a branch
             model = dump_trail(CaseTrailModel, CaseTrailIn(vignette=spec.vignette))
             called = bench.name_of("case", model)
             trial = Trial.of(ready, model, called, seed)
@@ -112,7 +98,6 @@ class Sending(BenchSending):
     async def told(
         self,
     ) -> AsyncGenerator[AgentStreamEvent | Answered | Judged | Failed]:
-        """What the LLM sends back, then what its answer comes to: no database."""
         async with aclosing(self.events()) as events:
             async for event in events:
                 match event:
@@ -146,7 +131,6 @@ class Sending(BenchSending):
         )
 
     def recorded(self) -> list[Event]:
-        """The run written down, once, and scored, as the API tells it."""
         if self.outcome is None or self._told:
             return []
 
@@ -169,7 +153,6 @@ class Sending(BenchSending):
         return said
 
     def through(self) -> Recorded:
-        """Sent and recorded in one go, from a loop of its own."""
 
         async def sent() -> None:
             async for _ in self.told():
@@ -191,7 +174,6 @@ class Sending(BenchSending):
 
 class Batch:
     def __init__(self, bench: Bench, cell: Cell, spec: BatchIn):
-        # what stands in the way is answered with its error
         ready = bench.ready(cell)
         seed = seed_of(ready, spec.seed)
         plan = Plan(
@@ -230,8 +212,6 @@ class Batch:
 
 
 class EventStream(StreamingHttpResponse):
-    """Runs' events as they come: over ASGI from the server's loop, else their own."""
-
     def __init__(
         self,
         sendings: list[Sending],
@@ -257,7 +237,6 @@ class EventStream(StreamingHttpResponse):
                 async for event in events:
                     yield self.make_bytes(sse(event))
             except BaseException:
-                # the client went away: the run stops, written down as stopped
                 await events.aclose()
                 await asyncio.shield(sync_to_async(sending.recorded)())
                 raise
@@ -269,7 +248,6 @@ class EventStream(StreamingHttpResponse):
             yield self.make_bytes(sse(event))
 
     def _handed_over(self) -> Iterator[bytes]:
-        """Over WSGI, and to Django's test client."""
         for event in self._opening:
             yield self.make_bytes(sse(event))
 
@@ -281,7 +259,6 @@ class EventStream(StreamingHttpResponse):
                     for event in handed:
                         yield self.make_bytes(sse(event))
             except BaseException:
-                # the client went away: the run stops, written down as stopped
                 _ = sending.recorded()
                 raise
 
@@ -293,7 +270,6 @@ class EventStream(StreamingHttpResponse):
 
 
 def sse(event: Any) -> str:
-    """An event of the API's own by its type, or of pydantic-ai's by its kind."""
     if isinstance(event, Schema):
         data = json.dumps(event.model_dump(), cls=NinjaJSONEncoder)
         return _sse(cast(Any, event).type, data)

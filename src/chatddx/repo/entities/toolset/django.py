@@ -9,7 +9,6 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 
 class ToolsetTrailModel(TrailModel):
     guidance = TextField(null=True, blank=True)
-    # ordered, as the LLM is shown them
     tools = RelatedArrayField(  # pyright: ignore[reportCallIssue]
         IntegerField(),
         associated_model=ToolTrailModel,

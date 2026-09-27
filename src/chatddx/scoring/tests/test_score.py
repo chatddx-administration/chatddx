@@ -38,7 +38,6 @@ SLICES = ("instruction", "output", "coercion", "reasoning", "sampling", "toolset
 
 
 async def outcome_of(run: Run) -> Outcome:
-    """What came of `run`, as the repl has it."""
     try:
         async with run.stream() as events:
             async for event in events:
@@ -58,7 +57,6 @@ def ran(
     transport: httpx2.AsyncBaseTransport | None = None,
     user: str = "alice",
 ) -> RunModel:
-    """A run of `configuration` on `case`, against the fake vLLM, written down."""
     own = ConfigurationBranchOut.model_validate(
         get_visible_branch_model("configuration", "alice", configuration)
     )

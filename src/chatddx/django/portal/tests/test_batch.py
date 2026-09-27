@@ -26,12 +26,10 @@ FREE_TEXT = {
 
 
 def confirmed(asked: dict[str, Any], how: str = RUN) -> dict[str, Any]:
-    """What was asked, confirmed: to run now, or to keep for later."""
     return asked | {CONFIRM: how}
 
 
 def labels(response: Any) -> list[str]:
-    """The cells a confirmation plans, as the repl labels them."""
     return [ready.cell.label for ready in response.context["plan"].ready]
 
 
@@ -67,14 +65,12 @@ def test_the_form_offers_what_the_repl_can_use(alice: Client):
         *bench.names("toolset"),
         "none",
     ]
-    # a seed drawn, as the repl draws one
     assert 0 <= form.initial["seed"] < SEEDS
 
 
 def test_the_form_offers_the_owner_s_own_and_the_archive_s_stacks(
     alice: Client, recommit: Recommit
 ):
-    # the archive's, shared with alice, and not hers
     recommit("configuration", "plan", name="archive-plan", collaborators=["alice"])
     recommit(
         "case",
@@ -87,7 +83,6 @@ def test_the_form_offers_the_owner_s_own_and_the_archive_s_stacks(
 
     assert "archive-plan" not in dict(form.fields["configuration"].choices)
     assert "archive-tag" not in dict(form.fields["case_tags"].choices)
-    # what answers is the archive's, for everyone
     assert [name for name, _ in form.fields["stack"].choices if name] == [
         stack.name for stack in Bench("archive").stacks()
     ]
@@ -120,7 +115,6 @@ def test_a_configuration_put_in_ticks_its_own_variations(alice: Client):
         "sampling": ["recommended"],
         "toolset": ["none"],
     }
-    # and what each configuration has is at hand for the script to tick
     assert b"data-variations=" in response.content
 
 
@@ -176,7 +170,6 @@ def test_a_cell_its_stack_refuses_is_held_back_with_why(alice: Client):
     [held_back] = response.context["shown"].held_back
 
     assert labels(response) == ["baseline+reasoning=on"]
-    # what runs, the cell held back aside
     assert response.context["description"] == (
         "baseline+reasoning=on × gpt-oss-20b@fake × 1 case tagged tag-1"
     )
@@ -194,7 +187,6 @@ def test_the_confirmation_says_which_cases_each_scorer_can_hold_the_cells_to(
     response = alice.post(ADD, FREE_TEXT | {"output": ["free-text", "diagnoses"]})
     scorers = {row.name: row for row in response.context["scorers"]}
 
-    # free text offers text and a differential, diagnoses a differential
     assert scorers["reciprocal_rank"].offered == 2
     assert scorers["reciprocal_rank"].have == 2
     assert scorers["first_mention"].offered == 1
@@ -281,7 +273,6 @@ def test_back_to_the_form_brings_back_what_was_asked(alice: Client):
     assert form.initial["case_tags"] == ["tag-2"]
     assert form.initial["reasoning"] == ["off", "on"]
     assert form.initial["seed"] == "42"
-    # what wasn't asked of a slice is the configuration's own
     assert form.initial["sampling"] == ["recommended"]
 
 

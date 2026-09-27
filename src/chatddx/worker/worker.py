@@ -1,14 +1,3 @@
-# pyright: basic
-"""
-The worker: it runs the queue's jobs as their stacks take them, as many at
-once on a stack as its max_jobs, first queued first, whosever they are.
-Each runs as the repl's batch runs a case, and is written down as a run of
-its owner's, in a conversation held by the worker. It heeds each owner's
-controls: a paused owner's jobs wait, and a stop again stops those running.
-`chatddx worker serve` keeps it at the queue, as the host's service runs
-it; `chatddx worker run` runs what is queued.
-"""
-
 import logging
 import math
 import signal
@@ -41,16 +30,12 @@ from chatddx.worker.models import (
 
 logger = logging.getLogger(__name__)
 
-# seconds between looks at the queue for jobs to start
 POLL = 1.0
 
-# seconds between beats while jobs run: their tallies written, stops read
 BEAT = 0.5
 
-# where runs go in place of each stack's endpoint: the fake vLLM, in tests
 TRANSPORT: Any = None
 
-# what keeps a trial from being sent when its turn comes
 UNSENT = (
     NotFound,
     NotReady,
@@ -63,8 +48,6 @@ UNSENT = (
 
 @dataclass
 class Running:
-    """A job the worker runs: its trial on its way."""
-
     job: JobModel
     sending: Sending
     # a stop now asked of it
@@ -72,19 +55,15 @@ class Running:
 
 
 class Worker:
-    """A worker at the queue: a bench and a scoring for each owner, a drain long."""
-
     def __init__(self, transport: Any = None):
         self.transport: Any = TRANSPORT if transport is None else transport
         self._benches: dict[str, tuple[Bench, Scoring]] = {}
         self._running: dict[int, Running] = {}
 
     def run(self) -> int:
-        """What is queued, till nothing more can start: how many jobs it took up."""
         return self._work(forever=False)
 
     def serve(self) -> None:
-        """The queue as it fills, till the worker is stopped."""
         _ = self._work(forever=True)
 
     def _work(self, forever: bool) -> int:
@@ -104,7 +83,6 @@ class Worker:
                         if not forever:
                             return taken
 
-                        # the next drain reads the registry afresh
                         self._benches.clear()
                         time.sleep(POLL)
                         continue
@@ -118,8 +96,6 @@ class Worker:
                         self._beat(relay)
                         beaten = time.monotonic()
             finally:
-                # stopped by a signal, what runs is stopped with it, written
-                # down as stopped; what is queued waits for the worker
                 relay.close()
 
                 for running in self._running.values():
@@ -128,7 +104,6 @@ class Worker:
                 self._running.clear()
 
     def _fill(self, relay: Relay[int]) -> int:
-        """The controls heeded, and each stack's free slots taken, first come first."""
         _heeded(self._running)
         holding = ControlsModel.holding()
         taken = 0
@@ -150,14 +125,12 @@ class Worker:
 
                 taken += 1
 
-                # a job skipped as it starts takes no slot
                 if self._start(job, relay):
                     free -= 1
 
         return taken
 
     def _max_jobs(self, stack: str, holding: list[int]) -> int:
-        """The stack's slots, as the owner of the first job queued on it sees it."""
         first = (
             queue.in_turn(
                 JobModel.objects.filter(stack=stack).exclude(owner_id__in=holding)
@@ -174,7 +147,6 @@ class Worker:
         try:
             return bench.max_jobs(stack)
         except (BranchNotFoundError, AmbiguousBranchError):
-            # its jobs are skipped as they start, one at a time
             return 1
 
     def _start(self, job: JobModel, relay: Relay[int]) -> bool:
@@ -194,7 +166,6 @@ class Worker:
         return True
 
     def _beat(self, relay: Relay[int]) -> None:
-        """The jobs running beaten, their tallies written; a stop now heeded."""
         now = timezone.now()
         jobs: list[JobModel] = []
 
@@ -217,9 +188,7 @@ class Worker:
                 relay.stop(key)
 
     def _end(self, running: Running) -> None:
-        """The job written down as its trial came out."""
         job, sending = running.job, running.sending
-        # ended before it began, it is written down as stopped
         sending.stop()
         written = sending.written()
         run = written.run
@@ -253,7 +222,6 @@ def serve(transport: Any = None) -> None:
 
 @contextmanager
 def terminated_as_interrupted() -> Iterator[None]:
-    """A stop from the host's service taken as Ctrl-C: the jobs written down."""
 
     def interrupted(_signal: int, _frame: FrameType | None) -> None:
         raise KeyboardInterrupt
@@ -267,10 +235,6 @@ def terminated_as_interrupted() -> Iterator[None]:
 
 
 def _heeded(running: dict[int, Running]) -> None:
-    """
-    The worker seen at the queue, what lost its worker lost, and the stops
-    heeded: an owner none of whose jobs runs any more stops no longer.
-    """
     with transaction.atomic():
         state = WorkerStateModel.row(lock=True)
         state.seen = timezone.now()
@@ -292,7 +256,6 @@ def _heeded(running: dict[int, Running]) -> None:
 
 
 def _taken(stack: str, holding: list[int]) -> JobModel | None:
-    """The stack's next job in the queue, running, but for the owners holding."""
     with transaction.atomic():
         job = (
             queue.in_turn(
@@ -314,7 +277,6 @@ def _taken(stack: str, holding: list[int]) -> JobModel | None:
 
 
 def _trial(bench: Bench, job: JobModel) -> Trial:
-    """The trial as it was planned, its case's vignette as it was then."""
     cell = bench.cell_as_kept(job.kept)
 
     return Trial.of(bench.ready(cell), job.case_trail, job.case, job.seed)
@@ -339,7 +301,6 @@ def _finished(job: JobModel, status: Status, reason: str | None) -> None:
 
 
 def _let_go() -> None:
-    """A long-lived process's connections, let go where they went stale."""
     for connection in connections.all(initialized_only=True):
         if not connection.in_atomic_block:
             connection.close_if_unusable_or_obsolete()

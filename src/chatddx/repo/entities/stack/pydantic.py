@@ -33,8 +33,6 @@ from chatddx.repo.families import (
     TrailRef,
 )
 
-# The API a request is sent through: `vllm` for a stack of chatddx's own, and
-# a cloud stack names its provider's.
 type Api = Literal["vllm", "openai-chat", "openai-responses", "anthropic", "google"]
 
 
@@ -43,7 +41,6 @@ class StackDetails(Details):
     served_name: str | None = None
     api: Api | None = None
     credential: str | None = None
-    # how many of the worker's jobs run on the stack at once: its slots
     max_jobs: PositiveInt = 1
 
 

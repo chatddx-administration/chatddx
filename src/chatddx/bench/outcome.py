@@ -1,5 +1,3 @@
-"""How a run came out: what the repl, the API and the portal record of it."""
-
 from typing import Any
 
 from pydantic_ai import UnexpectedModelBehavior, UsageLimitExceeded
@@ -25,7 +23,6 @@ def failed(error: Exception, run: Run) -> Outcome:
             stopped = f"stopped: still calling tools after {TOOL_ROUNDS} rounds"
             return Outcome(RunStatus.COMPLETED, valid=unheld, error=stopped)
         case Runaway():
-            # what came before stands as the answer, and the run is flagged
             answer = run.salvaged()
             return Outcome(
                 RunStatus.COMPLETED,

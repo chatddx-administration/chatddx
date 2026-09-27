@@ -10,7 +10,6 @@ type Run = Callable[..., None]
 
 @pytest.fixture
 def run_as(provision: Provision, say_as: SayAs) -> Callable[..., Run]:
-    # alice's is seeded for the session
     provisioned: set[str] = {"alice"}
 
     def run_as(identity: str, transport: Any = None) -> Run:
@@ -30,5 +29,4 @@ def run_as(provision: Provision, say_as: SayAs) -> Callable[..., Run]:
 
 @pytest.fixture
 def run(run_as: Callable[..., Run]) -> Run:
-    """alice's lines."""
     return run_as("alice")

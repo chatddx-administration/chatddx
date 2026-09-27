@@ -41,7 +41,6 @@ from chatddx.runtime.resolution import CellRefused, Resolution
 from chatddx.runtime.run import Runaway, invalid
 from chatddx.scoring.score import Scoring
 
-# the command that clears what stands in a cell's way
 HINTS: dict[type[NotReady], str] = {
     Incomplete: "cell CONFIGURATION STACK",
     NotOwn: "save NAME",
@@ -228,7 +227,6 @@ async def _tally(sending: Sending, tally: Tally, stopping: "_Stopping") -> Strea
 
 
 def _said(repl: Repl, sending: Sending, streamed: Streamed) -> None:
-    """What the run came to, where it didn't come to an answer as asked."""
     outcome = sending.outcome
     resolution = sending.trial.ready.resolution
     assert outcome is not None

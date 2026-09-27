@@ -6,7 +6,6 @@
     {{ block.super }}
 
     <script>
-        // a section's folds, all opened or all closed
         function portalFold(button, open) {
             for (const fold of button.closest("section").querySelectorAll("details")) {
                 fold.open = open;

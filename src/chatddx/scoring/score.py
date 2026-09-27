@@ -158,8 +158,6 @@ class Scoring:
                 else [str(item) for item in output.view(scorer.view, run.answer)]
             )
             ran = self.implementation_of(scorer)
-            # a pattern that doesn't parse is its scorer's to say, the run's
-            # other scorers scoring it all the same; why is the case's to say
             scored = (
                 Scored(None, reason="the pattern doesn't parse")
                 if target is not None and unread_pattern(target) is not None
@@ -183,7 +181,6 @@ class Scoring:
         return made
 
     def summed(self, made: list[ScoreModel]) -> list[Summed]:
-        """Each scorer's scores among `made`, and its metrics of their values."""
         found: list[Summed] = []
 
         for scorer in self.scorers:
@@ -239,11 +236,6 @@ class Scoring:
         return self._outputs[output.pk]
 
     def case_of(self, run: RunModel) -> CaseBranchModel | None:
-        """
-        The version whose targets the run is held to: the newest holding its
-        vignette, the identity's own before the archive's shared with it, a
-        deleted case's where its owner has no other.
-        """
         case_id = run.trial.case_id
 
         if case_id not in self._cases:

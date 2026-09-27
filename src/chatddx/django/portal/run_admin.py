@@ -1,10 +1,4 @@
 # pyright: basic
-"""
-The runs' pages: the owner's runs, the latest first; and a run's own page,
-read only, showing all it holds: what was tried and how it came out, what
-it read and answered, its scores, every message, and what it sent and got
-back, each loaded as it is opened.
-"""
 
 import uuid
 from typing import Any, override
@@ -25,7 +19,6 @@ from chatddx.django.portal.models import Run
 from chatddx.django.portal.owners import identity_of
 from chatddx.django.portal.status import value_of
 
-# what the portal calls a run, for the model holds no words of the portal's
 Run._meta.verbose_name = _("run")
 Run._meta.verbose_name_plural = _("runs")
 
@@ -88,7 +81,6 @@ class RunAdmin(ModelAdmin):
 
     @override
     def get_urls(self) -> Any:
-        # before the admin's own, whose object_id would take these for one
         return [
             path(
                 "<path:object_id>/exchange/<int:number>/<str:which>/",
@@ -99,7 +91,6 @@ class RunAdmin(ModelAdmin):
         ]
 
     def _run(self, request: HttpRequest, object_id: str) -> Run:
-        """One of the owner's runs, by its uuid or its key, or none to be found."""
         if not self.has_view_permission(request):
             raise PermissionDenied
 
@@ -130,13 +121,11 @@ class RunAdmin(ModelAdmin):
         form_url: str = "",
         extra_context: Any = None,
     ) -> Any:
-        """The run's page: all it holds, its messages and exchange to open."""
         run = self._run(request, object_id)
         context = {
             **self.admin_site.each_context(request),
             "title": runs.description_of(run),
             "opts": self.opts,
-            # what the header names: the run
             "original": run,
             "shown": runs.shown(run),
         }
@@ -146,7 +135,6 @@ class RunAdmin(ModelAdmin):
     def exchange_view(
         self, request: HttpRequest, object_id: str, number: int, which: str
     ) -> HttpResponse:
-        """A request the run sent, or a response it got back, as its fold is opened."""
         if which not in ("request", "response"):
             raise Http404
 

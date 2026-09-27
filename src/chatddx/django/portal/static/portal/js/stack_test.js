@@ -1,7 +1,3 @@
-// A stack's Test: its checks as they go, a line of JSON each, drawn into
-// the page as they come: a check as it stands, in place of how it stood,
-// or what the LLM wrote for one since, after what it wrote before.
-
 async function portalTest(form) {
     const section = form.closest("section");
     const button = form.querySelector("button");
@@ -27,7 +23,7 @@ async function portalTest(form) {
         const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
         let rest = "";
 
-        for (;;) {
+        for (; ;) {
             const { value, done } = await reader.read();
 
             if (done) {
@@ -74,6 +70,5 @@ function portalTestEvent(lists, event) {
         `#check-${event.check} [data-stream="${event.stream}"]`,
     );
 
-    // text, not markup: what the LLM wrote is shown as it wrote it
     into?.append(event.text);
 }

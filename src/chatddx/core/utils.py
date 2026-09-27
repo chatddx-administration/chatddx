@@ -20,7 +20,6 @@ def ensure_tag(owner: IdentityModel, entity: EntityName, name: str) -> TagModel:
 
 
 def ensure_identities(names: Sequence[str]) -> list[IdentityModel]:
-    """The identities of `names`, in their order: those there read at once."""
     there = {
         identity.name: identity
         for identity in IdentityModel.objects.filter(name__in=names)
@@ -31,7 +30,6 @@ def ensure_identities(names: Sequence[str]) -> list[IdentityModel]:
 def ensure_tags(
     owner: IdentityModel, entity: EntityName, names: Sequence[str]
 ) -> list[TagModel]:
-    """The tags of `names`, in their order: those there read at once."""
     there = {
         tag.name: tag
         for tag in TagModel.objects.filter(owner=owner, entity=entity, name__in=names)

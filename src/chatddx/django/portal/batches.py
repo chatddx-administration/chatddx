@@ -1,10 +1,4 @@
 # pyright: basic
-"""
-A plan as the portal keeps and shows it: what a batch stores of the plan it
-was confirmed on, and the rows its pages show, the confirmation's and the
-saved batch's alike.
-"""
-
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
@@ -18,12 +12,10 @@ from chatddx.repo.families.django import BranchModel
 from chatddx.scoring.score import Scoring
 from chatddx.worker import queue
 
-# the most names a list on a page shows before it says how many more
 SHOWN = 12
 
 
 def cells_of(plan: Plan) -> list[dict[str, Any]]:
-    """The cells a batch runs: what each sets, what it comes to, and its seed."""
     return [
         {
             "label": kept.label,
@@ -36,7 +28,6 @@ def cells_of(plan: Plan) -> list[dict[str, Any]]:
 
 
 def kept_of(batch: Any) -> list[Kept]:
-    """The cells a batch keeps, as the bench puts them together again."""
     return [
         Kept(
             batch.configuration,
@@ -69,14 +60,11 @@ def cases_of(cases: Iterable[BranchModel]) -> list[dict[str, str]]:
 
 @dataclass(frozen=True)
 class Case:
-    """A case a batch holds: by the name it holds it by, and its trail."""
-
     name: str
     trail_id: int
 
 
 def held(batch: Any) -> list[Case]:
-    """The cases the batch holds, as it holds them."""
     trails = dict(
         CaseTrailModel.objects.filter(
             fingerprint__in=[case["fingerprint"] for case in batch.cases]
@@ -87,17 +75,12 @@ def held(batch: Any) -> list[Case]:
 
 
 def put(batch: Any, run: bool) -> int:
-    """The batch's trials in the worker's queue, or stored for later."""
     return queue.put(batch.owner.name, batch.uuid, kept_of(batch), held(batch), run)
 
 
 def unheld(
     bench: Bench, batch: Any, tags: Iterable[str], names: Iterable[str]
 ) -> list[BranchModel]:
-    """
-    The cases with any of `tags`, and those named, that the batch doesn't
-    hold yet: a vignette once, under the name it came by first.
-    """
     held = set(
         CaseTrailModel.objects.filter(
             fingerprint__in=[case["fingerprint"] for case in batch.cases]
@@ -121,9 +104,7 @@ class CellRow:
     label: str
     set: dict[str, str]
     seed: int | None
-    # unseeded for greedy sampling, though the batch has a seed
     greedy: bool
-    # the page of the configuration with what the cell sets in it, as it is now
     page: str | None = None
 
 
@@ -135,8 +116,6 @@ class HeldBackRow:
 
 @dataclass(frozen=True)
 class Some:
-    """Names, as many as a page shows, and how many more there are."""
-
     shown: list[str]
     more: int
 
@@ -147,11 +126,6 @@ class Some:
 
 @dataclass(frozen=True)
 class ScorerRow:
-    """
-    A scorer: how many of the cells offer what it reads, and, where any does,
-    which of the cases it can hold them to.
-    """
-
     name: str
     view: str
     target_kind: str | None
@@ -163,8 +137,6 @@ class ScorerRow:
 
 @dataclass(frozen=True)
 class Shown:
-    """A batch's plan as its pages show it."""
-
     configuration: str
     cells: list[CellRow]
     held_back: list[HeldBackRow]
@@ -191,7 +163,6 @@ class Shown:
             cells=[
                 CellRow(
                     cell["label"],
-                    # in the slices' order, which the database doesn't keep
                     {
                         entity: cell["set"][entity]
                         for entity in SLICES
@@ -226,7 +197,6 @@ def shown(plan: Plan, identity: str | None = None) -> Shown:
 
 
 def scorers_of(bench: Bench, plan: Plan) -> list[ScorerRow]:
-    """Each scorer, as `show` counts it, over the plan's cells and cases."""
     scoring = Scoring(bench.identity)
     offered = {scorer.name: 0 for scorer in scoring.scorers}
     held: dict[str, HeldTo] = {}
@@ -238,7 +208,6 @@ def scorers_of(bench: Bench, plan: Plan) -> list[ScorerRow]:
         for scorer in scoring.scorers:
             offered[scorer.name] += scorer.view in output.views
 
-        # which cases a scorer can hold a cell to is the output's and the cases'
         if output.fingerprint in outputs:
             continue
 

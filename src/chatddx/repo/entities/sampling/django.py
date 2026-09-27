@@ -16,7 +16,6 @@ from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
 class SamplingTrailModel(TrailModel):
     defaults = CharField(max_length=32)
 
-    # doubles, like the numbers a request carries
     temperature = FloatField(null=True, blank=True)
     top_p = FloatField(null=True, blank=True)
     top_k = IntegerField(null=True, blank=True)

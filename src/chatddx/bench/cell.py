@@ -25,12 +25,6 @@ NONE = "none"
 
 @dataclass(frozen=True)
 class Kept:
-    """
-    A cell as a batch keeps it: by the names it was put together from, with
-    what it came to and the seed its trials take. The bench puts it together
-    again, as it was or not at all (Bench.cell_as_kept).
-    """
-
     configuration: str
     stack: str
     set: Mapping[str, str]
@@ -41,18 +35,12 @@ class Kept:
 
 @dataclass(frozen=True, eq=False)
 class Cell:
-    """
-    A configuration and a stack, and any slice's variation held in place of
-    the configuration's. A cell never changes: each change is another cell.
-    """
-
     configuration: ConfigurationBranchOut | None = None
     name: str = ""
     variations: Mapping[str, Any] = field(default_factory=dict[str, Any])
     stack: StackBranchOut | None = None
 
     def using(self, configuration: Any, name: str) -> "Cell":
-        """The configuration in the cell, as `name`, and nothing set in it."""
         return replace(
             self,
             configuration=ConfigurationBranchOut.model_validate(configuration),
@@ -85,7 +73,6 @@ class Cell:
 
     @property
     def set_names(self) -> dict[str, str]:
-        """What is set in the cell in place of the configuration's, by name."""
         return {
             entity: self.set_name(entity)
             for entity in SLICES
@@ -93,7 +80,6 @@ class Cell:
         }
 
     def holds(self, entity: str, variation: Any) -> bool:
-        """Whether `variation` is the configuration's own; None, no toolset."""
         assert self.configuration
 
         own = getattr(self.configuration.trail, entity)
@@ -104,7 +90,6 @@ class Cell:
         return own is not None and own.fingerprint == variation.trail.fingerprint
 
     def set(self, entity: str, variation: Any) -> "Cell":
-        """`variation` held in place of the configuration's; None takes it out."""
         if variation is None and entity not in OPTIONAL:
             raise ValueError(
                 f"a configuration always has a {entity}: only a toolset can be none"
@@ -125,7 +110,6 @@ class Cell:
 
     @property
     def fingerprint(self) -> str:
-        """The fingerprint of the configuration the cell comes to, set or not."""
         return ConfigurationTrailIn.model_validate(
             self.slices, from_attributes=True
         ).fingerprint
@@ -140,7 +124,6 @@ class Cell:
         return getattr(self.configuration.trail, entity)
 
     def kept(self, seed: int | None) -> Kept:
-        """The cell as a batch keeps it, its trials under `seed`."""
         assert self.configuration and self.stack
 
         return Kept(
@@ -153,7 +136,6 @@ class Cell:
         )
 
     def described(self, case: str, seed: int | None) -> str:
-        """What runs, as a run's conversation is described."""
         assert self.stack
         seeded = f" (seed {seed})" if seed is not None else ""
 

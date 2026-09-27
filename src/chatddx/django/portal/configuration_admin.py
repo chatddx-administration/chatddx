@@ -1,12 +1,4 @@
 # pyright: basic
-"""
-The configurations' pages: the owner's configurations, and a configuration's
-own page, read only, at the version asked for, with whatever variations
-were set in it: what it asks and how, slice by slice, what each variation
-set does in place of the configuration's own, and what its latest version
-changed.
-"""
-
 from typing import Any, override
 
 from django.contrib import admin
@@ -25,7 +17,6 @@ from chatddx.django.portal.models import Configuration
 from chatddx.django.portal.owners import identity_of
 from chatddx.repo.queries import qs_head
 
-# what the portal calls a configuration, for the model holds no words of the portal's
 Configuration._meta.verbose_name = _("configuration")
 Configuration._meta.verbose_name_plural = _("configurations")
 
@@ -38,7 +29,6 @@ class ConfigurationAdmin(ModelAdmin):
 
     @override
     def get_list_display(self, request: HttpRequest) -> Any:
-        # each slice by the name the owner has for its variation, looked up once a page
         bench = Bench(identity_of(request))
 
         def column(entity: Any) -> Any:
@@ -64,7 +54,6 @@ class ConfigurationAdmin(ModelAdmin):
 
     @override
     def get_queryset(self, request: HttpRequest) -> Any:
-        """The latest version of each of the owner's configurations, as the Batch plans with."""
         return qs_head(
             super().get_queryset(request), identity_of(request)
         ).select_related(*(f"trail__{entity}" for entity in SLICES))
@@ -82,7 +71,6 @@ class ConfigurationAdmin(ModelAdmin):
         return False
 
     def _row(self, request: HttpRequest, object_id: str) -> Configuration:
-        """A version of a configuration the owner reads, or none to be found."""
         if not self.has_view_permission(request):
             raise PermissionDenied
 
@@ -107,7 +95,6 @@ class ConfigurationAdmin(ModelAdmin):
         form_url: str = "",
         extra_context: Any = None,
     ) -> Any:
-        """The version's page, with each variation its address sets in it."""
         identity = identity_of(request)
         row = self._row(request, object_id)
         shown = configurations.shown(
@@ -117,7 +104,6 @@ class ConfigurationAdmin(ModelAdmin):
             **self.admin_site.each_context(request),
             "title": shown.label,
             "opts": self.opts,
-            # what the header names: the configuration
             "original": row,
             "shown": shown,
         }

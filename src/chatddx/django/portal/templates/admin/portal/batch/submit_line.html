@@ -4,7 +4,6 @@
 
 {% block submit-row %}
     {% if add %}
-        {# a batch is kept once its plan is confirmed: the form only asks for it #}
         {% component "unfold/components/button.html" with submit=1 form=opts.model_name|add:"_form" name="_save" class="w-full lg:w-auto" %}
             {% translate "Review the batch" %}
         {% endcomponent %}

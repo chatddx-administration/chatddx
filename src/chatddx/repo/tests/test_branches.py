@@ -240,9 +240,6 @@ def case(name: str, owner: str, *collaborators: str, vignette: str = "") -> None
     )
 
 
-# carol, dave and erin: the seed shares nothing with any of them
-
-
 def test_an_identity_sees_its_own_branches_and_those_shared_with_it():
     case("mine", "carol")
     case("shared", "dave", "carol")
@@ -360,7 +357,6 @@ def test_an_owner_s_branch_not_shared_isn_t_found_by_the_owner(
 
 
 def deleted_case(name: str, owner: str, deleted: bool = True) -> None:
-    """The owner's case taken out of sight, or brought back: its head again."""
     head = get_branch_model("case", owner, name)
     assert commit(
         head.trail,

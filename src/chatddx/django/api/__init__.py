@@ -1,6 +1,4 @@
 # pyright: basic
-"""What the repl does, over HTTP; `/api/docs` lists the endpoints."""
-
 from dataclasses import asdict
 from typing import Any, override
 
@@ -27,7 +25,6 @@ from chatddx.runtime.resolution import CellRefused
 class API(NinjaAPI):
     @override
     def get_openapi_schema(self, *args: Any, **kwargs: Any) -> Any:
-        """With the events a run streams, which no answer's schema names."""
         schema = super().get_openapi_schema(*args, **kwargs)
         event = TypeAdapter(Event).json_schema(
             ref_template="#/components/schemas/{model}"
@@ -53,7 +50,6 @@ api.add_router("/", runs.router)
 
 @api.get("/me", response=Me, tags=["identity"])
 def me(request: HttpRequest):
-    """Who the request acts as; it sets the CSRF cookie a session's posts send back."""
     _ = get_token(request)
     return Me(name=identity_of(request), guest=not request.user.is_authenticated)
 
@@ -70,7 +66,6 @@ def ambiguous(request: HttpRequest, error: Exception):
     return api.create_response(request, {"detail": str(error)}, status=409)
 
 
-# what stands in the way of a run, said before anything is sent
 NOT_READY: dict[type[NotReady], int] = {Incomplete: 400, NotOwn: 403, NoSecret: 409}
 
 

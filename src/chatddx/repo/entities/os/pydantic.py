@@ -23,7 +23,6 @@ class OsSpecs(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     hostname: str | None = None
-    # none for a container: it runs on its host's
     kernel: str | None = None
     nvidia_driver: str | None = None
     nixpkgs_rev: str | None = None

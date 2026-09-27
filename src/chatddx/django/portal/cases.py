@@ -1,12 +1,4 @@
 # pyright: basic
-"""
-A case as the portal shows it to its owner: its timeline, each version and
-what changed in it; what saving under a name does, and which other cases
-hold the vignette; what holds a version or the case where it is to be
-deleted, and deleting it; and the runs of a vignette, with the scores that
-go with the targets they are held to now.
-"""
-
 import difflib
 import re
 from dataclasses import dataclass, field
@@ -37,7 +29,6 @@ from chatddx.scoring.score import Scoring
 from chatddx.scoring.scorers.patterns import unread_pattern
 from chatddx.worker.models import JobModel
 
-# what the page calls each kind of target
 KINDS: dict[TargetKind, Any] = {
     "diagnosis": _("Diagnosis"),
     "warning": _("Warning"),
@@ -45,23 +36,17 @@ KINDS: dict[TargetKind, Any] = {
     "dont_miss": _("Don't miss"),
 }
 
-# the whitespace a vignette is saved without, around it
 AROUND = " \t\n\r\f\v"
 
-# the most runs a case's page lists, the latest
 SHOWN_RUNS = 10
 
-# what a vignette is compared by: its words, the spaces and the marks between
 _TOKEN = re.compile(r"\w+|\s+|[^\w\s]+")
 
-# how many of a vignette's words are kept, at least, for its change to go
-# word by word
 REWRITTEN = 0.4
 _WORD = re.compile(r"\w+")
 
 
 def versions_of(owner: str, name: str) -> list[CaseBranchModel]:
-    """The owner's case of the name: its timeline, the first version first."""
     return list(
         CaseBranchModel.objects.filter(owner__name=owner, name=name)
         .select_related("owner", "trail")
@@ -72,8 +57,6 @@ def versions_of(owner: str, name: str) -> list[CaseBranchModel]:
 
 @dataclass(frozen=True)
 class Shown:
-    """A target as the page shows it: none expected, or its text and pattern."""
-
     kind: TargetKind
     none: bool = False
     text: str | None = None
@@ -89,7 +72,6 @@ class Shown:
 
     @property
     def unread(self) -> str | None:
-        """Why the pattern doesn't parse, if it doesn't."""
         return None if self.pattern is None else unread_pattern(self.pattern)
 
 
@@ -105,8 +87,6 @@ def shown_of(kind: TargetKind, target: Target | None) -> Shown:
 
 @dataclass(frozen=True)
 class Version:
-    """A version of a case: which of how many, and what it holds."""
-
     row: CaseBranchModel
     number: int
     of: int
@@ -144,8 +124,6 @@ class Version:
 
 @dataclass(frozen=True)
 class Draft:
-    """A case as a page would save it, beside the case it would replace."""
-
     vignette: str
     language: str | None
     targets: list[Shown]
@@ -154,8 +132,6 @@ class Draft:
 
 
 class Content(Protocol):
-    """What a version or a draft holds, as a change is told of it."""
-
     @property
     def vignette(self) -> str: ...
 
@@ -174,8 +150,6 @@ class Content(Protocol):
 
 @dataclass(frozen=True)
 class Timeline:
-    """A case's versions, the first first."""
-
     rows: list[CaseBranchModel]
 
     @classmethod
@@ -206,19 +180,14 @@ class Timeline:
 
 @dataclass(frozen=True)
 class Change:
-    """What changed of one part of a case from a version to the next."""
-
     label: Any
     before: str = ""
     after: str = ""
-    # the vignette, word by word: each kept, gone or new
     words: list[tuple[str, str]] = field(default_factory=list)
-    # the vignette, rewritten too far to show word by word
     whole: bool = False
 
 
 def changes(before: Content | None, after: Content) -> list[Change]:
-    """What changed from `before` to `after`: nothing, where `after` is the first."""
     if before is None:
         return []
 
@@ -263,7 +232,6 @@ def changes(before: Content | None, after: Content) -> list[Change]:
 
 
 def said_of(target: Shown) -> str:
-    """A target in a few words, as a change shows it."""
     if target.none:
         return gettext("none expected")
 
@@ -274,10 +242,6 @@ def said_of(target: Shown) -> str:
 
 
 def vignette_change(before: str, after: str) -> Change:
-    """
-    What changed of the vignette: word by word, as it came of `before` (kept,
-    gone or new), or whole, where too little of it is kept to follow.
-    """
     kept = difflib.SequenceMatcher(
         None, _WORD.findall(before), _WORD.findall(after), autojunk=False
     ).ratio()
@@ -305,10 +269,6 @@ def vignette_change(before: str, after: str) -> Change:
 
 
 def needs_of(details: dict[str, Any]) -> dict[str, list[TargetKind]]:
-    """
-    What a case's targets still want, by kind: a text, a pattern, or a
-    pattern that parses. A target none is expected of wants nothing.
-    """
     targets = CaseDetails.model_validate(details).targets
     needs: dict[str, list[TargetKind]] = {"text": [], "pattern": [], "unread": []}
 
@@ -330,36 +290,24 @@ def needs_of(details: dict[str, Any]) -> dict[str, list[TargetKind]]:
 
 
 class Saving(StrEnum):
-    # a new version of the case the page is of
     SAME = "same"
-    # a new case, the page's own staying as it is
     NEW = "new"
-    # a new version of another case of the owner's
     ONTO = "onto"
-    # a new version of a case the owner deleted, which brings it back
     BACK = "back"
 
 
 @dataclass(frozen=True)
 class Said:
-    """What saving the page under a name does, said before it is done."""
-
     saving: Saving
     name: str
-    # the version the save makes of the case it saves to
     version: int
-    # the head of the case saved onto, where it is another
     onto: CaseBranchModel | None = None
-    # the version the page began from, where it is an earlier one
     since: int | None = None
-    # the page's case, where it is of one
     edited: str | None = None
-    # the owner's other cases whose names differ from it in capitals alone
     capitals: list[str] = field(default_factory=list)
 
     @property
     def confirms(self) -> bool:
-        """Whether the save asks first: it replaces another case's content."""
         return self.saving in (Saving.ONTO, Saving.BACK)
 
     @property
@@ -423,7 +371,6 @@ class Said:
 def said(
     owner: str, name: str, edited: str | None = None, since: int | None = None
 ) -> Said:
-    """What saving under `name` does, the page being of `edited`, where it is."""
     name = name.strip()
     rows = CaseBranchModel.objects.filter(owner__name=owner)
     count = rows.filter(name=name).count() if name else 0
@@ -453,12 +400,6 @@ def said(
 
 
 def vignette_of(owner: str, vignette: str) -> str:
-    """
-    The vignette as it is saved: its line endings made plain and the
-    whitespace around it gone; or, where it is a vignette of a case the owner
-    can see, but for its line endings and that whitespace, that one exactly,
-    so the two are one.
-    """
     bare = _plain(vignette).strip(AROUND)
     trails = CaseTrailModel.objects.annotate(
         bare=Func(
@@ -491,8 +432,6 @@ def _plain(text: str) -> str:
 
 @dataclass(frozen=True)
 class Sharer:
-    """Another case whose head has the vignette: the owner's, or shared with them."""
-
     name: str
     owner: str
     pk: int
@@ -503,11 +442,6 @@ class Sharer:
 def sharers(
     owner: str, vignette: str, name: str, edited: str | None = None
 ) -> list[Sharer]:
-    """
-    The cases, the owner's own and those shared with them, whose head has
-    the vignette, bar the page's own and the one it saves to: a shared one
-    named as the page names its case gives way to it.
-    """
     trail = (
         CaseTrailModel.objects.filter(
             fingerprint=CaseTrailIn(vignette=vignette).fingerprint
@@ -538,11 +472,6 @@ def sharers(
 
 @dataclass(frozen=True)
 class Held:
-    """
-    What of the owner's reads a version, or a case: the scores held to it,
-    and the runs and the trials of their batches on its vignette.
-    """
-
     scores: int = 0
     runs: int = 0
     trials: int = 0
@@ -552,7 +481,6 @@ class Held:
 
 
 def version_held(row: CaseBranchModel) -> Held:
-    """What holds a version: its scores, and its vignette's runs where no other version has it."""
     scores = ScoreModel.objects.filter(case_branch=row).count()
     another = (
         CaseBranchModel.objects.filter(
@@ -566,7 +494,6 @@ def version_held(row: CaseBranchModel) -> Held:
 
 
 def case_held(rows: list[CaseBranchModel]) -> Held:
-    """What holds a case: the scores held to its versions, and its vignettes' runs."""
     return Held(
         ScoreModel.objects.filter(case_branch__in=rows).count(),
         *_on(rows[0].owner_id, {row.trail_id for row in rows}),
@@ -581,17 +508,11 @@ def _on(owner_id: int, trails: set[int]) -> tuple[int, int]:
 
 
 class Deleted(StrEnum):
-    # nothing read it: its versions are gone
     GONE = "gone"
-    # taken out of sight, kept for what reads it
     HIDDEN = "hidden"
 
 
 def delete_case(owner: str, name: str) -> Deleted:
-    """
-    The owner's case deleted: gone, where nothing reads it, and else taken
-    out of sight, a version of it deleted made its head.
-    """
     rows = versions_of(owner, name)
 
     with transaction.atomic():
@@ -606,10 +527,6 @@ def delete_case(owner: str, name: str) -> Deleted:
 
 
 def restore(owner: str, name: str) -> None:
-    """
-    The owner's deleted case brought back: its deleting undone, where
-    nothing has read that since, and else a version of it not deleted.
-    """
     rows = versions_of(owner, name)
     head = rows[-1]
 
@@ -624,7 +541,6 @@ def restore(owner: str, name: str) -> None:
 
 
 def untagged(row: CaseBranchModel) -> None:
-    """The case's tags taken off its head, in place: batches by tag pass it by."""
     head = versions_of(row.owner.name, row.name)[-1]
     _ = commit(head.trail, _details(head, tags=[]))
 
@@ -635,14 +551,11 @@ def _details(row: CaseBranchModel, **changed: Any) -> CaseBranchDetails:
     )
 
 
-# what a score not yet made, for the target a run is held to now, shows
 OUTSTANDING = _("outstanding")
 
 
 @dataclass(frozen=True)
 class RunRow:
-    """A run of the vignette: when, which trial, and its score for each scorer shown."""
-
     run: RunModel
     cell: str
     scores: list[str]
@@ -650,22 +563,14 @@ class RunRow:
 
 @dataclass(frozen=True)
 class Runs:
-    """The owner's runs of a vignette, the latest first, and how they stand."""
-
     rows: list[RunRow]
     scorers: list[str]
     total: int
     outstanding: int
-    # the runs of the case's other vignettes, which keep their targets
     earlier: int
 
 
 def runs_of(owner: str, trail: int, others: set[int]) -> Runs:
-    """
-    The owner's runs of the vignette, each with its scores for the targets
-    it is held to now, as scoring has them; and those of the case's other
-    vignettes, counted.
-    """
     scoring = Scoring(owner)
     runs = list(
         RunModel.objects.filter(owner__name=owner, trial__case_id=trail)
@@ -716,7 +621,6 @@ def runs_of(owner: str, trail: int, others: set[int]) -> Runs:
 
 
 def score_again(owner: str, trail: int) -> int:
-    """The owner's runs of the vignette scored where they are outstanding: how many scores."""
     scoring = Scoring(owner)
     runs = (
         RunModel.objects.filter(owner__name=owner, trial__case_id=trail)

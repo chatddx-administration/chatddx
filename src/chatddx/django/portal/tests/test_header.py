@@ -11,7 +11,6 @@ pytestmark = pytest.mark.django_db
 
 
 def header_of(content: bytes) -> list[str]:
-    """What the page's header names, part by part, its chevrons left out."""
     found = re.search(rb"<h1[^>]*>(.*?)</h1>", content, re.DOTALL)
     assert found is not None, content
 

@@ -1,9 +1,3 @@
-"""
-The registry as an identity sees it, and what it takes to run a cell there:
-what the repl, the API and the portal's Batch share. A bench holds no cell;
-each asks it of the cells it holds.
-"""
-
 import secrets
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -81,7 +75,7 @@ class Ambiguous(NotFound):
 
 
 class NotReady(Exception):
-    """What stands in the way of running a cell, said before anything is sent."""
+    pass
 
 
 class Incomplete(NotReady):
@@ -89,7 +83,7 @@ class Incomplete(NotReady):
 
 
 class NotOwn(NotReady):
-    """Another's configuration, which runs once it is saved as one's own."""
+    pass
 
 
 class NoSecret(NotReady):
@@ -97,13 +91,11 @@ class NoSecret(NotReady):
 
 
 class Drifted(NotReady):
-    """A cell kept on a configuration that comes to another since."""
+    pass
 
 
 @dataclass(frozen=True)
 class Ready:
-    """A cell nothing stands in the way of: resolved, its secret at hand."""
-
     cell: Cell
     resolution: Resolution
     api_key: str | None
@@ -111,14 +103,11 @@ class Ready:
 
     @property
     def greedy(self) -> bool:
-        """Whether sampling is greedy, which a seed changes nothing of."""
         return greedy(self.resolution.sampling)
 
 
 @dataclass(frozen=True)
 class Trial:
-    """A ready cell on a case, with a seed or none: what a run is a go at."""
-
     ready: Ready
     case: int
     called: str
@@ -127,12 +116,10 @@ class Trial:
 
     @classmethod
     def of(cls, ready: Ready, case: Any, called: str, seed: int | None) -> "Trial":
-        """The cell on a case's trail, the case as `called`."""
         return cls(ready, case.pk, called, case.vignette, seed)
 
     @classmethod
     def on(cls, ready: Ready, case: BranchModel, seed: int | None) -> "Trial":
-        """The cell on a case's branch, as its name calls it."""
         return cls.of(ready, case.trail, case.name, seed)
 
     @property
@@ -159,7 +146,6 @@ class Saved:
     fingerprint: str
     what: Literal["created", "a new version", "unchanged"]
     copied: list[str]
-    # the cell, with the saved configuration in place of what it held
     cell: Cell
 
 
@@ -172,8 +158,6 @@ class Bench:
     ):
         self.identity: str = identity_name
         self.transport: Any = transport
-        # the kinds the identity lists and plans with its own of alone, as
-        # the portal does; others' it shares still name what it ran
         self.own: frozenset[EntityName] = frozenset(own)
 
         self._names: dict[tuple[EntityName, int], str] = {}
@@ -183,10 +167,6 @@ class Bench:
         self._names.clear()
 
     def visible(self, entity: EntityName) -> list[BranchModel]:
-        """
-        The heads of `entity` the identity can use, its own shadowing a shared
-        name; of a kind it keeps to its own of, those alone.
-        """
         models = select_visible_branch_models(
             entity, self.identity, SHARED_BY.get(entity)
         )
@@ -200,7 +180,6 @@ class Bench:
         return sorted({model.name for model in self.visible(entity)})
 
     def tags(self, entity: EntityName) -> list[str]:
-        """The tags of the branches of `entity` the identity can use."""
         return sorted(
             {tag.name for model in self.usable(entity) for tag in model.tags.all()}
         )
@@ -215,14 +194,12 @@ class Bench:
         ]
 
     def usable(self, entity: EntityName) -> list[BranchModel]:
-        """As `visible`, with their tags."""
         models = self.visible(entity)
         prefetch_related_objects(models, "tags")
 
         return models
 
     def cases(self, tags: Iterable[str] = ()) -> list[BranchModel]:
-        """The cases with any of `tags`, or all, a vignette once, by name."""
         tags = tuple(tags)
         distinct: dict[int, BranchModel] = {}
 
@@ -282,7 +259,6 @@ class Bench:
         return get_shared_branch_model("configuration", self.identity, owner, branch)
 
     def called(self, name: str) -> str:
-        """What the cell calls a configuration: what it was named, one's own bare."""
         return name.removeprefix(f"{self.identity}/")
 
     def variation_named(self, entity: EntityName, name: str) -> BranchOut[Any, Any]:
@@ -302,10 +278,6 @@ class Bench:
         stack: str | None = None,
         variations: Mapping[str, str | None] | None = None,
     ) -> Cell:
-        """
-        A cell put together from names as `use`, `on` and `set` would, each
-        looked up before any is put in; `none` takes the toolset out.
-        """
         cell = Cell()
         held = {entity: name for entity, name in (variations or {}).items() if name}
 
@@ -334,10 +306,6 @@ class Bench:
         return cell
 
     def cell_as_kept(self, kept: Kept) -> Cell:
-        """
-        The cell put together again as a batch kept it, or Drifted where its
-        configuration, or what is set in it, comes to another since.
-        """
         cell = self.cell_of(kept.configuration, kept.stack, kept.set)
 
         if cell.fingerprint != kept.fingerprint:
@@ -349,7 +317,6 @@ class Bench:
         return [StackBranchOut.model_validate(model) for model in self.visible("stack")]
 
     def facts_of(self, stack: StackBranchOut) -> LLMFacts:
-        """The facts of the stack's LLM, as the identity's branch has them."""
         return self.llm_of(stack)[0]
 
     def llm_of(self, stack: StackBranchOut) -> tuple[LLMFacts, int | None]:
@@ -390,10 +357,6 @@ class Bench:
         )
 
     def ready(self, cell: Cell) -> Ready:
-        """
-        The cell, resolved on its stack, or what stands in its way: NotReady,
-        or CellRefused with every refusal.
-        """
         if not (cell.configuration and cell.stack):
             raise Incomplete("the cell needs a configuration and a stack")
 
@@ -425,7 +388,6 @@ class Bench:
         cases: list[BranchModel],
         scoring: Scoring | None = None,
     ) -> list[HeldTo]:
-        """Each scorer, and which of `cases` it can hold the cell to."""
         views = cell.slices.output.views
         found: list[HeldTo] = []
 
@@ -520,11 +482,6 @@ class Bench:
         )
 
     def save(self, cell: Cell, name: str) -> Saved:
-        """
-        Keep the cell's configuration, what is set in it included, as the
-        identity's own. What it reaches becomes the identity's too, as the
-        archive has it: a tool keeps what it runs.
-        """
         assert cell.configuration
 
         if "/" in name:

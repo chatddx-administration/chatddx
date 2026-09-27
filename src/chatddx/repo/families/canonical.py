@@ -63,8 +63,6 @@ def _utf16(key: str) -> bytes:
 
 
 def _string(value: str) -> str:
-    # json's own escapes are the scheme's: " and \ escaped, \b \f \n \r \t by
-    # name, any other control character as \u00xx, and nothing else
     return json.dumps(value, ensure_ascii=False)
 
 

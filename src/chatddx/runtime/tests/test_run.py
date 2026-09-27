@@ -379,8 +379,6 @@ async def test_each_call_is_run_and_what_it_returned_goes_back(
 
 
 def calling(tool: str, arguments: dict[str, Any]) -> httpx2.MockTransport:
-    """The fake vLLM, calling `tool` with `arguments`, whatever it declares."""
-
     def handler(request: httpx2.Request) -> httpx2.Response:
         body = json.loads(request.content)
 
@@ -530,7 +528,6 @@ async def test_an_llm_that_goes_on_with_nothing_but_whitespace_is_stopped(cell: 
     assert bytes(response).count(b'"content": "\\n"') == RUNAWAY
     assert isinstance(answered, ModelResponse)
     assert answered.state == "interrupted"
-    # the closing brace never came: what came before is closed where it stops
     assert str(answered.text).rstrip().endswith("]")
     assert run.salvaged()["acute_warning"] == "fake acute warning"
     assert invalid(resolved.coercion.schema, run.salvaged()) is None
@@ -577,7 +574,6 @@ async def test_a_runaway_over_http_is_cut_off_and_the_server_hears_it(
 
 
 def writing(*tokens: str, field: str = "content") -> httpx2.MockTransport:
-    """A server that streams `tokens` in `field`, a chunk each, then an answer."""
     deltas = [{field: token} for token in tokens] + [{"content": "A cough."}]
 
     async def streamed() -> AsyncIterator[bytes]:
@@ -619,7 +615,6 @@ async def test_whitespace_short_of_a_runaway_is_written_as_it_comes(cell: Cell):
 async def test_whitespace_counts_before_the_answer_and_in_the_thinking(
     cell: Cell, field: str
 ):
-    # before the answer, pydantic-ai drops it as the LLM's profile asks
     run = Run(
         cell("free-text", "qwen3-8b-awq@fake"),
         CASE,

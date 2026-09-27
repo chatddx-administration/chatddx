@@ -18,7 +18,6 @@ def qs_head[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
 
 
 def head_of[T: BranchModel](qs: QuerySet[T], owner_name: str, name: str) -> T | None:
-    """The head of `owner_name`'s branch `name`, as `qs_head` has it, if it has one."""
     return (
         qs_owned(qs, owner_name)
         .filter(name=name)
@@ -29,15 +28,10 @@ def head_of[T: BranchModel](qs: QuerySet[T], owner_name: str, name: str) -> T | 
 
 
 def deleted(model: BranchModel) -> bool:
-    """Whether the row says its timeline is deleted: as its head, it is."""
     return model.details.get("deleted") is True
 
 
 def deleted_timelines(models: Sequence[BranchModel]) -> set[tuple[int, str]]:
-    """
-    The timelines, by owner and name, of those of `models` whose head is
-    deleted: a row goes with its timeline, head or not.
-    """
     wanted = {(model.owner_id, model.name) for model in models}
 
     if not wanted:
@@ -62,11 +56,6 @@ def deleted_timelines(models: Sequence[BranchModel]) -> set[tuple[int, str]]:
 
 
 def live_first[T: BranchModel](models: Sequence[T]) -> list[T]:
-    """
-    `models`, less the rows of a deleted timeline whose owner has a live one
-    among them: a deleted branch gives way to a live one of its owner's, and
-    stands, for what it held, where its owner has no other.
-    """
     gone = deleted_timelines(models)
     live = {
         model.owner_id for model in models if (model.owner_id, model.name) not in gone
@@ -100,8 +89,6 @@ def _head[T: BranchModel](qs: QuerySet[T], owned: QuerySet[T]) -> QuerySet[T]:
         .values_list("id", flat=True)
     )
 
-    # the heads by id alone: joined to the collaborators `owned` is filtered
-    # on, a branch would come once for each
     return (
         qs.filter(id__in=canonical_ids)
         .select_related("owner", "trail")

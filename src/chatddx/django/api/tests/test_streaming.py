@@ -1,11 +1,4 @@
 # pyright: basic
-"""
-Runs stream as they come over WSGI and ASGI alike: the gated fake vLLM holds
-its answer back after its first token until the client has seen it, which a
-response that waited for the run to end would never let through. The server
-is served in the test's transaction, as Django's test client serves it.
-"""
-
 import asyncio
 import json
 import sys
@@ -63,7 +56,6 @@ def gated(through: Callable[[Any], None]) -> Gated:
 
 @pytest.fixture
 def held_open() -> Iterator[None]:
-    """The test's connection, kept open across requests as the test client keeps it."""
     request_started.disconnect(close_old_connections)
     request_finished.disconnect(close_old_connections)
     yield
@@ -73,7 +65,6 @@ def held_open() -> Iterator[None]:
 
 @pytest.fixture
 def cookie(django_user_model: Any) -> str:
-    """alice's session, and a CSRF token beside it."""
     client = Client()
     client.force_login(django_user_model.objects.create_user(username="alice"))
     session = client.cookies[settings.SESSION_COOKIE_NAME].value
@@ -83,7 +74,6 @@ def cookie(django_user_model: Any) -> str:
 def asgi(
     request: dict[str, Any], received: Callable[[bytes], bool], cookie: str
 ) -> list[dict[str, Any]]:
-    """Serve `request` as alice; the client goes away once `received` says so."""
     body = json.dumps(request["body"]).encode()
     scope = {
         "type": "http",
@@ -135,7 +125,6 @@ def asgi(
 def wsgi(
     request: dict[str, Any], received: Callable[[bytes], bool], cookie: str
 ) -> bytes:
-    """Serve `request` as alice; the client goes away once `received` says so."""
     body = json.dumps(request["body"]).encode()
     environ = {
         "REQUEST_METHOD": request["method"],

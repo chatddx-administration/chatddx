@@ -140,7 +140,6 @@ def test_a_run_with_no_answer_names_nothing_without_asking_the_grader():
 @pytest.mark.slow
 def test_inspect_loads_the_judge_from_its_file_to_score_a_log(tmp_path: Path):
     path = tmp_path / "log.eval"
-    # a run with no answer, which the grader isn't asked about
     _ = write_eval_log(log_of(views=None), str(path))
     judge = Path(__file__).parents[1] / "judge.py"
 

@@ -1,11 +1,3 @@
-# pyright: basic
-"""
-The worker's queue: each job a trial of a batch's, kept for later or put in
-the queue, run once a slot of its stack's comes free, and how it went; what
-each owner asked of the worker, to pause their jobs or stop them; and when
-the worker was last at the queue.
-"""
-
 from __future__ import annotations
 
 from enum import IntEnum, StrEnum
@@ -37,29 +29,19 @@ __all__ = ["ControlsModel", "JobModel", "WorkerStateModel"]
 
 
 class Status(StrEnum):
-    # kept for later: in the queue once its batch is run
     STORED = "stored"
-    # in the queue, till a slot of its stack's comes free
     QUEUED = "queued"
     RUNNING = "running"
-    # the LLM answered, however well, and the run is written down
     COMPLETED = "completed"
-    # the LLM or the server failed, or the run couldn't be written down
     ERRORED = "errored"
-    # stopped as it ran, written down as stopped
     ABORTED = "aborted"
-    # taken out of the queue by a stop before its turn
     STOPPED = "stopped"
-    # not sent: what stood in its way when its turn came is its reason
     SKIPPED = "skipped"
-    # its worker went away while it ran
     LOST = "lost"
 
 
-# what is on its way: in the queue, or running
 UNDER_WAY = (Status.QUEUED, Status.RUNNING)
 
-# what the worker took up and is done with, one way or another
 TAKEN_UP = (
     Status.COMPLETED,
     Status.ERRORED,
@@ -68,7 +50,6 @@ TAKEN_UP = (
     Status.LOST,
 )
 
-# what a batch resumed runs: all but what completed, and what is on its way
 UNFINISHED = (
     Status.STORED,
     Status.ERRORED,
@@ -78,16 +59,13 @@ UNFINISHED = (
     Status.LOST,
 )
 
-# what a stop took out, and what went wrong otherwise
 STOPPED_BY = (Status.STOPPED, Status.ABORTED)
 FAILED = (Status.ERRORED, Status.SKIPPED, Status.LOST)
 
 
 class Stopping(IntEnum):
     NO = 0
-    # once the jobs running are done
     AFTER = 1
-    # the jobs running too, written down as stopped
     NOW = 2
 
 
@@ -103,10 +81,8 @@ class JobModel(Model):
         related_name="+",
     )
     owner_id: int
-    # what put it in, as it names itself: the portal's batch
     batch = UUIDField(db_index=True)
 
-    # the trial: the cell as its batch keeps it (Kept), the case, the seed
     configuration = CharField(max_length=255)
     stack = CharField(max_length=255, db_index=True)
     set: JSONField[dict[str, str]] = JSONField(default=dict, blank=True)
@@ -131,13 +107,11 @@ class JobModel(Model):
         null=True,
         blank=True,
     )
-    # when it was put in the queue last: its place in it
     queued = DateTimeField(
         default=None,
         null=True,
         blank=True,
     )
-    # what the LLM has written so far, and whether the server counted it
     tokens = PositiveIntegerField(default=0)
     counted = BooleanField(default=False)
     started = DateTimeField(
@@ -145,7 +119,6 @@ class JobModel(Model):
         null=True,
         blank=True,
     )
-    # when the worker last said it was still at it
     beat = DateTimeField(
         default=None,
         null=True,
@@ -183,15 +156,12 @@ class JobModel(Model):
 
     @property
     def tallied(self) -> str:
-        """Its tokens, as the repl's batch tallies them."""
         return (
             str(self.tokens) if self.counted or not self.tokens else f"~{self.tokens}"
         )
 
 
 class ControlsModel(Model):
-    """What an owner asked of the worker: to pause their jobs, or to stop them."""
-
     class Meta:
         app_label = "worker"
         db_table = "worker_controls"
@@ -207,7 +177,6 @@ class ControlsModel(Model):
 
     @classmethod
     def of(cls, owner: IdentityModel, lock: bool = False) -> ControlsModel:
-        """The owner's, held till the transaction under way ends where `lock`."""
         qs = cls.objects.select_for_update() if lock else cls.objects.all()
         controls, _ = qs.get_or_create(owner=owner)
 
@@ -215,7 +184,6 @@ class ControlsModel(Model):
 
     @classmethod
     def holding(cls) -> list[int]:
-        """The owners whose jobs wait in the queue: paused, or stopping."""
         return list(
             cls.objects.exclude(paused=False, stopping=Stopping.NO).values_list(
                 "owner_id", flat=True
@@ -224,8 +192,6 @@ class ControlsModel(Model):
 
 
 class WorkerStateModel(Model):
-    """When the worker was last at the queue: one row."""
-
     class Meta:
         app_label = "worker"
         db_table = "worker_state"
@@ -238,7 +204,6 @@ class WorkerStateModel(Model):
 
     @classmethod
     def row(cls, lock: bool = False) -> WorkerStateModel:
-        """The one row, held till the transaction under way ends where `lock`."""
         qs = cls.objects.select_for_update() if lock else cls.objects.all()
         state, _ = qs.get_or_create(pk=1)
 

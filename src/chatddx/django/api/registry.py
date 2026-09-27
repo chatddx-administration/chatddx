@@ -1,6 +1,4 @@
 # pyright: basic
-"""The registry as the identity sees it, entity by entity, in the repo's schemas."""
-
 from django.db.models import prefetch_related_objects
 from django.http import HttpRequest
 from ninja import Query, Router

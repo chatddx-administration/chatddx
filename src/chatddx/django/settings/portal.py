@@ -1,10 +1,4 @@
 # pyright: basic
-"""
-The portal's settings: the minimal ones, and what serving the portal takes on
-top of them. The CLI, the repl and the tests of everything but the portal
-keep to the minimal ones, so nothing here reaches them.
-"""
-
 import os
 
 from django.core.exceptions import ImproperlyConfigured
@@ -17,7 +11,6 @@ from .base import DATABASES, INSTALLED_APPS
 
 INSTALLED_APPS = [
     "chatddx.django.portal",
-    # before django.contrib.admin, whose site it replaces
     "unfold",
     *INSTALLED_APPS,
     "corsheaders",
@@ -35,12 +28,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# its tests' database, apart from the one the rest's tests keep
 DATABASES = {
     "default": {**DATABASES["default"], "TEST": {"NAME": "test_chatddx_portal"}}
 }
 
-# unfold's login form carries no `next`: where a login goes by default
 LOGIN_REDIRECT_URL = "admin:index"
 
 CSRF_TRUSTED_ORIGINS = os.environ["TRUSTED_ORIGINS"].split(",")
@@ -97,7 +88,6 @@ match os.environ.get("DJANGO_MODE", "dev"):
 
 
 def _at(url_name: str):
-    """Whether a request is at the page of `url_name`: a tab of its own."""
     return lambda request: request.resolver_match.url_name == url_name
 
 
@@ -213,7 +203,6 @@ UNFOLD = {
             },
         ],
     },
-    # the Batches' own pages: the batches, and the worker at their queue
     "TABS": [
         {
             "models": ["portal.batch"],

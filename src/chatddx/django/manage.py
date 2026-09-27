@@ -1,7 +1,9 @@
-#!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
+# pyright: basic
 
+import os
 import sys
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "chatddx.django.settings.portal"
 
 
 def main():

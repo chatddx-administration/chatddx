@@ -1,10 +1,4 @@
 # pyright: basic
-"""
-A request acts as its user's identity, by name, or the guest's. A session's
-unsafe requests carry its CSRF token (`X-CSRFToken`): a run spends what the
-identity's secrets pay for.
-"""
-
 from typing import Any, cast
 
 from django.conf import settings
@@ -24,7 +18,6 @@ class Identified(APIKeyCookie):
     param_name: str = settings.SESSION_COOKIE_NAME
 
     def __init__(self) -> None:
-        # checked in `authenticate`, for a session's requests alone
         super().__init__(csrf=False)
 
     def authenticate(self, request: HttpRequest, key: str | None) -> str:

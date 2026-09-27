@@ -32,7 +32,6 @@ def test_a_session_can_be_piped_in(tmp_path: Path):
     )
 
     assert result.exit_code == 0, result.output
-    # a seed drawn as it starts, in the prompt
     assert re.search(
         r"alice #\d{1,5}> cell free-text qwen3-8b-awq@fake\n", result.output
     )
@@ -40,9 +39,6 @@ def test_a_session_can_be_piped_in(tmp_path: Path):
         r"alice free-text×qwen3-8b-awq@fake #\d{1,5}> show\n", result.output
     )
     assert "the LLM's default, 'on'" in result.output
-
-
-# a transactional test may find the session's seed flushed away: alice will do
 
 
 @pytest.mark.django_db(transaction=True)

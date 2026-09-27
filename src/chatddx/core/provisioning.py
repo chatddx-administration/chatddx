@@ -38,7 +38,6 @@ receipt_text = {
 def wipe_data(
     user_name: Annotated[str, typer.Argument()],
 ):
-    # all of it or none: what another user's history read stays
     try:
         with transaction.atomic():
             lines = _wipe_history(user_name) + _wipe_branches(user_name)
@@ -53,12 +52,6 @@ def wipe_data(
 
 
 def _wipe_history(user_name: str) -> list[str]:
-    """
-    The jobs the user's batches gave the worker, their scores and runs, the
-    conversations their messages were in, and the trials no one else's run
-    is left of.
-    """
-    # what refers to a row goes before the row
     jobs = _removed(JobModel.objects.filter(owner__name=user_name))
     scores = _removed(ScoreModel.objects.filter(owner__name=user_name))
     runs = _removed(RunModel.objects.filter(owner__name=user_name))
@@ -140,15 +133,12 @@ def init_data(
         ),
     ] = settings.INVENTORY_PATH / "giftbag-inventory.toml",
 ):
-    # Both are read before either is written, so a mistake in one commits
-    # nothing of the other.
     archived = _parse(inventory_path, settings.ARCHIVE_IDENTITY_NAME)
     giftbag = _parse(giftbag_inventory_path, user_name) if with_giftbag else None
 
     user = ensure_identity(user_name)
     archive_receipt = _commit("archive", archived)
 
-    # The archive keeps the inventory, and its users collaborate on it.
     for entity in ENTITY_NAMES:
         _share(entity, list(archive_receipt[entity]), user)
 
@@ -157,7 +147,6 @@ def init_data(
 
 
 def _share(entity: EntityName, names: list[str], user: IdentityModel) -> None:
-    """The heads of the archive's branches of `names`, shared with `user`."""
     if not names:
         return
 

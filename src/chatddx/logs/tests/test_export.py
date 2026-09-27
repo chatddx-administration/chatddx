@@ -18,7 +18,6 @@ pytestmark = pytest.mark.django_db
 
 
 def log_of(identity: str = "alice") -> EvalLog:
-    """The log of the cell `identity` ran last."""
     latest = RunModel.objects.filter(owner__name=identity).latest("pk")
 
     return cell_log(identity, latest.trial.configuration, latest.trial.stack, "cell")

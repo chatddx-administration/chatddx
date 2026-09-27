@@ -21,7 +21,6 @@ type SamplingDefaults = Literal["generation_config", "recommended"]
 class SamplingFields(BaseModel):
     temperature: Annotated[float, Field(ge=0, le=2)] | None = None
     top_p: Annotated[float, Field(gt=0, le=1)] | None = None
-    # -1 turns it off
     top_k: Annotated[int, Field(ge=-1)] | None = None
     max_tokens: PositiveInt | None = None
     presence_penalty: Annotated[float, Field(ge=-2, le=2)] | None = None

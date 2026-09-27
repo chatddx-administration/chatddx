@@ -41,17 +41,11 @@ def shown(client: Client, url: str) -> Any:
 
 
 def fields(of: Any) -> dict[str, Any]:
-    """A part's fields on the page, or the stack's own: each its value, or its items."""
     shown = of.fields if hasattr(of, "fields") else of.details
     return {str(field.label): field.items or field.value for field in shown}
 
 
 class Serving(FakeTransport):
-    """
-    The fake vLLM, but for what it says of itself: the LLMs it lists at GET
-    /v1/models and the version at GET /version, as a test has them; or down.
-    """
-
     def __init__(
         self,
         listed: list[dict[str, Any]] | None = None,
@@ -89,10 +83,6 @@ class Serving(FakeTransport):
 def checked(
     client: Client, url: str, transport: Any, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[dict[str, tuple[str, str]], list[dict[str, Any]]]:
-    """
-    The stack's page's Test, run through `transport`: each check as it came
-    to stand, its state and what it said; and what the LLM wrote as it came.
-    """
     monkeypatch.setattr(checking, "TRANSPORT", transport)
     page = client.get(url)
     response: Any = client.post(page.context["test_url"])
@@ -206,7 +196,6 @@ def test_a_run_s_stack_is_the_version_it_read_its_llm_s_too(
     assert details["Stack"].link == read
     assert details["LLM"].link == f"{read}#llm"
 
-    # the stack and its LLM saved again since: the run's page is as it read them
     recommit("stack", FAKE, max_jobs=2)
     recommit("llm", "qwen3-8b-awq", source=None)
     page = shown(alice, read)
@@ -217,7 +206,6 @@ def test_a_run_s_stack_is_the_version_it_read_its_llm_s_too(
     assert (llm.version.number, llm.version.of) == (1, 2)
     assert [str(change.label) for change in llm.newer.changes] == ["Source"]
     assert fields(llm)["Source"] != "—"
-    # the LLM's latest where the page is the stack's own
     [latest_llm] = [
         part for part in shown(alice, page.newer.url).parts if part.key == "llm"
     ]
@@ -254,10 +242,8 @@ def test_the_test_checks_the_stack_live_and_streams_how_it_goes(
     assert {key: state for key, (state, _) in checks.items()} == {
         "reached": "passed",
         "served": "passed",
-        # the fake loads no snapshot: it serves the LLM by its name
         "snapshot": "warned",
         "context": "passed",
-        # the fake is no vLLM of a version
         "engine": "skipped",
         "answers": "passed",
         "off": "passed",
@@ -269,7 +255,6 @@ def test_the_test_checks_the_stack_live_and_streams_how_it_goes(
     assert checks["served"][1] == "serves Qwen/Qwen3-8B-AWQ"
     assert checks["context"][1] == "32768 tokens, the whole of what the LLM takes"
     assert checks["tools"][1] == "sentinel_op(v1=1, v2=1) returned 0, and it answered"
-    # the answer streamed as it came, its thinking first
     assert [event["stream"] for event in streamed if event["check"] == "answers"][
         :1
     ] == ["thinking"]
@@ -325,8 +310,6 @@ def test_the_test_of_a_server_refusing_the_credential_says_so(
 
 
 class Broken(FakeTransport):
-    """The fake vLLM, breaking the Test itself with what no check looks for."""
-
     @override
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         raise RuntimeError("the wires crossed")
