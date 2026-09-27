@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -27,7 +27,6 @@ from chatddx.repo.store.branch import (
     commit,
     commit_copies,
     get_branch_model,
-    get_branch_out,
     get_shared_branch_model,
     get_visible_branch_model,
     select_visible_branch_models,
@@ -54,7 +53,9 @@ def machine_details(owner: IdentityModel, **details: Any) -> MachineBranchDetail
 def test_a_commit_makes_a_version_the_head(owner: IdentityModel):
     assert commit(MACHINE, machine_details(owner, unreliable=True))
 
-    spec = cast(MachineBranchOut, get_branch_out("machine", owner.name, "box"))
+    spec = MachineBranchOut.model_validate(
+        get_branch_model("machine", owner.name, "box")
+    )
 
     assert spec.trail.fingerprint == MACHINE.fingerprint
     assert spec.details.unreliable is True
@@ -106,7 +107,9 @@ def test_a_change_to_details_is_a_new_version(
     assert first.details["facts"]["reasoning"]["off"] is None
     assert second.details["facts"]["reasoning"]["off"] == {"refused": "always reasons"}
 
-    head = cast(LLMBranchOut, get_branch_out("llm", owner.name, "gpt-oss-20b"))
+    head = LLMBranchOut.model_validate(
+        get_branch_model("llm", owner.name, "gpt-oss-20b")
+    )
 
     assert head.details.facts.reasoning.resolve("off") == (
         "off",

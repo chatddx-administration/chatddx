@@ -4,15 +4,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from django.contrib.postgres.fields.array import ArrayField
-from django.db.models import JSONField
 
 if TYPE_CHECKING:
     from chatddx.repo.families.django import TrailModel
 
-    TypedJSONField = JSONField[dict[str, Any]]
     TypedArrayField = ArrayField[list[int]]
 else:
-    TypedJSONField = JSONField
     TypedArrayField = ArrayField
 
 

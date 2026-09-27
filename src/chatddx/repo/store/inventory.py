@@ -3,7 +3,6 @@ from typing import Any, Literal, cast
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identity
 from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
-from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.repo.inventories import (
     InventoryBranchModel,
     InventoryTrailIn,
@@ -46,21 +45,6 @@ def commit_parsed_inventory(inventory: ParsedInventory) -> InventoryCommitReceip
         entity: {
             name: commit(trail, branch_details, owners[branch_details.owner])
             for name, (trail, branch_details) in getattr(inventory, entity).items()
-        }
-        for entity in ENTITY_NAMES
-    }
-
-
-def commit_trails_in(
-    inventory: InventoryTrailIn,
-    owner_name: str,
-) -> InventoryCommitReceipt:
-    owner = ensure_identity(owner_name)
-
-    return {
-        entity: {
-            name: commit(trail, BranchDetails(name=name, owner=owner_name), owner)
-            for name, trail in getattr(inventory, entity).items()
         }
         for entity in ENTITY_NAMES
     }

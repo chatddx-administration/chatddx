@@ -7,7 +7,6 @@ from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import TrailModel
 from chatddx.repo.families.pydantic import TrailIn, TrailOut
 from chatddx.repo.utils import resolve_trail
-from chatddx.utils import make_async
 
 
 def load_trail(
@@ -24,9 +23,6 @@ def load_trail(
         return trail_model
 
     return as_schema.model_validate(trail_model)
-
-
-load_trail_async = make_async(load_trail)
 
 
 def dump_trail[T: TrailModel](
@@ -87,6 +83,3 @@ def dump_trail[T: TrailModel](
         setattr(model, field_name, related)
 
     return model
-
-
-dump_trail_async = make_async(dump_trail)

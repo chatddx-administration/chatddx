@@ -6,7 +6,6 @@ from django.db.models import ForeignKey, OneToOneField
 
 from chatddx.core.django_fields import RelatedArrayField
 from chatddx.repo.families.django import TrailModel
-from chatddx.utils import make_async
 
 type _TrailFK = ForeignKey[TrailModel]
 
@@ -147,10 +146,6 @@ def resolve_trail[T: TrailModel](model: T) -> T:
     return resolve_trails([model])[0]
 
 
-resolve_trail_async = make_async(resolve_trail)
-resolve_trails_async = make_async(resolve_trails)
-
-
 def trail_relations(model: TrailModel) -> list[TrailModel]:
     related: list[TrailModel] = []
 
@@ -185,6 +180,3 @@ def trail_closure(model: TrailModel) -> list[TrailModel]:
             queue.append(related)
 
     return closure
-
-
-trail_closure_async = make_async(trail_closure)

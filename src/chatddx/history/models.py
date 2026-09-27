@@ -52,7 +52,6 @@ class RunStatus(StrEnum):
 
 class ConversationContext(StrEnum):
     API = "api"
-    CHAT = "chat"
     REPL = "repl"
     WORKER = "worker"
 

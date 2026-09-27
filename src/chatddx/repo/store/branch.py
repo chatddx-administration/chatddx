@@ -3,9 +3,7 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 from django.db.models import Model, QuerySet
-from pydantic import ValidationError
 
-from chatddx.core import settings
 from chatddx.core.models import IdentityModel
 from chatddx.core.utils import ensure_identities, ensure_identity, ensure_tags
 from chatddx.repo.bundles import entity_of
@@ -13,7 +11,6 @@ from chatddx.repo.entity_names import EntityName
 from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.families.pydantic import (
     BranchDetails,
-    BranchOut,
     TrailIn,
     dump_details,
     relation_fields,
@@ -34,7 +31,6 @@ from chatddx.repo.utils import (
     trail_closure,
     trail_relations,
 )
-from chatddx.utils import make_async
 
 
 class BranchNotFoundError(Exception):
@@ -48,22 +44,9 @@ class AmbiguousBranchError(Exception):
 def get_branch_model(
     entity_name: EntityName,
     owner_name: str,
-    branch_name: str | None = None,
-    fingerprint: str | None = None,
-    qs: QuerySet[Any] | None = None,
+    branch_name: str,
 ) -> BranchModel:
-    assert branch_name or fingerprint
-
-    if not qs:
-        model_cls = entity_of(entity_name).branch_model
-        qs = model_cls.objects.all()
-
-    if fingerprint:
-        qs = qs.filter(trail__fingerprint=fingerprint)
-
-    if branch_name:
-        qs = qs.filter(name=branch_name)
-
+    qs = entity_of(entity_name).branch_model.objects.filter(name=branch_name)
     model = qs_head(qs, owner_name).first()
 
     if model is None:
@@ -76,23 +59,13 @@ def get_branch_model(
     return model
 
 
-def select_branch_models(
-    entity_name: EntityName,
-    owner_name: str,
-    qs: QuerySet[Any] | None = None,
-) -> list[BranchModel]:
-    if qs is None:
-        model_cls = entity_of(entity_name).branch_model
-        qs = qs_with_relations(qs_head(model_cls.objects.all(), owner_name))
-
-    models = list(qs)
+def select_branch_models(entity_name: EntityName, owner_name: str) -> list[BranchModel]:
+    model_cls = entity_of(entity_name).branch_model
+    models = list(qs_with_relations(qs_head(model_cls.objects.all(), owner_name)))
 
     _ = resolve_trails([model.trail for model in models])
 
     return models
-
-
-get_branch_model_async = make_async(get_branch_model)
 
 
 def select_visible_branch_models(
@@ -200,63 +173,12 @@ def _prefer_own(models: list[BranchModel], identity_name: str) -> list[BranchMod
     ]
 
 
-def get_branch_out(
-    entity_name: EntityName,
-    owner_name: str,
-    branch_name: str | None = None,
-    fingerprint: str | None = None,
-    qs: QuerySet[Any] | None = None,
-) -> BranchOut[Any, Any]:
-    model = get_branch_model(
-        entity_name,
-        owner_name,
-        branch_name,
-        fingerprint,
-        qs,
-    )
-
-    spec_cls = entity_of(entity_name).branch_out
-
-    try:
-        return spec_cls.model_validate(model)
-    except ValidationError as e:
-        if settings.MODE == "dev":
-            from chatddx.dev.error_handling import print_pydantic_errors
-
-            print_pydantic_errors(e)
-        raise
-
-
-get_branch_async = make_async(get_branch_out)
-
-
-def select_branch_outs(
-    entity_name: EntityName,
-    owner_name: str,
-    qs: QuerySet[Any] | None = None,
-) -> list[BranchOut[Any, Any]]:
-    models = select_branch_models(entity_name, owner_name, qs)
-    spec_cls = entity_of(entity_name).branch_out
-
-    specs: list[BranchOut[Any, Any]] = []
-    for model in models:
-        specs.append(spec_cls.model_validate(model))
-
-    return specs
-
-
-select_branch_async = make_async(select_branch_outs)
-
-
 def commit(
     trail: TrailIn | TrailModel,
     branch_details: BranchDetails,
     owner: IdentityModel | None = None,
 ) -> bool:
     return _commit(trail, branch_details, owner, closure=True)
-
-
-commit_async = make_async(commit)
 
 
 def _commit(
@@ -308,13 +230,6 @@ def _commit(
         _ = _commit_closure(committed, owner)
 
     return True
-
-
-def commit_closure(root: TrailModel, owner_name: str) -> list[str]:
-    return _commit_closure(root, ensure_identity(owner_name))
-
-
-commit_closure_async = make_async(commit_closure)
 
 
 def _commit_closure(root: TrailModel, owner: IdentityModel) -> list[str]:

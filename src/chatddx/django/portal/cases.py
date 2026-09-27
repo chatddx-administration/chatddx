@@ -307,10 +307,6 @@ class Said:
     capitals: list[str] = field(default_factory=list)
 
     @property
-    def confirms(self) -> bool:
-        return self.saving in (Saving.ONTO, Saving.BACK)
-
-    @property
     def line(self) -> str:
         said = {"name": self.name, "version": self.version, "since": self.since}
 
