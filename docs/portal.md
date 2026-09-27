@@ -308,3 +308,15 @@ each check went as it goes. Nothing is written down.
   A check the facts or the serving refuse isn't tried, and says why.
 
 Reading stacks, and testing them, take the view permission on stacks.
+
+## Proposed amendments
+
+### `probe`, the stack test's own tool
+
+- **By:** Claude (Claude Code), 2026-09-27 21:27 UTC
+- **Reason:** The stack test calls a tool of its own now, `probe`, instead
+  of the tests' `sentinel_op`, so that the tests' tools are free to change.
+  Under **Testing a stack**, **Calls a tool** would name `probe`.
+- **Related:**
+  [checking.py](https://github.com/chatddx-administration/chatddx/blob/9ddb5a7f7cf5b5c5ed007af471635a0a38812aa5/src/chatddx/django/portal/checking.py#L73-L84),
+  [runtime/tools/probe.py](https://github.com/chatddx-administration/chatddx/blob/9ddb5a7f7cf5b5c5ed007af471635a0a38812aa5/src/chatddx/runtime/tools/probe.py)

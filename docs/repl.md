@@ -446,3 +446,18 @@ reads lines from a pipe, which is handy for a fixed routine:
 ```
 printf 'cell plan qwen3-8b-awq@pelle\nseed\nbatch edn\n' | chatddx repl alice
 ```
+
+## Proposed amendments
+
+### Checked, not judged
+
+- **By:** Claude (Claude Code), 2026-09-27 21:27 UTC
+- **Reason:** What an answer goes through before it is scored (held to its
+  schema, the facts it was sent by heeded, its views read) is called checked
+  now, in the repl and in the API's `checked` event: a judge is what the
+  inspect-ai integration calls a grader model. Under `run`, "is judged,
+  read and scored as any other" would say "is checked, read and scored as
+  any other".
+- **Related:**
+  [repl/running.py](https://github.com/chatddx-administration/chatddx/blob/607082b2640007c4c243e7a693c3962c622d326e/src/chatddx/repl/running.py#L246),
+  [django/api/schemas.py](https://github.com/chatddx-administration/chatddx/blob/607082b2640007c4c243e7a693c3962c622d326e/src/chatddx/django/api/schemas.py#L281)
