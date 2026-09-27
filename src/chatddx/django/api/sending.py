@@ -24,9 +24,9 @@ from chatddx.django.api.schemas import (
     Batched,
     BatchIn,
     Began,
+    Checked,
     Event,
     Failed,
-    Judged,
     Recorded,
     RunIn,
     Scored,
@@ -97,7 +97,7 @@ class Sending(BenchSending):
 
     async def told(
         self,
-    ) -> AsyncGenerator[AgentStreamEvent | Answered | Judged | Failed]:
+    ) -> AsyncGenerator[AgentStreamEvent | Answered | Checked | Failed]:
         async with aclosing(self.events()) as events:
             async for event in events:
                 match event:
@@ -111,18 +111,18 @@ class Sending(BenchSending):
 
         match self.error:
             case None:
-                yield self._judged(outcome)
+                yield self._checked(outcome)
             case Runaway():
-                yield self._judged(outcome, outcome.error)
+                yield self._checked(outcome, outcome.error)
             case error:
                 yield Failed(message=outcome.error or type(error).__name__)
 
-    def _judged(self, outcome: Outcome, stopped: str | None = None) -> Judged:
+    def _checked(self, outcome: Outcome, stopped: str | None = None) -> Checked:
         resolution = self.trial.ready.resolution
         coercion = resolution.coercion
         answer = outcome.answer
 
-        return Judged(
+        return Checked(
             warning=unheeded(resolution.reasoning.intent, self.thought),
             valid=outcome.valid,
             problem=None if coercion is None else invalid(coercion.schema, answer),

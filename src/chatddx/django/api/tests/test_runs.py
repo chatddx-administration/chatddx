@@ -67,7 +67,7 @@ def test_a_run_streams_as_it_comes_and_ends_with_its_record(
     [answered] = of(events, "answer")
     assert answered["answer"] == written(events, "text")
     assert answered["usage"]["requests"] == 1
-    assert of(events, "judged")[0]["views"]["differential"] == [
+    assert of(events, "checked")[0]["views"]["differential"] == [
         "Fake diagnosis A",
         "Fake diagnosis B",
         "Fake diagnosis C",
@@ -215,12 +215,12 @@ def test_a_run_whose_llm_runs_away_is_stopped_and_what_came_before_scored(
     stopped = f"stopped: nothing but whitespace for {RUNAWAY} tokens"
 
     events = run(**FREE_TEXT, case="case-1")
-    [judged] = of(events, "judged")
+    [checked] = of(events, "checked")
     run_ = recorded(events)
 
     assert of(events, "error") == []
-    assert judged["stopped"] == stopped
-    assert judged["views"]["differential"][0] == "Fake diagnosis A"
+    assert checked["stopped"] == stopped
+    assert checked["views"]["differential"][0] == "Fake diagnosis A"
     assert (run_["status"], run_["answer"], run_["error"]) == (
         "completed",
         "Fake diagnosis A\nFake diagnosis B\nFake diagnosis C",
@@ -286,12 +286,12 @@ def test_a_stack_s_credential_is_one_of_the_identity_s_secrets(
     assert len(fake.requests) == 1
 
 
-def test_a_structured_answer_is_judged_and_its_views_read(alice: Client, run: Run):
+def test_a_structured_answer_is_checked_and_its_views_read(alice: Client, run: Run):
     live = run(configuration="plan", stack="qwen3-8b-awq@fake", case="case-1")
-    [judged] = of(live, "judged")
-    views = judged["views"]
+    [checked] = of(live, "checked")
+    views = checked["views"]
 
-    assert (judged["valid"], judged["problem"], judged["warning"]) == (
+    assert (checked["valid"], checked["problem"], checked["warning"]) == (
         True,
         None,
         None,
@@ -321,7 +321,7 @@ def test_a_run_says_when_no_thinking_came_back_though_it_was_asked_for(
 
     events = run(configuration="diagnoses", stack="qwen3-8b-awq@fake", case="case-1")
 
-    assert of(events, "judged")[0]["warning"] == (
+    assert of(events, "checked")[0]["warning"] == (
         "no thinking came back, though reasoning resolved to 'on'"
     )
 

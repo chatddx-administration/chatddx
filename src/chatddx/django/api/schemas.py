@@ -278,8 +278,8 @@ class Answered(Schema):
     usage: RunUsage
 
 
-class Judged(Schema):
-    type: Literal["judged"] = "judged"
+class Checked(Schema):
+    type: Literal["checked"] = "checked"
     warning: str | None
     valid: bool | None
     problem: str | None
@@ -309,6 +309,6 @@ class Summarized(Schema):
 
 
 type Event = Annotated[
-    Batched | Began | Answered | Judged | Failed | Scored | Recorded | Summarized,
+    Batched | Began | Answered | Checked | Failed | Scored | Recorded | Summarized,
     Field(discriminator="type"),
 ]

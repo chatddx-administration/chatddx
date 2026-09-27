@@ -63,7 +63,7 @@ newlines is the last value (`]` or `"`), not `}`, this is it.
   nothing but whitespace in them (`RUNAWAY` in `runtime/run.py`). Its
   stream is closed, and vLLM, hearing the client go, aborts the request.
 - What came before stands as its answer: the JSON closed where it stops,
-  a string it hadn't finished left out. It is judged, read and scored as
+  a string it hadn't finished left out. It is checked, read and scored as
   any other, and the run is flagged, its error
   `stopped: nothing but whitespace for 100 tokens`. A batch says so on
   the case's line and goes on.

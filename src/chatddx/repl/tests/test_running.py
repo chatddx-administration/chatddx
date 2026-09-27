@@ -98,7 +98,7 @@ def test_run_takes_the_trial_s_seed(say: Say, fake: FakeTransport):
     assert len(fake.requests) == 1
 
 
-def test_a_structured_answer_is_judged_and_its_views_read(say: Say):
+def test_a_structured_answer_is_checked_and_its_views_read(say: Say):
     written = say("cell plan qwen3-8b-awq@fake", "run case-1")
 
     assert '"acute_warning": "fake acute warning"' in written

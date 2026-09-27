@@ -233,7 +233,7 @@ def _said(repl: Repl, sending: Sending, streamed: Streamed) -> None:
 
     match sending.error:
         case None:
-            _ = _judge(repl, resolution, streamed)
+            _ = _check(repl, resolution, streamed)
         case Runaway():
             repl.error(f"\n{outcome.error}")
             _ = _shown(repl, resolution, outcome.answer)
@@ -243,7 +243,7 @@ def _said(repl: Repl, sending: Sending, streamed: Streamed) -> None:
             repl.error(f"\n{outcome.error}")
 
 
-def _judge(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | None:
+def _check(repl: Repl, resolution: Resolution, streamed: Streamed) -> bool | None:
     warning = unheeded(resolution.reasoning.intent, streamed.thought)
 
     if warning is not None:
