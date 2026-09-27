@@ -2,7 +2,7 @@
 
 from django.db.models import PROTECT, ForeignKey, JSONField, TextField
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class ServingTrailModel(TrailModel):
@@ -23,10 +23,3 @@ class ServingBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_serving_branch"
-
-
-class Serving(BranchProxy, ServingBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Serving"
-        verbose_name_plural = "Servings"

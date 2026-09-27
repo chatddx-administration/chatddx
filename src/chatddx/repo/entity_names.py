@@ -20,5 +20,3 @@ type EntityName = Literal[
 ]
 
 ENTITY_NAMES: tuple[EntityName, ...] = get_args(EntityName.__value__)
-
-type PresentationName = EntityName

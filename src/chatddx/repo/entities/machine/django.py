@@ -2,7 +2,7 @@
 
 from django.db.models import PROTECT, ForeignKey, UUIDField
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class MachineTrailModel(TrailModel):
@@ -21,10 +21,3 @@ class MachineBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_machine_branch"
-
-
-class Machine(BranchProxy, MachineBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Machine"
-        verbose_name_plural = "Machines"

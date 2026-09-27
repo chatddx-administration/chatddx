@@ -1,18 +1,13 @@
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import model_validator
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
-    BranchIn,
     BranchOut,
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 from chatddx.repo.templates import placements
 
@@ -71,25 +66,9 @@ class CoercionTrailIn(CoercionTrailBase, TrailIn):
     pass
 
 
-class CoercionTrailRef(TrailRef, CoercionTrailBase):
-    pass
-
-
 class CoercionTrailOut(CoercionTrailBase, TrailOut):
-    pass
-
-
-class CoercionBranchIn(BranchIn[CoercionTrailIn]):
     pass
 
 
 class CoercionBranchOut(BranchOut[CoercionTrailOut, Details]):
     pass
-
-
-class CoercionFormDataIn(CoercionTrailBase, BaseFormDataIn):
-    pass
-
-
-class CoercionFormDataOut(CoercionTrailBase, BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")

@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from django.contrib import admin
 from django.db.models import (
     PROTECT,
     CharField,
@@ -13,7 +12,6 @@ from django.db.models import (
     ForeignKey,
     Index,
     JSONField,
-    Manager,
     ManyToManyField,
     Model,
     TextField,
@@ -40,8 +38,6 @@ class OrderedJSONField(TextField):
 class TrailModel(Model):
     id: int
 
-    branch_name: str | None = None
-
     fingerprint = CharField(
         max_length=128,
         db_index=True,
@@ -57,7 +53,7 @@ class TrailModel(Model):
         app_label = "repo"
 
     def __str__(self) -> str:
-        return self.branch_name or short_fingerprint(self.fingerprint)
+        return short_fingerprint(self.fingerprint)
 
 
 class BranchModel(Model):
@@ -110,25 +106,3 @@ class BranchModel(Model):
             field_names=[f.name for f in fields],
             values=[getattr(self, f.name) for f in fields],
         )
-
-
-class BranchProxy(Model):
-    pk: int
-    name: str
-    trail: TrailModel
-    version_count: int | None = None
-
-    class Meta:
-        abstract = True
-        app_label = "repo"
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class Sharable:
-    collaborators: Manager[IdentityModel]
-
-    @admin.display(description="Collaborators")
-    def collaborators_csv(self):
-        return ", ".join([str(c) for c in self.collaborators.all()]) or None

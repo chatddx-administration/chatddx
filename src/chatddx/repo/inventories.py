@@ -6,105 +6,89 @@ from chatddx.repo.entities.case.django import CaseBranchModel
 from chatddx.repo.entities.case.pydantic import (
     CaseBranchDetailsPatch,
     CaseBranchOut,
-    CaseFormDataOut,
     CaseTrailIn,
 )
 from chatddx.repo.entities.client.django import ClientBranchModel
 from chatddx.repo.entities.client.pydantic import (
     ClientBranchDetailsPatch,
     ClientBranchOut,
-    ClientFormDataOut,
     ClientTrailIn,
 )
 from chatddx.repo.entities.coercion.django import CoercionBranchModel
 from chatddx.repo.entities.coercion.pydantic import (
     CoercionBranchOut,
-    CoercionFormDataOut,
     CoercionTrailIn,
 )
 from chatddx.repo.entities.configuration.django import ConfigurationBranchModel
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
-    ConfigurationFormDataOut,
     ConfigurationTrailIn,
 )
 from chatddx.repo.entities.instruction.django import InstructionBranchModel
 from chatddx.repo.entities.instruction.pydantic import (
     InstructionBranchOut,
-    InstructionFormDataOut,
     InstructionTrailIn,
 )
 from chatddx.repo.entities.llm.django import LLMBranchModel
 from chatddx.repo.entities.llm.pydantic import (
     LLMBranchDetailsPatch,
     LLMBranchOut,
-    LLMFormDataOut,
     LLMTrailIn,
 )
 from chatddx.repo.entities.machine.django import MachineBranchModel
 from chatddx.repo.entities.machine.pydantic import (
     MachineBranchDetailsPatch,
     MachineBranchOut,
-    MachineFormDataOut,
     MachineTrailIn,
 )
 from chatddx.repo.entities.os.django import OsBranchModel
 from chatddx.repo.entities.os.pydantic import (
     OsBranchDetailsPatch,
     OsBranchOut,
-    OsFormDataOut,
     OsTrailIn,
 )
 from chatddx.repo.entities.output.django import OutputBranchModel
 from chatddx.repo.entities.output.pydantic import (
     OutputBranchOut,
-    OutputFormDataOut,
     OutputTrailIn,
 )
 from chatddx.repo.entities.reasoning.django import ReasoningBranchModel
 from chatddx.repo.entities.reasoning.pydantic import (
     ReasoningBranchOut,
-    ReasoningFormDataOut,
     ReasoningTrailIn,
 )
 from chatddx.repo.entities.sampling.django import SamplingBranchModel
 from chatddx.repo.entities.sampling.pydantic import (
     SamplingBranchOut,
-    SamplingFormDataOut,
     SamplingTrailIn,
 )
 from chatddx.repo.entities.scorer.django import ScorerBranchModel
 from chatddx.repo.entities.scorer.pydantic import (
     ScorerBranchDetailsPatch,
     ScorerBranchOut,
-    ScorerFormDataOut,
     ScorerTrailIn,
 )
 from chatddx.repo.entities.serving.django import ServingBranchModel
 from chatddx.repo.entities.serving.pydantic import (
     ServingBranchDetailsPatch,
     ServingBranchOut,
-    ServingFormDataOut,
     ServingTrailIn,
 )
 from chatddx.repo.entities.stack.django import StackBranchModel
 from chatddx.repo.entities.stack.pydantic import (
     StackBranchDetailsPatch,
     StackBranchOut,
-    StackFormDataOut,
     StackTrailIn,
 )
 from chatddx.repo.entities.tool.django import ToolBranchModel
 from chatddx.repo.entities.tool.pydantic import (
     ToolBranchDetailsPatch,
     ToolBranchOut,
-    ToolFormDataOut,
     ToolTrailIn,
 )
 from chatddx.repo.entities.toolset.django import ToolsetBranchModel
 from chatddx.repo.entities.toolset.pydantic import (
     ToolsetBranchOut,
-    ToolsetFormDataOut,
     ToolsetTrailIn,
 )
 from chatddx.repo.families.pydantic import BranchDetailsPatch
@@ -146,25 +130,6 @@ class InventoryTrailIn(BaseModel):
     configuration: dict[str, ConfigurationTrailIn]
     case: dict[str, CaseTrailIn]
     scorer: dict[str, ScorerTrailIn]
-
-
-class InventoryFormDataOut(BaseModel):
-    machine: dict[str, MachineFormDataOut]
-    os: dict[str, OsFormDataOut]
-    llm: dict[str, LLMFormDataOut]
-    serving: dict[str, ServingFormDataOut]
-    client: dict[str, ClientFormDataOut]
-    stack: dict[str, StackFormDataOut]
-    tool: dict[str, ToolFormDataOut]
-    toolset: dict[str, ToolsetFormDataOut]
-    instruction: dict[str, InstructionFormDataOut]
-    output: dict[str, OutputFormDataOut]
-    coercion: dict[str, CoercionFormDataOut]
-    reasoning: dict[str, ReasoningFormDataOut]
-    sampling: dict[str, SamplingFormDataOut]
-    configuration: dict[str, ConfigurationFormDataOut]
-    case: dict[str, CaseFormDataOut]
-    scorer: dict[str, ScorerFormDataOut]
 
 
 class InventoryBranchOut(BaseModel):

@@ -2,7 +2,7 @@
 
 from django.db.models import PROTECT, ForeignKey, TextField
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class ClientTrailModel(TrailModel):
@@ -21,10 +21,3 @@ class ClientBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_client_branch"
-
-
-class Client(BranchProxy, ClientBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Client"
-        verbose_name_plural = "Clients"

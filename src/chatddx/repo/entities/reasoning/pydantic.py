@@ -1,18 +1,13 @@
 from typing import Literal, get_args
 
-from pydantic import Field, PositiveInt, model_validator
+from pydantic import PositiveInt, model_validator
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
-    BranchIn,
     BranchOut,
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 
 type Effort = Literal[
@@ -48,25 +43,9 @@ class ReasoningTrailIn(ReasoningTrailBase, TrailIn):
     pass
 
 
-class ReasoningTrailRef(TrailRef, ReasoningTrailBase):
-    pass
-
-
 class ReasoningTrailOut(ReasoningTrailBase, TrailOut):
-    pass
-
-
-class ReasoningBranchIn(BranchIn[ReasoningTrailIn]):
     pass
 
 
 class ReasoningBranchOut(BranchOut[ReasoningTrailOut, Details]):
     pass
-
-
-class ReasoningFormDataIn(ReasoningTrailBase, BaseFormDataIn):
-    pass
-
-
-class ReasoningFormDataOut(ReasoningTrailBase, BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")

@@ -9,11 +9,7 @@ from pydantic import (
     model_validator,
 )
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BaseBranch,
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
     BranchDetails,
     BranchDetailsPatch,
@@ -21,7 +17,6 @@ from chatddx.repo.families import (
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 
 type TargetKind = Literal["diagnosis", "warning", "disposition", "dont_miss"]
@@ -94,10 +89,6 @@ class CaseTrailIn(CaseTrailBase, TrailIn):
     pass
 
 
-class CaseTrailRef(TrailRef, CaseTrailBase):
-    pass
-
-
 class CaseTrailOut(CaseTrailBase, TrailOut):
     pass
 
@@ -110,20 +101,5 @@ class CaseBranchDetailsPatch(BranchDetailsPatch, CaseDetails):
     pass
 
 
-class CaseBranchIn(BaseBranch[CaseTrailIn], CaseBranchDetails):
-    pass
-
-
 class CaseBranchOut(BranchOut[CaseTrailOut, CaseDetails]):
     pass
-
-
-class CaseFormDataIn(CaseTrailBase, BaseFormDataIn):
-    language: Language | None = None
-    targets: Targets = Field(default_factory=dict)
-
-
-class CaseFormDataOut(CaseTrailBase, BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")
-    language: Language | None
-    targets: dict[TargetKind, Target]

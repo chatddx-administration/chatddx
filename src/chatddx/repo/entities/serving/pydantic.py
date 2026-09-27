@@ -3,11 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, Field, JsonValue
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BaseBranch,
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
     BranchDetails,
     BranchDetailsPatch,
@@ -15,7 +11,6 @@ from chatddx.repo.families import (
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 from chatddx.repo.families.fields import StorePath
 
@@ -127,10 +122,6 @@ class ServingTrailIn(ServingTrailBase, TrailIn):
     pass
 
 
-class ServingTrailRef(TrailRef, ServingTrailBase):
-    pass
-
-
 class ServingTrailOut(ServingTrailBase, TrailOut):
     pass
 
@@ -143,21 +134,5 @@ class ServingBranchDetailsPatch(BranchDetailsPatch, ServingDetails):
     pass
 
 
-class ServingBranchIn(BaseBranch[ServingTrailIn], ServingBranchDetails):
-    pass
-
-
 class ServingBranchOut(BranchOut[ServingTrailOut, ServingDetails]):
     pass
-
-
-class ServingFormDataIn(ServingTrailBase, BaseFormDataIn):
-    performance: dict[str, JsonValue] = Field(default_factory=dict)
-
-
-class ServingFormDataOut(BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")
-    engine: str
-    args: dict[str, JsonValue]
-    env: dict[str, str]
-    performance: dict[str, JsonValue]

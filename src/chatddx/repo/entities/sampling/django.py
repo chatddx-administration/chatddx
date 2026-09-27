@@ -10,7 +10,7 @@ from django.db.models import (
     PositiveIntegerField,
 )
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class SamplingTrailModel(TrailModel):
@@ -37,10 +37,3 @@ class SamplingBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_sampling_branch"
-
-
-class Sampling(BranchProxy, SamplingBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Sampling"
-        verbose_name_plural = "Sampling"

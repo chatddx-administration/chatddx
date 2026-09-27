@@ -13,7 +13,6 @@ from pydantic import (
     model_validator,
 )
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.entities.coercion.pydantic import Mode
 from chatddx.repo.entities.reasoning.pydantic import (
     INTENTS,
@@ -24,9 +23,6 @@ from chatddx.repo.entities.reasoning.pydantic import (
 from chatddx.repo.entities.sampling.pydantic import SamplingValues
 from chatddx.repo.entities.serving.pydantic import Requirement
 from chatddx.repo.families import (
-    BaseBranch,
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
     BranchDetails,
     BranchDetailsPatch,
@@ -34,7 +30,6 @@ from chatddx.repo.families import (
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 from chatddx.repo.families.fields import STORE_PATH, PinnedSource
 
@@ -273,10 +268,6 @@ class LLMTrailIn(LLMTrailBase, TrailIn):
     pass
 
 
-class LLMTrailRef(TrailRef, LLMTrailBase):
-    pass
-
-
 class LLMTrailOut(LLMTrailBase, TrailOut):
     pass
 
@@ -289,23 +280,5 @@ class LLMBranchDetailsPatch(BranchDetailsPatch, LLMDetails):
     pass
 
 
-class LLMBranchIn(BaseBranch[LLMTrailIn], LLMBranchDetails):
-    pass
-
-
 class LLMBranchOut(BranchOut[LLMTrailOut, LLMDetails]):
     pass
-
-
-class LLMFormDataIn(LLMTrailBase, BaseFormDataIn):
-    source: PinnedSource | None = None
-    specs: LLMSpecs | None = None
-    facts: LLMFacts = Field(default_factory=LLMFacts)
-
-
-class LLMFormDataOut(BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")
-    snapshot: str
-    source: str | None
-    specs: LLMSpecs | None
-    facts: LLMFacts

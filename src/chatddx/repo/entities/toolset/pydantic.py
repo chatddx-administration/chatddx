@@ -2,18 +2,13 @@ from typing import Annotated
 
 from pydantic import Field
 
-from chatddx.core.fields import CoercedStr
-from chatddx.repo.entities.tool import ToolFormDataIn, ToolTrailIn, ToolTrailOut
+from chatddx.repo.entities.tool import ToolTrailIn, ToolTrailOut
 from chatddx.repo.families import (
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
-    BranchIn,
     BranchOut,
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 from chatddx.repo.families.fields import distinct
 
@@ -36,26 +31,9 @@ class ToolsetTrailIn(ToolsetTrailBase, TrailIn):
     ]
 
 
-class ToolsetTrailRef(TrailRef, ToolsetTrailBase):
-    pass
-
-
 class ToolsetTrailOut(ToolsetTrailBase, TrailOut):
     tools: list[ToolTrailOut]
 
 
-class ToolsetBranchIn(BranchIn[ToolsetTrailIn]):
-    pass
-
-
 class ToolsetBranchOut(BranchOut[ToolsetTrailOut, Details]):
     pass
-
-
-class ToolsetFormDataIn(ToolsetTrailBase, BaseFormDataIn):
-    tools: list[ToolFormDataIn] = Field(default_factory=list)
-
-
-class ToolsetFormDataOut(ToolsetTrailBase, BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")
-    tools: list[CoercedStr]

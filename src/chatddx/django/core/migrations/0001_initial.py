@@ -30,19 +30,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Identity',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Identity',
-                'verbose_name_plural': 'Identities',
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('core.identitymodel',),
-        ),
-        migrations.CreateModel(
             name='TagModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),

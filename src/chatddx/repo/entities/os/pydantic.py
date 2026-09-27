@@ -1,12 +1,8 @@
 from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BaseBranch,
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
     BranchDetails,
     BranchDetailsPatch,
@@ -14,7 +10,6 @@ from chatddx.repo.families import (
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 from chatddx.repo.families.fields import StorePath
 
@@ -41,10 +36,6 @@ class OsTrailIn(OsTrailBase, TrailIn):
     pass
 
 
-class OsTrailRef(TrailRef, OsTrailBase):
-    pass
-
-
 class OsTrailOut(OsTrailBase, TrailOut):
     pass
 
@@ -57,21 +48,5 @@ class OsBranchDetailsPatch(BranchDetailsPatch, OsDetails):
     pass
 
 
-class OsBranchIn(BaseBranch[OsTrailIn], OsBranchDetails):
-    pass
-
-
 class OsBranchOut(BranchOut[OsTrailOut, OsDetails]):
     pass
-
-
-class OsFormDataIn(OsTrailBase, BaseFormDataIn):
-    flake_rev: str | None = None
-    specs: OsSpecs | None = None
-
-
-class OsFormDataOut(BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")
-    toplevel: str
-    flake_rev: str | None
-    specs: OsSpecs | None

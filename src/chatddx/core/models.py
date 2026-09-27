@@ -45,17 +45,6 @@ class IdentityModel(Model):
     )
 
 
-class Identity(IdentityModel):
-    class Meta:
-        app_label = "core"
-        proxy = True
-        verbose_name = "Identity"
-        verbose_name_plural = "Identities"
-
-    def __str__(self):
-        return self.name
-
-
 class TagModel(Model):
     class Meta:
         app_label = "core"

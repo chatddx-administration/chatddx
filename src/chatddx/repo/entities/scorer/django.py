@@ -2,7 +2,7 @@
 
 from django.db.models import PROTECT, CharField, ForeignKey, JSONField
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class ScorerTrailModel(TrailModel):
@@ -24,8 +24,3 @@ class ScorerBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_scorer_branch"
-
-
-class Scorer(BranchProxy, ScorerBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True

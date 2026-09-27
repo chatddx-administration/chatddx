@@ -2,17 +2,12 @@ from typing import Annotated, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
-    BranchIn,
     BranchOut,
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 
 type SamplingDefaults = Literal["generation_config", "recommended"]
@@ -40,25 +35,9 @@ class SamplingTrailIn(SamplingTrailBase, TrailIn):
     pass
 
 
-class SamplingTrailRef(TrailRef, SamplingTrailBase):
-    pass
-
-
 class SamplingTrailOut(SamplingTrailBase, TrailOut):
-    pass
-
-
-class SamplingBranchIn(BranchIn[SamplingTrailIn]):
     pass
 
 
 class SamplingBranchOut(BranchOut[SamplingTrailOut, Details]):
     pass
-
-
-class SamplingFormDataIn(SamplingTrailBase, BaseFormDataIn):
-    pass
-
-
-class SamplingFormDataOut(SamplingTrailBase, BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")

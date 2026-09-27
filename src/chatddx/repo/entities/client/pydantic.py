@@ -1,10 +1,6 @@
 from pydantic import Field
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BaseBranch,
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
     BranchDetails,
     BranchDetailsPatch,
@@ -12,7 +8,6 @@ from chatddx.repo.families import (
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 from chatddx.repo.families.fields import StorePath
 
@@ -30,10 +25,6 @@ class ClientTrailIn(ClientTrailBase, TrailIn):
     pass
 
 
-class ClientTrailRef(TrailRef, ClientTrailBase):
-    pass
-
-
 class ClientTrailOut(ClientTrailBase, TrailOut):
     pass
 
@@ -46,21 +37,5 @@ class ClientBranchDetailsPatch(BranchDetailsPatch, ClientDetails):
     pass
 
 
-class ClientBranchIn(BaseBranch[ClientTrailIn], ClientBranchDetails):
-    pass
-
-
 class ClientBranchOut(BranchOut[ClientTrailOut, ClientDetails]):
     pass
-
-
-class ClientFormDataIn(ClientTrailBase, BaseFormDataIn):
-    rev: str | None = None
-    packages: dict[str, str] = Field(default_factory=dict)
-
-
-class ClientFormDataOut(BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")
-    build: str | None
-    rev: str | None
-    packages: dict[str, str]

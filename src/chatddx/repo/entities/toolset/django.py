@@ -4,7 +4,7 @@ from django.db.models import PROTECT, ForeignKey, IntegerField, TextField
 
 from chatddx.core.django_fields import RelatedArrayField
 from chatddx.repo.entities.tool.django import ToolTrailModel
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class ToolsetTrailModel(TrailModel):
@@ -28,10 +28,3 @@ class ToolsetBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_toolset_branch"
-
-
-class Toolset(BranchProxy, ToolsetBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Toolset"
-        verbose_name_plural = "Toolsets"

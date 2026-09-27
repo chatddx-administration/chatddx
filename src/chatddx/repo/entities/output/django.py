@@ -4,7 +4,6 @@ from django.db.models import PROTECT, ForeignKey, JSONField, TextField
 
 from chatddx.repo.families.django import (
     BranchModel,
-    BranchProxy,
     OrderedJSONField,
     TrailModel,
 )
@@ -28,10 +27,3 @@ class OutputBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_output_branch"
-
-
-class Output(BranchProxy, OutputBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Output"
-        verbose_name_plural = "Outputs"

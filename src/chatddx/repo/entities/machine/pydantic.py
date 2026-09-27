@@ -3,11 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
-    BaseBranch,
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
     BranchDetails,
     BranchDetailsPatch,
@@ -15,7 +11,6 @@ from chatddx.repo.families import (
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 
 
@@ -49,10 +44,6 @@ class MachineTrailIn(MachineTrailBase, TrailIn):
     pass
 
 
-class MachineTrailRef(TrailRef, MachineTrailBase):
-    pass
-
-
 class MachineTrailOut(MachineTrailBase, TrailOut):
     pass
 
@@ -65,21 +56,5 @@ class MachineBranchDetailsPatch(BranchDetailsPatch, MachineDetails):
     pass
 
 
-class MachineBranchIn(BaseBranch[MachineTrailIn], MachineBranchDetails):
-    pass
-
-
 class MachineBranchOut(BranchOut[MachineTrailOut, MachineDetails]):
     pass
-
-
-class MachineFormDataIn(MachineTrailBase, BaseFormDataIn):
-    unreliable: bool = False
-    specs: MachineSpecs | None = None
-
-
-class MachineFormDataOut(BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")
-    machine_id: UUID
-    unreliable: bool
-    specs: MachineSpecs | None

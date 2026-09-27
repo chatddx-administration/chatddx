@@ -2,7 +2,7 @@
 
 from django.db.models import PROTECT, CharField, ForeignKey, TextField
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class CoercionTrailModel(TrailModel):
@@ -23,10 +23,3 @@ class CoercionBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_coercion_branch"
-
-
-class Coercion(BranchProxy, CoercionBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Coercion"
-        verbose_name_plural = "Coercions"

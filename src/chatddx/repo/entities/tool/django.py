@@ -4,7 +4,6 @@ from django.db.models import PROTECT, CharField, ForeignKey, TextField
 
 from chatddx.repo.families.django import (
     BranchModel,
-    BranchProxy,
     OrderedJSONField,
     TrailModel,
 )
@@ -28,10 +27,3 @@ class ToolBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_tool_branch"
-
-
-class Tool(BranchProxy, ToolBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Tool"
-        verbose_name_plural = "Tools"

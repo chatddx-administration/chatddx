@@ -3,7 +3,7 @@ import pytest
 from chatddx.core import settings
 from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.inventories import InventoryBranchOut, InventoryTrailIn
-from chatddx.repo.store.inventory import form_data_out, owned_inventory
+from chatddx.repo.store.inventory import owned_inventory
 
 pytestmark = pytest.mark.django_db
 
@@ -31,10 +31,9 @@ def test_trail_schema(trails: InventoryTrailIn):
     assert {e: len(getattr(trails, e)) for e in ENTITY_NAMES} == COUNTS
 
 
-def test_a_committed_inventory_reads_back_as_models_specs_and_form_data():
+def test_a_committed_inventory_reads_back_as_models_and_specs():
     models = owned_inventory(settings.ARCHIVE_IDENTITY_NAME)
     specs = InventoryBranchOut.model_validate(models)
-    form_data = form_data_out(specs)
 
     assert {e: len(models[e]) for e in ENTITY_NAMES} == COUNTS
     assert {e: len(getattr(specs, e)) for e in ENTITY_NAMES} == COUNTS
@@ -44,11 +43,3 @@ def test_a_committed_inventory_reads_back_as_models_specs_and_form_data():
     assert stack.details.served_name == "Qwen/Qwen3-8B-AWQ"
     assert stack.trail.host_os is not None
     assert stack.tags == ["rtx-5090"]
-    assert {e: len(getattr(form_data, e)) for e in ENTITY_NAMES} == COUNTS
-
-    tool = form_data.tool["web_search"]
-
-    assert (tool.name, tool.tool_name) == ("web_search", "web_search")
-    assert form_data.stack["qwen3-8b-awq@pelle"].endpoint == (
-        "http://pelle.km:12009/v1/"
-    )

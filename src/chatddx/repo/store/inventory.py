@@ -6,8 +6,6 @@ from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
 from chatddx.repo.families.pydantic import BranchDetails
 from chatddx.repo.inventories import (
     InventoryBranchModel,
-    InventoryBranchOut,
-    InventoryFormDataOut,
     InventoryTrailIn,
     ParsedInventory,
 )
@@ -83,19 +81,3 @@ def trails_in(parsed_inventory: ParsedInventory) -> InventoryTrailIn:
         for entity in ENTITY_NAMES
     }
     return InventoryTrailIn.model_validate(inventory)
-
-
-def form_data_out(branches: InventoryBranchOut) -> InventoryFormDataOut:
-    inventory = {}
-
-    for entity_name in ENTITY_NAMES:
-        inventory[entity_name] = {}
-        for branch_name, branch_out in getattr(branches, entity_name).items():
-            branch = branch_out.model_dump(mode="json")
-            inventory[entity_name][branch_name] = (
-                branch["trail"]
-                | branch["details"]
-                | {"name": branch["name"], "trail": branch["trail"]}
-            )
-
-    return InventoryFormDataOut.model_validate(inventory)

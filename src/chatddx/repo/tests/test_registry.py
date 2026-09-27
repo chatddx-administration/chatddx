@@ -4,27 +4,20 @@ import pytest
 
 from chatddx.repo.bundles import (
     ALL_ENTITIES,
-    ALL_PRESENTATIONS,
     RegistryCollisionError,
     _index_by_class,  # pyright: ignore[reportPrivateUsage]
     entity_of,
-    presentation_of,
 )
-from chatddx.repo.entities.case.django import Case, SharedCase
 from chatddx.repo.entities.configuration.django import (
-    Configuration,
     ConfigurationBranchModel,
     ConfigurationTrailModel,
-    SharedConfiguration,
 )
 from chatddx.repo.entities.configuration.pydantic import (
     ConfigurationBranchOut,
-    ConfigurationFormDataOut,
     ConfigurationTrailIn,
     ConfigurationTrailOut,
 )
-from chatddx.repo.entities.llm.django import LLM as LLMProxy
-from chatddx.repo.entity_names import ENTITY_NAMES, EntityName, PresentationName
+from chatddx.repo.entity_names import ENTITY_NAMES
 from chatddx.repo.families.pydantic import (
     BRANCH_FIELDS,
     BranchDetails,
@@ -35,14 +28,13 @@ from chatddx.repo.families.pydantic import (
 from chatddx.repo.inventories import (
     InventoryBranchModel,
     InventoryBranchOut,
-    InventoryFormDataOut,
     InventoryTrailIn,
     ParsedInventory,
 )
 from chatddx.repo.parsers.inventory import (
     _relations,  # pyright: ignore[reportPrivateUsage]
 )
-from chatddx.repo.registry import CASE, CONFIGURATION, LLM
+from chatddx.repo.registry import CONFIGURATION
 
 
 def test_the_registry_is_the_new_datamodel_s():
@@ -75,46 +67,16 @@ def test_what_an_entity_references_is_committed_before_it():
             )
 
 
-@pytest.mark.parametrize("proxy", [Configuration, SharedConfiguration])
-def test_every_configuration_proxy_answers_configuration(proxy: type):
-    assert entity_of(proxy) is CONFIGURATION
-    assert presentation_of(proxy).entity is CONFIGURATION
+def test_a_subclass_answers_its_entity():
+    class Subclass(ConfigurationTrailIn):
+        pass
 
-
-def test_a_case_proxy_answers_case():
-    for proxy in (Case, SharedCase):
-        assert entity_of(proxy) is CASE
-
-
-def test_an_llm_proxy_answers_llm():
-    assert entity_of(LLMProxy) is LLM
+    assert entity_of(Subclass) is CONFIGURATION
 
 
 def test_two_entities_may_not_claim_one_class():
-    with pytest.raises(RegistryCollisionError, match="ConfigurationBranchIn"):
-        _ = _index_by_class((CONFIGURATION, CONFIGURATION), "members", "entity")
-
-
-def test_every_entity_has_a_presentation_of_its_name():
-    assert [view.name for view in ALL_PRESENTATIONS] == list(ENTITY_NAMES)
-
-    for entity in ALL_ENTITIES:
-        assert presentation_of(entity.name).entity is entity
-
-
-def test_the_flat_form_is_the_configuration_s():
-    assert presentation_of(Configuration).form_data_out is ConfigurationFormDataOut
-
-    jsonschema = ConfigurationFormDataOut.model_json_schema(mode="serialization")
-
-    assert [key for key in jsonschema["properties"] if key.endswith("_template")] == [
-        "instruction_template",
-        "output_template",
-        "coercion_template",
-        "reasoning_template",
-        "sampling_template",
-        "toolset_template",
-    ]
+    with pytest.raises(RegistryCollisionError, match="ConfigurationBranchOut"):
+        _ = _index_by_class((CONFIGURATION, CONFIGURATION))
 
 
 def test_the_request_time_slices_have_no_details():
@@ -168,7 +130,6 @@ def test_every_inventory_holds_every_entity():
         ParsedInventory,
         InventoryTrailIn,
         InventoryBranchOut,
-        InventoryFormDataOut,
     ):
         assert tuple(inventory.model_fields) == ENTITY_NAMES
 
@@ -193,7 +154,3 @@ def test_entity_of():
 
     assert entity_of(ConfigurationTrailModel) is CONFIGURATION
     assert entity_of(ConfigurationBranchModel) is CONFIGURATION
-
-
-def test_every_view_is_an_entity_s():
-    assert PresentationName.__value__ is EntityName

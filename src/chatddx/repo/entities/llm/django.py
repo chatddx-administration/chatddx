@@ -2,7 +2,7 @@
 
 from django.db.models import PROTECT, ForeignKey, TextField
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class LLMTrailModel(TrailModel):
@@ -21,8 +21,3 @@ class LLMBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_llm_branch"
-
-
-class LLM(BranchProxy, LLMBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True

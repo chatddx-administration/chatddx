@@ -14,7 +14,6 @@ from pydantic import (
 )
 from pydantic.fields import FieldInfo
 
-from chatddx.core.fields import CoercedStr, NullableStr
 from chatddx.core.schemas import IdentitySchemaOut
 from chatddx.repo.families.canonical import fingerprint, ordered
 
@@ -65,10 +64,6 @@ class TrailIn(BaseTrail):
                 data[field_name] = ordered(data[field_name])
 
         return data | relations
-
-
-class TrailRef(BaseTrail):
-    fingerprint: str
 
 
 class TrailOut(BaseTrail, NinjaSchema):
@@ -153,10 +148,6 @@ class BaseBranch[T: BaseTrail](BaseBranchTrail[T]):
     pass
 
 
-class BranchIn[T: TrailIn](BaseBranch[T], BranchDetails):
-    pass
-
-
 class BranchOut[T: TrailOut, D: Details](BaseBranch[T], NinjaSchema):
     id: int
     name: str
@@ -167,19 +158,6 @@ class BranchOut[T: TrailOut, D: Details](BaseBranch[T], NinjaSchema):
     tags: list[Annotated[str, BeforeValidator(str)]]
 
     details: D
-
-
-class BaseFormDataIn(NinjaSchema):
-    name: NullableStr = None
-    owner: IdentitySchemaOut | None = None
-
-    collaborators: list[IdentitySchemaOut] | None = None
-    tags: list[Annotated[str, BeforeValidator(str)]] | None = None
-
-
-class BaseFormDataOut(BaseModel):
-    id: CoercedStr
-    name: str = ""
 
 
 _ = TrailIn.model_rebuild()

@@ -4,18 +4,13 @@ from typing import Any, Literal, cast, get_args
 
 from pydantic import Field, JsonValue, model_validator
 
-from chatddx.core.fields import CoercedStr
 from chatddx.repo.families import (
     ORDERED,
-    BaseFormDataIn,
-    BaseFormDataOut,
     BaseTrail,
-    BranchIn,
     BranchOut,
     Details,
     TrailIn,
     TrailOut,
-    TrailRef,
 )
 from chatddx.repo.families.fields import JsonSchema
 
@@ -224,25 +219,9 @@ class OutputTrailIn(OutputTrailBase, TrailIn):
     pass
 
 
-class OutputTrailRef(TrailRef, OutputTrailBase):
-    pass
-
-
 class OutputTrailOut(OutputTrailBase, TrailOut):
-    pass
-
-
-class OutputBranchIn(BranchIn[OutputTrailIn]):
     pass
 
 
 class OutputBranchOut(BranchOut[OutputTrailOut, Details]):
     pass
-
-
-class OutputFormDataIn(OutputTrailBase, BaseFormDataIn):
-    pass
-
-
-class OutputFormDataOut(OutputTrailBase, BaseFormDataOut):
-    id: CoercedStr = Field(serialization_alias="template")

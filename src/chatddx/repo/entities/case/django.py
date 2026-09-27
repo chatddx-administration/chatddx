@@ -4,8 +4,6 @@ from django.db.models import PROTECT, ForeignKey, TextField
 
 from chatddx.repo.families.django import (
     BranchModel,
-    BranchProxy,
-    Sharable,
     TrailModel,
 )
 
@@ -26,17 +24,3 @@ class CaseBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_case_branch"
-
-
-class Case(BranchProxy, CaseBranchModel, Sharable):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Case"
-        verbose_name_plural = "Cases"
-
-
-class SharedCase(BranchProxy, CaseBranchModel, Sharable):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Shared Case"
-        verbose_name_plural = "Shared Cases"

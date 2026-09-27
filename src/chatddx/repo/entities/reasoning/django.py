@@ -2,7 +2,7 @@
 
 from django.db.models import PROTECT, CharField, ForeignKey, PositiveIntegerField
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 
 
 class ReasoningTrailModel(TrailModel):
@@ -22,10 +22,3 @@ class ReasoningBranchModel(BranchModel):
 
     class Meta(BranchModel.Meta):
         db_table = "repo_reasoning_branch"
-
-
-class Reasoning(BranchProxy, ReasoningBranchModel):
-    class Meta(BranchProxy.Meta):
-        proxy = True
-        verbose_name = "Reasoning"
-        verbose_name_plural = "Reasoning"

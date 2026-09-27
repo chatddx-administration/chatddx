@@ -238,34 +238,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Case',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Case',
-                'verbose_name_plural': 'Cases',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.casebranchmodel', models.Model, chatddx.repo.families.django.Sharable),
-        ),
-        migrations.CreateModel(
-            name='SharedCase',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Shared Case',
-                'verbose_name_plural': 'Shared Cases',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.casebranchmodel', models.Model, chatddx.repo.families.django.Sharable),
-        ),
-        migrations.CreateModel(
             name='ClientBranchModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -281,20 +253,6 @@ class Migration(migrations.Migration):
                 'db_table': 'repo_client_branch',
                 'abstract': False,
             },
-        ),
-        migrations.CreateModel(
-            name='Client',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Client',
-                'verbose_name_plural': 'Clients',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.clientbranchmodel', models.Model),
         ),
         migrations.CreateModel(
             name='CoercionBranchModel',
@@ -314,20 +272,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Coercion',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Coercion',
-                'verbose_name_plural': 'Coercions',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.coercionbranchmodel', models.Model),
-        ),
-        migrations.CreateModel(
             name='ConfigurationBranchModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -342,34 +286,6 @@ class Migration(migrations.Migration):
                 'db_table': 'repo_configuration_branch',
                 'abstract': False,
             },
-        ),
-        migrations.CreateModel(
-            name='Configuration',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Configuration',
-                'verbose_name_plural': 'Configurations',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.configurationbranchmodel', models.Model, chatddx.repo.families.django.Sharable),
-        ),
-        migrations.CreateModel(
-            name='SharedConfiguration',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Shared Configuration',
-                'verbose_name_plural': 'Shared Configurations',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.configurationbranchmodel', models.Model, chatddx.repo.families.django.Sharable),
         ),
         migrations.CreateModel(
             name='ConfigurationTrailModel',
@@ -412,20 +328,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Instruction',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Instruction',
-                'verbose_name_plural': 'Instructions',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.instructionbranchmodel', models.Model),
-        ),
-        migrations.CreateModel(
             name='LLMBranchModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -441,18 +343,6 @@ class Migration(migrations.Migration):
                 'db_table': 'repo_llm_branch',
                 'abstract': False,
             },
-        ),
-        migrations.CreateModel(
-            name='LLM',
-            fields=[
-            ],
-            options={
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.llmbranchmodel', models.Model),
         ),
         migrations.CreateModel(
             name='MachineBranchModel',
@@ -472,20 +362,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Machine',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Machine',
-                'verbose_name_plural': 'Machines',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.machinebranchmodel', models.Model),
-        ),
-        migrations.CreateModel(
             name='OsBranchModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -501,20 +377,6 @@ class Migration(migrations.Migration):
                 'db_table': 'repo_os_branch',
                 'abstract': False,
             },
-        ),
-        migrations.CreateModel(
-            name='Os',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'OS',
-                'verbose_name_plural': 'OSes',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.osbranchmodel', models.Model),
         ),
         migrations.CreateModel(
             name='OutputBranchModel',
@@ -534,20 +396,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Output',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Output',
-                'verbose_name_plural': 'Outputs',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.outputbranchmodel', models.Model),
-        ),
-        migrations.CreateModel(
             name='ReasoningBranchModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -563,20 +411,6 @@ class Migration(migrations.Migration):
                 'db_table': 'repo_reasoning_branch',
                 'abstract': False,
             },
-        ),
-        migrations.CreateModel(
-            name='Reasoning',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Reasoning',
-                'verbose_name_plural': 'Reasoning',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.reasoningbranchmodel', models.Model),
         ),
         migrations.CreateModel(
             name='SamplingBranchModel',
@@ -596,20 +430,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Sampling',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Sampling',
-                'verbose_name_plural': 'Sampling',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.samplingbranchmodel', models.Model),
-        ),
-        migrations.CreateModel(
             name='ScorerBranchModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -625,18 +445,6 @@ class Migration(migrations.Migration):
                 'db_table': 'repo_scorer_branch',
                 'abstract': False,
             },
-        ),
-        migrations.CreateModel(
-            name='Scorer',
-            fields=[
-            ],
-            options={
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.scorerbranchmodel', models.Model),
         ),
         migrations.CreateModel(
             name='ServingBranchModel',
@@ -656,20 +464,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Serving',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Serving',
-                'verbose_name_plural': 'Servings',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.servingbranchmodel', models.Model),
-        ),
-        migrations.CreateModel(
             name='StackBranchModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -684,20 +478,6 @@ class Migration(migrations.Migration):
                 'db_table': 'repo_stack_branch',
                 'abstract': False,
             },
-        ),
-        migrations.CreateModel(
-            name='Stack',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Stack',
-                'verbose_name_plural': 'Stacks',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.stackbranchmodel', models.Model),
         ),
         migrations.CreateModel(
             name='StackTrailModel',
@@ -739,20 +519,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Tool',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Tool',
-                'verbose_name_plural': 'Tools',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.toolbranchmodel', models.Model),
-        ),
-        migrations.CreateModel(
             name='ToolsetBranchModel',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -768,20 +534,6 @@ class Migration(migrations.Migration):
                 'db_table': 'repo_toolset_branch',
                 'abstract': False,
             },
-        ),
-        migrations.CreateModel(
-            name='Toolset',
-            fields=[
-            ],
-            options={
-                'verbose_name': 'Toolset',
-                'verbose_name_plural': 'Toolsets',
-                'abstract': False,
-                'proxy': True,
-                'indexes': [],
-                'constraints': [],
-            },
-            bases=('repo.toolsetbranchmodel', models.Model),
         ),
         migrations.AddIndex(
             model_name='casebranchmodel',

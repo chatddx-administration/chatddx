@@ -3,10 +3,8 @@ from typing import Any
 
 from django.db.models import Count, OuterRef, Prefetch, Q, QuerySet, Subquery
 
-from chatddx.repo.families.django import BranchModel, BranchProxy, TrailModel
+from chatddx.repo.families.django import BranchModel, TrailModel
 from chatddx.repo.utils import trail_paths
-
-type AnyBranch = BranchModel | BranchProxy
 
 
 def qs_owned[T: BranchModel](qs: QuerySet[T], owner_name: str) -> QuerySet[T]:
@@ -97,12 +95,12 @@ def _head[T: BranchModel](qs: QuerySet[T], owned: QuerySet[T]) -> QuerySet[T]:
     )
 
 
-def qs_with_trail[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
+def qs_with_trail[T: BranchModel](qs: QuerySet[T]) -> QuerySet[T]:
     paths = trail_paths(_trail_model(qs), "trail__")
     return qs.select_related(*paths) if paths else qs
 
 
-def qs_with_relations[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
+def qs_with_relations[T: BranchModel](qs: QuerySet[T]) -> QuerySet[T]:
     prefetch: list[str | Prefetch[Any]] = []
 
     for m2m in qs.model._meta.many_to_many:
@@ -118,7 +116,7 @@ def qs_with_relations[T: AnyBranch](qs: QuerySet[T]) -> QuerySet[T]:
     return qs_with_trail(qs).select_related("owner").prefetch_related(*prefetch)
 
 
-def _trail_model(qs: QuerySet[AnyBranch]) -> type[TrailModel]:
+def _trail_model[T: BranchModel](qs: QuerySet[T]) -> type[TrailModel]:
     related = qs.model._meta.get_field("trail").related_model
 
     assert related is not None and issubclass(related, TrailModel)
