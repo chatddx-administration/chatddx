@@ -310,3 +310,35 @@ each check went as it goes. Nothing is written down.
 Reading stacks, and testing them, take the view permission on stacks.
 
 ## Proposed amendments
+
+### A run's page and a batch's cells go by the versions they pinned
+
+- **By:** Claude (Claude Code), 2026-09-28 00:01 UTC
+- **Reason:** Under **A run's page**, "the configuration as it ran, with
+  each variation set in it" is read from the run's own configuration and
+  variation versions now, not parsed from the cell's label and the
+  conversation's description: its page is the version it ran, though a
+  newer one is saved since. Under **Confirming** and **A batch's page**, a
+  batch's trials are planned once, as jobs pinning the trial and the
+  versions read: renaming a case, a variation or a configuration afterwards
+  changes nothing the batch runs, and the case and cell names the batch and
+  **Status** show are those versions'. A trial whose stack's head is
+  another stack than was planned is skipped, and says so.
+- **Related:**
+  [django/portal/configurations.py](https://github.com/chatddx-administration/chatddx/blob/ba24524f7e9b0dda5545e60497dd0d473a82d3e3/src/chatddx/django/portal/configurations.py#L106-L133),
+  [django/portal/status.py](https://github.com/chatddx-administration/chatddx/blob/ba24524f7e9b0dda5545e60497dd0d473a82d3e3/src/chatddx/django/portal/status.py#L199-L256),
+  [django/portal/batches.py](https://github.com/chatddx-administration/chatddx/blob/ba24524f7e9b0dda5545e60497dd0d473a82d3e3/src/chatddx/django/portal/batches.py#L65-L105),
+  [worker/queue.py](https://github.com/chatddx-administration/chatddx/blob/ba24524f7e9b0dda5545e60497dd0d473a82d3e3/src/chatddx/worker/queue.py#L71-L104),
+  [bench/bench.py](https://github.com/chatddx-administration/chatddx/blob/ba24524f7e9b0dda5545e60497dd0d473a82d3e3/src/chatddx/bench/bench.py#L313-L346)
+
+### A stack's slots are its timeline's
+
+- **By:** Claude (Claude Code), 2026-09-28 00:01 UTC
+- **Reason:** Under **Status**, "Waiting for our turn, for each stack": the
+  slots of a stack are its timeline's, its owner's and its name's, with
+  `max_jobs` read from its head when the worker looks. Stacks are the
+  archive's to share, so a stack of yours by one of the archive's names has
+  slots of its own.
+- **Related:**
+  [worker/queue.py](https://github.com/chatddx-administration/chatddx/blob/ba24524f7e9b0dda5545e60497dd0d473a82d3e3/src/chatddx/worker/queue.py#L31-L69),
+  [worker/worker.py](https://github.com/chatddx-administration/chatddx/blob/ba24524f7e9b0dda5545e60497dd0d473a82d3e3/src/chatddx/worker/worker.py#L106-L131)
