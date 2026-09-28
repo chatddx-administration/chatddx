@@ -1,0 +1,55 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n unfold %}
+
+{% block content %}
+    <div class="portal-box mt-0">
+        <p class="font-semibold mb-2 text-font-important-light dark:text-font-important-dark">
+            {% translate "Deleting these cases:" %}
+        </p>
+
+        <table class="portal-table">
+            <tbody>
+                {% for name, held in held %}
+                    <tr>
+                        <td class="font-medium">{{ name }}</td>
+                        <td>
+                            {% if held %}
+                                {% translate "out of sight, kept for what reads it:" %}
+                                {% blocktranslate count counter=held.runs %}{{ counter }} run{% plural %}{{ counter }} runs{% endblocktranslate %},
+                                {% blocktranslate count counter=held.scores %}{{ counter }} score{% plural %}{{ counter }} scores{% endblocktranslate %},
+                                {% blocktranslate count counter=held.trials %}{{ counter }} trial of your batches{% plural %}{{ counter }} trials of your batches{% endblocktranslate %}
+                            {% else %}
+                                {% translate "gone for good: nothing has read it" %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <p class="mt-4 text-sm">
+            {% translate "A case out of sight is in no list or batch, and its runs keep its name and targets. Saving a case under its name brings it back." %}
+        </p>
+    </div>
+
+    <form method="post" class="portal-actions">
+        {% csrf_token %}
+
+        {% for obj in queryset %}
+            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+        {% endfor %}
+
+        <input type="hidden" name="action" value="{{ action }}">
+        <input type="hidden" name="post" value="yes">
+
+        {% url "admin:portal_case_changelist" as changelist_url %}
+        {% component "unfold/components/button.html" with href=changelist_url variant="default" %}
+            {% translate "Back to the cases" %}
+        {% endcomponent %}
+
+        {% component "unfold/components/button.html" with submit=1 variant="danger" icon="delete" class="lg:ml-auto" %}
+            {% translate "Delete them" %}
+        {% endcomponent %}
+    </form>
+{% endblock %}

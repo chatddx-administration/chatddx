@@ -1,0 +1,187 @@
+# pyright: basic
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from datetime import datetime
+from uuid import UUID
+
+from django.db import transaction
+from pydantic import JsonValue
+from pydantic_ai import (
+    ModelMessage,
+    ModelMessagesTypeAdapter,
+    ModelRequest,
+    ModelResponse,
+    RetryPromptPart,
+    SystemPromptPart,
+    ToolReturnPart,
+    UserPromptPart,
+)
+
+from chatddx.core.models import IdentityModel
+from chatddx.history.models import (
+    ConversationContext,
+    ConversationModel,
+    MessageKind,
+    MessageModel,
+    Role,
+    RunModel,
+    RunStatus,
+    RunToolModel,
+    TrialModel,
+)
+from chatddx.repo.entities.client.django import ClientTrailModel
+from chatddx.repo.entities.configuration.django import ConfigurationTrailModel
+from chatddx.repo.entities.configuration.pydantic import ConfigurationTrailIn
+from chatddx.repo.store.trail import dump_trail
+from chatddx.runtime.client import Client, running
+from chatddx.runtime.run import Run
+
+
+@dataclass(frozen=True)
+class Read:
+    stack: int
+    llm: int | None = None
+    configuration: int | None = None
+    variations: Mapping[str, int] = field(default_factory=dict[str, int])
+    tools: Mapping[int, str] = field(default_factory=dict[int, str])
+
+
+@dataclass(frozen=True)
+class Outcome:
+    status: RunStatus
+    answer: JsonValue = None
+    valid: bool | None = None
+    error: str | None = None
+
+
+def trial_of(
+    configuration: ConfigurationTrailIn | ConfigurationTrailModel,
+    stack: int,
+    case: int,
+    seed: int | None,
+) -> TrialModel:
+    if isinstance(configuration, ConfigurationTrailIn):
+        configuration = dump_trail(ConfigurationTrailModel, configuration)
+
+    trial, _ = TrialModel.objects.get_or_create(
+        configuration=configuration,
+        stack_id=stack,
+        case_id=case,
+        seed=seed,
+    )
+
+    return trial
+
+
+def record(
+    owner: str,
+    trial: TrialModel,
+    read: Read,
+    run: Run,
+    outcome: Outcome,
+    started: datetime,
+    finished: datetime,
+    description: str | None = None,
+    context: ConversationContext = ConversationContext.REPL,
+    conversation: ConversationModel | None = None,
+    client: Client | None = None,
+) -> RunModel:
+    client = client or running()
+
+    with transaction.atomic():
+        identity = IdentityModel.objects.get(name=owner)
+
+        conversation = conversation or ConversationModel.objects.create(
+            uuid=UUID(run.conversation_id),
+            owner=identity,
+            context=context,
+            description=description[:255] if description else None,
+        )
+        _ = MessageModel.objects.bulk_create(
+            _messages(conversation, run, outcome.error, finished)
+        )
+
+        recorded = RunModel.objects.create(
+            uuid=UUID(run.run_id),
+            owner=identity,
+            trial=trial,
+            conversation=conversation,
+            status=outcome.status,
+            stack_branch_id=read.stack,
+            llm_branch_id=read.llm,
+            configuration_branch_id=read.configuration,
+            **{f"{entity}_branch_id": pk for entity, pk in read.variations.items()},
+            client=dump_trail(ClientTrailModel, client.trail),
+            client_rev=client.rev,
+            client_packages=client.packages,
+            started=started,
+            finished=finished,
+            requests=[body.decode() for body in run.requests],
+            responses=[bytes(body).decode() for body in run.responses],
+            answer=outcome.answer,
+            valid=outcome.valid,
+            finish_reason=_finish_reason(run.new_messages),
+            error=outcome.error,
+        )
+        _ = RunToolModel.objects.bulk_create(
+            RunToolModel(run=recorded, tool_branch_id=tool, blob=blob)
+            for tool, blob in read.tools.items()
+        )
+
+    return recorded
+
+
+def _messages(
+    conversation: ConversationModel,
+    run: Run,
+    error: str | None,
+    at: datetime,
+) -> list[MessageModel]:
+    payloads = ModelMessagesTypeAdapter.dump_python(run.new_messages, mode="json")
+    messages = [
+        MessageModel(
+            conversation=conversation,
+            run_uuid=UUID(run.run_id),
+            role=_role(message),
+            kind=message.kind,
+            payload=payload,
+            timestamp=message.timestamp or at,
+        )
+        for message, payload in zip(run.new_messages, payloads, strict=True)
+    ]
+
+    if error is not None:
+        messages.append(
+            MessageModel(
+                conversation=conversation,
+                run_uuid=UUID(run.run_id),
+                role=Role.UNKNOWN,
+                kind=MessageKind.ERROR,
+                payload={"error": error},
+                timestamp=at,
+            )
+        )
+
+    return messages
+
+
+def _role(message: ModelMessage) -> Role:
+    match message:
+        case ModelResponse():
+            return Role.ASSISTANT
+        case ModelRequest(parts=parts):
+            kinds = {type(part) for part in parts}
+
+            if UserPromptPart in kinds:
+                return Role.USER
+            if kinds & {ToolReturnPart, RetryPromptPart}:
+                return Role.TOOL
+            if SystemPromptPart in kinds:
+                return Role.SYSTEM
+
+    return Role.UNKNOWN
+
+
+def _finish_reason(messages: list[ModelMessage]) -> str | None:
+    responses = [m for m in messages if isinstance(m, ModelResponse)]
+    return responses[-1].finish_reason if responses else None

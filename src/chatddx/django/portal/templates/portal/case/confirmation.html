@@ -1,0 +1,53 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n unfold %}
+
+{% block content %}
+    <div class="portal-box mt-0">
+        <p class="font-semibold text-font-important-light dark:text-font-important-dark">{{ said.line }}</p>
+
+        {% if changes %}
+            <p class="mb-2 mt-4 text-sm">
+                {% blocktranslate with name=said.name number=theirs.number %}What saving changes of {{ name }}, from its version {{ number }}:{% endblocktranslate %}
+            </p>
+
+            {% include "portal/case/changes.html" %}
+        {% else %}
+            <p class="mt-4 text-sm">
+                {% blocktranslate with name=said.name %}{{ name }} holds all this already: saving changes nothing of it.{% endblocktranslate %}
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="portal-side-by-side">
+        <div>
+            <h2 class="portal-heading mt-6">
+                {% blocktranslate with name=said.name number=theirs.number %}{{ name }}, version {{ number }}{% endblocktranslate %}
+            </h2>
+
+            {% include "portal/case/version.html" with shown=theirs %}
+        </div>
+
+        <div>
+            <h2 class="portal-heading mt-6">{% translate "What replaces it" %}</h2>
+
+            {% include "portal/case/version.html" with shown=ours %}
+        </div>
+    </div>
+
+    <form method="post" action="{{ action_url }}" class="portal-actions">
+        {% csrf_token %}
+
+        {% for name, value in asked %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% endfor %}
+
+        {% component "unfold/components/button.html" with submit=1 name=back value="1" variant="default" %}
+            {% translate "Back to the form" %}
+        {% endcomponent %}
+
+        {% component "unfold/components/button.html" with submit=1 name=onto value=onto_pk class="lg:ml-auto" %}
+            {{ said.button }}
+        {% endcomponent %}
+    </form>
+{% endblock %}

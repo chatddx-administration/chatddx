@@ -1,0 +1,23 @@
+[scorer.reciprocal_rank]
+function = "chatddx.scoring.scorers.patterns:reciprocal_rank"
+view = "differential"
+target_kind = "diagnosis"
+metrics = ["mean", "stderr"]
+
+[scorer.first_mention]
+function = "chatddx.scoring.scorers.patterns:first_mention"
+view = "text"
+target_kind = "diagnosis"
+metrics = ["mean", "stderr"]
+
+[scorer.warning_mentions]
+function = "chatddx.scoring.scorers.patterns:mentions"
+view = "warning"
+target_kind = "warning"
+metrics = ["mean", "stderr"]
+
+[scorer.disposition_mentions]
+function = "chatddx.scoring.scorers.patterns:mentions"
+view = "disposition"
+target_kind = "disposition"
+metrics = ["mean", "stderr"]

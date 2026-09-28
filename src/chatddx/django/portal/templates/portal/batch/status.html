@@ -1,0 +1,9 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n unfold %}
+
+{% block content %}
+    {% tab_list "changelist" opts %}
+
+    {% include "portal/batch/status_panel.html" %}
+{% endblock %}

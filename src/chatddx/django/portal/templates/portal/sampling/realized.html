@@ -1,0 +1,57 @@
+{% load i18n %}
+
+<section class="portal-box" id="sampling-realized"{% if oob %} hx-swap-oob="true"{% endif %}>
+    <h2 class="portal-heading">{% translate "What it does" %}</h2>
+
+    <p class="portal-said mb-4">
+        {% translate "On each LLM your stacks serve, reasoning each way its facts realize: what a request carries, and where the settings it leaves out come from." %}
+    </p>
+
+    {% if realized is None %}
+        <p class="portal-missing text-sm">{% translate "Once its values hold, this says what they do." %}</p>
+    {% elif not realized.rows %}
+        <p class="portal-missing text-sm">{% translate "None of your stacks' LLMs has facts to say it by." %}</p>
+    {% else %}
+        {% if realized.greedy == "all" %}
+            <p class="portal-said-note mb-4">
+                {% translate "It is greedy, whichever the LLM and the reasoning: a seed changes nothing of it, so its trials run unseeded." %}
+            </p>
+        {% endif %}
+
+        <div class="overflow-x-auto">
+            <table class="portal-table">
+                <thead>
+                    <tr>
+                        <th>{% translate "LLM" %}</th>
+                        <th>{% translate "Reasoning" %}</th>
+                        <th>{% translate "A request carries" %}</th>
+                        <th>{% translate "What it leaves out is" %}</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in realized.rows %}
+                        <tr>
+                            <td>{% ifchanged row.llm %}{{ row.llm }}{% endifchanged %}</td>
+                            <td>
+                                {% for intent, default in row.intents %}{{ intent }}{% if default %} <span class="portal-missing">{% translate "(its default)" %}</span>{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            </td>
+
+                            {% if row.refused %}
+                                <td class="portal-refused" colspan="2">{% blocktranslate with why=row.refused %}refused: {{ why }}{% endblocktranslate %}</td>
+                            {% else %}
+                                <td>
+                                    <code class="portal-value">{% for setting in row.writes %}<span class="portal-setting">{{ setting }}</span>{% if not forloop.last %}, {% endif %}{% empty %}{% translate "nothing" %}{% endfor %}</code>
+                                    {% if row.greedy and realized.greedy == "some" %}
+                                        <span class="portal-badge">{% translate "greedy: its trials run unseeded" %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ row.source }}</td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</section>

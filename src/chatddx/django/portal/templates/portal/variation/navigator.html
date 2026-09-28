@@ -1,0 +1,28 @@
+{% load i18n %}
+
+<nav class="portal-navigator" aria-label="{% translate 'Versions' %}">
+    {% if before_url %}
+        <a href="{{ before_url }}" title="{% translate 'The version before' %}">
+            <span class="material-symbols-outlined">chevron_left</span>
+        </a>
+    {% else %}
+        <span class="portal-missing"><span class="material-symbols-outlined">chevron_left</span></span>
+    {% endif %}
+
+    <span>
+        {% blocktranslate with number=version.number of=version.of %}version {{ number }} of {{ of }}{% endblocktranslate %}
+        · {{ version.saved|date:"DATETIME_FORMAT" }}
+    </span>
+
+    {% if after_url %}
+        <a href="{{ after_url }}" title="{% translate 'The version after' %}">
+            <span class="material-symbols-outlined">chevron_right</span>
+        </a>
+    {% else %}
+        <span class="portal-missing"><span class="material-symbols-outlined">chevron_right</span></span>
+    {% endif %}
+
+    {% if not version.latest %}
+        <a class="font-semibold underline" href="{{ head_url }}">{% translate "The latest" %}</a>
+    {% endif %}
+</nav>

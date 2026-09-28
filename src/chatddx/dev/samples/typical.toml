@@ -1,0 +1,95 @@
+# A typical run: the management plan, thought through once and answered in
+# one go, as Qwen3 answers held to the plan's schema by guided decoding.
+configuration = "plan"
+stack = "qwen3-8b-awq@fake"
+case = "DutchFall10w"
+seed = 58213
+
+[[turns]]
+reasoning = '''
+Okay, let me work through this. Sudden, continuous upper abdominal pain since last night, radiating to the back between the shoulder blades, VAS 8 at its worst, not touched by paracetamol and better after diclofenac and morphine. Known gallstones that never gave trouble before. No fever, no chills, normal stools, normal urine colour, eating and drinking normally.
+
+On examination the punctum maximum is in the left upper abdomen, no release pain, no palpable mass, both femoral pulses present. Heart rate 97, blood pressure 165/102, respiratory rate 24, temperature 36. Labs: normal leukocytes and differential, normal CRP, normal liver values, normal renal function; only a very mildly raised CK.
+
+The most likely picture is biliary colic: known stones, pain radiating to the back, and normal inflammatory markers and liver tests argue against cholecystitis and cholangitis for now. But pain between the shoulder blades together with a blood pressure of 165/102 means aortic dissection has to be excluded before she goes home. Pancreatitis is possible with gallstones and back pain, and lipase isn't reported, so it needs measuring. The left upper quadrant could also be gastric, a peptic ulcer, and she has just had an NSAID. An inferior myocardial infarction can present as epigastric pain, and the CK is mildly raised, so an ECG and a troponin belong in the workup.
+
+Workup: lipase, troponin and an ECG urgently, blood pressure in both arms, ultrasound of the upper abdomen, and CT angiography of the aorta if dissection can't be excluded at the bedside. Treatment: analgesia now, and nil by mouth with fluids if pancreatitis is confirmed.
+
+Disposition: observation in the emergency department; once dissection, pancreatitis and cardiac causes are excluded and the pain settles, discharge home with an outpatient ultrasound and a surgical referral for an elective cholecystectomy.
+'''
+content = '''{
+  "acute_warning": "Pain radiating between the shoulder blades with a blood pressure of 165/102 mmHg: exclude aortic dissection before discharge. Fever, jaundice or rising inflammatory markers would point to cholecystitis or cholangitis.",
+  "diagnoses": [
+    {
+      "diagnosis": "Biliary colic",
+      "probability": "high",
+      "critical": false,
+      "short_rationale": "Known gallstones, continuous upper abdominal pain radiating to the back, and normal CRP, leukocytes and liver values."
+    },
+    {
+      "diagnosis": "Acute pancreatitis",
+      "probability": "medium",
+      "critical": true,
+      "short_rationale": "Gallstones with epigastric pain radiating to the back; lipase has not been measured."
+    },
+    {
+      "diagnosis": "Aortic dissection",
+      "probability": "low",
+      "critical": true,
+      "short_rationale": "Pain between the shoulder blades and marked hypertension, though both femoral pulses are present."
+    },
+    {
+      "diagnosis": "Peptic ulcer",
+      "probability": "low",
+      "critical": false,
+      "short_rationale": "Left upper quadrant punctum maximum and a recent NSAID."
+    },
+    {
+      "diagnosis": "Myocardial infarction",
+      "probability": "low",
+      "critical": true,
+      "short_rationale": "Epigastric pain with a mildly raised CK can be an inferior infarction."
+    }
+  ],
+  "management": {
+    "workup": [
+      {
+        "type": "Lab",
+        "investigations": ["Lipase", "Troponin", "Repeat liver panel"],
+        "priority": "urgent"
+      },
+      {
+        "type": "Physiology",
+        "investigations": ["12-lead ECG", "Blood pressure in both arms"],
+        "priority": "urgent"
+      },
+      {
+        "type": "Radiology",
+        "investigations": ["Ultrasound of the upper abdomen"],
+        "priority": "prompt"
+      },
+      {
+        "type": "Radiology",
+        "investigations": ["CT angiography of the aorta, unless dissection is excluded at the bedside"],
+        "priority": "urgent"
+      }
+    ],
+    "empirical_treatment": [
+      {
+        "indication": "Biliary pain",
+        "treatment": "Paracetamol 1 g IV; morphine 5 mg IV if needed",
+        "important": "No further NSAIDs until a peptic ulcer and renal impairment are excluded."
+      },
+      {
+        "indication": "If pancreatitis is confirmed",
+        "treatment": "Nil by mouth, IV crystalloids 250 ml/h, analgesia",
+        "important": "Watch the urine output, and assess severity again at 48 hours."
+      }
+    ],
+    "disposition": "Observation in the emergency department; discharge home with an outpatient ultrasound and a surgical referral once dissection, pancreatitis and cardiac causes are excluded and the pain has settled."
+  },
+  "sources": [
+    "Tokyo Guidelines 2018 on acute cholangitis and cholecystitis",
+    "ESC guidelines on the diagnosis and treatment of aortic diseases"
+  ]
+}'''

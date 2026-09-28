@@ -1,0 +1,25 @@
+{% load i18n %}
+
+<ul class="portal-facts">
+    {% for holding in holds.configurations %}
+        <li>
+            {% if version and holding.version == version.number %}
+                {% blocktranslate with url=holding.page name=holding.name %}<a class="font-semibold underline" href="{{ url }}">{{ name }}</a> holds this version{% endblocktranslate %}
+            {% else %}
+                {% blocktranslate with url=holding.page name=holding.name number=holding.version %}<a class="font-semibold underline" href="{{ url }}">{{ name }}</a> holds version {{ number }}{% endblocktranslate %}
+            {% endif %}
+        </li>
+    {% endfor %}
+
+    {% if holds.earlier %}
+        <li>{% blocktranslate count counter=holds.earlier %}{{ counter }} earlier version of your configurations holds it{% plural %}{{ counter }} earlier versions of your configurations hold it{% endblocktranslate %}</li>
+    {% endif %}
+
+    {% if holds.runs %}
+        <li>{% blocktranslate count counter=holds.runs %}{{ counter }} run of yours holds it{% plural %}{{ counter }} runs of yours hold it{% endblocktranslate %}</li>
+    {% endif %}
+
+    {% if holds.trials %}
+        <li>{% blocktranslate count counter=holds.trials %}{{ counter }} trial of your batches holds it{% plural %}{{ counter }} trials of your batches hold it{% endblocktranslate %}</li>
+    {% endif %}
+</ul>

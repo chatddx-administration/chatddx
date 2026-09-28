@@ -1,0 +1,57 @@
+# A run that went wrong every way it could, and broke off: the search the LLM
+# called for failed (the search service answered 503), it called again with
+# an argument web_search doesn't take, and the server went away while it
+# wrote the plan, halfway through its differential.
+configuration = "plan-web"
+stack = "qwen3-8b-awq@fake"
+case = "Dutchfall11w"
+seed = 30719
+
+[[turns]]
+reasoning = '''
+An older man with benign prostatic hyperplasia, on 60 mg prednisone a day for temporal arteritis, treated with ciprofloxacin for a presumed urinary tract infection or pyelonephritis without getting better. Now lower back and lower abdominal pain, can't stand upright, nauseous and vomiting. Fever 38, heart rate 110, respiratory rate 36, blood pressure 105/68, lactate mildly raised. That is sepsis at the least, and the prednisone will blunt both the fever and the abdominal signs.
+
+Pulsations of the femoral arteries difficult to assess, back pain, a mild anaemia and a low blood pressure: a ruptured or an infected abdominal aortic aneurysm has to be on the list. High-dose steroids and a urinary source that didn't clear... a mycotic aneurysm? I'm not sure how often that presents like this. Let me search.
+'''
+
+[[turns.calls]]
+name = "web_search"
+arguments = { query = "mycotic abdominal aortic aneurysm corticosteroids fever back pain", max_results = 5 }
+
+[[turns]]
+reasoning = '''
+The search service didn't answer. Let me try once more, with fewer words.
+'''
+
+[[turns.calls]]
+name = "web_search"
+arguments = { search = "infected aortic aneurysm presentation" }
+
+[[turns]]
+reasoning = '''
+The tool won't help me here, so I answer from what I know. Sepsis with hypotension, back pain and femoral pulses that are hard to feel, in an older man on high-dose steroids: a ruptured or infected aortic aneurysm comes first, then urosepsis with an obstructed right kidney given the flank pain and the prostate, then a perforated viscus masked by the prednisone, a spondylodiscitis or psoas abscess, and a retroperitoneal bleed on ascal.
+'''
+content = '''{
+  "acute_warning": "Hypotension, tachycardia and back pain with femoral pulses that are hard to feel, in a patient on high-dose prednisone: treat as a ruptured or infected abdominal aortic aneurysm until CT angiography shows otherwise.",
+  "diagnoses": [
+    {
+      "diagnosis": "Ruptured abdominal aortic aneurysm",
+      "probability": "medium",
+      "critical": true,
+      "short_rationale": "Back and abdominal pain, hypotension, anaemia and femoral pulses that are difficult to assess."
+    },
+    {
+      "diagnosis": "Urosepsis",
+      "probability": "high",
+      "critical": true,
+      "short_rationale": "Fever, neutrophilia and a high CRP after a urinary tract infection that did not clear on ciprofloxacin, with right flank pain and prostatic hyperplasia."
+    },
+    {
+      "diagnosis": "Perforated viscus",
+      "probability": "low",
+      "critical": true,
+      "short_rationale": "High-dose prednisone masks peritonism, and'''
+broken = true
+
+[web."mycotic abdominal aortic aneurysm corticosteroids fever back pain"]
+status = 503

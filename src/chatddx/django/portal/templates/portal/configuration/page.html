@@ -1,0 +1,94 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n %}
+
+{% block content %}
+    <nav class="portal-navigator" aria-label="{% translate 'Versions' %}">
+        {% if shown.before %}
+            <a href="{{ shown.before }}" title="{% translate 'The version before' %}">
+                <span class="material-symbols-outlined">chevron_left</span>
+            </a>
+        {% else %}
+            <span class="portal-missing"><span class="material-symbols-outlined">chevron_left</span></span>
+        {% endif %}
+
+        <span>
+            {% blocktranslate with name=shown.row.name number=shown.version.number of=shown.version.of %}{{ name }}, version {{ number }} of {{ of }}{% endblocktranslate %}
+            · {{ shown.version.saved|date:"DATETIME_FORMAT" }}
+        </span>
+
+        {% if shown.after %}
+            <a href="{{ shown.after }}" title="{% translate 'The version after' %}">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </a>
+        {% else %}
+            <span class="portal-missing"><span class="material-symbols-outlined">chevron_right</span></span>
+        {% endif %}
+    </nav>
+
+    {% if shown.newer %}
+        {% include "portal/record/newer.html" with newer=shown.newer what=shown.row.name %}
+    {% endif %}
+
+    <section class="portal-box">
+        <div class="portal-box-head">
+            <h2 class="portal-heading">{{ shown.label }}</h2>
+            <span class="portal-missing text-sm">{{ shown.owner }} · {{ shown.fingerprint }}</span>
+        </div>
+
+        {% if shown.set %}
+            <p class="portal-said">
+                {% blocktranslate count counter=shown.set|length with name=shown.row.name url=shown.varies %}A variation of <a class="font-semibold underline" href="{{ url }}">{{ name }}</a>, with a variation set in place of its own:{% plural %}A variation of <a class="font-semibold underline" href="{{ url }}">{{ name }}</a>, with {{ counter }} variations set in place of its own:{% endblocktranslate %}
+            </p>
+
+            <ul class="portal-variations">
+                {% for slice in shown.set %}
+                    <li>
+                        <a class="font-semibold underline" href="#{{ slice.entity }}">{{ slice.label }}</a>:
+                        <span class="portal-chip portal-chip-set">{{ slice.name }}</span>
+                        {% blocktranslate with own=slice.own %}in place of {{ own }}{% endblocktranslate %}
+
+                        <ul class="portal-facts">
+                            {% for change in slice.changes %}
+                                <li>
+                                    {% if change.before is None %}
+                                        {% blocktranslate with label=change.label %}{{ label }}: another{% endblocktranslate %}
+                                    {% else %}
+                                        {{ change.label }}: {{ change.before }} → {{ change.after }}
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="portal-said">{% translate "The configuration as it is saved, with no variation set in it." %}</p>
+        {% endif %}
+    </section>
+
+    <div class="portal-parts">
+        {% for slice in shown.slices %}
+            <section class="portal-box{% if slice.set %} portal-box-set{% endif %}" id="{{ slice.entity }}">
+                <div class="portal-box-head">
+                    <h2 class="portal-heading">
+                        {{ slice.label }} ·
+                        {% if slice.page %}<a class="underline" href="{{ slice.page }}" title="{% translate 'Open the variation' %}">{{ slice.name }}</a>{% else %}{{ slice.name }}{% endif %}
+                    </h2>
+                    {% if slice.set %}
+                        <span class="portal-badge">{% blocktranslate with own=slice.own %}set in place of {{ own }}{% endblocktranslate %}</span>
+                    {% endif %}
+                    <span class="portal-missing text-sm">
+                        {% if slice.version %}{% blocktranslate with number=slice.version.number of=slice.version.of %}version {{ number }} of {{ of }}{% endblocktranslate %}{% if slice.fingerprint %} · {% endif %}{% endif %}{{ slice.fingerprint|default:"" }}
+                    </span>
+                </div>
+
+                {% if slice.newer %}
+                    {% include "portal/record/newer.html" with newer=slice.newer what=slice.name %}
+                {% endif %}
+
+                {% include "portal/record/fields.html" with fields=slice.fields %}
+            </section>
+        {% endfor %}
+    </div>
+{% endblock %}

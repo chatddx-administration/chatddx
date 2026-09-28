@@ -1,0 +1,46 @@
+# the management plan, as the medical-assistant agents ask for it
+[configuration.plan]
+instruction = "ddx"
+output = "management-plan"
+coercion = "native"
+reasoning = "default"
+sampling = "recommended"
+tags = ["ddx"]
+
+# the same, with the schema shown to the LLM in the instructions
+[configuration.plan-shown]
+extends = "plan"
+coercion = "native-shown"
+
+# the same, with the schema shown and nothing enforcing it
+[configuration.plan-prompted]
+extends = "plan"
+coercion = "prompted"
+
+# the same, with web search at hand
+[configuration.plan-web]
+extends = "plan"
+toolset = "web"
+
+# the differential alone, as the medical-assistant agents ask for it
+[configuration.diagnoses]
+instruction = "ddx"
+output = "diagnoses"
+coercion = "native"
+reasoning = "default"
+sampling = "recommended"
+tags = ["ddx"]
+
+# the same, answered through the final-result tool
+[configuration.diagnoses-tool]
+extends = "diagnoses"
+coercion = "tool"
+
+# the differential as plain lines; every coercion collapses here
+[configuration.free-text]
+instruction = "ddx"
+output = "free-text"
+coercion = "auto"
+reasoning = "default"
+sampling = "recommended"
+tags = ["ddx"]

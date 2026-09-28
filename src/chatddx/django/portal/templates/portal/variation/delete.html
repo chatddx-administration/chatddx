@@ -1,0 +1,35 @@
+{% extends "admin/base_site.html" %}
+
+{% load i18n unfold %}
+
+{% block content %}
+    <div class="portal-box mt-0">
+        {% if holds.anything %}
+            <p class="font-semibold text-font-important-light dark:text-font-important-dark">
+                {% blocktranslate %}{{ name }} can't be deleted while anything of yours goes by its name:{% endblocktranslate %}
+            </p>
+
+            <div class="mt-2 text-sm">
+                {% include "portal/variation/held.html" %}
+            </div>
+        {% else %}
+            <p class="font-semibold text-font-important-light dark:text-font-important-dark">
+                {% blocktranslate count counter=versions %}Nothing of yours goes by {{ name }}: deleting it deletes its one version for good.{% plural %}Nothing of yours goes by {{ name }}: deleting it deletes its {{ counter }} versions for good.{% endblocktranslate %}
+            </p>
+        {% endif %}
+    </div>
+
+    <form method="post" class="portal-actions">
+        {% csrf_token %}
+
+        {% component "unfold/components/button.html" with href=back_url variant="default" %}
+            {% translate "Back to the variation" %}
+        {% endcomponent %}
+
+        {% if not holds.anything %}
+            {% component "unfold/components/button.html" with submit=1 variant="danger" icon="delete" class="lg:ml-auto" %}
+                {% translate "Delete it" %}
+            {% endcomponent %}
+        {% endif %}
+    </form>
+{% endblock %}

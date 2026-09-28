@@ -1,48 +1,37 @@
-import json
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 import pytest
+from pydantic_ai import AgentRunResult
 
 from chatddx.core import settings
-from chatddx.repo.inventories import InventoryBranchSpec
-from chatddx.runtime.runners import run_from_spec
+from chatddx.repo.inventories import ParsedInventory
+from chatddx.repo.parsers.inventory import parse
+from chatddx.runtime.resolution import Resolution
+from chatddx.runtime.run import Run, invalid
 
-pytestmark = [
-    pytest.mark.network,
-    pytest.mark.asyncio,
-    pytest.mark.django_db(transaction=True),
-]
+type Cell = Callable[..., Resolution]
+type Ran = Callable[[Run], Coroutine[Any, Any, AgentRunResult[Any]]]
 
+pytestmark = [pytest.mark.network, pytest.mark.asyncio]
 
-def get_case_and_expect(name: str) -> tuple[str, dict[str, Any]]:
-    data_path = settings.INVENTORY_PATH / f"chatddx/cases/case_{name}.txt"
-    expects_path = settings.INVENTORY_PATH / f"chatddx/cases/expect_{name}.json"
-
-    with data_path.open("r") as f:
-        case = f.read()
-
-    with expects_path.open("r") as f:
-        expect = json.load(f)
-
-    return case, expect
+STACK = "qwen3-8b-awq@pelle"
 
 
-@pytest.mark.parametrize(
-    "case_name",
-    [
-        "a",
-        "b",
-    ],
-)
-async def test_qwen3_baseline(
-    inventory_fixture_bs: InventoryBranchSpec, case_name: str
+@pytest.fixture(scope="module")
+def live_inventory() -> ParsedInventory:
+    return parse(settings.INVENTORY_PATH / "inventory.toml")
+
+
+@pytest.mark.parametrize("case_name", ["DutchFall10w", "Dutchfall11w"])
+async def test_qwen3_management_plan(
+    cell: Cell, ran: Ran, live_inventory: ParsedInventory, case_name: str
 ):
-    agent = inventory_fixture_bs.agent[
-        "qwen3-8b management_plan_v1 seed-locked disable-thinking"
-    ]
-    case, expect = get_case_and_expect(case_name)
+    resolution = cell("plan", STACK, reasoning="off")
+    case, _ = live_inventory.case[case_name]
+    assert resolution.coercion is not None
 
-    result = await run_from_spec(agent.target, case)
-    print(json.dumps(result.output, indent=2))
+    result = await ran(Run(resolution, case.vignette, seed=0))
 
-    assert result.output == expect
+    assert invalid(resolution.coercion.schema, result.output) is None
+    assert resolution.output.view("differential", result.output)

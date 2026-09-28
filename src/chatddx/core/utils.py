@@ -1,6 +1,7 @@
+from collections.abc import Sequence
+
 from chatddx.core.models import IdentityModel, TagModel
 from chatddx.repo.entity_names import EntityName
-from chatddx.utils import make_async
 
 
 def ensure_identity(name: str) -> IdentityModel:
@@ -17,4 +18,19 @@ def ensure_tag(owner: IdentityModel, entity: EntityName, name: str) -> TagModel:
     return tag
 
 
-ensure_identity_async = make_async(ensure_identity)
+def ensure_identities(names: Sequence[str]) -> list[IdentityModel]:
+    there = {
+        identity.name: identity
+        for identity in IdentityModel.objects.filter(name__in=names)
+    }
+    return [there.get(name) or ensure_identity(name) for name in names]
+
+
+def ensure_tags(
+    owner: IdentityModel, entity: EntityName, names: Sequence[str]
+) -> list[TagModel]:
+    there = {
+        tag.name: tag
+        for tag in TagModel.objects.filter(owner=owner, entity=entity, name__in=names)
+    }
+    return [there.get(name) or ensure_tag(owner, entity, name) for name in names]

@@ -1,49 +1,51 @@
-from pydantic import BaseModel
+from typing import Annotated, Literal
 
+from pydantic import Field, JsonValue
+
+from chatddx.repo.entities.case.pydantic import TargetKind
+from chatddx.repo.entities.output.pydantic import View
 from chatddx.repo.families import (
-    BranchSchema,
-    BranchSpec,
-    TrailSchema,
-    TrailSchemaRef,
-    TrailSpec,
+    BaseTrail,
+    BranchDetails,
+    BranchDetailsPatch,
+    BranchOut,
+    Details,
+    TrailIn,
+    TrailOut,
 )
-from chatddx.repo.families.pydantic import BaseFormDataIn, BaseFormDataOut, BaseTrail
+from chatddx.repo.families.fields import EntryPoint, distinct
+
+type Metric = Literal["mean", "stderr", "std", "var"]
 
 
-class ScorerBasePrimitives(BaseModel):
-    command: str
+class ScorerDetails(Details):
+    metrics: Annotated[list[Metric], distinct()] = Field(
+        default_factory=lambda: ["mean", "stderr"]
+    )
 
 
-class ScorerTrailBase(ScorerBasePrimitives, BaseTrail):
+class ScorerTrailBase(BaseTrail):
+    function: EntryPoint
+    view: View
+    target_kind: TargetKind | None = None
+    args: dict[str, JsonValue] = Field(default_factory=dict)
+
+
+class ScorerTrailIn(ScorerTrailBase, TrailIn):
     pass
 
 
-class ScorerTrailSchema(ScorerTrailBase, TrailSchema):
+class ScorerTrailOut(ScorerTrailBase, TrailOut):
     pass
 
 
-class ScorerTrailSchemaRef(
-    TrailSchemaRef,
-    ScorerTrailBase,
-):
+class ScorerBranchDetails(BranchDetails, ScorerDetails):
     pass
 
 
-class ScorerTrailSpec(ScorerTrailBase, TrailSpec):
+class ScorerBranchDetailsPatch(BranchDetailsPatch, ScorerDetails):
     pass
 
 
-class ScorerBranchSchema(BranchSchema[ScorerTrailSchema]):
-    pass
-
-
-class ScorerBranchSpec(BranchSpec[ScorerTrailSpec]):
-    pass
-
-
-class ScorerFormDataIn(ScorerTrailBase, BaseFormDataIn):
-    pass
-
-
-class ScorerFormDataOut(ScorerTrailBase, BaseFormDataOut):
+class ScorerBranchOut(BranchOut[ScorerTrailOut, ScorerDetails]):
     pass

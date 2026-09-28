@@ -1,0 +1,123 @@
+# A run rich in all a run can hold: gpt-oss thinking hard before every step,
+# four rounds of searches, two of them made at once, one call with an
+# argument of the wrong type and one search that finds nothing, a word to
+# the user beside its calls, and the plan answered through the final_result
+# tool, as the tool coercion has it.
+configuration = "plan-web"
+stack = "gpt-oss-20b@fake"
+case = "Dutchfall14w"
+seed = 1337
+
+[set]
+reasoning = "high"
+coercion = "tool"
+
+[[turns]]
+reasoning = '''
+We have a patient with dyspnea for two days. History: facial erysipelas treated with flucloxacillin, then clindamycin, still on clindamycin. COPD exacerbation history with a possible asthma component, on inhalers. Hospitalized last week for the erysipelas. Since discharge, rapidly short of breath on exertion. No cough to speak of, a little light mucus. No fever, no chills. Weighs 120 kg. Smokes 5 to 10 cigarettes a day. No alcohol for weeks. No chest pain, no palpitations.
+
+Exam: respiratory rate 13, heart rate 104, blood pressure 121/97, saturation 92% on 2 liters of oxygen, temperature 36. Not acutely ill, speaks full sentences. Diffuse expiratory wheeze on both sides. Calves supple. Labs: mildly raised erythrocytes, platelets and leukocytes; very mildly raised CRP. Blood gas: normal pH, low pO2.
+
+The obvious reading is an exacerbation of COPD: wheeze, a known history, a smoker. But several things don't fit an ordinary exacerbation. He was in hospital last week and has been short of breath since discharge: immobility, infection, obesity. That is a textbook setup for venous thromboembolism. Tachycardia at 104 with a respiratory rate of only 13 is odd for an exacerbation severe enough to need oxygen. Hypoxemia with a normal pH: no hypercapnia at least, though the pCO2 isn't given. Diffuse wheeze doesn't exclude pulmonary embolism; bronchospasm is described with PE.
+
+We should quantify the PE risk properly instead of guessing. Wells criteria: heart rate over 100 gives 1.5, immobilisation or surgery in the previous four weeks gives 1.5 if hospitalisation counts, PE as likely as an alternative gives 3 or not depending on judgement. Let me look up how COPD exacerbations and PE overlap, and the exact Wells items.
+'''
+content = "Before settling on an exacerbation, I'll check how likely a pulmonary embolism is after his stay in hospital."
+
+[[turns.calls]]
+name = "web_search"
+arguments = { query = "pulmonary embolism after hospital discharge unexplained COPD exacerbation wheeze", max_results = 3 }
+
+[[turns.calls]]
+name = "web_search"
+arguments = { query = "Wells score pulmonary embolism criteria", max_results = 2 }
+
+[[turns]]
+reasoning = '''
+The results support the worry. In exacerbations of COPD without an obvious infectious trigger, pulmonary embolism turns up in a meaningful share, and the risk stays raised for weeks after discharge, highest in the first month. Wheeze can be the presenting sign of PE.
+
+Wells items: clinical signs of DVT 3 (none here: calves supple), PE the most likely diagnosis 3 (arguable), heart rate over 100 1.5 (yes, 104), immobilisation at least 3 days or surgery in the previous 4 weeks 1.5 (a hospital stay last week: likely yes), previous DVT or PE 1.5 (unknown), haemoptysis 1 (no), malignancy 1 (no). Without the "most likely" item that is 3, PE unlikely on the two-level score; with it, 6, PE likely. The judgement call decides the pathway, which is exactly why the D-dimer and imaging questions matter.
+
+Two more loose ends. First, clindamycin: could the dyspnea be a drug reaction, bronchospasm or even a hypersensitivity pneumonitis? Rare, but he started it recently. Second, the raised erythrocytes: a secondary polycythemia would point to chronic hypoxemia, which fits smoking and obesity, possibly obesity hypoventilation or undiagnosed sleep apnea at 120 kg. Let me search both at once.
+'''
+
+[[turns.calls]]
+name = "web_search"
+arguments = { query = "clindamycin adverse reactions dyspnea bronchospasm", max_results = 2 }
+
+[[turns.calls]]
+name = "web_search"
+arguments = { query = "secondary polycythemia smoker hypoxemia", max_results = "five" }
+
+[[turns]]
+reasoning = '''
+The clindamycin result: rash and diarrhoea are common, bronchospasm and anaphylaxis rare, and nothing suggests a slow onset over days after starting it. That makes a drug reaction unlikely but not impossible; worth stopping or switching the antibiotic if another cause isn't found, and the erysipelas course is nearly done anyway.
+
+The second search failed: max_results has to be an integer, not the word "five". Let me run it again properly, with slightly better terms.
+'''
+
+[[turns.calls]]
+name = "web_search"
+arguments = { query = "secondary polycythaemia chronic hypoxaemia smoker obesity", max_results = 2 }
+
+[[turns]]
+reasoning = '''
+Secondary erythrocytosis from chronic hypoxemia: smoking raises the haematocrit through carboxyhaemoglobin, and obesity hypoventilation does it through nocturnal hypoxemia. Both plausible here. Neither explains an acute worsening since discharge, but together they lower the reserve he has.
+
+Now the practical question for PE workup. If the Wells score comes out likely, go straight to CT pulmonary angiography. If unlikely, a D-dimer first, age-adjusted if over 50. At 120 kg the scanner's table limit and contrast dosing matter. Let me check whether an age-adjusted D-dimer holds up in obesity and what weight limits apply to CTPA.
+'''
+content = "Checking the D-dimer cut-off and imaging at his weight."
+
+[[turns.calls]]
+name = "web_search"
+arguments = { query = "age adjusted D-dimer cutoff obesity 120 kg CTPA table weight limit contrast dose", max_results = 3 }
+
+[[turns]]
+reasoning = '''
+Nothing found on the combined question. Fine: most CT tables carry well over 120 kg, and an age-adjusted D-dimer is validated across weights; it isn't a reason to change the pathway.
+
+Putting it together.
+
+Most likely: an exacerbation of COPD, perhaps with an asthmatic component, triggered by the recent infection and hospital stay. Supports: known COPD, diffuse expiratory wheeze, smoker, light sputum, mild CRP rise.
+
+Must exclude: pulmonary embolism. Supports: dyspnea since discharge after a hospital stay, tachycardia 104, hypoxemia out of proportion to a respiratory rate of 13, obesity. Against: supple calves, no chest pain, no haemoptysis. Critical.
+
+Also consider: heart failure (obesity, smoking, diastolic pressure 97; check NT-proBNP and an echo if it's raised), pneumonia (no fever and a near-normal CRP make it less likely; a chest X-ray settles it), obesity hypoventilation or sleep apnea (polycythemia, 120 kg; needs a pCO2 and later polysomnography), and a clindamycin reaction (rare, onset doesn't fit).
+
+Warning signs: worsening hypoxemia, a rising pCO2 or falling pH meaning hypercapnic respiratory failure, exhaustion, and signs of right heart strain.
+
+Workup: arterial blood gas with pCO2 now, a chest X-ray, ECG, NT-proBNP and troponin, a D-dimer, and CTPA if the Wells score is likely or the D-dimer is raised. Peak flow or spirometry once stable.
+
+Treatment: controlled oxygen to a saturation of 88 to 92 percent, nebulised salbutamol and ipratropium, prednisolone 40 mg for five days. Antibiotics only if the sputum turns purulent. Therapeutic low-molecular-weight heparin if the PE probability is high and imaging is delayed; dose by weight, 120 kg.
+
+Disposition: admission to a monitored bed on the respiratory ward: he needs oxygen and a PE workup, and has just come out of hospital.
+'''
+
+[[turns.calls]]
+name = "final_result"
+arguments = '''{"acute_warning": "Hypoxaemia at a saturation of 92% on 2 L after a hospital stay last week: exclude a pulmonary embolism now. A rising pCO2, a falling pH or exhaustion would mean hypercapnic respiratory failure.", "diagnoses": [{"diagnosis": "COPD exacerbation", "probability": "high", "critical": false, "short_rationale": "Known COPD with an asthmatic component, diffuse expiratory wheeze, a smoker, light sputum and a mildly raised CRP."}, {"diagnosis": "Pulmonary embolism", "probability": "medium", "critical": true, "short_rationale": "Dyspnea since discharge after a hospital stay, tachycardia and hypoxaemia out of proportion to the respiratory rate, obesity; calves supple and no chest pain."}, {"diagnosis": "Heart failure", "probability": "low", "critical": false, "short_rationale": "Obesity, smoking and a raised diastolic pressure, without oedema or crackles."}, {"diagnosis": "Pneumonia", "probability": "low", "critical": false, "short_rationale": "No fever and a near-normal CRP make it unlikely; a chest X-ray settles it."}, {"diagnosis": "Obesity hypoventilation", "probability": "low", "critical": false, "short_rationale": "Weighs 120 kg with a secondary polycythaemia; the pCO2 is needed."}, {"diagnosis": "Clindamycin reaction", "probability": "low", "critical": false, "short_rationale": "Started recently, but bronchospasm from it is rare and the onset does not fit."}], "management": {"workup": [{"type": "Lab", "investigations": ["Arterial blood gas with pCO2", "D-dimer, age-adjusted", "NT-proBNP", "Troponin"], "priority": "urgent"}, {"type": "Radiology", "investigations": ["Chest X-ray", "CT pulmonary angiography if the Wells score is likely or the D-dimer is raised"], "priority": "urgent"}, {"type": "Physiology", "investigations": ["12-lead ECG", "Peak flow or spirometry once stable"], "priority": "prompt"}, {"type": "Other", "investigations": ["Polysomnography after discharge"], "priority": "elective"}], "empirical_treatment": [{"indication": "COPD exacerbation", "treatment": "Controlled oxygen to a saturation of 88-92%, nebulised salbutamol 5 mg and ipratropium 0.5 mg, prednisolone 40 mg orally for 5 days", "important": "Recheck the blood gas within an hour of starting oxygen."}, {"indication": "If pulmonary embolism is likely and imaging is delayed", "treatment": "Therapeutic low-molecular-weight heparin, dosed by weight (120 kg)", "important": "Check the renal function and the platelets first."}, {"indication": "If the sputum turns purulent", "treatment": "Doxycycline 200 mg, then 100 mg daily", "important": "Stop the clindamycin once the erysipelas course is complete."}], "disposition": "Admission to a monitored bed on the respiratory ward, for oxygen and a pulmonary embolism workup."}, "sources": ["Pulmonary embolism in unexplained exacerbations of COPD (respiratory-review.example.org)", "Wells criteria for pulmonary embolism (calculators.example.org)", "Venous thromboembolism after hospital discharge (thrombosis.example.org)", "Secondary erythrocytosis: causes and work-up (haematology.example.org)"]}'''
+
+[web."pulmonary embolism after hospital discharge unexplained COPD exacerbation wheeze"]
+results = [
+  { title = "Pulmonary embolism in unexplained exacerbations of COPD: prevalence and predictors", url = "https://respiratory-review.example.org/copd-exacerbation-pulmonary-embolism", snippet = "In exacerbations of COPD without an evident infectious cause, pulmonary embolism was found in roughly one in six patients; a recent hospital stay and immobility were the strongest predictors." },
+  { title = "Venous thromboembolism after hospital discharge", url = "https://thrombosis.example.org/post-discharge-vte", snippet = "The risk of venous thromboembolism stays raised for weeks after discharge from a medical ward, highest in the first month, in patients who are obese or were immobile." },
+  { title = "When wheeze is not asthma: pulmonary embolism presenting as bronchospasm", url = "https://casereports.example.org/pulmonary-embolism-wheeze", snippet = "Diffuse wheeze does not exclude a pulmonary embolism; bronchospasm is a recognised, if uncommon, presentation." },
+]
+
+[web."Wells score pulmonary embolism criteria"]
+results = [
+  { title = "Wells criteria for pulmonary embolism", url = "https://calculators.example.org/wells-pe", snippet = "Clinical signs of DVT 3; PE as likely as or likelier than an alternative 3; heart rate over 100 1.5; immobilisation for 3 days or surgery in the previous 4 weeks 1.5; previous DVT or PE 1.5; haemoptysis 1; malignancy 1." },
+  { title = "The two-level Wells score and D-dimer testing", url = "https://guidelines.example.org/pe-two-level-wells", snippet = "Above 4 points, PE is likely: offer CT pulmonary angiography. At 4 or below, PE is unlikely: offer a D-dimer test, and imaging if it is positive." },
+]
+
+[web."clindamycin adverse reactions dyspnea bronchospasm"]
+results = [
+  { title = "Clindamycin: adverse effects", url = "https://drugs.example.org/clindamycin/adverse-effects", snippet = "Rash, diarrhoea and Clostridioides difficile infection are the common adverse effects; bronchospasm and anaphylaxis are rare." },
+  { title = "Hypersensitivity to lincosamides", url = "https://allergy.example.org/lincosamide-hypersensitivity", snippet = "Immediate reactions to clindamycin are rare and follow within hours of a dose; delayed reactions are mostly cutaneous." },
+]
+
+[web."secondary polycythaemia chronic hypoxaemia smoker obesity"]
+results = [
+  { title = "Secondary erythrocytosis: causes and work-up", url = "https://haematology.example.org/secondary-erythrocytosis", snippet = "Chronic hypoxaemia from lung disease, obesity hypoventilation or sleep apnoea raises the haematocrit through erythropoietin." },
+  { title = "Smoker's polycythaemia", url = "https://haematology.example.org/smokers-polycythaemia", snippet = "Carboxyhaemoglobin from smoking lowers the oxygen delivered to the tissues and raises the red cell mass; it falls within weeks of stopping." },
+]

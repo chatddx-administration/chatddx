@@ -1,0 +1,126 @@
+[instruction.ddx]
+system = """
+{{output_guidance}}{{#if tool_guidance}}
+
+{{tool_guidance}}{{/if}}{{#if schema_prompt}}
+
+{{schema_prompt}}{{/if}}"""
+user = "{{case}}"
+variables = ["case", "output_guidance", "schema_prompt", "tool_guidance"]
+
+[instruction.bare]
+system = ""
+user = "{{case}}"
+variables = ["case"]
+
+[output.management-plan]
+answer_schema_path = "schemas/management_plan_v1.json"
+guidance = "Fill in the management plan for the case."
+views.differential = "$.diagnoses[*].diagnosis"
+views.warning = "$.acute_warning"
+views.disposition = "$.management.disposition"
+views.critical = "$.diagnoses[?(@.critical)].diagnosis"
+
+[output.diagnoses]
+answer_schema_path = "schemas/diagnoses.json"
+guidance = "List the plausible diagnoses, most likely first."
+views.differential = "$.diagnoses[*]"
+
+[output.free-text]
+guidance = "List the plausible diagnoses, one per line, most likely first."
+views.text = "whole"
+views.differential = "lines"
+
+# Free text with no guidance: whatever the LLM makes of the case alone.
+[output.raw]
+views.text = "whole"
+
+[coercion.native]
+mode = "native"
+
+[coercion.native-shown]
+mode = "native"
+schema_prompt = """
+Answer with a JSON object that matches this JSON Schema, and nothing else:
+
+{{schema}}"""  # guessed: the wording
+
+[coercion.tool]
+mode = "tool"
+tool_description = "Give your answer by calling this tool, with the answer as its arguments."  # guessed: the wording
+
+# the same text as native-shown, so the two differ only in what enforces it
+[coercion.prompted]
+extends = "native-shown"
+mode = "prompted"
+
+# whatever the LLM's facts name as its default
+[coercion.auto]
+mode = "auto"
+
+[reasoning.default]
+effort = "default"
+
+[reasoning.off]
+effort = "off"
+
+[reasoning.on]
+effort = "on"
+
+[reasoning.minimal]
+effort = "minimal"
+
+[reasoning.low]
+effort = "low"
+
+[reasoning.medium]
+effort = "medium"
+
+[reasoning.high]
+effort = "high"
+
+[reasoning.xhigh]
+effort = "xhigh"
+
+[reasoning.on-budget-2048]
+effort = "on"
+budget = 2048  # guessed: a budget worth comparing against plain "on"
+
+[sampling.generation-config]
+defaults = "generation_config"
+
+[sampling.recommended]
+defaults = "recommended"
+
+[sampling.recommended-4k]
+extends = "recommended"
+max_tokens = 4096
+
+[sampling.greedy]
+defaults = "generation_config"
+temperature = 0
+
+[sampling.fixed]
+defaults = "generation_config"
+temperature = 0.7
+top_p = 0.8
+top_k = 20
+max_tokens = 4096
+presence_penalty = 0
+frequency_penalty = 0
+
+[toolset.web]
+tools = ["web_search"]
+guidance = "You have access to a web_search tool. Use it whenever you need current facts, documentation, or anything you're not confident about from memory, instead of guessing."
+
+[tool.web_search]
+name = "web_search"
+description = "Search the web for up-to-date information"
+implementation.function = "chatddx.runtime.tools.web_search:web_search"
+
+[tool.web_search.parameters]
+type = "object"
+properties.query = { type = "string" }
+properties.max_results = { type = "integer", default = 5 }
+required = ["query"]
+additionalProperties = false

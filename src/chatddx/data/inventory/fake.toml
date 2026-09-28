@@ -1,0 +1,47 @@
+[machine.fake]
+machine_id = "58f4de13-fba7-4b15-a70e-33355081c606"
+tags = ["fake"]
+
+[serving."qwen3-8b-awq@fake"]
+engine = "/nix/store/2ggzfi36z2c9gckn3fp4mgij41wyf7la-chatddx-django-b585cec"  # guessed
+
+[serving."qwen3-8b-awq@fake".args]
+reasoning-parser = "qwen3"
+enable-auto-tool-choice = true
+tool-call-parser = "hermes"
+
+[serving."qwen3-8b-awq@fake".performance]
+host = "127.0.0.1"
+port = 12099
+
+[serving."gpt-oss-20b@fake"]
+engine = "/nix/store/2ggzfi36z2c9gckn3fp4mgij41wyf7la-chatddx-django-b585cec"  # guessed
+
+[serving."gpt-oss-20b@fake".args]
+reasoning-parser = "openai_gptoss"
+enable-auto-tool-choice = true
+tool-call-parser = "openai"
+
+[serving."gpt-oss-20b@fake".performance]
+host = "127.0.0.1"
+port = 12099
+
+[stack."qwen3-8b-awq@fake"]
+machine = "fake"
+llm = "qwen3-8b-awq"
+serving = "qwen3-8b-awq@fake"
+endpoint = "http://localhost:12099/v1/"
+served_name = "Qwen/Qwen3-8B-AWQ"
+api = "vllm"
+max_jobs = 4
+tags = ["fake"]
+
+[stack."gpt-oss-20b@fake"]
+machine = "fake"
+llm = "gpt-oss-20b"
+serving = "gpt-oss-20b@fake"
+endpoint = "http://localhost:12099/v1/"
+served_name = "openai/gpt-oss-20b"
+api = "vllm"
+max_jobs = 4
+tags = ["fake"]

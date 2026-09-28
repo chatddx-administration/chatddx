@@ -72,15 +72,6 @@
       django-app =
         system: (pythonSets.${system}.mkVirtualEnv "${name}-django-${version}" workspace.deps.default);
 
-      worker =
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        pkgs.writeShellScriptBin "chatddx-worker" ''
-          exec ${django-app system}/bin/chatddx worker serve "$@"
-        '';
-
       scripts =
         system:
         let
@@ -90,7 +81,6 @@
           mkdir -p $out/bin
           ln -s ${django-app system}/bin/chatddx $out/bin/chatddx
           ln -s ${django-app system}/bin/django $out/bin/chatddx-django
-          ln -s ${worker system}/bin/chatddx-worker $out/bin/chatddx-worker
         '';
 
     in
@@ -100,14 +90,6 @@
       packages = forAllSystems (system: {
         django-app = django-app system;
         scripts = scripts system;
-        worker = worker system;
-      });
-
-      apps = forAllSystems (system: {
-        worker = {
-          type = "app";
-          program = "${worker system}/bin/chatddx-worker";
-        };
       });
 
       devShells = forAllSystems (

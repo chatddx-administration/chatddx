@@ -1,0 +1,7 @@
+<div class="portal-progress" role="progressbar" aria-valuemin="0" aria-valuemax="{{ progress.counts.total }}" aria-valuenow="{{ progress.counts.completed }}" aria-valuetext="{{ progress.counted }}">
+    <div class="portal-progress-completed" style="width: {{ progress.completed_share }}%"></div>
+    <div class="portal-progress-failed" style="width: {{ progress.failed_share }}%"></div>
+    <div class="portal-progress-running" style="width: {{ progress.running_share }}%"></div>
+    <div class="portal-progress-stopped" style="width: {{ progress.stopped_share }}%"></div>
+    <div class="portal-progress-label"><span>{{ progress.counted }}</span></div>
+</div>

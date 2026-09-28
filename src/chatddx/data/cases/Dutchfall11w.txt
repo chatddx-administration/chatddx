@@ -27,3 +27,13 @@ Urine strip: Positive for protein, no other abnormalities.
 Hematology: Mild normocytic anemia, in addition a marked neutrophilia. Clotting normal.
 Chemistry: Mild renal insufficiency, markedly elevated CRP, mild hyperglycemia, liver values not abnormal, electrolytes not abnormal.
 Blood gas: Mildly elevated lactate. Otherwise no abnormalities. Normal pH, pO2 and pCO2.
+
+Olof comments
+identifiera tecken på prechock eller chock, därmed oidentiferad chockbild där mycket talar för sepsis, men enligt guideline gå vidare med RUSH / EFAST (vid trauma) / eller riktat POCUS för att utesluta andra orsaker till chockbilden. 
+Beroende på ultraljudsbild, avgör behov av högre vårdnivå eller ytterligare utredningar.
+Rundodling och inled bred empirisk antibiotikabehandling (i svensk regim, Tazocin eller Meronem). 
+På huddingeakuten - sambedömningslarm med IVA, medicinjour /kirurgjour. Vidare till DT eller till OP.
+
+Chatddx: 
+vid tecken på prechock eller chock gå vidare med ultraljud t.ex. RUSH för att utesluta andra orsaker till chock.
+Rundodla, och påbörja empirisk bredspektrumantibiotika.

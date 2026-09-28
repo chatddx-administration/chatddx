@@ -1,0 +1,67 @@
+from typing import Any, Literal, cast
+
+from chatddx.core.models import IdentityModel
+from chatddx.core.utils import ensure_identity
+from chatddx.repo.entity_names import ENTITY_NAMES, EntityName
+from chatddx.repo.inventories import (
+    InventoryBranchModel,
+    InventoryTrailIn,
+    ParsedInventory,
+)
+from chatddx.repo.store.branch import commit, select_branch_models
+
+type InventoryCommitReceipt = dict[EntityName, dict[str, bool]]
+
+
+def owned_inventory(
+    owner_name: str,
+    index_key: Literal["branch_name", "trail_id"] = "branch_name",
+) -> InventoryBranchModel:
+    inventory: dict[str, Any] = {}
+
+    for entity_name in ENTITY_NAMES:
+        inventory[entity_name] = {}
+
+        branch_models = select_branch_models(
+            entity_name=entity_name,
+            owner_name=owner_name,
+        )
+
+        for branch_model in branch_models:
+            index = {
+                "branch_name": branch_model.name,
+                "trail_id": str(branch_model.trail.pk),
+            }[index_key]
+
+            inventory[entity_name][index] = branch_model
+
+    return cast(InventoryBranchModel, cast(object, inventory))
+
+
+def commit_parsed_inventory(inventory: ParsedInventory) -> InventoryCommitReceipt:
+    owners = _Owners()
+
+    return {
+        entity: {
+            name: commit(trail, branch_details, owners[branch_details.owner])
+            for name, (trail, branch_details) in getattr(inventory, entity).items()
+        }
+        for entity in ENTITY_NAMES
+    }
+
+
+class _Owners(dict[str, IdentityModel]):
+    def __missing__(self, name: str) -> IdentityModel:
+        self[name] = ensure_identity(name)
+        return self[name]
+
+
+def trails_in(parsed_inventory: ParsedInventory) -> InventoryTrailIn:
+    inventory: dict[str, Any] = {
+        entity: {
+            name: trail
+            for name, (trail, _) in getattr(parsed_inventory, entity).items()
+        }
+        for entity in ENTITY_NAMES
+    }
+    return InventoryTrailIn.model_validate(inventory)

@@ -1,0 +1,60 @@
+from typing import Annotated, ClassVar
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+from chatddx.repo.families import (
+    BaseTrail,
+    BranchDetails,
+    BranchDetailsPatch,
+    BranchOut,
+    Details,
+    TrailIn,
+    TrailOut,
+)
+
+
+class GPU(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    model: str
+    memory_mib: int = Field(gt=0)
+    uuid: Annotated[str, StringConstraints(pattern=r"^GPU-[0-9a-f-]{36}$")]
+
+
+class MachineSpecs(BaseModel):
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    gpus: list[GPU] = Field(default_factory=list)
+    cpu: str | None = None
+    ram_gib: int | None = Field(default=None, gt=0)
+    location: str | None = None
+
+
+class MachineDetails(Details):
+    unreliable: bool = False
+    specs: MachineSpecs | None = None
+
+
+class MachineTrailBase(BaseTrail):
+    machine_id: UUID
+
+
+class MachineTrailIn(MachineTrailBase, TrailIn):
+    pass
+
+
+class MachineTrailOut(MachineTrailBase, TrailOut):
+    pass
+
+
+class MachineBranchDetails(BranchDetails, MachineDetails):
+    pass
+
+
+class MachineBranchDetailsPatch(BranchDetailsPatch, MachineDetails):
+    pass
+
+
+class MachineBranchOut(BranchOut[MachineTrailOut, MachineDetails]):
+    pass

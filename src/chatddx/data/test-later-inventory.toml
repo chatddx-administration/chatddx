@@ -1,0 +1,21 @@
+# The archive's test inventory as it stands once its owners have started:
+# the fake's Qwen moved to another port and taking more jobs at once, and a
+# scorer added for the don't-miss target. What of it reaches an owner
+# seeded before (core/tests/test_seeding.py).
+extends = ["test-inventory.toml"]
+
+[stack."qwen3-8b-awq@fake"]
+machine = "fake"
+llm = "qwen3-8b-awq"
+serving = "qwen3-8b-awq@fake"
+endpoint = "http://localhost:12100/v1/"
+served_name = "Qwen/Qwen3-8B-AWQ"
+api = "vllm"
+max_jobs = 8
+tags = ["fake"]
+
+[scorer.dont_miss_mentions]
+function = "chatddx.scoring.scorers.patterns:mentions"
+view = "differential"
+target_kind = "dont_miss"
+metrics = ["mean", "stderr"]
