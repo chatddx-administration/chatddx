@@ -1075,6 +1075,16 @@ Raises:
 * `selector: str`
 * ∟`bool`
 
+## `reaches_text`
+`src/chatddx/factors/select.py:reaches_text`
+
+Whether the selector reaches, in the schema, something that may be other than
+an object or an array: what a metric reads as it is written, not as its JSON.
+
+* `schema: JsonValue`
+* `selector: str`
+* ∟`bool`
+
 ## `REASONING`
 `src/chatddx/factors/response.py:REASONING`
 

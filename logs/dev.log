@@ -1,2 +1,78 @@
-2026-11-09T01:03:18Z 811a201 ./dev/check.sh dev
-• dev: unchanged since it passed (dev/state/dev-good)
+2026-11-10T01:22:43Z db48a54 ./dev/check.sh dev
+• dev
+1..75
+ok 1 agent says how to use it
+ok 2 session-start checks a fresh session and says nothing when it passes
+ok 3 session-start refuses work for what fails, with what it said
+ok 4 session-start checks nothing on resume
+ok 5 session-start refuses work in a container that fails to provision
+ok 6 turn-start holds the commit the turn starts at
+ok 7 turn-start keeps work refused that session-start refused
+ok 8 turn-start keeps work refused at a later turn while what refused it fails
+ok 9 turn-start lets work on at a later turn once what refused it passes, and says so
+ok 10 turn-start provisions again at a later turn in a container that failed to
+ok 11 turn-start moves a fresh session to the commit its prompt starts at
+ok 12 turn-start refuses work at a commit that isn't to be found
+ok 13 turn-start fast-forwards to what was pushed to the branch
+ok 14 turn-start fetches what the operator stamped, and lets go of what it no longer holds
+ok 15 session-start fetches what the operator stamped before it checks
+ok 16 turn-start tells what was pushed to a branch that went its own way
+ok 17 turn-end does nothing while work is refused
+ok 18 turn-end has the turn go on without the commit the turn started at
+ok 19 turn-end does nothing when nothing changed
+ok 20 turn-end writes and pushes
+ok 21 turn-end commits what it wrote as turn-end
+ok 22 turn-end has the turn go on when write fails, with what it said
+ok 23 turn-end lets the turn end when it went on once already
+ok 24 turn-end has the turn go on with messages untranslated
+ok 25 turn-end pushes a branch rebased over what it pushed before
+ok 26 turn-end pushes nothing over what was pushed meanwhile
+ok 27 hand-over hands nothing over while work is refused
+ok 28 hand-over commits, pushes, checks and pushes the logs
+ok 29 hand-over tells what failed, from its log
+ok 30 start initializes, starts and sets up the database
+ok 31 start again neither initializes nor sets up again
+ok 32 start says when postgres is already running
+ok 33 start tells what the server logged when postgres fails to start
+ok 34 start tells how to reset when setup fails, and sets up again next time
+ok 35 stop stops postgres, and says when it isn't running
+ok 36 status says whether postgres is running
+ok 37 reset stops postgres and removes its data and socket
+ok 38 enter runs psql as chatddx on the socket with the arguments given
+ok 39 dev-db says how to use it
+ok 40 stamp commits what is uncommitted as stamp, pushes it and prints its revision
+ok 41 stamp refuses on what turn-start checks
+ok 42 stamp commits with the message given
+ok 43 stamp pushes without a commit when nothing changed
+ok 44 stamp moves what is stamped along
+ok 45 fetch fetches what is stamped
+ok 46 stamp commits nothing when a check fails
+ok 47 stamp refuses on main
+ok 48 stamp refuses on a detached HEAD
+ok 49 stamp stamps a branch not based on the tip of main
+ok 50 stamp refuses while a rebase is in progress
+ok 51 stamp refuses without CHATDDX_DEV
+ok 52 stamp takes MAIN for main
+ok 53 merge stamps, squashes the branch onto main, pushes it and deletes the branch
+ok 54 merge checks what stamp doesn't before it squashes
+ok 55 merge stamps but merges nothing when a check of its own fails
+ok 56 merge switches to the branch named
+ok 57 merge refuses to leave uncommitted changes for the branch named
+ok 58 merge says it stamped when the squash commit is aborted
+ok 59 merge says it stamped when the branch has nothing beyond main
+ok 60 merge merges nothing when stamp refuses
+ok 61 merge refuses a branch not based on the tip of main, and stamps nothing
+ok 62 merge refuses a branch checked out in another worktree
+ok 63 operator refuses outside a git repository
+ok 64 operator says how to use it
+ok 65 stamped tells STAMPED as it is set
+ok 66 stamped tells what refs/stamped holds for the branch while HEAD is on it
+ok 67 stamped tells nothing but guessed when HEAD isn't on what refs/stamped holds
+ok 68 stamped guesses where HEAD left main without refs/stamped
+ok 69 stamped fails, saying why, with nothing to guess
+ok 70 stamped tells nothing outside a git checkout
+ok 71 write writes all, in order, the prose against the commit stamped
+ok 72 write writes those named alone, in its own order
+ok 73 write refuses a write it doesn't have, and writes nothing
+ok 74 write guesses the commit stamped as where HEAD left main
+ok 75 write stops when there is no commit to stamp against

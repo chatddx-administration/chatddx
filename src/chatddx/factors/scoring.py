@@ -19,7 +19,15 @@ from .base import (
 from .cases import CaseRef
 from .engine import EngineRef, ModelRef, model_of
 from .request import EntryPoint, Skeleton, SkeletonRef, SlotName
-from .select import SplitOp, check_selector, parse_selector, reaches, select, split
+from .select import (
+    SplitOp,
+    check_selector,
+    parse_selector,
+    reaches,
+    reaches_text,
+    select,
+    split,
+)
 
 
 class ExpectationSchema(Component):
@@ -108,6 +116,11 @@ class View(Frozen):
     def offered_by(self, schema: JsonValue) -> bool:
         if not parse_selector(self.output):
             return schema is None
+        # Policy: a view no judge reads picks text, so one whose selector reaches only
+        # objects or arrays isn't offered: a pattern would read their JSON, and match
+        # what a field beside the one meant says.
+        if self.judge is None:
+            return reaches_text(schema, self.output)
         return reaches(schema, self.output)
 
 

@@ -452,12 +452,18 @@ def _schema_step(root: JsonValue, node: JsonValue, step: Step) -> list[JsonValue
 
 
 def _schema_reach(root: JsonValue, node: JsonValue, steps: Iterable[Step]) -> bool:
+    return bool(_schema_reached(root, node, steps))
+
+
+def _schema_reached(
+    root: JsonValue, node: JsonValue, steps: Iterable[Step]
+) -> list[JsonValue]:
     nodes = [node]
     for step in steps:
         nodes = [n for s in nodes for n in _schema_step(root, s, step)]
         if not nodes:
-            return False
-    return True
+            return []
+    return nodes
 
 
 def reaches(schema: JsonValue, selector: str) -> bool:
@@ -465,3 +471,19 @@ def reaches(schema: JsonValue, selector: str) -> bool:
     if schema is None:
         return not steps
     return _schema_reach(schema, schema, steps)
+
+
+_SCALARS = ("string", "number", "integer", "boolean", "null")
+
+
+def reaches_text(schema: JsonValue, selector: str) -> bool:
+    """Whether the selector reaches, in the schema, something that may be other than
+    an object or an array: what a metric reads as it is written, not as its JSON."""
+    steps = parse_selector(selector)
+    if schema is None:
+        return not steps
+    return any(
+        not isinstance(alt, dict) or any(_allows(alt, kind) for kind in _SCALARS)
+        for node in _schema_reached(schema, schema, steps)
+        for alt in _alternatives(schema, node)
+    )

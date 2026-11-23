@@ -9,9 +9,9 @@ member installed beside `chatddx` in the one environment, its command `chatddx-d
 ## Check
 
 `./dev/check.sh [check]...` runs the checks named, or all of them, side by side, and writes what each says to
-`dev/state/logs/<check>.log`. A check that passes is skipped till what it reads changes, as `settings.toml`'s
-`[checks.inputs]` names it, which `flake.nix` runs it on alone, and `dev/state/<check>-good` holds it: `rm` that to run
-it again.
+`dev/state/logs/<check>.log`. A check that passes is skipped till what it reads changes, its log left as the run that
+passed wrote it, as `settings.toml`'s `[checks.inputs]` names it, which `flake.nix` runs it on alone, and
+`dev/state/<check>-good` holds it: `rm` that to run it again.
 
 In step with the code:
 
@@ -116,11 +116,11 @@ status, how many checks ran beside it, the commit and the command. Lines are onl
 In `dev/state/`, out of git:
 
 - `turn-start`: the commit the turn started at.
-- `refused`: there while work is refused this turn.
+- `refused`: there while work is refused, from the turn that refused it till a turn's start passes what refused it.
 - `session-start`: what session-start hands the session's first turn.
 - `costs-spool.tsv`: what was timed since the last fold.
-- `logs/<check>.log`: what `./dev/check.sh` last said for the check, as `./dev/write.sh` and `hand-over` move it to
-  `logs/` in git.
+- `logs/<check>.log`: what `./dev/check.sh` said for the check when it last ran it, as `./dev/write.sh` and `hand-over`
+  move it to `logs/` in git.
 - `<check>-good`: what `./dev/check.sh` last passed the check on: the tree a commit of the worktree would hold, for
   `stamps` also the commit stamped, and for `docs` also `origin/main`.
 
@@ -153,7 +153,9 @@ Claude Code's hooks (`.claude/settings.json`):
 - `./dev/agent.sh turn-start`, as a turn starts: moves a fresh session to the commit its first prompt starts at, or
   fast-forwards to what the operator pushed, fetching `refs/stamped/*` along, and checks what that moved it to, refusing
   work on the OpenAPI document or the catalogs out of step and telling of the rest, a part's doc no part names among
-  them.
+  them. While work is refused, each later turn follows what was pushed to the branch, provisions and checks again as
+  session-start does, and says whether work is still refused or on again: a refusal ends when what refused it passes,
+  not with its turn.
 - `./dev/agent.sh turn-end`, as a turn ends: unless work was refused or nothing changed since the turn started, runs
   `./dev/write.sh`, commits what that changed as `turn-end` and pushes.
 

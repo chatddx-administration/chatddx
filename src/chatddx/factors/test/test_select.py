@@ -2,7 +2,13 @@ import pytest
 from pydantic import JsonValue, ValidationError
 
 from chatddx.factors.scoring import View
-from chatddx.factors.select import parse_selector, reaches, select, split
+from chatddx.factors.select import (
+    parse_selector,
+    reaches,
+    reaches_text,
+    select,
+    split,
+)
 
 PLAN: JsonValue = {
     "diagnoses": [
@@ -108,6 +114,12 @@ def test_selectors_are_checked_against_schemas() -> None:
         },
     }
     assert reaches(schema, "$.diagnoses[*].diagnosis")
+    assert reaches_text(schema, "$.diagnoses[*].diagnosis")
+    assert not reaches_text(schema, "$.diagnoses[*]")
+    assert not reaches_text(schema, "$.management")
+    assert reaches_text(schema, "$.either")
+    assert reaches_text({}, "$.anything[*]")
+    assert not reaches_text(schema, "$.acute_warning")
     assert reaches(schema, "$.diagnoses[?@.critical == true].diagnosis")
     assert not reaches(schema, "$.diagnoses[?@.urgent].diagnosis")
     assert not reaches(schema, "$.diagnoses[*].urgent")

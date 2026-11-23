@@ -134,7 +134,7 @@ How many of dev/check.sh's other checks run beside this one, as it says.
 Usage: ./dev/check.sh [check]..., from the repository's root in the dev shell with its database
 up (dev-db start). Each check tests one thing and writes nothing git tracks; the checks
 named, or all of them, run side by side, and it fails, saying which did, if any does.
-What a check says is also logged to dev/state/logs/<check>.log, as dev/write.sh moves it to logs/.
+What a check that runs says is also logged to dev/state/logs/<check>.log, as dev/write.sh moves it to logs/.
 
 * `$MACHINE_CLASS`
 

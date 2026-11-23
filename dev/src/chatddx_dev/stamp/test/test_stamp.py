@@ -295,6 +295,7 @@ def test_reflow_formats_each_side_of_a_doc_s_stamps_as_a_doc_of_its_own(
     stamp.reflow(check=True)
 
 
+@needs_git
 def test_docs_refuses_a_base_that_is_no_commit(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

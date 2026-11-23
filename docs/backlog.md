@@ -17,7 +17,6 @@ doc in docs/parts/ tracks is that doc's, not this document's.
   - [Aggregation](#aggregation)
   - [Export and publication](#export-and-publication)
   - [Scoring: coverage and judges](#scoring-coverage-and-judges)
-  - [A view's reach knows the type it picks](#a-views-reach-knows-the-type-it-picks)
   - [Unheeded reasoning](#unheeded-reasoning)
   - [Tool rounds](#tool-rounds)
   - [What reaches vLLM: argv and passthrough](#what-reaches-vllm-argv-and-passthrough)
@@ -123,15 +122,6 @@ when an item needs a judge.
 - **A scoring doesn't say which cases it lacks.** Only checking a score warns, once a run is scored under it.
 - **Judge calls go one at a time**, and every judged scoring confirms its judges' endpoints, even when no item needs a
   judge; an endpoint that hangs holds it up to the confirmation's timeout.
-
-### A view's reach knows the type it picks
-
-A view whose selector reaches objects where it reads text isn't offered. The sample's `diagnoses` scorer reads
-`$.diagnoses[*]`, which are objects in `management_plan_v1`, so it scores their JSON on every edge.
-
-- **`diagnoses` applies to a plan**, since a plan's `$.diagnoses[*]` reaches its schema, but the items are objects, so
-  its differential lists them as JSON and scores their text. A reach that knew the type of what a view picks would leave
-  it out, as `View.offered_by` leaves whole-answer views out of structured runs.
 
 ### Unheeded reasoning
 

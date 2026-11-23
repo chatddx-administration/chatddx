@@ -129,6 +129,37 @@ wrote() { grep -c "^write" "$CALLS" || true; }
   [ -e dev/state/refused ]
 }
 
+@test "turn-start keeps work refused at a later turn while what refused it fails" {
+  FAIL=index hook session-start '{"source":"startup"}'
+  hook turn-start
+  FAIL=index hook turn-start
+  [ "$status" -eq 0 ]
+  [[ $output == "Work is refused, for indexes behind the code"* ]]
+  [ -e dev/state/refused ]
+  echo change >file
+  hook turn-end
+  [ "$(wrote)" -eq 0 ]
+}
+
+@test "turn-start lets work on at a later turn once what refused it passes, and says so" {
+  FAIL=index hook session-start '{"source":"startup"}'
+  hook turn-start
+  hook turn-start
+  [ "$status" -eq 0 ]
+  [[ $output == "Work isn't refused any more: "* ]]
+  [ ! -e dev/state/refused ]
+}
+
+@test "turn-start provisions again at a later turn in a container that failed to" {
+  export CLAUDE_CODE_REMOTE=true
+  hook session-start '{"source":"startup"}'
+  hook turn-start
+  hook turn-start
+  [ "$status" -eq 0 ]
+  [[ $output == *"Work is refused, for a container that fails to provision"* ]]
+  [ -e dev/state/refused ]
+}
+
 @test "turn-start moves a fresh session to the commit its prompt starts at" {
   export CLAUDE_CODE_REMOTE=true
   committed later

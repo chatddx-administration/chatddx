@@ -1,4 +1,4 @@
-2026-11-09T00:40:02Z 9d6e8c1 ./dev/check.sh python-tests
+2026-11-09T19:29:52Z a8228cc ./dev/check.sh python-tests
 • python-tests
 ============================= test session starts ==============================
 platform linux -- Python 3.13.18, pytest-9.1.1, pluggy-1.6.0
@@ -7,14 +7,14 @@ configfile: pyproject.toml
 testpaths: dev/src, src
 plugins: xdist-3.8.0, anyio-4.15.1
 created: 4/4 workers
-4 workers [1206 items]
+4 workers [1207 items]
 
 ........................................................................ [  5%]
-........................................................................ [ 11%]
+........................F............................................... [ 11%]
 ........................................................................ [ 17%]
 ........................................................................ [ 23%]
 ........................................................................ [ 29%]
-.....ssssssssssssssssssssssss.sssss..................................... [ 35%]
+.........................sssssssssssssssssssssssssssss.................. [ 35%]
 ........................................................................ [ 41%]
 ........................................................................ [ 47%]
 ........................................................................ [ 53%]
@@ -25,12 +25,31 @@ created: 4/4 workers
 ........................................................................ [ 83%]
 ........................................................................ [ 89%]
 ........................................................................ [ 95%]
-......................................................                   [100%]
+.......................................................                  [100%]
+=================================== FAILURES ===================================
+_______________ test_each_surface_is_as_chatddx_stamp_writes_it ________________
+[gw0] linux -- Python 3.13.18 /home/user/chatddx-remastered/.venv/bin/python
+
+    @pytest.mark.slow
+    def test_each_surface_is_as_chatddx_stamp_writes_it() -> None:
+        for s in proofs():
+>           assert not s.behind, "chatddx-dev index"
+E           AssertionError: chatddx-dev index
+E           assert not True
+E            +  where True = Proof(path=PosixPath('/home/user/chatddx-remastered/docs/comments/importers.md'), current="# Comments in `importers`\n...dating for a discovered fact: a report as o11n.vllm's vllm-report gave it for\n# one server, pelle's qwen3-8b.\n```\n").behind
+
+dev/src/chatddx_dev/index/test/test_index.py:1078: AssertionError
 ================================= slow budget ==================================
-399.1 s in 1177 tests; slow from 0.337 s on
-the quick run takes 30.1 s of it, 8%
-set up once for many tests: tmp_path_factory 0.0 s, cheap_hashing 0.0 s, shipped_test_tools 0.0 s, unsynced_commits 0.0 s, copies 0.0 s, migrated 1.0 s, curated 3.3 s, plan 0.8 s, described 0.8 s, loaded 1.3 s, ran 4.1 s, sampled 7.7 s, pytestconfig 0.0 s, parsed 1.6 s, each 0.2 s
-waited for, made ahead: db 29.3 s
-unmark: src/chatddx/api/test/test_people.py::test_a_cookie_s_unsafe_requests_must_come_from_this_site (0.101 s)
-unmark: src/chatddx/bench/test/test_seen.py::test_a_fork_is_a_new_configuration_and_an_edit_a_new_version_of_one_s_own (0.102 s)
-================= 1177 passed, 29 skipped in 133.35s (0:02:13) =================
+407.5 s in 1178 tests; slow from 0.346 s on
+the quick run takes 32.7 s of it, 8%
+set up once for many tests: tmp_path_factory 0.0 s, cheap_hashing 0.0 s, shipped_test_tools 0.0 s, unsynced_commits 0.0 s, copies 0.0 s, migrated 1.6 s, curated 4.1 s, plan 0.7 s, described 0.9 s, loaded 1.5 s, ran 3.9 s, sampled 8.2 s, pytestconfig 0.0 s, parsed 1.9 s, each 0.1 s
+waited for, made ahead: db 80.4 s
+unmark: src/chatddx/bench/test/test_proposing.py::test_a_configuration_is_updated_from_its_origin_with_its_own_change_on_top (0.086 s)
+unmark: src/chatddx/bench/test/test_seen.py::test_a_run_s_scores_are_read_the_latest_every_one_or_one_by_id (0.114 s)
+unmark: src/chatddx/portal/test/test_signing_in.py::test_signing_out_ends_the_session (0.107 s)
+unmark: src/chatddx/repl/test/test_inspecting.py::test_show_says_which_cases_each_scorer_can_hold_the_variation_to (0.108 s)
+unmark: src/chatddx/repl/test/test_inspecting.py::test_show_tag_counts_only_the_cases_with_any_of_the_tags (0.110 s)
+unmark: src/chatddx/repl/test/test_scoring.py::test_take_names_the_cases_shared_by_several_owners (0.085 s)
+=========================== short test summary info ============================
+FAILED dev/src/chatddx_dev/index/test/test_index.py::test_each_surface_is_as_chatddx_stamp_writes_it
+============ 1 failed, 1177 passed, 29 skipped in 156.34s (0:02:36) ============

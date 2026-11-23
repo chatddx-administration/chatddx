@@ -146,7 +146,8 @@ trials, so the same runs gather alike.
 - A :Scorer pins the scoring code by entry point and version, and holds its views (:View). A view's selectors
   (:Selector) are parsed when it is built (`src/chatddx/factors/select.py`, whose scope is said there), and `split`
   breaks what it picks from an output into items (:Split). `reaches` tells whether a schema can hold what a selector
-  picks, and `View.offered_by` whether an output's can.
+  picks, and `View.offered_by` whether an output's can: a view no judge reads isn't offered where its selector reaches
+  only objects or arrays, which a pattern would read as JSON (`src/chatddx/factors/select.py:reaches_text`).
 - A :Judge pins a judge skeleton without tools, a model, seeds and a :Fill rule. `Judge.fills` writes what a view picks
   into the completion and expectation slots.
 - A :Scoring pins the engine each of its scorer's judges is sent to, which must serve the judge's model, and at most one

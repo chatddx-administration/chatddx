@@ -68,7 +68,7 @@ Finds:
 ## `RUNS_PER_DAY`
 `src/chatddx/settings.py:RUNS_PER_DAY`
 
-`RUNS_PER_DAY = 1000`
+`RUNS_PER_DAY = 100_000`
 
 ## `SERVE_GRACE`
 `src/chatddx/settings.py:SERVE_GRACE`
@@ -83,7 +83,7 @@ Finds:
 ## `TYPED_PER_DAY`
 `src/chatddx/settings.py:TYPED_PER_DAY`
 
-`TYPED_PER_DAY = 50`
+`TYPED_PER_DAY = 1_000`
 
 ## `TYPED_TEXT_LIMIT`
 `src/chatddx/settings.py:TYPED_TEXT_LIMIT`

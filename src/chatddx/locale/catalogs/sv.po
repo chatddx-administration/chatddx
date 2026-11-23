@@ -1704,6 +1704,15 @@ msgstr "Inferensserver"
 msgid "Engines"
 msgstr "Inferensservrar"
 
+#: frontend/src/islands/Home.svelte
+msgid ""
+"Enter nothing that could identify a patient. De-identifying a case is the"
+" responsibility of the clinician or researcher who enters it."
+msgstr ""
+"Ange ingenting som kan identifiera en patient. Ansvaret för att "
+"avidentifiera ett fall ligger hos den kliniker eller forskare som matar "
+"in det."
+
 #: src/chatddx/portal/templates/world.html
 msgid "Environment"
 msgstr "Miljövariabler"

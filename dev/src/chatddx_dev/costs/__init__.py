@@ -1,5 +1,6 @@
 import re
 import shlex
+import shutil
 import subprocess
 import time
 from collections import defaultdict
@@ -175,7 +176,8 @@ class Costs:
 
     def pytest_unconfigure(self) -> None:
         machine = project.machine_class()
-        if machine is None or self.status is None:
+        # Accommodating for a checkout without git, such as nix's: nothing is spooled there.
+        if machine is None or self.status is None or shutil.which("git") is None:
             return
         head = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],

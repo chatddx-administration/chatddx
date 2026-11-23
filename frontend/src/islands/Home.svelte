@@ -12,7 +12,7 @@
   import * as NativeSelect from "$lib/components/ui/native-select";
   import { Textarea } from "$lib/components/ui/textarea";
   import { api, type Schemas, why } from "$lib/api/client";
-  import { displayLanguage, t, tn } from "$lib/locale";
+  import { displayLanguage, t, th, tn } from "$lib/locale";
   import { watch } from "$lib/runs/events";
   import { begun, failed, fold } from "$lib/runs/progress";
   import ManagementPlan from "$lib/plan/ManagementPlan.svelte";
@@ -143,7 +143,7 @@
       <StethoscopeIcon class="size-10 text-primary-foreground" />
     </div>
     <h1 class="mb-4 text-4xl font-bold tracking-tight sm:text-5xl">
-      {@html t(
+      {@html th(
         '<span class="gradient-text">Emergency</span> <span class="text-foreground">Differential Diagnostics</span>',
       )}
     </h1>
@@ -156,8 +156,13 @@
     <TriangleAlertIcon class="text-warning" />
     <Alert.Description class="text-muted-foreground">
       <p>
-        {@html t(
+        {@html th(
           '<strong class="font-semibold text-foreground">Important:</strong> for testing only. It does not replace clinical judgment or medical consultation.',
+        )}
+      </p>
+      <p>
+        {t(
+          "Enter nothing that could identify a patient. De-identifying a case is the responsibility of the clinician or researcher who enters it.",
         )}
       </p>
     </Alert.Description>

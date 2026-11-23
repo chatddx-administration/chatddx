@@ -158,6 +158,14 @@ Written by `chatddx-dev index` from the comments in `[parts.factors]`'s code in 
 # (cases.py).
 ```
 
+## `src/chatddx/factors/scoring.py:View.offered_by`
+
+```
+# Policy: a view no judge reads picks text, so one whose selector reaches only
+# objects or arrays isn't offered: a pattern would read their JSON, and match
+# what a field beside the one meant says.
+```
+
 ## `src/chatddx/factors/select.py`
 
 ```

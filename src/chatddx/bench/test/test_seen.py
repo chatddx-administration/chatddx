@@ -183,7 +183,7 @@ def test_a_view_of_the_whole_answer_is_offered_by_a_text_output_only(
     assert picked.offered_by(schema) and not picked.offered_by(None)
 
     started = bench.run(str(ran(conn, alice, trial(conn, plan, NATIVE, "crlf"))))
-    assert {a.name for _, a, _ in bench.scorers(started)} == {"answer", "list"}
+    assert {a.name for _, a, _ in bench.scorers(started)} == {"answer"}
 
 
 @pytest.mark.slow

@@ -2,7 +2,7 @@
 # Usage: ./dev/check.sh [check]..., from the repository's root in the dev shell with its database
 # up (dev-db start). Each check tests one thing and writes nothing git tracks; the checks
 # named, or all of them, run side by side, and it fails, saying which did, if any does.
-# What a check says is also logged to dev/state/logs/<check>.log, as dev/write.sh moves it to logs/.
+# What a check that runs says is also logged to dev/state/logs/<check>.log, as dev/write.sh moves it to logs/.
 set -euo pipefail
 . dev/settings.sh
 . dev/stamped.sh
@@ -172,6 +172,12 @@ if [[ ${#checks[@]} -eq 1 ]]; then
   check="${checks[0]}"
   good="dev/state/$check-good"
   log="dev/state/logs/$check.log"
+  # Policy: a check skipped leaves its log as the run that passed wrote it, so that a log tells of a run.
+  was="$(inputs "$check")"
+  if [[ -n $was && $was == "$(cat "$good" 2>/dev/null)" ]]; then
+    echo "• $check: unchanged since it passed ($good)" >&2
+    exit
+  fi
   mkdir -p dev/state/logs
   printf '%s %s ./dev/check.sh %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     "$(git rev-parse --short HEAD 2>/dev/null)" "$check" >"$log"
@@ -182,11 +188,6 @@ if [[ ${#checks[@]} -eq 1 ]]; then
   exec 2> >(tee -a "$log" >&2)
   teed+=("$!")
   trap logged EXIT
-  was="$(inputs "$check")"
-  if [[ -n $was && $was == "$(cat "$good" 2>/dev/null)" ]]; then
-    echo "• $check: unchanged since it passed ($good)" >&2
-    exit
-  fi
   echo "• $check" >&2
   began="$EPOCHREALTIME"
   "$check"

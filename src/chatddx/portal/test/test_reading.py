@@ -339,3 +339,22 @@ def test_what_a_page_can_t_find_is_a_page_and_the_api_s_stays_json(
     assert 'aria-current="page"' not in page.text and "Sign out" in page.text
     assert signed.get("/api/nowhere").json()["code"] == "not_found"
     assert signed.get("/runs/not-a-run").status_code == 422
+
+
+def test_a_value_the_store_can_t_keep_is_refused_by_a_page_and_the_api(
+    signed: TestClient,
+) -> None:
+    large = "9" * 30
+    for path in (f"/compose/{large}", f"/review/{large}", f"/threads/{large}"):
+        page = signed.get(path)
+        assert page.status_code == 422, path
+        assert page.headers["content-type"].startswith("text/html")
+        assert "bigint" not in page.text
+    for path in (
+        f"/api/threads/{large}",
+        f"/api/families/{large}",
+        "/api/components/%00",
+    ):
+        got = signed.get(path)
+        assert (got.status_code, got.json()["code"]) == (422, "refused"), path
+        assert "can't be kept" in got.json()["detail"]

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import psycopg
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
@@ -45,6 +46,7 @@ def app(
     )
     for error in (
         *api.STATUSES,
+        psycopg.DataError,
         Whoops,
         HTTPException,
         RequestValidationError,

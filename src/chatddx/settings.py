@@ -18,9 +18,9 @@ def database(admin: bool = False) -> str:
 SESSION_TTL = timedelta(hours=12)
 
 TYPED_TEXT_LIMIT = 20_000
-TYPED_PER_DAY = 50
+TYPED_PER_DAY = 1_000
 
-RUNS_PER_DAY = 1000
+RUNS_PER_DAY = 100_000
 ITEMS_PER_RUN = 1000
 
 ROWS_PER_PAGE = 100

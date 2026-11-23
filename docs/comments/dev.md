@@ -95,13 +95,24 @@ Written by `chatddx-dev index` from the comments in `[parts.dev]`'s code in `set
 # lest the turn never end.
 ```
 
+## `dev/agent.sh:turn-start`
+
+```
+# Policy: work refused stays refused till what the session starts on passes: each later turn
+# follows what was pushed to the branch, provisions and checks again, and says which way it went.
+```
+
 ## `dev/check.sh`
 
 ```
 # Usage: ./dev/check.sh [check]..., from the repository's root in the dev shell with its database
 # up (dev-db start). Each check tests one thing and writes nothing git tracks; the checks
 # named, or all of them, run side by side, and it fails, saying which did, if any does.
-# What a check says is also logged to dev/state/logs/<check>.log, as dev/write.sh moves it to logs/.
+# What a check that runs says is also logged to dev/state/logs/<check>.log, as dev/write.sh moves it to logs/.
+```
+
+```
+# Policy: a check skipped leaves its log as the run that passed wrote it, so that a log tells of a run.
 ```
 
 ## `dev/check.sh:browser`

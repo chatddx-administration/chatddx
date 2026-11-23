@@ -131,7 +131,16 @@ turn-start() {
   fi
   [[ " ${state[*]} " != *" refused "* ]] || refused=refused
   was="$(git rev-parse HEAD)"
-  if ! remote || [[ " ${state[*]} " == *" unprovisioned "* ]]; then
+  if ((${#state[@]} == 0)) && [[ -e $REFUSED ]]; then
+    # Policy: work refused stays refused till what the session starts on passes: each later turn
+    # follows what was pushed to the branch, provisions and checks again, and says which way it went.
+    ! remote || synced
+    if { ! remote || provisioned; } && session-checked; then
+      echo "Work isn't refused any more: $(git rev-parse --short HEAD) passes what work was refused for."
+    else
+      refused=refused
+    fi
+  elif ! remote || [[ " ${state[*]} " == *" unprovisioned "* ]]; then
     :
   elif [[ " ${state[*]} " == *" fresh "* ]] && rev="$(supplied)"; then
     if ! moved "$rev"; then
@@ -243,7 +252,7 @@ turn-checked() {
 }
 
 refuse() {
-  echo "Work is refused, for $1: tell the user so${2:+, with what follows,} and commit no changes this turn."
+  echo "Work is refused, for $1: tell the user so${2:+, with what follows,} and commit no changes: do what only reads. Each turn's start checks again, and says once work is on."
 }
 
 checked() {

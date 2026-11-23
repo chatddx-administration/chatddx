@@ -126,7 +126,7 @@ def test_a_structured_answer_is_checked_and_its_views_read(say: Say):
         "differential\n  1. fake diagnosis 1\nwarning\n  1. fake acute warning\n"
         + "disposition\n  1. fake disposition\ndont-miss\n  nothing\n"
     ) in written
-    assert 'differential (list)\n  1. {"diagnosis": "fake diagnosis 1"' in written
+    assert "differential (list)" not in written and '{"diagnosis"' not in cells(written)
     assert ["warning", "0", "not", "named"] in cells(written)
 
 

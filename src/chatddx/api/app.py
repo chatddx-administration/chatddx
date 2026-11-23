@@ -4,6 +4,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from importlib import metadata
 from typing import Any
 
+import psycopg
 from fastapi import FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.encoders import jsonable_encoder
@@ -81,6 +82,17 @@ def _whoops(_: Request, e: Exception) -> JSONResponse:
 # Compromise: Raw, though it may quote sensitive content, until edges hold that back.
 def _raw(_: Request, e: Exception) -> JSONResponse:
     return _answer(500, Error(detail=f"{type(e).__name__}: {e}", code="error"))
+
+
+# Policy: a value the database can't take, a number past its integers or a text holding U+0000, is
+# the request's to set right wherever it was given, so it is refused here once for every route.
+def _unstorable(_: Request, e: Exception) -> JSONResponse:
+    assert isinstance(e, psycopg.DataError)
+    refused = Invalid.of(
+        "the request holds a value that can't be kept: a number too large, or a text "
+        + "holding U+0000"
+    )
+    return _answer(422, Error.of(refused, "refused"))
 
 
 def _http(_: Request, e: Exception) -> JSONResponse:
@@ -176,6 +188,7 @@ def app(
         made.include_router(module.router, prefix="/api")
     for error, (status, code) in STATUSES.items():
         made.add_exception_handler(error, _status(status, code))
+    made.add_exception_handler(psycopg.DataError, _unstorable)
     made.add_exception_handler(Whoops, _whoops)
     made.add_exception_handler(HTTPException, _http)
     made.add_exception_handler(RequestValidationError, _invalid)

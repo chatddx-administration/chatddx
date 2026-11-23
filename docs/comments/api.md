@@ -26,6 +26,13 @@ Written by `chatddx-dev index` from the comments in `[parts.api]`'s code in `set
 # Compromise: Raw, though it may quote sensitive content, until edges hold that back.
 ```
 
+## `src/chatddx/api/app.py:_unstorable`
+
+```
+# Policy: a value the database can't take, a number past its integers or a text holding U+0000, is
+# the request's to set right wherever it was given, so it is refused here once for every route.
+```
+
 ## `src/chatddx/api/listening.py:_AGAIN`
 
 ```
