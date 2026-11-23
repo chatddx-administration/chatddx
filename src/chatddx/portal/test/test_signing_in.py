@@ -22,16 +22,25 @@ ELSEWHERE = (
 def test_a_page_sends_whoever_isn_t_signed_in_to_sign_in_first(
     client: TestClient,
 ) -> None:
-    got = client.get("/", params={"a": "b"})
+    got = client.get("/runs", params={"a": "b"})
     assert (got.status_code, got.headers["location"]) == (
         303,
-        "/sign-in?next=%2F%3Fa%3Db",
+        "/sign-in?next=%2Fruns%3Fa%3Db",
     )
-    form = client.get("/sign-in", params={"next": "/?a=b"})
+    form = client.get("/sign-in", params={"next": "/runs?a=b"})
     assert form.status_code == 200
     assert form.headers["content-type"].startswith("text/html")
     assert form.headers["cache-control"] == "no-store"
-    assert 'name="next" value="/?a=b"' in form.text
+    assert 'name="next" value="/runs?a=b"' in form.text
+
+
+def test_whoever_isn_t_signed_in_is_shown_the_landing_page(
+    client: TestClient,
+) -> None:
+    landing = client.get("/")
+    assert landing.status_code == 200
+    assert 'href="/sign-in"' in landing.text and 'id="home"' not in landing.text
+    assert 'src="/static/landing/review.webp"' in landing.text
 
 
 @pytest.mark.slow
@@ -62,7 +71,7 @@ def test_a_wrong_password_asks_again(client: TestClient) -> None:
     assert got.status_code == 200 and "set-cookie" not in got.headers
     assert "Wrong login or password." in got.text
     assert 'name="login" value="alice"' in got.text
-    assert client.get("/").status_code == 303
+    assert client.get("/runs").status_code == 303
 
 
 @pytest.mark.usefixtures("alice")
@@ -77,7 +86,7 @@ def test_a_session_the_browser_doesn_t_keep_is_said_on_signing_in(
         back = plain.get(got.headers["location"])
         assert back.status_code == 200
         assert "your browser didn't keep the session" in back.text
-        assert plain.get("/").status_code == 303
+        assert plain.get("/runs").status_code == 303
     assert "didn't keep" not in plain.get("/sign-in").text
 
 
@@ -114,7 +123,7 @@ def test_signing_out_ends_the_session(client: TestClient) -> None:
     got = client.post("/sign-out")
     assert (got.status_code, got.headers["location"]) == (303, "/sign-in")
     assert COOKIE not in client.cookies
-    assert client.get("/").status_code == 303
+    assert client.get("/runs").status_code == 303
     gone = client.get("/api/me", headers={"Authorization": f"Bearer {token}"})
     assert gone.status_code == 401
 

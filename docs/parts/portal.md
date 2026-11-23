@@ -13,6 +13,10 @@ cognitive reserves.
 - **Library**: schema driven, instructive of the data model rather than practical. Translations stay in the Library,
   which is the de facto translation page as long as its UX and the Library's philosophy are aligned.
 - **World**: a read-only view of the World the portal runs in.
+- **Landing**: `/` for whoever isn't signed in, what ChatDDX is for and a tour in screenshots
+  (`src/chatddx/portal/templates/landing.html`); signed in, `/` is the home page. The screenshots are of the sample
+  World's scripted data (`chatddx scripted-compose`, then `scripted-review` of dutch-10, then `scripted-runs`), kept in
+  `frontend/public/landing/` and served at `/static/landing/`.
 
 Take: each page by what it writes, what it weighs and what it only picks, so that a thing is written in one place and
 weighed where its consequences show.

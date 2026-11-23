@@ -1,4 +1,5 @@
 from .locale import (
+    CHOSEN,
     N_,
     Coded,
     Locale,
@@ -26,6 +27,7 @@ from .locale import (
 )
 
 __all__ = [
+    "CHOSEN",
     "N_",
     "Coded",
     "Locale",

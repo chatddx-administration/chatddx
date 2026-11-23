@@ -115,3 +115,9 @@ Written by `chatddx-dev index` from the comments in `[parts.locale]`'s code in `
 # Accommodating for Babel, which matches a new message to an untranslated plural one as
 # if it were translated: what holds no translation comes anew from the code.
 ```
+
+## `src/chatddx/locale/locale.py:CHOSEN`
+
+```
+# Policy: the cookie that keeps the locale a person chose over their browser's.
+```

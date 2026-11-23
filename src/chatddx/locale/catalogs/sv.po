@@ -1005,6 +1005,27 @@ msgid_plural "A case holds at most %(num)s characters; this one has %(given)s."
 msgstr[0] "Ett fall rymmer högst %(num)s tecken; det här har %(given)s."
 msgstr[1] "Ett fall rymmer högst %(num)s tecken; det här har %(given)s."
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"A case's vignette beside what a good answer to it holds, its diagnosis, "
+"the warnings it should raise, where the patient should go and what must "
+"not be missed, each in plain words and as a pattern a scorer can match."
+msgstr ""
+"Ett falls vinjett bredvid vad ett bra svar på det innehåller, dess "
+"diagnos, de varningar det bör lyfta, vart patienten bör ta vägen och vad "
+"som inte får missas, vart och ett i klartext och som ett mönster en "
+"rättare kan matcha."
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"A configuration that has changed since it ran, or whose runs aren't "
+"whole, says so, and Run brings the case up to date: three replicates and "
+"a repeat under each configuration."
+msgstr ""
+"En konfiguration som har ändrats sedan den kördes, eller vars körningar "
+"inte är hela, säger det, och Kör tar fallet ikapp: tre replikat och en "
+"upprepning under varje konfiguration."
+
 #: src/chatddx/portal/shelves.py
 msgid ""
 "A configuration with its cases and seeds fixed, so that its run can be "
@@ -1130,10 +1151,54 @@ msgstr "En ny version av var och en"
 msgid "A newer version is saved: version %(n)s, %(at)s by %(by)s."
 msgstr "En nyare version är sparad: version %(n)s, %(at)s av %(by)s."
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"A pattern too broad scores every answer well, one too narrow none. "
+"Measure takes a single pattern and shows how it has matched the answers "
+"it has read: what each of its alternatives found, and what it missed, "
+"most frequent first."
+msgstr ""
+"Ett mönster som är för brett ger varje svar bra poäng, ett för snävt "
+"inget. Mät tar ett enda mönster och visar hur det har matchat de svar det"
+" har läst: vad vart och ett av dess alternativ hittade, och vad det "
+"missade, det vanligaste först."
+
 #: src/chatddx/portal/templates/case.html
 #, python-format
 msgid "A repair has moved its vignette since: version %(n)s, %(at)s."
 msgstr "En reparation har flyttat dess vinjett sedan dess: version %(n)s, %(at)s."
+
+#: src/chatddx/portal/templates/landing.html
+msgid "A research rig for emergency care"
+msgstr "En forskningsrigg för akutsjukvård"
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"A run names the versions it ran under, so a result can always be traced "
+"back to what produced it."
+msgstr ""
+"En körning namnger de versioner den kördes under, så att ett resultat "
+"alltid kan spåras tillbaka till det som gav det."
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"A run of four cases: its model, engine, seed and the rig's build, what "
+"was noted of it, and each item's outcome, valid, salvaged or errored."
+msgstr ""
+"En körning av fyra fall: dess modell, inferensserver, seed och riggens "
+"bygge, vad som noterades om den, och varje posts utfall, giltigt, räddat "
+"eller med fel."
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"A run records what was planned, what was sent and what came back: the "
+"model, the engine, the seeds, the build of the rig itself, and every "
+"answer, whether valid, salvaged from a broken stream or failed."
+msgstr ""
+"En körning sparar vad som planerades, vad som skickades och vad som kom "
+"tillbaka: modellen, inferensservern, seeds, riggens eget bygge, och varje"
+" svar, vare sig det är giltigt, räddat ur en bruten ström eller "
+"misslyckat."
 
 #: frontend/src/lib/scorer/JudgeEditor.svelte
 msgid ""
@@ -1163,6 +1228,14 @@ msgstr ""
 #: frontend/src/lib/compose/Settings.svelte
 msgid "A tool call"
 msgstr "Ett verktygsanrop"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "A tour of the portal"
+msgstr "En rundtur i portalen"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "A tour, with fictional cases"
+msgstr "En rundtur, med fiktiva fall"
 
 #: frontend/src/lib/compose/Settings.svelte
 msgid "A value given here is used in place of the one recommended."
@@ -1318,6 +1391,18 @@ msgstr "Fråga dess senaste version, i en egen rättare"
 msgid "Asked by"
 msgstr "Frågad av"
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Asked the same question twice, a language model can answer differently, "
+"and a model behind an API can change overnight. Nor does it have what "
+"makes a colleague's judgement trustworthy: a reputation, insight into its"
+" own reasoning, and accountability when it's wrong."
+msgstr ""
+"Får en språkmodell samma fråga två gånger kan den svara olika, och en "
+"modell bakom ett API kan ändras över en natt. Den saknar också det som "
+"gör en kollegas omdöme pålitligt: ett rykte, insikt i sitt eget "
+"resonemang och ansvar när den har fel."
+
 #: src/chatddx/portal/templates/scoring.html
 msgid "Asked under"
 msgstr "Frågad under"
@@ -1344,6 +1429,18 @@ msgstr "Tillbaka dit du var"
 msgid "Baseline"
 msgstr "Baslinje"
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Before it assists in emergency care, someone has to know how well it "
+"performs: on which cases, under which instructions, and how sure that "
+"knowledge is. ChatDDX is built to find out, and to hand over what it "
+"found with everything needed to check it."
+msgstr ""
+"Innan den bistår i akutsjukvården måste någon veta hur väl den presterar:"
+" på vilka fall, under vilka instruktioner, och hur säker den kunskapen "
+"är. ChatDDX är byggd för att ta reda på det, och för att lämna över vad "
+"den fann med allt som behövs för att kontrollera det."
+
 #: frontend/src/lib/compose/Paired.svelte
 msgid "Before it:"
 msgstr "Före den:"
@@ -1351,6 +1448,16 @@ msgstr "Före den:"
 #: src/chatddx/portal/templates/library.html
 msgid "Begin a trial of the picked"
 msgstr "Påbörja ett försök av de valda"
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Below the case, each configuration's score on it is plotted among every "
+"other case's under that configuration, field by field, and each replicate"
+" is a point that leads to its score."
+msgstr ""
+"Under fallet ritas varje konfigurations poäng på det bland alla andra "
+"fall under samma konfiguration, fält för fält, och varje replikat är en "
+"punkt som leder till sin poäng."
 
 #: src/chatddx/portal/templates/world.html
 msgid "Bindings"
@@ -1439,6 +1546,16 @@ msgstr "Fall"
 msgid "Cases"
 msgstr "Fall"
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Cases arrive de-identified, from a known source or typed by a clinician, "
+"who de-identifies them. A vignette is sent only to endpoints cleared for "
+"it, and the record keeps it as a fingerprint."
+msgstr ""
+"Fall kommer avidentifierade, från en känd källa eller inskrivna av en "
+"kliniker, som avidentifierar dem. En vinjett skickas bara till ändpunkter"
+" som är godkända för den, och loggen sparar den som ett fingeravtryck."
+
 #: frontend/src/lib/review/Appendices.svelte
 #: src/chatddx/portal/templates/review.html
 #: src/chatddx/portal/templates/thread.html
@@ -1469,6 +1586,22 @@ msgstr "Argument till chattmallen"
 msgid "Chat templates"
 msgstr "Chattmallar"
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"ChatDDX measures how accurately large language models produce "
+"differential diagnoses and management plans from emergency-care case "
+"vignettes, and keeps what it measured so that others can rebuild it and "
+"examine it."
+msgstr ""
+"ChatDDX mäter hur träffsäkert stora språkmodeller ställer "
+"differentialdiagnoser och gör handläggningsplaner utifrån fallvinjetter "
+"från akutsjukvården, och sparar det den mätte så att andra kan bygga upp "
+"det igen och granska det."
+
+#: src/chatddx/portal/templates/landing.html
+msgid "ChatDDX: how well does a language model reason about a patient?"
+msgstr "ChatDDX: hur väl resonerar en språkmodell kring en patient?"
+
 #: src/chatddx/portal/templates/run.html
 msgid "Checked now"
 msgstr "Kontrollerat nu"
@@ -1484,6 +1617,20 @@ msgstr "Godkänd för"
 #: src/chatddx/portal/templates/world.html
 msgid "Cleared for it"
 msgstr "Godkänd för den"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "Clinicians and researchers"
+msgstr "Kliniker och forskare"
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Clinicians review cases and write what is expected of them; researchers "
+"compose configurations, judges and scorers, and run them. The portal "
+"speaks English and Swedish."
+msgstr ""
+"Kliniker granskar fall och skriver vad som förväntas av svaren; forskare "
+"sätter samman konfigurationer, bedömare och rättare, och kör dem. "
+"Portalen talar engelska och svenska."
 
 #: frontend/src/lib/compose/Preview.svelte
 #: frontend/src/lib/review/Measuring.svelte
@@ -1549,6 +1696,12 @@ msgstr "Kontrakt"
 #: src/chatddx/portal/templates/error.html
 msgid "Copy this and send it to drift@chatddx.com:"
 msgstr "Kopiera och skicka detta till drift@chatddx.com:"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "Copyright Alexander Holmbäck and Olof Silfver, all rights reserved."
+msgstr ""
+"Copyright Alexander Holmbäck och Olof Silfver, alla rättigheter "
+"förbehållna."
 
 #: frontend/src/lib/plan/DiagnosisCard.svelte
 msgid "Critical"
@@ -1725,6 +1878,20 @@ msgstr ""
 "Varje svar på fallet som detta rättas mot, och vad det hittar i vart och "
 "ett"
 
+#: src/chatddx/portal/templates/landing.html
+msgid "Every exchange is recorded"
+msgstr "Varje utbyte sparas"
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Every expectation, prompt, instruction, sampling setting and scorer is "
+"kept in every version, each named by its digest. The Library shows what "
+"each version changed, and who changed it."
+msgstr ""
+"Varje facit, prompt, instruktion, samplingsinställning och rättare sparas"
+" i varje version. Biblioteket visar vad varje version ändrade, och vem "
+"som ändrade det."
+
 #: src/chatddx/portal/shelves.py
 msgid ""
 "Everything sent with a case, put together from parts, so that one can "
@@ -1732,6 +1899,16 @@ msgid ""
 msgstr ""
 "Allt som skickas med ett fall, ihopsatt av delar, så att en kan ändras "
 "medan resten står still."
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Everything that can change an answer or its score is a factor, pinned by "
+"its digest, the hash of what it holds, and referring to the factors it is"
+" made of by theirs."
+msgstr ""
+"Allt som kan ändra ett svar eller dess poäng är en faktor, fastlåst av "
+"sin kontrollsumma, hashen av det den innehåller, och som hänvisar till de"
+" faktorer den består av med deras."
 
 #: src/chatddx/portal/templates/library.html
 msgid ""
@@ -1752,6 +1929,10 @@ msgstr "Facitscheman"
 #: src/chatddx/portal/templates/scoring.html
 msgid "Expected"
 msgstr "Facit"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "Factors"
+msgstr "Faktorer"
 
 #: src/chatddx/portal/templates/world.html
 msgid "Facts"
@@ -1940,6 +2121,18 @@ msgstr "Hur fallet klarar sig"
 msgid "How the case fares among the others is shown with scripts."
 msgstr "Hur fallet klarar sig bland de andra visas med skript."
 
+#: src/chatddx/portal/templates/landing.html
+msgid "How the case fares under every configuration"
+msgstr "Hur fallet klarar sig under varje konfiguration"
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"How the case fares: for each configuration, its score on the case plotted"
+" among every other case's under it, field by field."
+msgstr ""
+"Hur fallet klarar sig: för varje konfiguration, dess poäng på fallet "
+"ritad bland alla andra fall under den, fält för fält."
+
 #: src/chatddx/portal/templates/score.html
 msgid "How the judge decided"
 msgstr "Hur bedömaren avgjorde"
@@ -1947,6 +2140,10 @@ msgstr "Hur bedömaren avgjorde"
 #: src/chatddx/portal/templates/compare.html
 msgid "How they fare"
 msgstr "Hur de klarar sig"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "How well does a language model reason about a patient?"
+msgstr "Hur väl resonerar en språkmodell kring en patient?"
 
 #: src/chatddx/portal/templates/review.html
 msgid "In sync"
@@ -1973,6 +2170,10 @@ msgstr "Till"
 #, python-format
 msgid "Into %(language)s: %(text)s"
 msgstr "Till %(language)s: %(text)s"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "Is the yardstick right?"
+msgstr "Stämmer måttstocken?"
 
 #: src/chatddx/portal/templates/macros.html
 msgid "It asks a judge that is behind."
@@ -2259,6 +2460,7 @@ msgstr "Typer: %(kind)s"
 msgid "Lands at %(level)s."
 msgstr "Hamnar på %(level)s."
 
+#: src/chatddx/portal/templates/base.html
 #: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/library.html
 #: src/chatddx/portal/templates/run.html
@@ -2361,6 +2563,14 @@ msgstr "Leverfunktion"
 msgid "Loaded with data sets: read here, not written"
 msgstr "Laddat med datamängder: läses här, skrivs inte"
 
+#: src/chatddx/portal/templates/landing.html
+msgid "Local or remote models"
+msgstr "Lokala eller fjärranslutna modeller"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "Log in"
+msgstr "Logga in"
+
 #: src/chatddx/portal/templates/sign-in.html
 msgid "Login"
 msgstr "Inloggningsnamn"
@@ -2401,6 +2611,14 @@ msgstr "Mäter"
 msgid "Measuring the expectation"
 msgstr "Mätning av facit"
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Measuring the possible warnings of a case: how often each alternative of "
+"the pattern matched, and the answers it missed, most frequent first."
+msgstr ""
+"Ett falls eventuella varningar mäts: hur ofta varje alternativ i mönstret"
+" matchade, och de svar det missade, det vanligaste först."
+
 #: frontend/src/lib/plan/ManagementPlan.svelte
 msgid "Medical sources"
 msgstr "Medicinska källor"
@@ -2427,6 +2645,16 @@ msgstr "Modell"
 #: src/chatddx/portal/templates/world.html
 msgid "Models"
 msgstr "Modeller"
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"Models run on the rig's own hosts with vLLM, or remotely behind OpenAI-"
+"compatible APIs, each pinned to the weights and engine it was served "
+"with."
+msgstr ""
+"Modeller körs på riggens egna servrar med vLLM, eller på distans bakom "
+"OpenAI-kompatibla API:er, var och en fastlåst vid de vikter och den "
+"inferensserver den serverades med."
 
 #: frontend/src/lib/scorer/ScorerViews.svelte
 msgid "Move it down"
@@ -2711,6 +2939,10 @@ msgstr "Inget ändrat än."
 msgid "Nothing could be read."
 msgstr "Inget kunde läsas."
 
+#: src/chatddx/portal/templates/landing.html
+msgid "Nothing is overwritten"
+msgstr "Inget skrivs över"
+
 #: src/chatddx/portal/templates/score.html
 msgid "Nothing is picked."
 msgstr "Inget plockas ut."
@@ -2845,6 +3077,7 @@ msgid "Owner"
 msgstr "Ägare"
 
 #: src/chatddx/portal/templates/base.html
+#: src/chatddx/portal/templates/landing.html
 msgid "Pages"
 msgstr "Sidor"
 
@@ -2864,6 +3097,10 @@ msgstr "Parametrar"
 #: src/chatddx/portal/templates/sign-in.html
 msgid "Password"
 msgstr "Lösenord"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "Patient data on a path of its own"
+msgstr "Patientdata hanteras separat"
 
 #: src/chatddx/portal/templates/runs.html
 msgid "Pause"
@@ -3027,6 +3264,11 @@ msgstr "Återuppta"
 
 #: src/chatddx/portal/templates/base.html
 #: src/chatddx/portal/templates/review.html
+msgid "Review"
+msgstr "Granskning"
+
+#: src/chatddx/portal/templates/landing.html
+msgctxt "a step of the tour"
 msgid "Review"
 msgstr "Granskning"
 
@@ -3495,6 +3737,16 @@ msgstr "Det namnger flera"
 msgid "That shouldn't have happened"
 msgstr "Det borde inte ha hänt"
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"The Review page: a fictional case of abdominal pain, its vignette beside "
+"the expectation written for it, with the latest version's change to the "
+"disposition highlighted."
+msgstr ""
+"Granskningssidan: ett fiktivt fall av buksmärta, dess vinjett bredvid "
+"facit som skrivits för det, med den senaste versionens ändring av "
+"fortsatt disposition markerad."
+
 #: src/chatddx/portal/templates/world.html
 msgid "The World"
 msgstr "Miljön"
@@ -3528,13 +3780,43 @@ msgstr "Svarets schema"
 msgid "The answer, as it was given"
 msgstr "Svaret, så som det gavs"
 
+#: src/chatddx/portal/templates/landing.html
+msgid "The cage"
+msgstr "Buren"
+
 #: frontend/src/islands/Home.svelte src/chatddx/portal/templates/review.html
 msgid "The case"
 msgstr "Fallet"
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"The cases, answers and scores below are scripted: made up to show the "
+"portal at work, not results of any model."
+msgstr ""
+"Fallen, svaren och poängen nedan är skriptade: fiktiva för att visa "
+"portalen i arbete, inte resultat från någon modell."
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"The clinician tightens or widens it right where it is written, before "
+"asking how any model fared."
+msgstr ""
+"Klinikern begränsar eller vidgar det precis där det skrivs, innan frågan "
+"ställs hur någon modell presterade."
+
 #: src/chatddx/portal/templates/compose.html
 msgid "The configuration"
 msgstr "Konfigurationen"
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"The environment a run took place in can then be rebuilt from the digests "
+"it names, and delivered with its results as a bundle anyone can check "
+"offline."
+msgstr ""
+"Miljön en körning gjordes i kan då byggas upp igen utifrån de "
+"kontrollsummor den namnger, och levereras med dess resultat som ett paket"
+" som vem som helst kan kontrollera offline."
 
 #: src/chatddx/portal/templates/score.html
 msgid "The expectation"
@@ -3676,6 +3958,15 @@ msgstr "Versionen efter"
 msgid "The version before"
 msgstr "Versionen före"
 
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"The versions of an expectation in the Library, each with its time, its "
+"author and its digest, below what the latest version changed."
+msgstr ""
+"Versionerna av ett facit i Biblioteket, var och en med sin tid, sin "
+"författare och sin kontrollsumma, under vad den senaste versionen "
+"ändrade."
+
 #: src/chatddx/portal/templates/vignette.html
 msgid "The vignette"
 msgstr "Vinjetten"
@@ -3770,6 +4061,10 @@ msgstr "Det här behövs."
 #: src/chatddx/portal/templates/vignette.html
 msgid "This isn't the text the case was made from any more."
 msgstr "Det här är inte längre texten fallet gjordes av."
+
+#: src/chatddx/portal/templates/landing.html
+msgid "This site holds fictional cases only."
+msgstr "Den här webbplatsen innehåller bara fiktiva fall."
 
 #: frontend/src/lib/plan/labs.ts
 msgid "Thyroid"
@@ -4043,6 +4338,10 @@ msgstr ""
 "Vad dess vyer och resurser kallas, efter position, sparat med den här "
 "versionen."
 
+#: src/chatddx/portal/templates/landing.html
+msgid "What makes a result reproducible"
+msgstr "Vad som gör ett resultat reproducerbart"
+
 #: src/chatddx/portal/templates/updated.html
 msgid ""
 "What of yours was behind what it was made from, updated in this order so "
@@ -4075,6 +4374,14 @@ msgstr "Vad den här versionen ändrade i dess recept"
 #: src/chatddx/portal/templates/run.html
 msgid "What was noted"
 msgstr "Vad som noterades"
+
+#: src/chatddx/portal/templates/landing.html
+msgid ""
+"What went wrong is noted rather than hidden, and the answers are scored "
+"by strict patterns or by a language model asked to judge."
+msgstr ""
+"Det som gick fel noteras i stället för att döljas, och svaren rättas med "
+"strikta mönster eller av en språkmodell som ombeds bedöma dem."
 
 #: src/chatddx/portal/templates/macros.html
 msgid ""
@@ -4116,6 +4423,10 @@ msgstr ""
 #: src/chatddx/portal/templates/fields.html
 msgid "Whole numbers, one a line or apart by commas."
 msgstr "Heltal, ett per rad eller åtskilda med kommatecken."
+
+#: src/chatddx/portal/templates/landing.html
+msgid "Why measure"
+msgstr "Varför mäta"
 
 #: src/chatddx/portal/templates/scoring.html
 msgid ""
@@ -4518,6 +4829,10 @@ msgctxt "refusal"
 msgid "case %(case)s has expectations to choose from, in threads %(threads)s"
 msgstr "fallet %(case)s har flera facit att välja mellan, i trådarna %(threads)s"
 
+#: src/chatddx/portal/templates/landing.html
+msgid "cases"
+msgstr "fall"
+
 #: src/chatddx/portal/templates/translations.html
 msgid "cases you see are in it"
 msgstr "fall du har tillgång till är på det"
@@ -4685,6 +5000,10 @@ msgctxt "kind"
 msgid "engine"
 msgstr "inferensserver"
 
+#: src/chatddx/portal/templates/landing.html
+msgid "engines"
+msgstr "inferensservrar"
+
 #: frontend/src/lib/runs/outcomes.ts src/chatddx/portal/templates/macros.html
 msgctxt "outcome"
 msgid "errored"
@@ -4704,6 +5023,10 @@ msgstr "facit för %(case)s"
 msgctxt "kind"
 msgid "expectation schema"
 msgstr "facitschema"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "expectations"
+msgstr "facit"
 
 #: frontend/src/lib/kinds.ts src/chatddx/portal/shelves.py
 msgctxt "kind"
@@ -4997,6 +5320,10 @@ msgstr "modell"
 msgctxt "refusal"
 msgid "model %(model)s is deleted: pick another"
 msgstr "modellen %(model)s är raderad: välj en annan"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "model weights"
+msgstr "modellvikter"
 
 #: src/chatddx/portal/templates/begun.html
 msgid "name"
@@ -5433,6 +5760,10 @@ msgctxt "kind"
 msgid "prompt"
 msgstr "prompt"
 
+#: src/chatddx/portal/templates/landing.html
+msgid "prompts"
+msgstr "promptar"
+
 #: src/chatddx/portal/templates/macros.html
 #, python-format
 msgid "queued, %(num)s ahead"
@@ -5583,6 +5914,10 @@ msgctxt "outcome"
 msgid "salvaged"
 msgstr "räddad"
 
+#: src/chatddx/portal/templates/landing.html
+msgid "sampling"
+msgstr "sampling"
+
 #: frontend/src/lib/kinds.ts src/chatddx/portal/shelves.py
 msgctxt "kind"
 msgid "sampling"
@@ -5609,12 +5944,20 @@ msgctxt "refusal"
 msgid "scorer %(scorer)s has a newer version: look at it again"
 msgstr "rättaren %(scorer)s har en nyare version: titta på den igen"
 
+#: src/chatddx/portal/templates/landing.html
+msgid "scorers"
+msgstr "rättare"
+
 #: frontend/src/lib/runs/titles.ts src/chatddx/portal/templates/macros.html
 #, python-format
 msgid "seed %(seeds)s"
 msgid_plural "seeds %(seeds)s"
 msgstr[0] "seed %(seeds)s"
 msgstr[1] "seeds %(seeds)s"
+
+#: src/chatddx/portal/templates/landing.html
+msgid "seeds"
+msgstr "seeds"
 
 #: frontend/src/lib/scorer/judging.ts
 msgid "seeds are whole numbers, 0 or more"

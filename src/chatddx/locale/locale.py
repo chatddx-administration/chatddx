@@ -17,6 +17,7 @@ from babel.messages.extract import DEFAULT_KEYWORDS, extract
 from babel.messages.mofile import write_mo
 from babel.messages.pofile import PoFileError, read_po, write_po
 from starlette.datastructures import Headers
+from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from chatddx import markers, settings
@@ -69,11 +70,20 @@ _LANGUAGE_PARAMS = ("language", "into")
 _LISTED_PARAMS = ("slots", "inserts", "worked")
 
 
+# Policy: the cookie that keeps the locale a person chose over their browser's.
+CHOSEN = "__Host-chatddx-locale"
+
+
 @dataclass(frozen=True)
 class Locale:
     tag: str
     translations: NullTranslations
     islands: dict[str, str | list[str]] = field(default_factory=dict)
+
+    @property
+    def name(self) -> str:
+        said = Language.parse(self.tag, sep="-").get_display_name(self.tag) or self.tag
+        return said[:1].upper() + said[1:]
 
 
 _ENGLISH = Locale("en", NullTranslations())
@@ -89,7 +99,11 @@ class Locales:
         for path in sorted(catalogs.glob("*.po")):
             self.by_tag[path.stem] = _locale(path)
 
-    def negotiate(self, accept_language: str | None) -> Locale:
+    def negotiate(
+        self, accept_language: str | None, chosen: str | None = None
+    ) -> Locale:
+        if chosen is not None and chosen in self.by_tag:
+            return self.by_tag[chosen]
         preferred = _preferred(accept_language or "")
         tag = negotiate_locale(preferred, list(self.by_tag), sep="-")
         return self.by_tag.get(tag or _ENGLISH.tag, _ENGLISH)
@@ -104,7 +118,8 @@ class Localizing:
             return await self.app(scope, receive, send)
         locales: Locales = scope["app"].state.locales
         asked = Headers(scope=scope).get("accept-language")
-        with localizing(locales.negotiate(asked)):
+        chosen = HTTPConnection(scope).cookies.get(CHOSEN)
+        with localizing(locales.negotiate(asked, chosen)):
             await self.app(scope, receive, send)
 
 

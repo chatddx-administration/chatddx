@@ -54,6 +54,11 @@ TypeScript and Svelte:
 Raises:
 1. `SystemExit`: `"locale: {shown} behind the code: run chatddx locale write"`
 
+## `CHOSEN`
+`src/chatddx/locale/locale.py:CHOSEN`
+
+`CHOSEN = "__Host-chatddx-locale"`
+
 ## `Coded` `(Protocol)`
 `src/chatddx/locale/locale.py:Coded`
 
@@ -102,6 +107,11 @@ Raises:
 * `translations: NullTranslations`
 * `islands: dict[str, str | list[str]] = field(default_factory=dict)`
 
+## `Locale.name` `@property`
+`src/chatddx/locale/locale.py:Locale.name`
+
+* ∟`str`
+
 ## `Locales`
 `src/chatddx/locale/locale.py:Locales`
 
@@ -120,6 +130,7 @@ Raises:
 `src/chatddx/locale/locale.py:Locales.negotiate`
 
 * `accept_language: str | None`
+* `chosen: str | None = None`
 * ∟`Locale`
 
 ## `localized`

@@ -78,6 +78,8 @@ cast(dict[str, object], templates.env.globals).update(
 
 router = APIRouter()
 
+_CHOSEN_FOR = 365 * 24 * 60 * 60
+
 
 class SignInFirst(Exception):
     def __init__(self, request: Request) -> None:
@@ -94,7 +96,7 @@ def to_sign_in(_: Request, e: Exception) -> Response:
 def page(request: Request, name: str, status: int = 200, **context: Any) -> Response:
     assets = request.app.state.assets
     negotiated = request.app.state.locales.negotiate(
-        request.headers.get("accept-language")
+        request.headers.get("accept-language"), request.cookies.get(locale.CHOSEN)
     )
     with locale.localizing(negotiated):
         return templates.TemplateResponse(
@@ -205,7 +207,10 @@ def paged(
 
 
 @router.get("/")
-def home(request: Request, bench: BenchDep) -> Response:
+def home(request: Request, conn: ConnDep) -> Response:
+    if _person(request, conn) is None:
+        return page(request, "landing.html")
+    bench = page_bench(request, conn, signed_in(request, conn))
     return page(
         request,
         "home.html",
@@ -250,6 +255,19 @@ def signing_in(
     signed = RedirectResponse(f"/sign-in?{query}", 303)
     keep_cookie(signed, people.open_session(person.id))
     return signed
+
+
+@router.post("/locale")
+def choosing_locale(
+    request: Request, tag: Annotated[str, Form()], next: Annotated[str, Form()] = "/"
+) -> Response:
+    same_origin(request)
+    chosen = RedirectResponse(within(next), 303)
+    if tag in request.app.state.locales.by_tag:
+        chosen.set_cookie(
+            locale.CHOSEN, tag, max_age=_CHOSEN_FOR, secure=True, samesite="lax"
+        )
+    return chosen
 
 
 @router.post("/sign-out")

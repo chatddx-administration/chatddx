@@ -19,8 +19,8 @@ middleware on its app and the messages of its own.
 2. **Take: Swedish first**, beside English. Both have one plural form besides the singular, so nothing in the first step
    needs more than gettext's plurals.
 3. **Take: the portal only.** The API, the repl, the CLI and the docs stay English.
-4. **Take: the browser's language first**, `Accept-Language`, matched against the catalogs there are; a switch of the
-   person's own comes after (see "Open").
+4. **Take: the browser's language first**, `Accept-Language`, matched against the catalogs there are, unless the person
+   chose one with the switch in the header (see "The server").
 5. **Decided: what clinicians and researchers read is localized; what developers and ops read is raw.** A whoops says
    what is going on and what the person can do now, its `message`, which is translated where it is shown, and what they
    are to pass on to developers and ops, its `pass_on`, which isn't (`src/chatddx/whoops.py:Whoops`).
@@ -73,6 +73,11 @@ time, so that Babel matches a changed message only to one translated.
   `negotiate_locale` (`src/chatddx/locale/locale.py:Locales.negotiate`). `src/chatddx/portal/pages.py:page` sets it
   around the page's rendering (`src/chatddx/locale/locale.py:localizing`) and gives it as `locale`, whose `tag` is
   `base.html`'s `lang`.
+- **The person's own language**, built: a switch in every page's header, the catalogs' languages each by its own name,
+  posts the one picked to `/locale` (`src/chatddx/portal/pages.py:choosing_locale`), which keeps it a year in the cookie
+  `src/chatddx/locale/locale.py:CHOSEN` and leads back to the page. A locale chosen wins over `Accept-Language`, for the
+  pages and the API alike. Take: a cookie rather than the store, so that it holds before signing in, on the landing page
+  and the sign-in page.
 - **The templates**, built: Jinja's `i18n` extension, newstyle and trimmed, on `src/chatddx/portal/pages.py:templates`,
   with `_()`, `ngettext()`, `pgettext()`, `npgettext()` and `{% trans %}…{% pluralize %}`. The callables read the locale
   set around the rendering rather than the template's context, which a macro imported without context, as most are,
@@ -305,16 +310,13 @@ Each step leaves the portal working in English, and Swedish appearing only where
 
 ## Open
 
-1. **The person's own language**: a switch in the header that sets a cookie, or a language of the person's kept in the
-   store, which `src/chatddx/identity/identity.py:Person` has no field for, with `Accept-Language` the default either
-   way.
-2. **The kinds' words**: translated, kept as the glossary's (they are the API's, the docs' and the address's,
+1. **The kinds' words**: translated, kept as the glossary's (they are the API's, the docs' and the address's,
    `?kind=configuration`), or both, as the Library is to teach the data model. Step 2 draws them in one place, so this
    is settled in the catalog whenever it is.
-3. **Refusals**: they are English. A code for each, translated where shown; translated where shown with the English as
+2. **Refusals**: they are English. A code for each, translated where shown; translated where shown with the English as
    the key, as a whoops's `said` is; or English for now. A whoops is settled (see "Start with this"), and so is a
    finding, by its code (see "Findings"), and a refusal, by its wording (see "Refusals").
-4. **What data sets hold**: a schema's titles and descriptions in more than one language is a question of the data
+3. **What data sets hold**: a schema's titles and descriptions in more than one language is a question of the data
    format, and left out of these steps.
-5. **A locale with more plural forms** than one and other: the islands' `t()` would need gettext's forms in the order of
+4. **A locale with more plural forms** than one and other: the islands' `t()` would need gettext's forms in the order of
    CLDR's categories, which Babel derives its own from.

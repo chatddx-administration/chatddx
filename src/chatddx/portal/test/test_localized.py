@@ -9,7 +9,7 @@ from jinja2 import ChoiceLoader, DictLoader
 
 from chatddx.api import schemas
 from chatddx.factors import Finding, Invalid
-from chatddx.locale import Locales, localizing
+from chatddx.locale import CHOSEN, Locales, localizing
 from chatddx.locale.test.helpers import catalog
 from chatddx.markers import restamped
 from chatddx.portal.pages import refusal_of, templates
@@ -251,3 +251,23 @@ def test_what_the_portal_s_python_says_is_said_in_the_locale_asked_for(
     refused = signed.post(action, data=form, headers=sv)
     assert refused.status_code == 422 and "temperature är inget tal" in refused.text
     assert "isn&#39;t a number" in signed.post(action, data=form).text
+
+
+def test_a_locale_chosen_is_kept_over_the_browser_s(client: TestClient) -> None:
+    sv = {"accept-language": "sv"}
+    chose = client.post("/locale", data={"tag": "sv", "next": "/runs?a=b"})
+    assert (chose.status_code, chose.headers["location"]) == (303, "/runs?a=b")
+    cookie = chose.headers["set-cookie"]
+    assert cookie.startswith(f"{CHOSEN}=sv;")
+    assert {"path=/", "samesite=lax", "secure"} <= {
+        part.strip().lower() for part in cookie.split(";")
+    }
+    assert '<html lang="sv">' in client.get("/").text
+    _ = client.post("/locale", data={"tag": "en"})
+    assert '<html lang="en">' in client.get("/", headers=sv).text
+    unknown = client.post("/locale", data={"tag": "xx", "next": "//elsewhere.example"})
+    assert unknown.headers["location"] == "/" and "set-cookie" not in unknown.headers
+    elsewhere = {"Sec-Fetch-Site": "cross-site"}
+    assert (
+        client.post("/locale", data={"tag": "sv"}, headers=elsewhere).status_code == 403
+    )

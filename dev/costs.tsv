@@ -1868,3 +1868,79 @@
 2026-11-23T10:27:12Z	container	18.2	0	8	5873676	./dev/check.sh frontend
 2026-11-23T10:27:14Z	container	20.4	0	8	5873676	./dev/check.sh index
 2026-11-23T10:27:26Z	container	32.1	0	8	5873676	./dev/check.sh python-lint
+2026-11-23T09:51:06Z	container	1.4	0	8	7a12453	./dev/check.sh stamps
+2026-11-23T09:51:07Z	container	1.9	0	8	7a12453	./dev/check.sh docs
+2026-11-23T09:51:08Z	container	3.4	0	8	7a12453	./dev/check.sh openapi
+2026-11-23T09:51:09Z	container	4.5	0	8	7a12453	./dev/check.sh locale
+2026-11-23T09:51:11Z	container	5.9	0	8	7a12453	./dev/check.sh pending
+2026-11-23T09:51:14Z	container	9.4	0	8	7a12453	./dev/check.sh format
+2026-11-23T09:51:19Z	container	2.8	0	8	7a12453	pnpm --dir frontend test
+2026-11-23T09:51:19Z	container	13.9	0	8	7a12453	./dev/check.sh frontend
+2026-11-23T09:51:22Z	container	16.7	1	8	7a12453	./dev/check.sh index
+2026-11-23T09:51:30Z	container	24.8	0	8	7a12453	./dev/check.sh python-lint
+2026-11-23T11:32:26Z	container	2.5	0	8	c9b4d91	./dev/check.sh openapi
+2026-11-23T11:32:27Z	container	2.8	0	8	c9b4d91	./dev/check.sh stamps
+2026-11-23T11:32:27Z	container	3.8	0	8	c9b4d91	./dev/check.sh docs
+2026-11-23T11:32:28Z	container	4.2	0	8	c9b4d91	./dev/check.sh locale
+2026-11-23T11:32:30Z	container	6.5	0	8	c9b4d91	./dev/check.sh pending
+2026-11-23T11:32:37Z	container	13.5	0	8	c9b4d91	./dev/check.sh format
+2026-11-23T11:32:42Z	container	3.5	0	8	c9b4d91	pnpm --dir frontend test
+2026-11-23T11:32:42Z	container	18.7	0	8	c9b4d91	./dev/check.sh frontend
+2026-11-23T11:32:46Z	container	22.6	0	8	c9b4d91	./dev/check.sh index
+2026-11-23T11:32:56Z	container	32.2	0	8	c9b4d91	./dev/check.sh python-lint
+2026-11-23T11:51:03Z	container	8.9	0	0	c9b4d91	pytest src/chatddx/portal/test/test_signing_in.py src/chatddx/portal/test/test_frontend.py src/chatddx/portal/test/test_localized.py
+2026-11-23T11:51:09Z	container	2.0	0	7	c9b4d91	./dev/check.sh docs
+2026-11-23T11:51:11Z	container	4.7	0	7	c9b4d91	./dev/check.sh openapi
+2026-11-23T11:51:13Z	container	6.1	0	7	c9b4d91	./dev/check.sh pending
+2026-11-23T11:51:13Z	container	6.2	0	7	c9b4d91	./dev/check.sh locale
+2026-11-23T11:51:18Z	container	11.4	0	7	c9b4d91	./dev/check.sh format
+2026-11-23T11:51:26Z	container	3.5	0	7	c9b4d91	pnpm --dir frontend test
+2026-11-23T11:51:26Z	container	18.9	0	7	c9b4d91	./dev/check.sh frontend
+2026-11-23T11:51:30Z	container	23.3	0	7	c9b4d91	./dev/check.sh index
+2026-11-23T11:51:38Z	container	31.0	0	7	c9b4d91	./dev/check.sh python-lint
+2026-11-23T11:51:57Z	container	0.7	0	2	c9b4d91	./dev/check.sh docs
+2026-11-23T11:52:02Z	container	6.1	0	2	c9b4d91	./dev/check.sh format
+2026-11-23T11:52:12Z	container	15.7	0	2	c9b4d91	./dev/check.sh index
+2026-11-23T12:20:49Z	container	8.5	0	0	8214db5	pytest src/chatddx/portal/test/test_signing_in.py src/chatddx/portal/test/test_localized.py src/chatddx/locale
+2026-11-23T12:20:50Z	container	0.6	1	6	8214db5	./dev/check.sh pending
+2026-11-23T12:20:51Z	container	1.1	0	6	8214db5	./dev/check.sh docs
+2026-11-23T12:20:55Z	container	6.0	0	6	8214db5	./dev/check.sh locale
+2026-11-23T12:21:01Z	container	11.9	0	6	8214db5	./dev/check.sh format
+2026-11-23T12:21:07Z	container	4.0	0	6	8214db5	pnpm --dir frontend test
+2026-11-23T12:21:08Z	container	18.1	0	6	8214db5	./dev/check.sh frontend
+2026-11-23T12:21:11Z	container	21.6	0	6	8214db5	./dev/check.sh index
+2026-11-23T12:21:21Z	container	31.8	0	6	8214db5	./dev/check.sh python-lint
+2026-11-23T12:24:18Z	container	0.3	0	0	cd2ed21	pytest src/chatddx/portal/test/test_browser.py -k landing_page
+2026-11-23T12:24:22Z	container	0.1	0	0	cd2ed21	pytest src/chatddx/portal/test/test_browser.py -k landing_page -rs
+2026-11-23T12:24:32Z	container	6.8	0	0	cd2ed21	pytest -m browser src/chatddx/portal/test/test_browser.py -k landing_page
+2026-11-23T12:24:35Z	container	1.0	0	5	cd2ed21	./dev/check.sh docs
+2026-11-23T12:24:40Z	container	5.2	0	5	cd2ed21	./dev/check.sh locale
+2026-11-23T12:24:45Z	container	10.3	0	5	cd2ed21	./dev/check.sh format
+2026-11-23T12:24:50Z	container	3.3	0	5	cd2ed21	pnpm --dir frontend test
+2026-11-23T12:24:50Z	container	15.9	0	5	cd2ed21	./dev/check.sh frontend
+2026-11-23T12:24:54Z	container	19.7	0	5	cd2ed21	./dev/check.sh index
+2026-11-23T12:25:03Z	container	28.8	0	5	cd2ed21	./dev/check.sh python-lint
+2026-11-23T12:41:17Z	container	1.3	0	4	4b1a2af	./dev/check.sh docs
+2026-11-23T12:41:20Z	container	4.1	0	4	4b1a2af	./dev/check.sh locale
+2026-11-23T12:41:24Z	container	9.0	0	4	4b1a2af	./dev/check.sh format
+2026-11-23T12:41:30Z	container	3.1	0	4	4b1a2af	pnpm --dir frontend test
+2026-11-23T12:41:30Z	container	14.6	0	4	4b1a2af	./dev/check.sh frontend
+2026-11-23T12:41:34Z	container	18.3	0	4	4b1a2af	./dev/check.sh index
+2026-11-23T12:41:44Z	container	8.6	0	0	4b1a2af	pytest src/chatddx/portal/test/test_signing_in.py src/chatddx/portal/test/test_localized.py
+2026-11-23T13:01:02Z	container	10.0	0	0	1dd9626	pytest src/chatddx/portal/test/test_localized.py src/chatddx/portal/test/test_signing_in.py src/chatddx/portal/test/test_frontend.py src/chatddx/locale
+2026-11-23T13:02:45Z	container	96.4	0	0	1dd9626	pytest -n 4 src/chatddx/portal src/chatddx/locale
+2026-11-23T13:04:37Z	container	103.9	0	0	1dd9626	pytest -m browser src/chatddx/portal/test/test_browser.py
+2026-11-23T13:05:02Z	container	1.5	0	6	1dd9626	./dev/check.sh docs
+2026-11-23T13:05:04Z	container	4.2	0	6	1dd9626	./dev/check.sh openapi
+2026-11-23T13:05:05Z	container	5.1	0	6	1dd9626	./dev/check.sh locale
+2026-11-23T13:05:11Z	container	11.2	0	6	1dd9626	./dev/check.sh format
+2026-11-23T13:05:18Z	container	3.8	0	6	1dd9626	pnpm --dir frontend test
+2026-11-23T13:05:19Z	container	18.4	0	6	1dd9626	./dev/check.sh frontend
+2026-11-23T13:05:23Z	container	22.4	1	6	1dd9626	./dev/check.sh index
+2026-11-23T13:05:31Z	container	30.7	1	6	1dd9626	./dev/check.sh python-lint
+2026-11-23T13:06:00Z	container	1.0	0	4	1dd9626	./dev/check.sh docs
+2026-11-23T13:06:03Z	container	4.1	0	4	1dd9626	./dev/check.sh locale
+2026-11-23T13:06:07Z	container	8.8	0	4	1dd9626	./dev/check.sh format
+2026-11-23T13:06:16Z	container	17.3	0	4	1dd9626	./dev/check.sh index
+2026-11-23T13:06:24Z	container	25.2	0	4	1dd9626	./dev/check.sh python-lint
+2026-11-23T13:06:40Z	container	8.9	0	0	1dd9626	pytest src/chatddx/portal/test/test_localized.py src/chatddx/portal/test/test_signing_in.py src/chatddx/locale

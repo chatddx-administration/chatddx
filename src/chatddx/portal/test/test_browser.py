@@ -214,7 +214,7 @@ def test_a_configuration_s_parts_are_written_in_compose_and_saved_with_it(
     expect(page.get_by_text("Carried over from the text as it was.")).to_be_visible()
     expect(page.get_by_label("temperature", exact=True)).to_have_count(0)
 
-    page.get_by_role("button", name="English", exact=True).click()
+    page.locator("main").get_by_role("button", name="English", exact=True).click()
     with page.expect_response(re.compile(r"/drafts$")):
         page.get_by_label("temperature", exact=True).fill("0.5")
     page.get_by_role("button", name="Save").click()
@@ -1487,3 +1487,20 @@ def test_how_a_case_fares_is_drawn_below_its_review_once_scrolled_to(
     ).to_have_attribute("href", re.compile(r"^/scores/"))
     expect(page.get_by_role("button", name="Run", exact=True)).to_be_enabled()
     assert errors == []
+
+
+def test_a_landing_page_s_picture_opens_over_it_and_a_click_beside_it_closes_it(
+    browser: Browser, portal: str
+) -> None:
+    context = browser.new_context(base_url=portal)
+    page = context.new_page()
+    _ = page.goto("/")
+    enlarged = page.locator("#enlarged")
+    page.locator("a[data-enlarge]").first.click()
+    expect(enlarged).to_have_attribute("open", "")
+    enlarged.locator("img").click()
+    expect(enlarged).to_have_attribute("open", "")
+    page.mouse.click(5, 5)
+    expect(enlarged).not_to_have_attribute("open", "")
+    assert page.url == portal + "/"
+    context.close()

@@ -364,6 +364,7 @@ code = [
   "src/chatddx/portal/templates/error.html",
   "src/chatddx/portal/templates/fields.html",
   "src/chatddx/portal/templates/home.html",
+  "src/chatddx/portal/templates/landing.html",
   "src/chatddx/portal/templates/library.html",
   "src/chatddx/portal/templates/macros.html",
   "src/chatddx/portal/templates/review.html",

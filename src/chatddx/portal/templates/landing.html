@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% set shots = {
+  "review": (2880, 1800),
+  "measure": (2180, 1680),
+  "fares": (2880, 1583),
+  "versions": (1984, 1110),
+  "run": (2080, 2584),
+} %}
+{% macro shot(name, alt) %}
+<a href="/static/landing/{{ name }}.webp" data-enlarge class="block cursor-zoom-in rounded-2xl"><img src="/static/landing/{{ name }}.webp" alt="{{ alt }}" width="{{ shots[name][0] }}" height="{{ shots[name][1] }}" loading="lazy" decoding="async" class="block h-auto w-full rounded-2xl border border-border shadow-lg glow-primary"></a>
+{% endmacro %}
+{% macro feature(id, title, name, alt, step=none, flipped=false) %}
+<section id="{{ id }}" class="grid scroll-mt-8 items-center gap-8 lg:grid-cols-5 lg:gap-12">
+  <div class="lg:col-span-2{% if flipped %} lg:order-last{% endif %}">
+    <h3 class="text-2xl font-bold tracking-tight sm:text-3xl">{% if step %}{{ step }}. {% endif %}{{ title }}</h3>
+    <div class="mt-4 space-y-3 leading-relaxed text-muted-foreground">{{ caller() }}</div>
+  </div>
+  <div class="lg:col-span-3">{{ shot(name, alt) }}</div>
+</section>
+{% endmacro %}
+{% macro part(id, title, about=none) %}
+<div id="{{ id }}" class="mt-24 scroll-mt-8">
+  <header class="mx-auto mb-16 max-w-3xl text-center">
+    <h2 class="text-2xl font-bold tracking-tight sm:text-3xl">{{ title }}</h2>
+    {% if about %}<p class="mt-3 text-muted-foreground">{{ about }}</p>{% endif %}
+  </header>
+  <div class="space-y-24">{{ caller() }}</div>
+</div>
+{% endmacro %}
+{% block title %}{{ _("ChatDDX: how well does a language model reason about a patient?") }}{% endblock %}
+{% block visiting %}
+<nav aria-label="{{ _('Pages') }}" class="text-sm"><a href="/sign-in" class="px-2 py-1.5">{{ _("Log in") }}</a></nav>
+{% endblock %}
+{% block main %}
+<div class="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+  <header class="mx-auto max-w-3xl animate-fade-in py-14 text-center sm:py-20">
+    <p class="text-sm font-semibold tracking-wide text-primary uppercase">{{ _("A research rig for emergency care") }}</p>
+    <h1 class="mt-4 text-4xl font-bold tracking-tight text-balance sm:text-5xl">{{ _("How well does a language model reason about a patient?") }}</h1>
+    <p class="mt-6 text-lg leading-relaxed text-muted-foreground">{{ _("ChatDDX measures how accurately large language models produce differential diagnoses and management plans from emergency-care case vignettes, and keeps what it measured so that others can rebuild it and examine it.") }}</p>
+    <p class="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2">
+      <a href="#tour">{{ _("A tour of the portal") }}</a>
+      <a href="#reproducible">{{ _("What makes a result reproducible") }}</a>
+    </p>
+  </header>
+
+  <section class="mx-auto max-w-3xl animate-slide-up">
+    <h2 class="text-2xl font-bold tracking-tight sm:text-3xl">{{ _("Why measure") }}</h2>
+    <div class="mt-4 space-y-4 text-lg leading-relaxed text-muted-foreground">
+      <p>{{ _("Asked the same question twice, a language model can answer differently, and a model behind an API can change overnight. Nor does it have what makes a colleague's judgement trustworthy: a reputation, insight into its own reasoning, and accountability when it's wrong.") }}</p>
+      <p>{{ _("Before it assists in emergency care, someone has to know how well it performs: on which cases, under which instructions, and how sure that knowledge is. ChatDDX is built to find out, and to hand over what it found with everything needed to check it.") }}</p>
+    </div>
+  </section>
+
+  {% call part("tour", _("A tour, with fictional cases"), _("The cases, answers and scores below are scripted: made up to show the portal at work, not results of any model.")) %}
+    {% call feature("review", pgettext("a step of the tour", "Review"), "review", _("The Review page: a fictional case of abdominal pain, its vignette beside the expectation written for it, with the latest version's change to the disposition highlighted."), step=1) %}
+    <p>{{ _("A case's vignette beside what a good answer to it holds, its diagnosis, the warnings it should raise, where the patient should go and what must not be missed, each in plain words and as a pattern a scorer can match.") }}</p>
+    {% endcall %}
+
+    {% call feature("measure", _("Is the yardstick right?"), "measure", _("Measuring the possible warnings of a case: how often each alternative of the pattern matched, and the answers it missed, most frequent first."), step=2, flipped=true) %}
+    <p>{{ _("A pattern too broad scores every answer well, one too narrow none. Measure takes a single pattern and shows how it has matched the answers it has read: what each of its alternatives found, and what it missed, most frequent first.") }}</p>
+    <p>{{ _("The clinician tightens or widens it right where it is written, before asking how any model fared.") }}</p>
+    {% endcall %}
+
+    {% call feature("fares", _("How the case fares under every configuration"), "fares", _("How the case fares: for each configuration, its score on the case plotted among every other case's under it, field by field."), step=3) %}
+    <p>{{ _("Below the case, each configuration's score on it is plotted among every other case's under that configuration, field by field, and each replicate is a point that leads to its score.") }}</p>
+    <p>{{ _("A configuration that has changed since it ran, or whose runs aren't whole, says so, and Run brings the case up to date: three replicates and a repeat under each configuration.") }}</p>
+    {% endcall %}
+  {% endcall %}
+
+  {% call part("reproducible", _("What makes a result reproducible")) %}
+    <section id="cage" class="pane scroll-mt-8 rounded-2xl p-6 sm:p-10">
+      <h3 class="text-2xl font-bold tracking-tight sm:text-3xl">{{ _("The cage") }}</h3>
+      <div class="mt-4 grid gap-8 lg:grid-cols-2">
+        <div class="space-y-3 leading-relaxed text-muted-foreground">
+          <p>{{ _("Everything that can change an answer or its score is a factor, pinned by its digest, the hash of what it holds, and referring to the factors it is made of by theirs.") }}</p>
+          <p>{{ _("The environment a run took place in can then be rebuilt from the digests it names, and delivered with its results as a bundle anyone can check offline.") }}</p>
+        </div>
+        <ul class="flex flex-wrap content-start gap-2" aria-label="{{ _('Factors') }}">
+          {% for factor in [_("prompts"), _("sampling"), _("engines"), _("model weights"), _("cases"), _("seeds"), _("expectations"), _("scorers")] %}
+          <li class="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">{{ factor }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    {% call feature("versions", _("Nothing is overwritten"), "versions", _("The versions of an expectation in the Library, each with its time, its author and its digest, below what the latest version changed.")) %}
+    <p>{{ _("Every expectation, prompt, instruction, sampling setting and scorer is kept in every version, each named by its digest. The Library shows what each version changed, and who changed it.") }}</p>
+    <p>{{ _("A run names the versions it ran under, so a result can always be traced back to what produced it.") }}</p>
+    {% endcall %}
+
+    {% call feature("run", _("Every exchange is recorded"), "run", _("A run of four cases: its model, engine, seed and the rig's build, what was noted of it, and each item's outcome, valid, salvaged or errored."), flipped=true) %}
+    <p>{{ _("A run records what was planned, what was sent and what came back: the model, the engine, the seeds, the build of the rig itself, and every answer, whether valid, salvaged from a broken stream or failed.") }}</p>
+    <p>{{ _("What went wrong is noted rather than hidden, and the answers are scored by strict patterns or by a language model asked to judge.") }}</p>
+    {% endcall %}
+  {% endcall %}
+
+  <div class="mt-24 grid gap-6 md:grid-cols-3">
+    <section class="pane rounded-2xl p-6">
+      <h2 class="text-lg font-bold">{{ _("Patient data on a path of its own") }}</h2>
+      <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{{ _("Cases arrive de-identified, from a known source or typed by a clinician, who de-identifies them. A vignette is sent only to endpoints cleared for it, and the record keeps it as a fingerprint.") }}</p>
+    </section>
+    <section class="pane rounded-2xl p-6">
+      <h2 class="text-lg font-bold">{{ _("Local or remote models") }}</h2>
+      <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{{ _("Models run on the rig's own hosts with vLLM, or remotely behind OpenAI-compatible APIs, each pinned to the weights and engine it was served with.") }}</p>
+    </section>
+    <section class="pane rounded-2xl p-6">
+      <h2 class="text-lg font-bold">{{ _("Clinicians and researchers") }}</h2>
+      <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{{ _("Clinicians review cases and write what is expected of them; researchers compose configurations, judges and scorers, and run them. The portal speaks English and Swedish.") }}</p>
+    </section>
+  </div>
+
+  <dialog id="enlarged" class="m-0 h-dvh max-h-none w-dvw max-w-none cursor-zoom-out overflow-auto overscroll-contain bg-transparent p-4 open:grid open:place-items-center backdrop:bg-black/80 sm:p-8">
+    <img alt="" class="block h-auto max-w-full cursor-default rounded-xl shadow-2xl">
+  </dialog>
+  <script>
+    // Policy: a picture opens enlarged over the page, and a click beside it or Escape closes
+    // it; without scripts, its link opens the picture alone.
+    {
+      const enlarged = document.getElementById("enlarged");
+      const picture = enlarged.querySelector("img");
+      document.addEventListener("click", (clicked) => {
+        const link = clicked.target.closest?.("a[data-enlarge]");
+        if (!link || clicked.button || clicked.metaKey || clicked.ctrlKey || clicked.shiftKey || clicked.altKey) return;
+        clicked.preventDefault();
+        const shown = link.querySelector("img");
+        picture.src = shown.src;
+        picture.alt = shown.alt;
+        picture.style.width = `${shown.getAttribute("width") / 2}px`;
+        enlarged.setAttribute("aria-label", shown.alt);
+        enlarged.showModal();
+        enlarged.scrollTo(0, 0);
+      });
+      enlarged.addEventListener("click", (clicked) => clicked.target === picture || enlarged.close());
+    }
+  </script>
+
+  <footer class="mt-24 border-t border-border pt-8 text-sm text-muted-foreground">
+    <p>{{ _("This site holds fictional cases only.") }} <a href="/sign-in">{{ _("Log in") }}</a></p>
+    <p class="mt-2">{{ _("Copyright Alexander Holmbäck and Olof Silfver, all rights reserved.") }}</p>
+  </footer>
+</div>
+{% endblock %}
