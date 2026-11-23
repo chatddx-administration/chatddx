@@ -172,9 +172,9 @@ Built, in use: chatddx-dev runs with `CHATDDX_WORLD=worlds/kompismoln`, and its 
 pelle and malborg. Its store has been dropped and loaded again when a stored kind's version went up; since a bump adds
 the kind's upgrade from the version before (docs/parts/factors.md, "Components"), what it holds can be kept.
 
-- **Where it is**: Kompismoln's org (`Kompismoln/org`), in `apps/chatddx-remastered.nix`, the app file of
-  `[app.chatddx-dev]` in its `org.toml`, which o11n's app-scheduler role imports on the app's hosts. It adapts the org's
-  app to `services.chatddx`; o11n has nothing of chatddx's.
+- **Where it is**: Kompismoln's org (`Kompismoln/org`), in `apps/chatddx.nix`, the app file of `[app.chatddx-dev]` in
+  its `org.toml`, which o11n's app-scheduler role imports on the app's hosts. It adapts the org's app to
+  `services.chatddx`; o11n has nothing of chatddx's.
 - **What the org gives**: the app's principal, `chatddx-dev`, a system user with an id, a home in `/var/lib/chatddx-dev`
   that stationary keeps across its ephemeral root, and a loopback address of its own (`bindAddress`). Decided: the
   principal is the admin (`admin`, and the database of its name). The writer is in its group (`principal.members`), to

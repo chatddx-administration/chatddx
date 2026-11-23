@@ -46,8 +46,8 @@ mkdir -p ~/.config/nix && echo 'experimental-features = nix-command flakes' >> ~
 
 ```sh
 git --version || sudo apt install -y git
-git clone https://github.com/chatddx-administration/chatddx-remastered.git   # or git@github.com:… over SSH
-cd chatddx-remastered
+git clone https://github.com/chatddx-administration/chatddx.git   # or git@github.com:… over SSH
+cd chatddx
 ```
 
 ### The development shell
