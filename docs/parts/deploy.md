@@ -14,7 +14,9 @@ containers for a Kubernetes cluster. The NixOS module is built; the containers a
    portal and the API with no worker, so that the NixOS module's systemd services each run a command of their own (see
    "Services and commands").
 3. **Decided: two targets**, a NixOS module (see "The NixOS module") and containers for a Kubernetes cluster (see
-   "Containers for Kubernetes"). Which of them serves real patient data first is open.
+   "Containers for Kubernetes"). Decided: the containers serve real patient data, on Kubernetes inside Karolinska's
+   network, and that is the deployment; the NixOS module serves Kompismoln's chatddx and chatddx-dev, which sign people
+   in and hold fictional cases only (see "On Kompismoln").
 
 ## What holds now
 
@@ -165,28 +167,34 @@ flake's `checks.<system>.module`, boots it in a VM.
 
 ## On Kompismoln
 
-Decided: chatddx-dev first, on stationary, from this repository's `main`, with the World `worlds/kompismoln`; the old
-chatddx stays on helsinki meanwhile.
+Built, in use: two apps of Kompismoln's org run this repository's `main` with the World `worlds/kompismoln`, and their
+runs on the sample's vignettes go to pelle and malborg. Decided: neither is the deployment, both sign people in and hold
+fictional cases only, so "Before real patient data" (`docs/parts/clearance.md`) doesn't hold them back.
 
-Built, in use: chatddx-dev runs with `CHATDDX_WORLD=worlds/kompismoln`, and its runs on the sample's vignettes go to
-pelle and malborg. Its store has been dropped and loaded again when a stored kind's version went up; since a bump adds
-the kind's upgrade from the version before (docs/parts/factors.md, "Components"), what it holds can be kept.
+- **chatddx**, at chatddx.com on helsinki, for the people who use the rig. It replaced the Django app of the same name,
+  whose database was dumped and dropped first, and it started with an empty store.
+- **chatddx-dev**, at chatddx-dev.kompismoln.se on stationary, for testing and development. Its store has been dropped
+  and loaded again when a stored kind's version went up; since a bump adds the kind's upgrade from the version before
+  (docs/parts/factors.md, "Components"), what it holds can be kept.
 
-- **Where it is**: Kompismoln's org (`Kompismoln/org`), in `apps/chatddx.nix`, the app file of `[app.chatddx-dev]` in
-  its `org.toml`, which o11n's app-scheduler role imports on the app's hosts. It adapts the org's app to
-  `services.chatddx`; o11n has nothing of chatddx's.
-- **What the org gives**: the app's principal, `chatddx-dev`, a system user with an id, a home in `/var/lib/chatddx-dev`
-  that stationary keeps across its ephemeral root, and a loopback address of its own (`bindAddress`). Decided: the
-  principal is the admin (`admin`, and the database of its name). The writer is in its group (`principal.members`), to
-  read the World in its home.
+Each locks this repository in the org's flake, as its own input, `chatddx` or `chatddx-dev`, so a deploy takes the
+revision its input is locked to.
+
+- **Where it is**: Kompismoln's org (`Kompismoln/org`), in `apps/chatddx.nix`, the app file of both apps in its
+  `org.toml`, which o11n's app-scheduler role imports on the app's hosts. It adapts the org's app to `services.chatddx`;
+  o11n has nothing of chatddx's.
+- **What the org gives**: the app's principal, `chatddx` or `chatddx-dev`, a system user with an id, a home in
+  `/var/lib/<app>`, kept across stationary's ephemeral root, and a loopback address of its own (`bindAddress`). Decided:
+  the principal is the admin (`admin`, and the database of its name). The writer is in its group (`principal.members`),
+  to read the World in its home. `www.chatddx.com` redirects to chatddx.com (the org's `altpoints`).
 - **What the app file adds**: `listen` on the principal's address; nginx for the app's endpoint; o11n's
   `nixos/nginx.nix` (ACME, the firewall) and `nixos/postgresql.nix` (PostgreSQL 17, its directory kept across the
   ephemeral root, a daily dump into the home); and `chatddx-worlds`, a oneshot before `chatddx-migrate` that copies the
   repository's `worlds/` into the home, since `worlds/kompismoln` refers to the sample's vignettes and `_data`.
 - **One chatddx to a database server**: the migrations name the writer's and the reader's roles, which are the server's,
   not the database's. chatddx and chatddx-dev are on different hosts.
-- Open: helsinki's chatddx, once chatddx-dev has replaced it: the app file becomes `apps/chatddx.nix`, the org's
-  `chatddx` input this repository, and o11n's `nixos/django.nix` is left with no user.
+- **Shared engines**: both send to pelle and malborg, and each holds an endpoint to its capacity on its own, so an
+  endpoint can take up to twice its capacity at once. Decided: accepted, as chatddx-dev is for testing.
 
 ## Containers for Kubernetes
 
@@ -218,8 +226,6 @@ the kind's upgrade from the version before (docs/parts/factors.md, "Components")
 
 ## Open
 
-- Which target serves real patient data first, and whether the other stays (`docs/chatddx.md`, "How it runs", names
-  both).
 - Keycloak in front: which target runs it, and how it hands the app a login.
 - CI: whether a deployment takes only a revision CI passed, and what builds the image. The checks, the VM test included,
   run on each push to main on a self-hosted Forgejo runner (docs/parts/dev.md, "CI"); the options for one with KVM on

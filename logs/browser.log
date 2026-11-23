@@ -1,15 +1,15 @@
-2026-11-10T01:23:25Z db48a54 ./dev/check.sh browser
+2026-11-23T11:28:47Z f12d4bf ./dev/check.sh browser
 • browser
 
-> chatddx-portal@0.0.0 build /home/user/chatddx-remastered/frontend
+> chatddx-portal@0.0.0 build /home/user/chatddx/frontend
 > pnpm types && vite build
 
 
-> chatddx-portal@0.0.0 types /home/user/chatddx-remastered/frontend
+> chatddx-portal@0.0.0 types /home/user/chatddx/frontend
 > openapi-typescript openapi.json --default-non-nullable false --output src/lib/api/schema.d.ts
 
 ✨ openapi-typescript 7.13.0
-🚀 openapi.json → src/lib/api/schema.d.ts [265.8ms]
+🚀 openapi.json → src/lib/api/schema.d.ts [190.3ms]
 vite v8.3.4 building client environment for production...
 transforming...
 ✓ 833 modules transformed.
@@ -47,12 +47,2450 @@ dist/assets/compose-BFpMXto1.js                                      68.99 kB �
 ✓ built in 2.59s
 ============================= test session starts ==============================
 platform linux -- Python 3.13.18, pytest-9.1.1, pluggy-1.6.0
-rootdir: /home/user/chatddx-remastered
+rootdir: /home/user/chatddx
 configfile: pyproject.toml
 testpaths: dev/src, src
 plugins: xdist-3.8.0, anyio-4.15.1
 collected 1208 items / 1179 deselected / 29 selected
 
-src/chatddx/portal/test/test_browser.py .............................    [100%]
+src/chatddx/portal/test/test_browser.py EEEEEEEEEEEEEEEEEEEEEEEEEEEEE    [100%]
 
-=============== 29 passed, 1179 deselected in 104.44s (0:01:44) ================
+==================================== ERRORS ====================================
+_ ERROR at setup of test_a_variation_is_run_watched_halted_scored_again_and_run_again _
+
+request = <SubRequest 'template' for <Function test_a_variation_is_run_watched_halted_scored_again_and_run_again>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_____ ERROR at setup of test_a_judge_s_configuration_is_written_in_compose _____
+
+request = <SubRequest 'template' for <Function test_a_judge_s_configuration_is_written_in_compose>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_configuration_s_parts_are_written_in_compose_and_saved_with_it _
+
+request = <SubRequest 'template' for <Function test_a_configuration_s_parts_are_written_in_compose_and_saved_with_it>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_configuration_s_baseline_is_run_from_compose_once_it_is_saved _
+
+request = <SubRequest 'template' for <Function test_a_configuration_s_baseline_is_run_from_compose_once_it_is_saved>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_what_a_configuration_sends_slides_in_marked_against_what_was_saved _
+
+request = <SubRequest 'template' for <Function test_what_a_configuration_sends_slides_in_marked_against_what_was_saved>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_configuration_s_settings_are_written_by_what_they_decide _
+
+request = <SubRequest 'template' for <Function test_a_configuration_s_settings_are_written_by_what_they_decide>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_clinician_s_appendix_case_and_expectation_are_written_and_counted _
+
+request = <SubRequest 'template' for <Function test_a_clinician_s_appendix_case_and_expectation_are_written_and_counted>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_clinician_reviews_a_case_writing_what_is_expected_and_its_appendices _
+
+request = <SubRequest 'template' for <Function test_a_clinician_reviews_a_case_writing_what_is_expected_and_its_appendices>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_the_cases_are_filtered_in_place_by_tags_and_languages _
+
+request = <SubRequest 'template' for <Function test_the_cases_are_filtered_in_place_by_tags_and_languages>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+__ ERROR at setup of test_a_case_s_tags_and_language_are_saved_with_the_page ___
+
+request = <SubRequest 'template' for <Function test_a_case_s_tags_and_language_are_saved_with_the_page>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_case_with_none_of_one_s_own_shows_the_shared_one_and_waits_for_typing _
+
+request = <SubRequest 'template' for <Function test_a_case_with_none_of_one_s_own_shows_the_shared_one_and_waits_for_typing>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_____________ ERROR at setup of test_a_scorer_s_page_fits_a_phone ______________
+
+request = <SubRequest 'template' for <Function test_a_scorer_s_page_fits_a_phone>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_judged_view_is_written_with_a_new_judge_and_scored_through_the_worker _
+
+request = <SubRequest 'template' for <Function test_a_judged_view_is_written_with_a_new_judge_and_scored_through_the_worker>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_what_a_judge_is_asked_is_rewritten_on_its_page_and_picked_in_the_library _
+
+request = <SubRequest 'template' for <Function test_what_a_judge_is_asked_is_rewritten_on_its_page_and_picked_in_the_library>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_translator_carries_an_edited_instruction_over_and_compose_takes_it _
+
+request = <SubRequest 'template' for <Function test_a_translator_carries_an_edited_instruction_over_and_compose_takes_it>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_text_an_expectation_and_a_scorer_s_views_are_written_in_their_editors _
+
+request = <SubRequest 'template' for <Function test_a_text_an_expectation_and_a_scorer_s_views_are_written_in_their_editors>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_few_shot_messages_and_a_contract_are_written_in_forms_and_json_checked_as_typed _
+
+request = <SubRequest 'template' for <Function test_few_shot_messages_and_a_contract_are_written_in_forms_and_json_checked_as_typed>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_researcher_s_chunks_are_written_in_their_forms_and_made_into_a_configuration _
+
+request = <SubRequest 'template' for <Function test_a_researcher_s_chunks_are_written_in_their_forms_and_made_into_a_configuration>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_trial_is_begun_of_the_picked_cases_in_their_language_and_run _
+
+request = <SubRequest 'template' for <Function test_a_trial_is_begun_of_the_picked_cases_in_their_language_and_run>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_press_shows_until_the_next_page_comes_and_sends_its_form_once _
+
+request = <SubRequest 'template' for <Function test_a_press_shows_until_the_next_page_comes_and_sends_its_form_once>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_the_library_s_kinds_scroll_on_their_own_beside_a_long_page _
+
+request = <SubRequest 'template' for <Function test_the_library_s_kinds_scroll_on_their_own_beside_a_long_page>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_long_list_is_paged_found_in_and_shows_the_page_a_jump_is_to _
+
+request = <SubRequest 'template' for <Function test_a_long_list_is_paged_found_in_and_shows_the_page_a_jump_is_to>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+________ ERROR at setup of test_a_jump_to_a_card_of_the_world_opens_it _________
+
+request = <SubRequest 'template' for <Function test_a_jump_to_a_card_of_the_world_opens_it>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_____ ERROR at setup of test_a_case_over_the_limit_isn_t_sent_and_says_why _____
+
+request = <SubRequest 'template' for <Function test_a_case_over_the_limit_isn_t_sent_and_says_why>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_an_island_says_what_its_page_s_catalog_holds_in_the_locale_asked_for _
+
+request = <SubRequest 'template' for <Function test_an_island_says_what_its_page_s_catalog_holds_in_the_locale_asked_for>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_run_s_items_are_paged_and_found_in_as_they_come[ran] _
+
+request = <SubRequest 'template' for <Function test_a_run_s_items_are_paged_and_found_in_as_they_come[ran]>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_case_is_run_from_its_review_once_what_changed_is_saved _
+
+request = <SubRequest 'template' for <Function test_a_case_is_run_from_its_review_once_what_changed_is_saved>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_a_field_is_measured_in_a_column_of_its_own_and_closed_again _
+
+request = <SubRequest 'template' for <Function test_a_field_is_measured_in_a_column_of_its_own_and_closed_again>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+_ ERROR at setup of test_how_a_case_fares_is_drawn_below_its_review_once_scrolled_to _
+
+request = <SubRequest 'template' for <Function test_how_a_case_fares_is_drawn_below_its_review_once_scrolled_to>>
+
+    @pytest.fixture(name="template")
+    def curated_template(request: pytest.FixtureRequest) -> str:
+>       return chosen(request, "curated")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/chatddx/test/helpers.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/chatddx/test/helpers.py:141: in chosen
+    return request.getfixturevalue(getattr(request, "param", otherwise))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/conftest.py:102: in migrated
+    with templated(copies) as name:
+         ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:127: in templated
+    name = create_database(copies.admin, template=of)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/chatddx/test/helpers.py:66: in create_database
+    with psycopg.connect(admin, autocommit=True) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'psycopg.Connection'>
+conninfo = 'user=chatddx dbname=chatddx host=/var/run/postgresql'
+autocommit = True, prepare_threshold = 5, context = None, row_factory = None
+cursor_factory = None, kwargs = {}
+
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        prepare_threshold: int | None = 5,
+        context: AdaptContext | None = None,
+        row_factory: RowFactory[Row] | None = None,
+        cursor_factory: type[Cursor[Row]] | None = None,
+        **kwargs: ConnParam,
+    ) -> Self:
+        """
+        Connect to a database server and return a new `Connection` instance.
+        """
+    
+        params = cls._get_connection_params(conninfo, **kwargs)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        conn_errors: list[tuple[e.Error, str]] = []
+        for attempt in attempts:
+            tdescr = (attempt.get("host"), attempt.get("port"), attempt.get("hostaddr"))
+            descr = "host: %r, port: %r, hostaddr: %r" % tdescr
+            logger.debug("connection attempt: %s", descr)
+            try:
+                conninfo = make_conninfo("", **attempt)
+                gen = cls._connect_gen(conninfo)
+                rv = waiting.wait_conn(gen, interval=_WAIT_INTERVAL, timeout=timeout)
+            except e._WaitTimeout:
+                tex = e.ConnectionTimeout("connection timeout expired")
+                logger.debug("connection failed: %s: %s", descr, str(tex))
+                conn_errors.append((tex, descr))
+            except e.Error as ex:
+                logger.debug("connection failed: %s: %s", descr, str(ex))
+                conn_errors.append((ex, descr))
+            except e._NO_TRACEBACK as ex:
+                raise ex.with_traceback(None)
+            else:
+                logger.debug("connection succeeded: %s", descr)
+                break
+    
+        if not rv:
+            last_ex = conn_errors[-1][0]
+            if len(conn_errors) == 1:
+>               raise last_ex.with_traceback(None)
+E               psycopg.OperationalError: connection is bad: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: Connection refused
+E               	Is the server running locally and accepting connections on that socket?
+
+.venv/lib/python3.13/site-packages/psycopg/connection.py:126: OperationalError
+=========================== short test summary info ============================
+ERROR src/chatddx/portal/test/test_browser.py::test_a_variation_is_run_watched_halted_scored_again_and_run_again
+ERROR src/chatddx/portal/test/test_browser.py::test_a_judge_s_configuration_is_written_in_compose
+ERROR src/chatddx/portal/test/test_browser.py::test_a_configuration_s_parts_are_written_in_compose_and_saved_with_it
+ERROR src/chatddx/portal/test/test_browser.py::test_a_configuration_s_baseline_is_run_from_compose_once_it_is_saved
+ERROR src/chatddx/portal/test/test_browser.py::test_what_a_configuration_sends_slides_in_marked_against_what_was_saved
+ERROR src/chatddx/portal/test/test_browser.py::test_a_configuration_s_settings_are_written_by_what_they_decide
+ERROR src/chatddx/portal/test/test_browser.py::test_a_clinician_s_appendix_case_and_expectation_are_written_and_counted
+ERROR src/chatddx/portal/test/test_browser.py::test_a_clinician_reviews_a_case_writing_what_is_expected_and_its_appendices
+ERROR src/chatddx/portal/test/test_browser.py::test_the_cases_are_filtered_in_place_by_tags_and_languages
+ERROR src/chatddx/portal/test/test_browser.py::test_a_case_s_tags_and_language_are_saved_with_the_page
+ERROR src/chatddx/portal/test/test_browser.py::test_a_case_with_none_of_one_s_own_shows_the_shared_one_and_waits_for_typing
+ERROR src/chatddx/portal/test/test_browser.py::test_a_scorer_s_page_fits_a_phone
+ERROR src/chatddx/portal/test/test_browser.py::test_a_judged_view_is_written_with_a_new_judge_and_scored_through_the_worker
+ERROR src/chatddx/portal/test/test_browser.py::test_what_a_judge_is_asked_is_rewritten_on_its_page_and_picked_in_the_library
+ERROR src/chatddx/portal/test/test_browser.py::test_a_translator_carries_an_edited_instruction_over_and_compose_takes_it
+ERROR src/chatddx/portal/test/test_browser.py::test_a_text_an_expectation_and_a_scorer_s_views_are_written_in_their_editors
+ERROR src/chatddx/portal/test/test_browser.py::test_few_shot_messages_and_a_contract_are_written_in_forms_and_json_checked_as_typed
+ERROR src/chatddx/portal/test/test_browser.py::test_a_researcher_s_chunks_are_written_in_their_forms_and_made_into_a_configuration
+ERROR src/chatddx/portal/test/test_browser.py::test_a_trial_is_begun_of_the_picked_cases_in_their_language_and_run
+ERROR src/chatddx/portal/test/test_browser.py::test_a_press_shows_until_the_next_page_comes_and_sends_its_form_once
+ERROR src/chatddx/portal/test/test_browser.py::test_the_library_s_kinds_scroll_on_their_own_beside_a_long_page
+ERROR src/chatddx/portal/test/test_browser.py::test_a_long_list_is_paged_found_in_and_shows_the_page_a_jump_is_to
+ERROR src/chatddx/portal/test/test_browser.py::test_a_jump_to_a_card_of_the_world_opens_it
+ERROR src/chatddx/portal/test/test_browser.py::test_a_case_over_the_limit_isn_t_sent_and_says_why
+ERROR src/chatddx/portal/test/test_browser.py::test_an_island_says_what_its_page_s_catalog_holds_in_the_locale_asked_for
+ERROR src/chatddx/portal/test/test_browser.py::test_a_run_s_items_are_paged_and_found_in_as_they_come[ran]
+ERROR src/chatddx/portal/test/test_browser.py::test_a_case_is_run_from_its_review_once_what_changed_is_saved
+ERROR src/chatddx/portal/test/test_browser.py::test_a_field_is_measured_in_a_column_of_its_own_and_closed_again
+ERROR src/chatddx/portal/test/test_browser.py::test_how_a_case_fares_is_drawn_below_its_review_once_scrolled_to
+===================== 1179 deselected, 29 errors in 4.30s ======================
