@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass, replace
 from typing import Annotated, Any
 from urllib.parse import urlencode
+from uuid import UUID
 
 from fastapi import APIRouter, Form, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -10,6 +11,8 @@ from pydantic import JsonValue, ValidationError
 
 from chatddx import catalog
 from chatddx.api import (
+    breakdown as api_breakdown,
+    families as api_families,
     schemas,
     threads as api,
 )
@@ -27,11 +30,14 @@ from chatddx.factors.request import (
     Recipe,
     Toolset,
     texts,
+    translated,
 )
 
 from .mending import mend, placed
 from .pages import BenchDep, configurations, page, refusal_of
+from .scoring import unit_in
 from .shelves import display_kind
+from .titles import display_case
 
 router = APIRouter()
 
@@ -93,12 +99,14 @@ def compose(
             t.model_dump(mode="json")
             for t in api.threads(bench, "configuration", purpose=purpose)
         ],
+        "cases": [] if judged else _cases(bench),
         "baseline": None
         if based is None
         else {
             "running": based.running,
             "behind": based.mendable,
             "whole": based.whole,
+            "runs": [str(r) for r in based.runs],
         },
     }
     return page(
@@ -125,6 +133,23 @@ def compose(
     )
 
 
+@router.get("/gatherings/{started}")
+def gathered(
+    request: Request, bench: BenchDep, started: UUID, view: int = 0
+) -> Response:
+    held = api_breakdown.gathering(bench, started)
+    at = view if 0 <= view < len(held.views) else 0
+    return page(
+        request,
+        "gathering.html",
+        person=bench.person,
+        held=held,
+        at=at,
+        titles={r.case: display_case(bench.titled_case(r.case)) for r in held.rows},
+        units=[unit_in(bench, v.scorer, v.view) for v in held.views],
+    )
+
+
 @router.post("/compose/{thread}/runs")
 def running_in_compose(
     bench: BenchDep, thread: int, head: Annotated[int | None, Form()] = None
@@ -144,7 +169,7 @@ def running_in_compose(
     if any(b.why == "under_way" for b in stood.behind):
         return RedirectResponse(back, 303)
     # Policy: a baseline whole as things are now is run again on seeds drawn anew, as
-    # what narrows its version's interval is another draw, and its repeat is none.
+    # its seeds again would only repeat what it answered.
     if not stood.behind:
         stood = replace(stood, behind=[Behind("no_runs", rerun={})])
     # Policy: a baseline that can't run says why on the page it leads back to.
@@ -156,10 +181,19 @@ def running_in_compose(
 class Baseline:
     refusal: str | None
     outdated: bool
+    untranslated: str | None
     findings: list[Finding]
     running: bool
     mendable: bool
     whole: bool
+    runs: list[UUID]
+
+
+def _cases(bench: Bench) -> list[dict[str, Any]]:
+    return [
+        {"family": f.id, "name": f.name, "tags": f.tags, "language": f.language}
+        for f in api_families.families(bench)
+    ]
 
 
 def _baseline(bench: Bench, shown: schemas.ThreadDetail, head: int) -> Baseline | None:
@@ -173,11 +207,28 @@ def _baseline(bench: Bench, shown: schemas.ThreadDetail, head: int) -> Baseline 
     return Baseline(
         refusal=None if refused is None else refusal_of(refused),
         outdated=any(b.why == "outdated" for b in behind),
+        untranslated=_tabless(
+            bench, shown, head, [b.language for b in behind if b.why == "untranslated"]
+        ),
         findings=_found(bench, shown, cases, head) if runs else [],
         running=any(b.why == "under_way" for b in behind),
         mendable=_mendable(behind),
         whole=not behind,
+        runs=[r.run for r in runs],
     )
+
+
+# Policy: a language the configuration has translations into has a tab of its own in
+# Compose, which marks it while texts are left to translate there, so only one it has
+# none into is said above it.
+def _tabless(
+    bench: Bench, shown: schemas.Thread, head: int, languages: list[str | None]
+) -> str | None:
+    if not languages or languages[0] is None:
+        return None
+    recipe = bench.variation(shown.id, {}, head).varied
+    held = {} if recipe is None else translated(recipe, bench.store.get)
+    return None if languages[0] in held else languages[0]
 
 
 def _stood(
@@ -193,27 +244,13 @@ def _mendable(behind: list[Behind]) -> bool:
     )
 
 
-# Policy: a case in a language the configuration has no translations into is left out
-# of its baseline unsaid, and said among its findings once it has run, as a translation
-# that fails to compile is.
 def _found(
     bench: Bench, shown: schemas.ThreadDetail, cases: list[str], head: int
 ) -> list[Finding]:
     if (at_hand := placed(bench, shown, head)) is None:
         return []
     variation, at = at_hand
-    carried = bench.languages(variation, cases)
-    found = bench.findings(variation, at.engine, 0, carried)
-    for each in carried:
-        if each.untranslated:
-            found.append(
-                Finding(
-                    code="translations.missing",
-                    message=each.refused or "",
-                    subject=shown.head.digest,
-                )
-            )
-    return found
+    return bench.findings(variation, at.engine, 0, bench.languages(variation, cases))
 
 
 @dataclass(frozen=True)

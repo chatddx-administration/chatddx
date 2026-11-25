@@ -1,4 +1,5 @@
 import type { Schemas } from "$lib/api/client";
+import type { Listed } from "./cases";
 import type { Drafted } from "./drafting";
 
 export type Facts = {
@@ -22,5 +23,6 @@ export type Props = {
   toolChoices: ToolChoice[];
   drafted: Drafted | null;
   configurations: Schemas["Thread"][];
-  baseline: { running: boolean; behind: boolean; whole: boolean } | null;
+  cases: Listed[];
+  baseline: { running: boolean; behind: boolean; whole: boolean; runs: string[] } | null;
 };

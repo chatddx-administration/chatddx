@@ -198,6 +198,7 @@ doc = "docs/parts/compose.md"
 code = [
   "src/chatddx/portal/compose.py",
   "src/chatddx/portal/templates/compose.html",
+  "src/chatddx/portal/templates/gathering.html",
   "src/chatddx/portal/test/test_compose.py",
   "frontend/src/lib/compose",
   "frontend/src/islands/compose.ts",

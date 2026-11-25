@@ -45,9 +45,10 @@
     {% endif %}
   </header>
   {{ updating(configuration, proposal, changes, here) }}
-  {% if baseline and (baseline.refusal or baseline.outdated or baseline.findings) %}
+  {% if baseline and (baseline.refusal or baseline.outdated or baseline.untranslated or baseline.findings) %}
   <section aria-label="{{ _('Its findings') }}" class="mb-4 text-sm">
     {% if baseline.outdated %}<p class="mb-2 text-warning">{{ _("it is out of date: update it on its page") }}</p>{% endif %}
+    {% if baseline.untranslated %}<p class="mb-2 text-warning">{{ _("Its baseline has cases in %(language)s, which it has no translation into: translate it to run the baseline.", language=baseline.untranslated | language) }}</p>{% endif %}
     {% if baseline.refusal %}<p class="mb-2 text-warning">{{ baseline.refusal }}</p>{% endif %}
     {% if baseline.findings %}{{ findings(baseline.findings) }}{% endif %}
   </section>

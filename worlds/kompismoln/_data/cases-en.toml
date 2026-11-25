@@ -5,13 +5,13 @@ targets.warning.pattern = "fracture* | dislocat* | popliteal | compartment & syn
 targets.disposition.pattern = "discharge* | home | outpatient | orthop* | physio* | follow*"
 
 [case.akm-13]
-tags = ["akm"]
+tags = ["akm", "baseline"]
 targets.diagnosis.pattern = "leptospirosis"
 targets.warning.pattern = "kidney & failure | renal & failure | kidney & injury | hemorrhag* | haemorrhag* | sepsis | meningit* | weil*"
 targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care | infect*"
 
 [case.dutch-01]
-tags = ["dutch"]
+tags = ["dutch", "baseline"]
 targets.diagnosis.pattern = "pneumonia"
 targets.warning.pattern = "pulmonary & embolism | pe | hypoxi* | sepsis"
 targets.disposition.pattern = "admit* | admission | hospital*"
@@ -52,7 +52,7 @@ targets.warning.pattern = "sepsis | septic | urosepsis | shock"
 targets.disposition.pattern = "icu | intensive & care | admit* | admission | hospital*"
 
 [case.dutch-06]
-tags = ["dutch", "copd"]
+tags = ["dutch"]
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure | sepsis"
 targets.disposition.pattern = "admit* | admission | hospital*"
@@ -83,7 +83,7 @@ targets.disposition.pattern = "discharge* | home | outpatient | observation"
 targets.dont_miss.pattern = "dissection"
 
 [case.dutch-11]
-tags = ["dutch"]
+tags = ["dutch", "baseline"]
 targets.diagnosis.pattern = "aaa | (abdominal | aortic) & aneurysm | dissection"
 targets.warning.pattern = "rupture* | dissection | shock | aneurysm*"
 targets.disposition.pattern = "surg* | operat* | vascular | icu | intensive & care"
@@ -107,13 +107,13 @@ targets.disposition.pattern = "admit* | admission | hospital*"
 targets.dont_miss.pattern = "myocardial & infarction | acute & coronary | acs | stemi"
 
 [case.dutch-13]
-tags = ["dutch"]
+tags = ["dutch", "baseline"]
 targets.diagnosis.pattern = "torsion | ovarian & torsion"
 targets.warning.pattern = "torsion | ischemi* | ischaemi* | necro* | rupture*"
 targets.disposition.pattern = "surg* | operat* | laparoscop* | gynecolog* | gynaecolog*"
 
 [case.dutch-14]
-tags = ["dutch", "copd"]
+tags = ["dutch"]
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"
 targets.disposition.pattern = "admit* | admission | hospital*"
@@ -133,7 +133,7 @@ targets.warning.pattern = "hypoxi* | respiratory & failure | pulmonary & (edema 
 targets.disposition.pattern = "icu | intensive & care | ccu | coronary & care | admit* | admission | hospital*"
 
 [case.dutch-17]
-tags = ["dutch", "liver-failure"]
+tags = ["dutch"]
 targets.diagnosis.pattern = "liver & failure | cirrosis | cirrhosis"
 targets.warning.pattern = "bleed* | variceal | varices | peritonitis | encephalopath* | hepatorenal"
 targets.disposition.pattern = "admit* | admission | hospital*"
@@ -145,7 +145,7 @@ targets.warning.pattern = "sepsis | septic | hypoxi* | respiratory & failure"
 targets.disposition.pattern = "admit* | admission | hospital*"
 
 [case.dutch-19]
-tags = ["dutch", "copd"]
+tags = ["dutch"]
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure | pulmonary & embolism"
 targets.disposition.pattern = "admit* | admission | hospital*"
@@ -157,7 +157,7 @@ targets.warning.pattern = "renal | kidney | glomerulonephritis | hemorrhag* | ha
 targets.disposition.pattern = "admit* | admission | hospital*"
 
 [case.dutch-21]
-tags = ["dutch", "copd"]
+tags = ["dutch"]
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning.pattern = "hypoxi* | hypercapni* | respiratory & failure"
 targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care"
@@ -169,13 +169,13 @@ targets.warning.pattern = "sepsis | septic | urosepsis | pyelonephritis"
 targets.disposition.pattern = "admit* | admission | hospital*"
 
 [case.dutch-23]
-tags = ["dutch", "copd"]
+tags = ["dutch"]
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning.pattern = "pulmonary & embolism | pe | dvt | deep & vein & thrombosis | hypoxi* | respiratory & failure"
 targets.disposition.pattern = "admit* | admission | hospital*"
 
 [case.dutch-24]
-tags = ["dutch", "copd"]
+tags = ["dutch"]
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning.pattern = "respiratory & failure | hypercapni* | hypoxi* | sepsis | exhaust*"
 targets.disposition.pattern = "icu | intensive & care | high & dependency | hdu | niv"
@@ -242,7 +242,7 @@ targets.warning.pattern = "volvulus | malrotation | enterocolitis | perforat* | 
 targets.disposition.pattern = "nicu | neonatal & intensive | surg* | pediatric & surg* | paediatric & surg*"
 
 [case.oddx-005]
-tags = ["oddx"]
+tags = ["oddx", "baseline"]
 targets.diagnosis.pattern = "peripheral & artery & disease | arterial & insufficiency | peripheral & arterial & disease"
 targets.warning.pattern = "critical & limb | limb & ischemi* | gangren* | amputat* | ulcer*"
 targets.disposition.pattern = "outpatient | follow* | referr* | vascular | exercise"
@@ -254,7 +254,7 @@ targets.warning.pattern = "hypokal* | arrhythmi* | hypertensive & (crisis | emer
 targets.disposition.pattern = "outpatient | follow* | referr* | endocrinolog*"
 
 [case.oddx-007]
-tags = ["oddx"]
+tags = ["oddx", "baseline"]
 targets.diagnosis.pattern = "tardive & dyskinesia | dyskinesia"
 targets.warning.pattern = "neuroleptic & malignant | nms"
 targets.disposition.pattern = "psychiatr* | follow* | medication & review"
@@ -290,7 +290,7 @@ targets.warning.pattern = "ectopic | torsion | rupture*"
 targets.disposition.pattern = "outpatient | follow* | referr* | gynecolog* | gynaecolog* | laparoscop* | fertility"
 
 [case.oddx-013]
-tags = ["oddx"]
+tags = ["oddx", "baseline"]
 targets.diagnosis.pattern = "tension & pneumothorax"
 targets.warning.pattern = "tension & pneumothorax | hemothorax | haemothorax | aortic & (rupture | injury) | shock"
 targets.disposition.pattern = "surg* | operat* | trauma | icu | intensive & care"
@@ -314,7 +314,7 @@ targets.warning.pattern = "suicid* | self & harm"
 targets.disposition.pattern = "psychiatr* | dialectical | dbt"
 
 [case.oddx-017]
-tags = ["oddx", "liver-failure"]
+tags = ["oddx"]
 targets.diagnosis.pattern = "(liver & failure) | cirrosis | cirrhosis"
 targets.warning.pattern = "peritonitis | sbp | encephalopath* | sepsis | hepatorenal"
 targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care"
@@ -356,7 +356,7 @@ targets.warning.pattern = "encephalit* | pneumonia | superinfect* | secondary & 
 targets.disposition.pattern = "discharge* | home | outpatient | isolat*"
 
 [case.oddx-024]
-tags = ["oddx"]
+tags = ["oddx", "baseline"]
 targets.diagnosis.pattern = "takotsubo | cardiomyopathy"
 targets.warning.pattern = "cardiogenic & shock | shock | heart & failure | arrhythmi* | thromb*"
 targets.disposition.pattern = "admit* | admission | hospital* | ccu | coronary & care | cardiolog* | telemetry | icu"
@@ -368,7 +368,7 @@ targets.warning.pattern = "septic & arthritis | fracture* | infect*"
 targets.disposition.pattern = "outpatient | follow* | physio* | physical & therap* | rheumatolog* | home"
 
 [case.oddx-026]
-tags = ["oddx"]
+tags = ["oddx", "baseline"]
 targets.diagnosis.pattern = "testicular & torsion"
 targets.warning.pattern = "torsion | abscess | orchitis | infarct*"
 targets.disposition.pattern = "outpatient | home | discharge* | follow* | urolog*"
@@ -434,7 +434,7 @@ targets.warning.pattern = "abuse | fracture* | malignan* | tumo*"
 targets.disposition.pattern = "outpatient | follow* | referr* | endocrinolog*"
 
 [case.oddx-037]
-tags = ["oddx", "liver-failure"]
+tags = ["oddx"]
 targets.diagnosis.pattern = "(liver & failure) | cirrosis | cirrhosis"
 targets.warning.pattern = "encephalopath* | bleed* | variceal | sepsis | hypokal* | dehydrat*"
 targets.disposition.pattern = "admit* | admission | hospital* | ward"
@@ -470,13 +470,13 @@ targets.warning.pattern = "malignan* | carcinoma | cancer | papillary"
 targets.disposition.pattern = "outpatient | follow* | referr* | biopsy | fna | endocrin* | surg*"
 
 [case.oddx-044]
-tags = ["oddx", "liver-failure"]
+tags = ["oddx"]
 targets.diagnosis.pattern = "(liver & failure) | cirrosis | cirrhosis"
 targets.warning.pattern = "liver & failure | hepatic & failure | encephalopath* | coagulopath* | fetal | hepatitis e"
 targets.disposition.pattern = "icu | intensive & care | admit* | admission | hospital* | transplant*"
 
 [case.oddx-045]
-tags = ["oddx", "copd"]
+tags = ["oddx"]
 targets.diagnosis.pattern = "copd | ((exacerbation | obstructive) & pulmonary)"
 targets.warning.pattern = "lung & cancer | malignan* | hypoxi*"
 targets.disposition.pattern = "outpatient | follow* | referr* | home | pulmonolog* | pulmonary & rehab* | smoking & cessation"

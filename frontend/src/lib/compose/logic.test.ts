@@ -51,13 +51,19 @@ describe("where a save goes", () => {
   };
 
   it("is a new version of the person's own, on its latest version and under its name", () => {
-    expect(whereSaveGoes(given)).toEqual({ to: "version", version: 3 });
-    expect(whereSaveGoes({ ...given, name: "  plan " })).toEqual({ to: "version", version: 3 });
+    expect(whereSaveGoes(given)).toEqual({ to: "version", version: 3, restoring: false });
+    expect(whereSaveGoes({ ...given, name: "  plan " })).toEqual({ to: "version", version: 3, restoring: false });
     expect(whereSaveGoes({ ...given, changed: false })).toEqual({ to: "nothing", because: "unchanged" });
   });
 
+  it("brings an earlier version of the person's own back as the latest, changed or not", () => {
+    const back = { to: "version", version: 3, restoring: true };
+    expect(whereSaveGoes({ ...given, latest: false })).toEqual(back);
+    expect(whereSaveGoes({ ...given, latest: false, changed: false })).toEqual(back);
+    expect(whereSaveGoes({ ...given, latest: false, name: "fresh" })).toEqual({ to: "fork", namesakes: 0 });
+  });
+
   it("is a fork otherwise, counting the person's own of that name", () => {
-    expect(whereSaveGoes({ ...given, latest: false })).toEqual({ to: "fork", namesakes: 1 });
     expect(whereSaveGoes({ ...given, name: "terse" })).toEqual({ to: "fork", namesakes: 1 });
     expect(whereSaveGoes({ ...given, name: "fresh" })).toEqual({ to: "fork", namesakes: 0 });
     const others = { ...given, configuration: configuration("archive", "plan"), changed: false };

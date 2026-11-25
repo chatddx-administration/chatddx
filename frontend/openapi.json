@@ -1263,7 +1263,7 @@
           "threads"
         ],
         "summary": "Breakdown",
-        "description": "How the configuration fared on the World's baseline cases: its versions, those\nthat compile to one skeleton pooled, each view's estimate over every replicate of\nevery case and its difference from the version before, case by case; each\nbaseline gathering's means, how far its repeats were from it, and its failed\nitems, time and tokens; and the person's other configurations' latest baselines\non the views they share. Costs a read of each of the person's runs and their\nscores, rows read before held.",
+        "description": "How the configuration fared on the World's baseline cases: each baseline\ngathering in the order they ran, each view's estimate over its cases, each case's\nvalue and its difference from the gathering before, case by case; its means, how\nfar its repeats were from it, the baseline cases it left unanswered, and its\nfailed items, time and tokens; and the person's other configurations' latest\nbaselines on the views they share. Costs a read of each of the person's runs and\ntheir scores, rows read before held.",
         "operationId": "breakdown_api_threads__thread__breakdown_get",
         "security": [
           {
@@ -1291,6 +1291,59 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Broken"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gatherings/{started}": {
+      "get": {
+        "tags": [
+          "threads",
+          "runs"
+        ],
+        "summary": "Gathering",
+        "description": "The baseline gathering begun by the run `started`: itself as its configuration's\nbreakdown has it, the gathering before it, its runs, each a replicate or a repeat,\nand each case it sent or the World's baseline holds now, those first: the language\nit went in, whether it was answered, and alike to the letter by its repeat, and by\nview its replicate's value and score, its repeat's, and the gathering before's\nvalue. Costs what the configuration's breakdown costs.",
+        "operationId": "gathering_api_gatherings__started__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          },
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "started",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Started"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gathering"
                 }
               }
             }
@@ -3536,13 +3589,13 @@
             "type": "array",
             "title": "Views"
           },
-          "versions": {
+          "gatherings": {
             "items": {
-              "$ref": "#/components/schemas/BrokenVersion"
+              "$ref": "#/components/schemas/BrokenGathering"
             },
             "type": "array",
-            "title": "Versions",
-            "description": "in the order first saved"
+            "title": "Gatherings",
+            "description": "in the order they ran"
           },
           "peers": {
             "items": {
@@ -3559,10 +3612,73 @@
           "tag",
           "cases",
           "views",
-          "versions",
+          "gatherings",
           "peers"
         ],
         "title": "Broken"
+      },
+      "BrokenGathering": {
+        "properties": {
+          "digest": {
+            "type": "string",
+            "title": "Digest",
+            "description": "the skeleton it ran"
+          },
+          "point": {
+            "$ref": "#/components/schemas/BrokenPoint"
+          },
+          "estimates": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Estimated"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Estimates",
+            "description": "by view, over its cases"
+          },
+          "values": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Values",
+            "description": "by view, each case's value, sorted"
+          },
+          "paired": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Estimated"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Paired",
+            "description": "by view, its mean difference from the gathering before, case by case on the cases both sent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "digest",
+          "point",
+          "estimates",
+          "values",
+          "paired"
+        ],
+        "title": "BrokenGathering"
       },
       "BrokenLanguage": {
         "properties": {
@@ -3720,6 +3836,11 @@
             "type": "boolean",
             "title": "Stale",
             "description": "not all of it scored as things are now"
+          },
+          "missing": {
+            "type": "integer",
+            "title": "Missing",
+            "description": "the baseline cases, as they are now, none of its replicates answered without failing"
           }
         },
         "additionalProperties": false,
@@ -3736,73 +3857,10 @@
           "failed",
           "seconds",
           "tokens",
-          "stale"
+          "stale",
+          "missing"
         ],
         "title": "BrokenPoint"
-      },
-      "BrokenVersion": {
-        "properties": {
-          "digest": {
-            "type": "string",
-            "title": "Digest",
-            "description": "the skeleton its versions compile to"
-          },
-          "versions": {
-            "items": {
-              "type": "integer"
-            },
-            "type": "array",
-            "title": "Versions",
-            "description": "the versions that compile to it, from 1"
-          },
-          "estimates": {
-            "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/Estimated"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Estimates",
-            "description": "by view, over every replicate of every case"
-          },
-          "paired": {
-            "items": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/Estimated"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Paired",
-            "description": "by view, its mean difference from the one before, case by case"
-          },
-          "points": {
-            "items": {
-              "$ref": "#/components/schemas/BrokenPoint"
-            },
-            "type": "array",
-            "title": "Points"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "digest",
-          "versions",
-          "estimates",
-          "paired",
-          "points"
-        ],
-        "title": "BrokenVersion"
       },
       "BrokenView": {
         "properties": {
@@ -5225,6 +5283,225 @@
         ],
         "title": "Finding",
         "type": "object"
+      },
+      "GatheredCase": {
+        "properties": {
+          "case": {
+            "type": "string",
+            "title": "Case"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language",
+            "description": "the language it went in"
+          },
+          "answered": {
+            "type": "boolean",
+            "title": "Answered",
+            "description": "whether its replicate answered without failing"
+          },
+          "alike": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alike",
+            "description": "whether its repeat answered alike to the letter; null where either said nothing"
+          },
+          "replicate": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/GatheredValue"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Replicate",
+            "description": "by view"
+          },
+          "repeat": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/GatheredValue"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Repeat",
+            "description": "by view"
+          },
+          "before": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Before",
+            "description": "by view, the gathering before's value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case",
+          "language",
+          "answered",
+          "alike",
+          "replicate",
+          "repeat",
+          "before"
+        ],
+        "title": "GatheredCase"
+      },
+      "GatheredRun": {
+        "properties": {
+          "run": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "repeat": {
+            "type": "boolean",
+            "title": "Repeat",
+            "description": "whether it repeats a replicate's seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run",
+          "language",
+          "repeat"
+        ],
+        "title": "GatheredRun"
+      },
+      "GatheredValue": {
+        "properties": {
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "score": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Score",
+            "description": "the score it is read from"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "score"
+        ],
+        "title": "GatheredValue"
+      },
+      "Gathering": {
+        "properties": {
+          "configuration": {
+            "type": "integer",
+            "title": "Configuration"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "tag": {
+            "type": "string",
+            "title": "Tag"
+          },
+          "cases": {
+            "type": "integer",
+            "title": "Cases",
+            "description": "the World's baseline cases now"
+          },
+          "views": {
+            "items": {
+              "$ref": "#/components/schemas/BrokenView"
+            },
+            "type": "array",
+            "title": "Views"
+          },
+          "gathering": {
+            "$ref": "#/components/schemas/BrokenGathering"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BrokenGathering"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the configuration's baseline gathering before it"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/GatheredRun"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/GatheredCase"
+            },
+            "type": "array",
+            "title": "Rows",
+            "description": "each case it sent or the baseline holds now, those first"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "configuration",
+          "name",
+          "tag",
+          "cases",
+          "views",
+          "gathering",
+          "before",
+          "runs",
+          "rows"
+        ],
+        "title": "Gathering"
       },
       "Graded": {
         "additionalProperties": false,

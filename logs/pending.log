@@ -1,4 +1,4 @@
-2026-11-23T12:20:49Z 8214db5 ./dev/check.sh pending
+2026-11-25T14:07:40Z b98ee3a ./dev/check.sh pending
 • pending
-flag: docs/parts/portal.md: 1 stamp pending
-flag: src/chatddx/locale/catalogs/sv.po: 47 stamps pending
+ok
+ok

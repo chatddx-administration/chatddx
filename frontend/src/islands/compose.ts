@@ -1,12 +1,19 @@
 import { mount } from "svelte";
 import type { Props } from "$lib/compose/props";
 import Breakdown from "$lib/compose/Breakdown.svelte";
+import { Following } from "$lib/compose/following.svelte";
 import Preview from "$lib/compose/Preview.svelte";
 import { Sending } from "$lib/compose/sending.svelte";
 import Compose from "./Compose.svelte";
 
 const target = document.getElementById("compose");
 const held = document.getElementById("compose-props");
+const given = held ? (JSON.parse(held.textContent ?? "null") as Props) : null;
+const following = new Following(
+  given?.baseline?.runs ?? [],
+  given?.baseline?.running ?? false,
+  given?.baseline?.whole ?? false,
+);
 const grid = document.querySelector<HTMLElement>("[data-compose]");
 const column = document.getElementById("compose-preview");
 if (target && held) {
@@ -20,7 +27,7 @@ if (target && held) {
     }
   });
   target.replaceChildren();
-  mount(Compose, { target, props: { held: props, sending } });
+  mount(Compose, { target, props: { held: props, sending, following } });
   if (column && props.drafted) {
     mount(Preview, {
       target: column,
@@ -38,7 +45,7 @@ if (breakdown && held) {
     props: {
       thread: props.configuration.id,
       version: props.versions.findIndex((v) => v.id === props.head) + 1,
-      running: props.baseline?.running ?? false,
+      following,
     },
   });
 }

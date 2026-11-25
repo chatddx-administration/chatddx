@@ -23,8 +23,14 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 ## `frontend/src/islands/Compose.svelte:run`
 
 ```
-// Policy: Run saves what there is to save first, and runs the configuration it saved into; with nothing to save, it
-// runs the version open, an earlier one among them.
+// Policy: Run saves what there is to save first, an earlier version being brought back, and runs the configuration it
+// saved into; with nothing to save, it runs the version open.
+```
+
+## `frontend/src/islands/Compose.svelte:runOn`
+
+```
+// Policy: running on cases saves what there is to save first, as Run does, and runs the configuration it saved into.
 ```
 
 ## `frontend/src/lib/compose/Breakdown.svelte`
@@ -37,6 +43,12 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 
 ```
 // Policy: read again so long after while its baseline is under way, as Review's faring does.
+```
+
+## `frontend/src/lib/compose/Breakdown.svelte:was`
+
+```
+// Policy: read once more as the baseline's runs end, lest what they came to wait for the next visit.
 ```
 
 ## `frontend/src/lib/compose/Preview.svelte`
@@ -78,11 +90,17 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 // doesn't move between the two meanwhile.
 ```
 
-## `frontend/src/lib/compose/breakdown.ts:spread`
+## `frontend/src/lib/compose/breakdown.ts:scattered`
 
 ```
-// Policy: a version's gatherings spread across its column by when they ran, so that a version run again
-// later sits to the right of its first.
+// Policy: a gathering's cases scatter across a third of its column in a fixed pattern, so that cases on one value
+// stay apart and the scatter stays put between reads.
+```
+
+## `frontend/src/lib/compose/cases.ts:toggled`
+
+```
+// Policy: a group picked whole is let go whole; otherwise each of it is picked, keeping what else is.
 ```
 
 ## `frontend/src/lib/compose/diffing.ts:overlaid`
@@ -133,12 +151,18 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 // Dependency: src/chatddx/factors/request.py:texts orders a recipe's texts by these parts.
 ```
 
-## `src/chatddx/portal/compose.py:_found`
+## `frontend/src/lib/compose/following.svelte.ts:AGAIN`
 
 ```
-# Policy: a case in a language the configuration has no translations into is left out
-# of its baseline unsaid, and said among its findings once it has run, as a translation
-# that fails to compile is.
+// Policy: each run of the baseline is read again so long after while any is open, rather than a stream held open for
+// each, as only how far it has come is shown here.
+```
+
+## `frontend/src/lib/compose/logic.ts:whereSaveGoes`
+
+```
+// Policy: an earlier version saved is brought back as the latest, rather than forked, as going back is what saving
+// one is for here.
 ```
 
 ## `src/chatddx/portal/compose.py:_set`
@@ -146,6 +170,14 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 ```
 # Accommodating for the forms, which show a field that is set: a default left out is
 # filled in again where it is read, to the same digest.
+```
+
+## `src/chatddx/portal/compose.py:_tabless`
+
+```
+# Policy: a language the configuration has translations into has a tab of its own in
+# Compose, which marks it while texts are left to translate there, so only one it has
+# none into is said above it.
 ```
 
 ## `src/chatddx/portal/compose.py:running_in_compose`
@@ -156,7 +188,7 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 
 ```
 # Policy: a baseline whole as things are now is run again on seeds drawn anew, as
-# what narrows its version's interval is another draw, and its repeat is none.
+# its seeds again would only repeat what it answered.
 ```
 
 ```

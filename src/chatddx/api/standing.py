@@ -8,6 +8,7 @@ from chatddx.bench.seen import trial
 from chatddx.factors.base import Invalid, resolve
 from chatddx.factors.gatherer import gather
 from chatddx.factors.gathering import Center, Seeding
+from chatddx.factors.request import untranslated
 from chatddx.factors.scoring import Scorer
 from chatddx.factors.trial import Trial
 from chatddx.ledger import RunStarted
@@ -91,8 +92,8 @@ def standing(
     shape, as `bench.latest_starts` has it: under way, or what keeps it from being
     whole, in each language the cases are sent in and scored by what `left` gives, as
     the cases and the configuration are now, at its version `at` when given, else at
-    its head. A case in a language the configuration has no translations into is left
-    out while any other is sent.
+    its head. A case that can't be sent in its language keeps the whole gathering from
+    running.
 
     Costs the person's runs read with their catalog rows and trials, their places in
     the queue, and, for each configuration, the trial of each language built twice and
@@ -141,12 +142,19 @@ def _behind(
     except (Invalid, NotFound) as e:
         return [Behind("refused", refusal=e)]
     carried = bench.languages(variation, cases)
+    recipe = variation.varied
+    for each in carried:
+        partly = (
+            each.skeleton is None
+            and each.language is not None
+            and recipe is not None
+            and bool(untranslated(recipe, bench.store.get, each.language))
+        )
+        if each.untranslated or partly:
+            return [Behind("untranslated", language=str(each.language))]
+        if each.skeleton is None:
+            return [Behind("refused", refusal=Invalid(each.refused or ""))]
     sent = [(c, c.skeleton) for c in carried if c.skeleton is not None]
-    if not sent:
-        first = carried[0]
-        if first.untranslated:
-            return [Behind("untranslated", language=str(first.language))]
-        return [Behind("refused", refusal=Invalid(first.refused or ""))]
     for each, skeleton in sent:
         registry, made = trial(bench, skeleton, endpoint.engine, each.cases, (0,))
         try:

@@ -1,4 +1,5 @@
 import html
+import re
 import time
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
@@ -18,7 +19,7 @@ from chatddx.portal.test.helpers import (
 )
 from chatddx.store import Store
 from chatddx.store.store import Connection
-from chatddx.test.world import LINES, OFF, faked
+from chatddx.test.world import LINES, LINES_GUIDED, OFF, faked
 
 __all__ = ["world_served"]
 
@@ -426,6 +427,9 @@ def test_a_configuration_s_baseline_is_run_from_compose(signed: TestClient) -> N
     targets = signed.get("/api/families", params={"tag": "targets"}).json()
     sent = {c for r in runs for c in r["cases"]}
     assert sent and sent <= {f["case"] for f in targets}
+    assert set(compose_props(shown(signed, compose))["baseline"]["runs"]) == {
+        r["id"] for r in runs
+    }
     assert {len(r["seeds"]) for r in runs} == {1}
     assert len(runs) == 2 * len({tuple(r["cases"]) for r in runs})
     for r in runs:
@@ -449,9 +453,83 @@ def test_a_configuration_s_baseline_is_run_from_compose(signed: TestClient) -> N
     assert got.status_code == 200, got.json()
     broken = got.json()
     assert broken["tag"] == "targets" and broken["views"]
-    [version] = broken["versions"]
-    assert version["versions"] == [1] and len(version["points"]) == 2
-    assert all(len(e) == len(broken["views"]) for e in (version["estimates"],))
+    gatherings = broken["gatherings"]
+    assert [g["point"]["version"] for g in gatherings] == [1, 1]
+    assert [g["point"]["missing"] for g in gatherings] == [0, 0]
+    for g in gatherings:
+        assert len(g["estimates"]) == len(g["values"]) == len(broken["views"])
+    assert gatherings[0]["paired"] == [None] * len(broken["views"])
+    assert any(d is not None for d in gatherings[1]["paired"])
+
+    first, second = (g["point"]["started"] for g in gatherings)
+    got = signed.get(f"/api/gatherings/{second}")
+    assert got.status_code == 200, got.json()
+    held = got.json()
+    assert held["configuration"] == mine["id"] and held["gathering"] == gatherings[1]
+    assert held["before"]["point"]["started"] == first
+    assert {r["run"] for r in held["runs"]} == {r["id"] for r in fresh}
+    assert sorted(r["repeat"] for r in held["runs"]) == [False, True] * (
+        len(fresh) // 2
+    )
+    assert [r["case"] for r in held["rows"]] == sorted(sent)
+    for row in held["rows"]:
+        assert row["answered"] and row["alike"] is not None
+        assert len(row["replicate"]) == len(row["repeat"]) == len(broken["views"])
+        assert any(v is not None for v in row["replicate"])
+        assert any(v is not None for v in row["before"])
+    page = html.unescape(shown(signed, f"/gatherings/{second}"))
+    assert f"/gatherings/{first}" in page
+    scored = re.findall(r'href="(/scores/[^"]+)"', page)
+    assert scored and all(signed.get(u).status_code == 200 for u in set(scored))
+    assert all(f"/runs/{r['id']}" in page for r in fresh)
+    unknown = "00000000-0000-0000-0000-000000000000"
+    assert signed.get(f"/api/gatherings/{unknown}").status_code == 404
+
+
+@pytest.mark.usefixtures("fake")
+def test_a_baseline_with_a_case_it_has_no_translation_for_runs_nothing(
+    signed: TestClient,
+) -> None:
+    [svenska] = signed.get("/api/families", params={"name": "svenska"}).json()
+    tagged = {"tags": [*svenska["tags"], "targets"]}
+    assert (
+        signed.patch(f"/api/families/{svenska['id']}", json=tagged).status_code == 200
+    )
+    lines = thread(signed, "configuration", LINES)
+    compose = f"/compose/{lines['id']}"
+    assert based(signed, compose) == {"running": False, "behind": False, "whole": False}
+    assert "Its baseline has cases in" in html.unescape(shown(signed, compose))
+
+    assert signed.post(f"{compose}/runs").status_code == 303
+    assert signed.get("/api/runs", params={"limit": 200}).json() == []
+
+
+@pytest.mark.usefixtures("fake")
+def test_a_baseline_with_texts_left_to_translate_runs_nothing_and_says_nothing_above(
+    signed: TestClient,
+) -> None:
+    [svenska] = signed.get("/api/families", params={"name": "svenska"}).json()
+    tagged = {"tags": [*svenska["tags"], "targets"]}
+    assert (
+        signed.patch(f"/api/families/{svenska['id']}", json=tagged).status_code == 200
+    )
+    guided = thread(signed, "configuration", LINES_GUIDED)
+    compose = f"/compose/{guided['id']}"
+    assert based(signed, compose) == NO_RUNS
+
+    drafted = compose_props(shown(signed, compose))["drafted"]
+    into = {k: dict(list(v.items())[1:]) for k, v in drafted["into"].items()}
+    saved = {"head": guided["head"]["id"], "chunks": drafted["chunks"]}
+    got = signed.post(
+        f"/api/threads/{guided['id']}/saves", json={**saved, "translations": into}
+    )
+    assert got.status_code == 201, got.json()
+    assert based(signed, compose) == {"running": False, "behind": False, "whole": False}
+    page = html.unescape(shown(signed, compose))
+    assert "Its baseline has cases in" not in page and "can't be done" not in page
+
+    assert signed.post(f"{compose}/runs").status_code == 303
+    assert signed.get("/api/runs", params={"limit": 200}).json() == []
 
 
 @pytest.mark.usefixtures("fake")
@@ -549,4 +627,5 @@ WHOLE = {"running": False, "behind": False, "whole": True}
 
 
 def based(signed: TestClient, compose: str) -> dict[str, bool]:
-    return compose_props(shown(signed, compose))["baseline"]
+    held = compose_props(shown(signed, compose))["baseline"]
+    return {k: v for k, v in held.items() if k != "runs"}

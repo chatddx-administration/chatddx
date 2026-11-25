@@ -157,13 +157,13 @@ drawing those it doesn't hold, resumes `resume` and scores `rescore` again.
 ## `breakdown` `@router.get("/threads/{thread}/breakdown", dependencies=[Depends(no_store)])`
 `src/chatddx/api/breakdown.py:breakdown`
 
-How the configuration fared on the World's baseline cases: its versions, those
-that compile to one skeleton pooled, each view's estimate over every replicate of
-every case and its difference from the version before, case by case; each
-baseline gathering's means, how far its repeats were from it, and its failed
-items, time and tokens; and the person's other configurations' latest baselines
-on the views they share. Costs a read of each of the person's runs and their
-scores, rows read before held.
+How the configuration fared on the World's baseline cases: each baseline
+gathering in the order they ran, each view's estimate over its cases, each case's
+value and its difference from the gathering before, case by case; its means, how
+far its repeats were from it, the baseline cases it left unanswered, and its
+failed items, time and tokens; and the person's other configurations' latest
+baselines on the views they share. Costs a read of each of the person's runs and
+their scores, rows read before held.
 
 * `bench: BenchDep`
 * `thread: int`
@@ -179,8 +179,17 @@ Raises:
 * `tag: str`
 * `cases: int`
 * `views: list[BrokenView]`
-* `versions: list[BrokenVersion] = Field(description="in the order first saved")`
+* `gatherings: list[BrokenGathering] = Field(description="in the order they ran")`
 * `peers: list[BrokenPeer]`
+
+## `BrokenGathering` `(_Schema)`
+`src/chatddx/api/schemas.py:BrokenGathering`
+
+* `digest: str = Field(description="the skeleton it ran")`
+* `point: BrokenPoint`
+* `estimates: list[Estimated | None] = Field(description="by view, over its cases")`
+* `values: list[list[float]] = Field(description="by view, each case's value, sorted")`
+* `paired: list[Estimated | None] = Field(…)`
 
 ## `BrokenLanguage` `(_Schema)`
 `src/chatddx/api/schemas.py:BrokenLanguage`
@@ -211,15 +220,7 @@ Raises:
 * `seconds: float = Field(description="an item's mean time")`
 * `tokens: float | None = Field(description="an item's mean answer tokens")`
 * `stale: bool = Field(description="not all of it scored as things are now")`
-
-## `BrokenVersion` `(_Schema)`
-`src/chatddx/api/schemas.py:BrokenVersion`
-
-* `digest: str = Field(description="the skeleton its versions compile to")`
-* `versions: list[int] = Field(description="the versions that compile to it, from 1")`
-* `estimates: list[Estimated | None] = Field(…)`
-* `paired: list[Estimated | None] = Field(…)`
-* `points: list[BrokenPoint]`
+* `missing: int = Field(…)`
 
 ## `BrokenView` `(_Schema)`
 `src/chatddx/api/schemas.py:BrokenView`
@@ -714,6 +715,61 @@ Raises:
 2. `HTTPException`: `422, "only a configuration has parts"` (through `_check_given`)
 3. `HTTPException`: `422, "only a configuration is forked from an edit: another kind from a component"` (through `_check_given`)
 4. `HTTPException`: `422, "only a scorer has labels"` (through `_check_given`)
+
+## `GatheredCase` `(_Schema)`
+`src/chatddx/api/schemas.py:GatheredCase`
+
+* `case: str`
+* `language: str | None = Field(description="the language it went in")`
+* `answered: bool = Field(description="whether its replicate answered without failing")`
+* `alike: bool | None = Field(…)`
+* `replicate: list[GatheredValue | None] = Field(description="by view")`
+* `repeat: list[GatheredValue | None] = Field(description="by view")`
+* `before: list[float | None] = Field(…)`
+
+## `GatheredRun` `(_Schema)`
+`src/chatddx/api/schemas.py:GatheredRun`
+
+* `run: UUID`
+* `language: str | None`
+* `repeat: bool = Field(description="whether it repeats a replicate's seed")`
+
+## `GatheredValue` `(_Schema)`
+`src/chatddx/api/schemas.py:GatheredValue`
+
+* `value: float`
+* `score: UUID = Field(description="the score it is read from")`
+
+## `Gathering` `(_Schema)`
+`src/chatddx/api/schemas.py:Gathering`
+
+* `configuration: int`
+* `name: str`
+* `tag: str`
+* `cases: int = Field(description="the World's baseline cases now")`
+* `views: list[BrokenView]`
+* `gathering: BrokenGathering`
+* `before: BrokenGathering | None = Field(…)`
+* `runs: list[GatheredRun]`
+* `rows: list[GatheredCase] = Field(…)`
+
+## `gathering` `@router.get("/gatherings/{started}", tags=["runs"], dependencies=[Depends(no_store)])`
+`src/chatddx/api/breakdown.py:gathering`
+
+The baseline gathering begun by the run `started`: itself as its configuration's
+breakdown has it, the gathering before it, its runs, each a replicate or a repeat,
+and each case it sent or the World's baseline holds now, those first: the language
+it went in, whether it was answered, and alike to the letter by its repeat, and by
+view its replicate's value and score, its repeat's, and the gathering before's
+value. Costs what the configuration's breakdown costs.
+
+* `bench: BenchDep`
+* `started: UUID`
+* ∟`schemas.Gathering`
+
+Raises:
+1. `NotFound`: `"this World names no baseline cases"`
+2. `NotFound`: `"no baseline of yours begun by run {started}"`
 
 ## `Graded` `(_Schema)`
 `src/chatddx/api/schemas.py:Graded`
@@ -1942,8 +1998,8 @@ How each configuration's latest gathering on the cases stands in the seedings'
 shape, as `bench.latest_starts` has it: under way, or what keeps it from being
 whole, in each language the cases are sent in and scored by what `left` gives, as
 the cases and the configuration are now, at its version `at` when given, else at
-its head. A case in a language the configuration has no translations into is left
-out while any other is sent.
+its head. A case that can't be sent in its language keeps the whole gathering from
+running.
 
 Costs the person's runs read with their catalog rows and trials, their places in
 the queue, and, for each configuration, the trial of each language built twice and

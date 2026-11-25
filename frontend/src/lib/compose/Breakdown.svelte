@@ -1,15 +1,17 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { api, type Schemas, why } from "$lib/api/client";
   import { t, tn, tp } from "$lib/locale";
   import { fieldName } from "$lib/schema/form";
-  import { differs, estimated, grouped, languages, mean, named, spread } from "./breakdown";
+  import { differs, estimated, grouped, languages, mean, named, scattered, unanswered } from "./breakdown";
+  import type { Following } from "./following.svelte";
 
-  let { thread, version, running }: { thread: number; version: number; running: boolean } = $props();
+  let { thread, version, following }: { thread: number; version: number; following: Following } = $props();
 
   type Broken = Schemas["Broken"];
   type Point = Schemas["BrokenPoint"];
+  type Gathering = Schemas["BrokenGathering"];
 
   let got = $state<Broken | null>(null);
   let problem = $state<string | null>(null);
@@ -40,8 +42,16 @@
       return;
     }
     got = res.data;
-    if (running) setTimeout(() => void read(), AGAIN);
+    if (following.running) setTimeout(() => void read(), AGAIN);
   }
+
+  // Policy: read once more as the baseline's runs end, lest what they came to wait for the next visit.
+  let was = untrack(() => following.running);
+  $effect(() => {
+    const now = following.running;
+    if (was && !now && untrack(() => got) !== null) void read();
+    was = now;
+  });
 
   const HIGH = 150;
   const LEFT = 28;
@@ -49,27 +59,24 @@
   const TOP = 8;
   const BOTTOM = 20;
   const y = (value: number): number => TOP + (1 - Math.min(1, Math.max(0, value))) * (HIGH - TOP - BOTTOM);
-  const columns = $derived(got?.versions.length ?? 0);
+  const columns = $derived(got?.gatherings.length ?? 0);
   const step = $derived(columns ? Math.max(0, width - LEFT - RIGHT) / columns : 0);
   const x = (column: number): number => LEFT + (column + 0.5) * step;
   const groups = $derived(got === null ? [] : grouped(got));
-  const latest = $derived(
-    got === null
-      ? null
-      : got.versions
-          .flatMap((v) => v.points)
-          .reduce<Point | null>((a, p) => (a === null || Date.parse(p.at) > Date.parse(a.at) ? p : a), null),
-  );
-  const stale = $derived(got?.versions.some((v) => v.points.some((p) => p.stale)) ?? false);
+  const latest = $derived<Point | null>(got?.gatherings.at(-1)?.point ?? null);
+  const stale = $derived(got?.gatherings.some((g) => g.point.stale) ?? false);
+  const incomplete = $derived(got?.gatherings.some((g) => g.point.missing) ?? false);
 
   const STRIP = 22;
   const along = (value: number, wide: number): number => 6 + Math.min(1, Math.max(0, value)) * Math.max(0, wide - 12);
   let stripWidth = $state(0);
 
-  function gathered(p: Point, view: number): string {
-    const value = p.means[view];
-    const said = `v${p.version} · ${new Date(p.at).toLocaleDateString()} · ${value == null ? "—" : value.toFixed(2)}`;
-    return p.stale ? `${said} · ${t("not as things are now")}` : said;
+  function gathered(g: Gathering, view: number): string {
+    const said = [estimated(g, view), new Date(g.point.at).toLocaleString()];
+    const left = unanswered(g.point, got?.cases ?? 0);
+    if (left) said.push(left);
+    if (g.point.stale) said.push(t("not as things are now"));
+    return said.join(" · ");
   }
 </script>
 
@@ -99,14 +106,22 @@
       </li>
       <li class="flex items-center gap-1.5">
         <svg width="14" height="14" aria-hidden="true"
-          ><circle cx="7" cy="7" r="3" class="fill-muted-foreground/60" /></svg
+          ><circle cx="7" cy="7" r="2.5" class="fill-muted-foreground/40" /></svg
         >
-        {t("Runs")}
+        {t("Cases")}
       </li>
+      {#if incomplete}
+        <li class="flex items-center gap-1.5">
+          <svg width="14" height="14" aria-hidden="true"
+            ><circle cx="7" cy="7" r="4" class="fill-destructive stroke-card" stroke-width="2" /></svg
+          >
+          {t("not every case answered")}
+        </li>
+      {/if}
       {#if stale}
         <li class="flex items-center gap-1.5">
           <svg width="14" height="14" aria-hidden="true"
-            ><circle cx="7" cy="7" r="3.5" class="fill-muted-foreground/60 stroke-warning" stroke-width="1.5" /></svg
+            ><circle cx="7" cy="7" r="4" class="fill-primary stroke-warning" stroke-width="1.5" /></svg
           >
           {t("not as things are now")}
         </li>
@@ -120,7 +135,7 @@
     <p role="status" aria-busy="true" class="text-muted-foreground">
       <LoaderCircleIcon class="size-4 animate-spin" />
     </p>
-  {:else if !got.versions.length}
+  {:else if !got.gatherings.length}
     <p class="text-sm text-muted-foreground">{t("None.")}</p>
   {:else}
     <div class="space-y-8">
@@ -140,7 +155,7 @@
                       class="block w-full"
                       height={HIGH}
                       role="img"
-                      aria-label={got.versions.map((v) => estimated(v, view)).join(". ")}
+                      aria-label={got.gatherings.map((g) => estimated(g, view)).join(". ")}
                     >
                       {#each [0, 0.5, 1] as tick (tick)}
                         <line
@@ -159,8 +174,8 @@
                           class="fill-muted-foreground text-[0.7rem] tabular-nums">{tick}</text
                         >
                       {/each}
-                      {#each got.versions as v, column (v.digest)}
-                        {#if v.versions.includes(version)}
+                      {#each got.gatherings as g, column (g.point.started)}
+                        {#if g.point.version === version}
                           <rect
                             x={x(column) - step / 2 + 2}
                             y={TOP - 4}
@@ -171,9 +186,9 @@
                           />
                         {/if}
                       {/each}
-                      {#each got.versions as v, column (v.digest)}
-                        {@const before = column > 0 ? got.versions[column - 1]?.estimates[view] : null}
-                        {@const now = v.estimates[view]}
+                      {#each got.gatherings as g, column (g.point.started)}
+                        {@const before = column > 0 ? got.gatherings[column - 1]?.estimates[view] : null}
+                        {@const now = g.estimates[view]}
                         {#if before && now}
                           <line
                             x1={x(column - 1)}
@@ -185,11 +200,13 @@
                           />
                         {/if}
                       {/each}
-                      {#each got.versions as v, column (v.digest)}
-                        {@const e = v.estimates[view]}
-                        {@const offsets = spread(v.points)}
+                      {#each got.gatherings as g, column (g.point.started)}
+                        {@const e = g.estimates[view]}
+                        {@const values = g.values[view] ?? []}
+                        {@const offsets = scattered(values.length)}
+                        {@const short = g.point.missing > 0}
                         <g>
-                          <title>{estimated(v, view)}</title>
+                          <title>{gathered(g, view)}</title>
                           <rect
                             x={x(column) - step / 2}
                             y="0"
@@ -197,22 +214,13 @@
                             height={HIGH - BOTTOM}
                             class="fill-transparent"
                           />
-                          {#each v.points as p, i (p.started)}
-                            {@const value = p.means[view]}
-                            {#if value !== null && value !== undefined}
-                              <a href={`/runs/${p.started}`}>
-                                <title>{gathered(p, view)}</title>
-                                <circle
-                                  cx={x(column) + (offsets[i] ?? 0) * step * 0.5}
-                                  cy={y(value)}
-                                  r="3"
-                                  class={p.stale
-                                    ? "fill-muted-foreground/60 stroke-warning hover:fill-muted-foreground"
-                                    : "fill-muted-foreground/60 hover:fill-muted-foreground"}
-                                  stroke-width={p.stale ? 1.5 : 0}
-                                />
-                              </a>
-                            {/if}
+                          {#each values as value, i (i)}
+                            <circle
+                              cx={x(column) + (offsets[i] ?? 0) * step}
+                              cy={y(value)}
+                              r="2.5"
+                              class="fill-muted-foreground/40"
+                            />
                           {/each}
                           {#if e}
                             {#if e.half !== null}
@@ -221,27 +229,29 @@
                                 x2={x(column)}
                                 y1={y(e.mean - e.half)}
                                 y2={y(e.mean + e.half)}
-                                class="stroke-primary"
+                                class={short ? "stroke-destructive" : "stroke-primary"}
                                 stroke-width="2"
                                 stroke-linecap="round"
                               />
                             {/if}
-                            <circle
-                              cx={x(column)}
-                              cy={y(e.mean)}
-                              r="5"
-                              class="fill-primary stroke-card"
-                              stroke-width="2"
-                            />
+                            <a href={`/gatherings/${g.point.started}`} aria-label={gathered(g, view)}>
+                              <circle
+                                cx={x(column)}
+                                cy={y(e.mean)}
+                                r="5"
+                                class={`${short ? "fill-destructive" : "fill-primary"} ${g.point.stale ? "stroke-warning" : "stroke-card"}`}
+                                stroke-width={g.point.stale ? 1.5 : 2}
+                              />
+                            </a>
                           {/if}
                         </g>
                         <text
                           x={x(column)}
                           y={HIGH - 5}
                           text-anchor="middle"
-                          class={v.versions.includes(version)
+                          class={g.point.version === version
                             ? "fill-foreground text-[0.7rem] font-semibold"
-                            : "fill-muted-foreground text-[0.7rem]"}>{named(v)}</text
+                            : "fill-muted-foreground text-[0.7rem]"}>{named(g)}</text
                         >
                       {/each}
                     </svg>
@@ -306,7 +316,7 @@
           <thead>
             <tr class="text-left text-[0.7rem] tracking-wide text-muted-foreground uppercase">
               <th class="py-1 pr-3 font-medium">{t("View")}</th>
-              <th class="py-1 pr-3 font-medium">{t("Versions")}</th>
+              <th class="py-1 pr-3 font-medium">{t("Runs")}</th>
               <th class="py-1 pr-3 text-right font-medium">{t("Mean")}</th>
               <th class="py-1 pr-3 text-right font-medium">±95%</th>
               <th class="py-1 pr-3 text-right font-medium">{t("Cases")}</th>
@@ -315,12 +325,12 @@
           </thead>
           <tbody>
             {#each got.views as view, at (at)}
-              {#each got.versions as v (v.digest)}
-                {@const e = v.estimates[at]}
-                {@const d = v.paired[at]}
+              {#each got.gatherings as g (g.point.started)}
+                {@const e = g.estimates[at]}
+                {@const d = g.paired[at]}
                 <tr class="border-t border-border/60">
                   <td class="py-1 pr-3">{view.label}</td>
-                  <td class="py-1 pr-3">{named(v)}</td>
+                  <td class="py-1 pr-3">{named(g)} · {new Date(g.point.at).toLocaleString()}</td>
                   <td class="py-1 pr-3 text-right tabular-nums">{e ? e.mean.toFixed(2) : "—"}</td>
                   <td class="py-1 pr-3 text-right tabular-nums">{e && e.half !== null ? e.half.toFixed(2) : "—"}</td>
                   <td class="py-1 pr-3 text-right tabular-nums">{e ? e.n : 0}</td>
@@ -333,7 +343,7 @@
         <table class="mt-6 w-full">
           <thead>
             <tr class="text-left text-[0.7rem] tracking-wide text-muted-foreground uppercase">
-              <th class="py-1 pr-3 font-medium">{t("Versions")}</th>
+              <th class="py-1 pr-3 font-medium">{t("Runs")}</th>
               <th class="py-1 pr-3 text-right font-medium">{t("Repeats")}</th>
               <th class="py-1 pr-3 text-right font-medium">{tp("job", "failed")}</th>
               <th class="py-1 pr-3 text-right font-medium">{t("Tokens")}</th>
@@ -341,25 +351,22 @@
             </tr>
           </thead>
           <tbody>
-            {#each got.versions as v (v.digest)}
-              {@const off = mean(v.points.map((p) => mean(p.spread)))}
-              {@const alike = v.points.reduce((n, p) => n + p.alike, 0)}
-              {@const compared = v.points.reduce((n, p) => n + p.compared, 0)}
-              {@const tokens = mean(v.points.map((p) => p.tokens))}
-              {@const seconds = v.points.reduce((n, p) => n + p.seconds, 0) / v.points.length}
-              {@const last = v.points.at(-1)}
-              <tr class="border-t border-border/60" class:font-medium={v.versions.includes(version)}>
-                <td class="py-1 pr-3">{named(v)}</td>
+            {#each got.gatherings as g (g.point.started)}
+              {@const p = g.point}
+              {@const off = mean(p.spread)}
+              {@const left = unanswered(p, got.cases)}
+              <tr class="border-t border-border/60" class:font-medium={p.version === version}>
+                <td class="py-1 pr-3">{named(g)} · {new Date(p.at).toLocaleString()}</td>
                 <td class="py-1 pr-3 text-right tabular-nums"
-                  >{off === null ? "—" : `±${off.toFixed(2)}`} · {compared ? `≡ ${alike}/${compared}` : "—"}</td
+                  >{off === null ? "—" : `±${off.toFixed(2)}`} · {p.compared ? `≡ ${p.alike}/${p.compared}` : "—"}</td
                 >
+                <td class="py-1 pr-3 text-right tabular-nums">{`${Math.round(100 * p.failed)}%`}</td>
                 <td class="py-1 pr-3 text-right tabular-nums"
-                  >{`${Math.round((100 * v.points.reduce((n, p) => n + p.failed, 0)) / v.points.length)}%`}</td
+                  >{p.tokens === null ? "—" : Math.round(p.tokens)} · {p.seconds.toFixed(1)} s</td
                 >
-                <td class="py-1 pr-3 text-right tabular-nums"
-                  >{tokens === null ? "—" : Math.round(tokens)} · {seconds.toFixed(1)} s</td
+                <td class="py-1 text-muted-foreground"
+                  >{languages(p)}{#if left}<span class="text-destructive"> · {left}</span>{/if}</td
                 >
-                <td class="py-1 text-muted-foreground">{last ? languages(last) : ""}</td>
               </tr>
             {/each}
           </tbody>

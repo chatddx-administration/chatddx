@@ -1,8 +1,8 @@
 import type { Schemas } from "$lib/api/client";
-import { displayLanguage } from "$lib/locale";
+import { displayLanguage, tn } from "$lib/locale";
 
 type Broken = Schemas["Broken"];
-type Version = Schemas["BrokenVersion"];
+type Gathering = Schemas["BrokenGathering"];
 type Point = Schemas["BrokenPoint"];
 
 export type Group = { field: string | null; views: number[] };
@@ -17,27 +17,31 @@ export function grouped(broken: Broken): Group[] {
   return found;
 }
 
-export function named(version: Version): string {
-  return version.versions.map((v) => `v${v}`).join(", ");
+export function named(gathering: Gathering): string {
+  return `v${gathering.point.version}`;
 }
 
-// Policy: a version's gatherings spread across its column by when they ran, so that a version run again
-// later sits to the right of its first.
-export function spread(points: Point[]): number[] {
-  if (points.length < 2) return points.map(() => 0);
-  const order = points.map((p, i) => [Date.parse(p.at), i] as const).sort((a, b) => a[0] - b[0]);
-  const found = points.map(() => 0);
-  order.forEach(([, i], k) => (found[i] = k / (points.length - 1) - 0.5));
-  return found;
+// Policy: a gathering's cases scatter across a third of its column in a fixed pattern, so that cases on one value
+// stay apart and the scatter stays put between reads.
+export function scattered(n: number): number[] {
+  return Array.from({ length: n }, (_, k) => (((k * 3) % 7) - 3) / 18);
 }
 
-export function estimated(version: Version, view: number): string {
-  const e = version.estimates[view];
+export function estimated(gathering: Gathering, view: number): string {
+  const e = gathering.estimates[view];
   const said = e
-    ? `${named(version)}: ${e.mean.toFixed(2)}${e.half === null ? "" : ` ±${e.half.toFixed(2)}`} (n=${e.n})`
-    : `${named(version)}: —`;
-  const d = version.paired[view];
+    ? `${named(gathering)}: ${e.mean.toFixed(2)}${e.half === null ? "" : ` ±${e.half.toFixed(2)}`} (n=${e.n})`
+    : `${named(gathering)}: —`;
+  const d = gathering.paired[view];
   return d ? `${said}, Δ ${differs(d)}` : said;
+}
+
+export function unanswered(point: Point, of: number): string | null {
+  if (!point.missing) return null;
+  return tn("%(missing)s of %(of)s case unanswered", "%(missing)s of %(of)s cases unanswered", of, {
+    missing: point.missing,
+    of,
+  });
 }
 
 export function differs(d: Schemas["Estimated"]): string {

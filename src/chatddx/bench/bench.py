@@ -1,6 +1,6 @@
 from typing import final
 
-from .breakdown import breakdown
+from .breakdown import baseline, breakdown
 from .cases import case, replacement, type_case
 from .components import check, edit, fork, new
 from .composing import compose, drafted, preview
@@ -72,3 +72,4 @@ class Bench(Seen):
     latest_starts = latest_starts
     observed = observed
     breakdown = breakdown
+    baseline = baseline

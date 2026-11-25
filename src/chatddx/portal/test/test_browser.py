@@ -207,7 +207,7 @@ def test_a_configuration_s_parts_are_written_in_compose_and_saved_with_it(
     with page.expect_response(re.compile(r"/drafts$")):
         text.fill(new)
 
-    page.get_by_role("button", name=re.compile("^Swedish")).click()
+    page.get_by_role("button", name=re.compile(r"^Swedish \d+\D")).click()
     expect(page.get_by_label(f"Into Swedish: {old}", exact=True)).to_have_count(0)
     carried = page.get_by_label(f"Into Swedish: {new}", exact=True)
     expect(carried).to_have_value(re.compile(r"^Du bistår"))
@@ -260,11 +260,90 @@ def test_a_configuration_s_baseline_is_run_from_compose_once_it_is_saved(
             if r["ran"]["configuration"] == guided["id"]
         ]
         assert runs and {len(r["seeds"]) for r in runs} == {1}
+        saving = page.get_by_role("region", name="Saving it")
+        under_way = saving.get_by_role("status")
+        expect(under_way).to_contain_text("under way")
+        for r in runs:
+            expect(under_way.get_by_role("link", name=r["id"][:8])).to_be_visible()
+        expect(run).to_be_disabled()
         for r in runs:
             assert page.request.post(f"/api/runs/{r['id']}/halt").status in (204, 409)
+        expect(under_way).to_have_count(0, timeout=30_000)
+        expect(run).to_be_enabled()
         fared = page.get_by_role("region", name="Baseline", exact=True)
         fared.scroll_into_view_if_needed()
         expect(fared.get_by_role("status")).to_have_count(0, timeout=30_000)
+    assert errors == []
+
+
+def test_a_configuration_is_run_from_compose_on_the_cases_a_tag_picks(
+    page: Page, world: Inventory, conn: Connection
+) -> None:
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    query: dict[str, str | float | bool] = {
+        "kind": "configuration",
+        "name": LINES_GUIDED,
+        "owner": "alice",
+    }
+    guided = page.request.get("/api/threads", params=query).json()[0]
+    tagged = page.request.get("/api/families", params={"tag": "targets"}).json()
+    with faked(world, Store(conn).get, delay=0.3):
+        _ = page.goto(f"/compose/{guided['id']}")
+        picker = page.get_by_role("region", name="Run it on cases")
+        picker.get_by_role("button", name=re.compile(r"^targets \d+$")).click()
+        expect(picker.get_by_text(f"{len(tagged)} cases picked")).to_be_visible()
+        picker.get_by_label("Replicates").fill("2")
+        with page.expect_navigation(url=re.compile(r"/runs/"), timeout=120_000):
+            picker.get_by_role("button", name=f"Run it on {len(tagged)} cases").click()
+        runs = [
+            r
+            for r in page.request.get("/api/runs", params={"limit": 200}).json()
+            if r["ran"]["configuration"] == guided["id"]
+        ]
+        assert runs and {len(r["seeds"]) for r in runs} == {2}
+        for r in runs:
+            assert page.request.post(f"/api/runs/{r['id']}/halt").status in (204, 409)
+    assert errors == []
+
+
+def test_an_earlier_version_saved_is_brought_back_as_the_latest(page: Page) -> None:
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    query: dict[str, str | float | bool] = {
+        "kind": "configuration",
+        "name": LINES_GUIDED,
+        "owner": "alice",
+    }
+    guided = page.request.get("/api/threads", params=query).json()[0]
+    first = guided["head"]["id"]
+    compose = f"/compose/{guided['id']}"
+
+    def sampled() -> float:
+        recipe = page.request.get(f"/api/threads/{guided['id']}").json()["recipe"]
+        held = page.request.get(f"/api/components/{recipe['sampling']}").json()
+        return held["body"]["temperature"]
+
+    was = sampled()
+    _ = page.goto(compose)
+    with page.expect_response(re.compile(r"/drafts$")):
+        page.get_by_label("temperature", exact=True).fill("0.5")
+    save = page.get_by_role("button", name="Save", exact=True)
+    with page.expect_navigation():
+        save.click()
+    expect(page.get_by_text("Version 2 of 2", exact=True)).to_be_visible()
+    assert sampled() == 0.5
+
+    _ = page.goto(f"{compose}?head={first}")
+    expect(
+        page.get_by_text("Saves version 3 of this configuration, from version 1.")
+    ).to_be_visible()
+    with page.expect_navigation():
+        save.click()
+    page.wait_for_url(re.compile(rf"/compose/{guided['id']}$"))
+    expect(page.get_by_text("Version 3 of 3", exact=True)).to_be_visible()
+    assert sampled() == was
+    assert len(page.request.get("/api/threads", params=query).json()) == 1
     assert errors == []
 
 
@@ -301,7 +380,7 @@ def test_what_a_configuration_sends_slides_in_marked_against_what_was_saved(
     expect(shown.locator("del").first).to_contain_text("You")
     expect(shown.locator("ins").first).to_contain_text("brief")
     with page.expect_response(re.compile(r"/previews$")):
-        page.get_by_role("button", name=re.compile("^Swedish")).click()
+        page.get_by_role("button", name=re.compile(r"^Swedish \d+\D")).click()
     expect(update).to_be_disabled()
     expect(shown.locator("ins, del")).to_have_count(0)
     page.get_by_label("Into Swedish: Be brief.", exact=True).fill("")

@@ -1445,18 +1445,63 @@ class BrokenPoint(_Schema):
     seconds: float = Field(description="an item's mean time")
     tokens: float | None = Field(description="an item's mean answer tokens")
     stale: bool = Field(description="not all of it scored as things are now")
-
-
-class BrokenVersion(_Schema):
-    digest: str = Field(description="the skeleton its versions compile to")
-    versions: list[int] = Field(description="the versions that compile to it, from 1")
-    estimates: list[Estimated | None] = Field(
-        description="by view, over every replicate of every case"
+    missing: int = Field(
+        description="the baseline cases, as they are now, none of its replicates "
+        + "answered without failing"
     )
+
+
+class BrokenGathering(_Schema):
+    digest: str = Field(description="the skeleton it ran")
+    point: BrokenPoint
+    estimates: list[Estimated | None] = Field(description="by view, over its cases")
+    values: list[list[float]] = Field(description="by view, each case's value, sorted")
     paired: list[Estimated | None] = Field(
-        description="by view, its mean difference from the one before, case by case"
+        description="by view, its mean difference from the gathering before, case by "
+        + "case on the cases both sent"
     )
-    points: list[BrokenPoint]
+
+
+class GatheredValue(_Schema):
+    value: float
+    score: UUID = Field(description="the score it is read from")
+
+
+class GatheredRun(_Schema):
+    run: UUID
+    language: str | None
+    repeat: bool = Field(description="whether it repeats a replicate's seed")
+
+
+class GatheredCase(_Schema):
+    case: str
+    language: str | None = Field(description="the language it went in")
+    answered: bool = Field(description="whether its replicate answered without failing")
+    alike: bool | None = Field(
+        description="whether its repeat answered alike to the letter; null where "
+        + "either said nothing"
+    )
+    replicate: list[GatheredValue | None] = Field(description="by view")
+    repeat: list[GatheredValue | None] = Field(description="by view")
+    before: list[float | None] = Field(
+        description="by view, the gathering before's value"
+    )
+
+
+class Gathering(_Schema):
+    configuration: int
+    name: str
+    tag: str
+    cases: int = Field(description="the World's baseline cases now")
+    views: list[BrokenView]
+    gathering: BrokenGathering
+    before: BrokenGathering | None = Field(
+        description="the configuration's baseline gathering before it"
+    )
+    runs: list[GatheredRun]
+    rows: list[GatheredCase] = Field(
+        description="each case it sent or the baseline holds now, those first"
+    )
 
 
 class BrokenPeer(_Schema):
@@ -1473,5 +1518,5 @@ class Broken(_Schema):
     tag: str
     cases: int
     views: list[BrokenView]
-    versions: list[BrokenVersion] = Field(description="in the order first saved")
+    gatherings: list[BrokenGathering] = Field(description="in the order they ran")
     peers: list[BrokenPeer]

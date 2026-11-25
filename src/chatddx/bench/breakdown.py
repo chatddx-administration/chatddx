@@ -30,7 +30,8 @@ class Estimate:
 @dataclass(frozen=True)
 class Point:
     """One baseline gathering of a configuration: `means` over its replicates alone,
-    `spread` and `alike` its repeats against them."""
+    `spread` and `alike` its repeats against them, `missing` the baseline cases none
+    of its replicates answered without failing."""
 
     started: UUID
     at: datetime
@@ -43,19 +44,19 @@ class Point:
     seconds: float
     tokens: float | None
     stale: bool
+    missing: int
 
 
 @dataclass(frozen=True)
-class Pooled:
-    """The baseline gatherings of the versions that compile to one skeleton, by its
-    digest: each view's estimate over the cases, each case its replicates' mean, and
-    its mean difference from the pooled before it on the cases both sent, case by
-    case."""
+class Gathered:
+    """One baseline gathering of the configuration, `digest` the skeleton it ran:
+    each view's estimate over its cases, each case's value, and its mean difference
+    from the gathering before it on the cases both sent, case by case."""
 
     digest: str
-    versions: tuple[int, ...]
-    points: tuple[Point, ...]
+    point: Point
     estimates: dict[View, Estimate]
+    values: dict[View, dict[str, float]]
     paired: dict[View, Estimate]
 
 
@@ -72,11 +73,11 @@ class Peer:
 @dataclass(frozen=True)
 class Breakdown:
     """How a configuration fared on the baseline cases: the views its skeleton offers,
-    its versions pooled by what they compile to in the order first saved, and its
-    peers among the configurations given."""
+    its baseline gatherings in the order they ran, a version once for each time it
+    ran, and its peers among the configurations given."""
 
     views: tuple[View, ...]
-    timeline: tuple[Pooled, ...]
+    timeline: tuple[Gathered, ...]
     peers: tuple[Peer, ...]
 
 
@@ -94,32 +95,29 @@ def breakdown(
     starts = _baselines(seen, observed(seen, seen.runs()), within)
     mine = sorted(
         (p for p in starts if p.ran[0].configuration == thread),
-        key=lambda s: s.ran[0].at,
+        key=lambda s: s.point.at,
     )
-    pooled: dict[str, list[_Start]] = {}
+    timeline: list[Gathered] = []
     for s in mine:
         digest = s.ran[0].digest
         assert digest is not None
-        pooled.setdefault(digest, []).append(s)
-    order = sorted(pooled, key=lambda d: min(s.ran[0].version or 0 for s in pooled[d]))
-    timeline: list[Pooled] = []
-    for digest in order:
-        held = pooled[digest]
-        values = _by_case(held)
+        values = {
+            v: {case: mean(xs) for case, xs in by.items()}
+            for v, by in _by_case([s]).items()
+            if v in views
+        }
         before = timeline[-1] if timeline else None
         timeline.append(
-            Pooled(
+            Gathered(
                 digest=digest,
-                versions=tuple(sorted({s.ran[0].version or 0 for s in held})),
-                points=tuple(s.point for s in held),
+                point=s.point,
                 estimates={
                     v: e
                     for v in views
-                    if (e := estimate([mean(xs) for xs in values.get(v, {}).values()]))
+                    if (e := estimate(list(values.get(v, {}).values())))
                 },
-                paired={}
-                if before is None
-                else _paired(views, _by_case(pooled[before.digest]), values),
+                values=values,
+                paired={} if before is None else _paired(views, before.values, values),
             )
         )
     found: list[Peer] = []
@@ -135,9 +133,118 @@ def breakdown(
 
 
 @dataclass(frozen=True)
+class Scored:
+    """A case's value under a view, with the score it is read from."""
+
+    value: float
+    score: UUID
+
+
+@dataclass(frozen=True)
+class GatheredCase:
+    """A baseline case in one gathering: the language it went in, whether its
+    replicate answered without failing, whether its repeat answered alike to the
+    letter, None where either said nothing, and by view its replicate's value, its
+    repeat's and the gathering before's."""
+
+    case: str
+    language: str | None
+    answered: bool
+    alike: bool | None
+    replicate: dict[View, Scored]
+    repeat: dict[View, Scored]
+    before: dict[View, float]
+
+
+@dataclass(frozen=True)
+class GatheredRun:
+    run: UUID
+    language: str | None
+    repeat: bool
+
+
+@dataclass(frozen=True)
+class Baseline:
+    """One baseline gathering of a configuration as a page shows it: itself as its
+    breakdown has it, the one before it, its runs, and each case it sent or the
+    baseline holds now, those the baseline holds first."""
+
+    configuration: int
+    views: tuple[View, ...]
+    gathered: Gathered
+    before: Gathered | None
+    runs: tuple[GatheredRun, ...]
+    cases: tuple[GatheredCase, ...]
+
+
+def baseline(seen: Seen, started: UUID, cases: Collection[str]) -> Baseline | None:
+    """The person's baseline gathering begun by `started` on the cases, with the
+    configuration's gathering before it, None if it is no such gathering. Costs what
+    `breakdown` costs."""
+    within = set(cases)
+    starts = _baselines(seen, observed(seen, seen.runs()), within)
+    found = next((s for s in starts if s.point.started == started), None)
+    if found is None or (thread := found.ran[0].configuration) is None:
+        return None
+    held = breakdown(seen, thread, cases)
+    at = next(i for i, g in enumerate(held.timeline) if g.point.started == started)
+    before = held.timeline[at - 1] if at else None
+    runs = sorted(
+        [GatheredRun(o.ran.run, o.ran.language, False) for o in found.replicates]
+        + [
+            GatheredRun(o.ran.run, o.ran.language, True) for o in found.repeats.values()
+        ],
+        key=lambda r: (r.language or "", r.repeat),
+    )
+    rows: list[GatheredCase] = []
+    sent = {i.case for o in found.replicates for i in o.ran.items}
+    for case in sorted(sent | within):
+        replicate = next((o for o in found.replicates if case in o.ran.cases), None)
+        repeat = None if replicate is None else found.repeats.get(replicate.ran.run)
+        said = None if replicate is None else _said(replicate, case)
+        again = None if repeat is None else _said(repeat, case)
+        rows.append(
+            GatheredCase(
+                case=case,
+                language=None if replicate is None else replicate.ran.language,
+                answered=replicate is not None
+                and any(i.case == case and not i.failed for i in replicate.ran.items),
+                alike=None if said is None or again is None else said == again,
+                replicate={} if replicate is None else _scored(replicate, case),
+                repeat={} if repeat is None else _scored(repeat, case),
+                before={}
+                if before is None
+                else {v: by[case] for v, by in before.values.items() if case in by},
+            )
+        )
+    return Baseline(
+        thread,
+        held.views,
+        held.timeline[at],
+        before,
+        tuple(runs),
+        tuple(sorted(rows, key=lambda r: r.case not in within)),
+    )
+
+
+def _said(o: Observed, case: str) -> str | None:
+    return next((i.said for i in o.ran.items if i.case == case), None)
+
+
+def _scored(o: Observed, case: str) -> dict[View, Scored]:
+    return {
+        (s.scorer, view): Scored(value, s.score)
+        for s in o.scores
+        for c, replicate, view, value in s.values
+        if c == case and replicate == 0 and value is not None
+    }
+
+
+@dataclass(frozen=True)
 class _Start:
     ran: tuple[Ran, ...]
     replicates: tuple[Observed, ...]
+    repeats: dict[UUID, Observed]
     point: Point
 
 
@@ -198,7 +305,8 @@ def _baselines(seen: Seen, found: Sequence[Observed], within: set[str]) -> list[
             _Start(
                 tuple(o.ran for o in each),
                 replicates,
-                _point(each, replicates, repeats),
+                repeats,
+                _point(each, replicates, repeats, within),
             )
         )
     return made
@@ -208,6 +316,7 @@ def _point(
     each: list[Observed],
     replicates: tuple[Observed, ...],
     repeats: dict[UUID, Observed],
+    within: set[str],
 ) -> Point:
     first = min((o.ran for o in each), key=lambda r: r.at)
     means: dict[View, list[float]] = {}
@@ -245,6 +354,9 @@ def _point(
         seconds=mean(i.seconds for i in items) if items else 0.0,
         tokens=mean(tokens) if tokens else None,
         stale=any(o.unscored for o in each),
+        missing=len(
+            within - {i.case for o in replicates for i in o.ran.items if not i.failed}
+        ),
     )
 
 
@@ -268,13 +380,13 @@ def _by_case(starts: Sequence[_Start]) -> dict[View, dict[str, list[float]]]:
 
 def _paired(
     views: Sequence[View],
-    before: dict[View, dict[str, list[float]]],
-    after: dict[View, dict[str, list[float]]],
+    before: dict[View, dict[str, float]],
+    after: dict[View, dict[str, float]],
 ) -> dict[View, Estimate]:
     found: dict[View, Estimate] = {}
     for v in views:
         then, now = before.get(v, {}), after.get(v, {})
-        diffs = [mean(now[c]) - mean(then[c]) for c in now if c in then]
+        diffs = [now[c] - then[c] for c in now if c in then]
         if (e := estimate(diffs)) is not None:
             found[v] = e
     return found

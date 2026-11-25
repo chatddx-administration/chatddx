@@ -1,5 +1,5 @@
 [case.akm-01]
-tags = ["akm", "copd"]
+tags = ["akm"]
 targets.diagnosis.pattern = "copd | (exacerbation | obstructive) & pulmonary"
 targets.warning.pattern = "respiratory & failure | hypercapni* | airway | intubat* | andningssvikt | intuber*"
 targets.disposition.pattern = "icu | intensive & care | iva | intensivvård*"
@@ -66,7 +66,7 @@ targets.warning.pattern = "stemi | st & elevation | myocardial & infarction | di
 targets.disposition.pattern = "cath* | pci | angiograph* | angiografi | ccu | coronary & care | hia | hjärtintensiv*"
 
 [case.akm-11]
-tags = ["akm"]
+tags = ["akm", "baseline"]
 targets.diagnosis.pattern = "delirium | abstinens"
 targets.warning.pattern = "delirium & tremens | withdrawal | seizure* | dissection | abstinens | kramp*"
 targets.disposition.pattern = "icu | intensive & care | iva | intensivvård* | admit* | admission | hospital*"
@@ -96,7 +96,7 @@ targets.warning.pattern = "perforat* | peritonitis | free & (air | gas) | sepsis
 targets.disposition.pattern = "surg* | operat* | laparotom* | kirurg* | operation"
 
 [case.akm-17]
-tags = ["akm"]
+tags = ["akm", "baseline"]
 targets.diagnosis.pattern = "porfyri"
 targets.warning.pattern = "paralys* | respiratory & failure | seizure* | hyponatrem* | neuropath* | förlamning"
 targets.disposition.pattern = "admit* | admission | hospital* | inlägg* | vårdavdelning"
@@ -114,7 +114,7 @@ targets.warning.pattern = "meningit* | encephalit* | sepsis | septic | herniat*"
 targets.disposition.pattern = "admit* | admission | hospital* | icu | intensive & care | iva | intensivvård* | infekt*"
 
 [case.akm-20]
-tags = ["akm"]
+tags = ["akm", "baseline"]
 targets.diagnosis.pattern = "viral & meningit* | meningit*"
 targets.warning.pattern = "encephalit* | herpes | hsv | bacterial & meningit*"
 targets.disposition.pattern = "admit* | admission | hospital* | infect* | infekt* | inlägg* | vårdavdelning"

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "macros.html" import heading, section, facts, mean %}
+{% set g = held.gathering %}
+{% set p = g.point %}
+{% set b = held.before %}
+{% block title %}{{ _("Baseline run") }} · ChatDDX{% endblock %}
+{% block main %}
+<div class="mx-auto max-w-5xl px-4 py-8">
+  <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="/compose/{{ held.configuration }}">← {{ held.name }}</a></nav>
+  {{ heading(_("%(configuration)s, version %(n)s, on its baseline", configuration=held.name, n=p.version), p.at | when) }}
+
+  {% call section(_("The run")) %}
+  {% set runs %}{% for r in held.runs %}<a href="/runs/{{ r.run }}">{% set said = r.language | language if r.language else _("a language unknown") %}{% if r.repeat %}{{ _("%(run)s, a repeat in %(language)s", run=(r.run | string)[:8], language=said) }}{% else %}{{ _("%(run)s, a replicate in %(language)s", run=(r.run | string)[:8], language=said) }}{% endif %}</a>{% if not loop.last %}; {% endif %}{% endfor %}{% endset %}
+  {% set languages %}{% for l in p.languages %}{{ l.language | language if l.language else "—" }} {{ l.cases }}{% if not loop.last %}, {% endif %}{% endfor %}{% endset %}
+  {% set unanswered %}{% if p.missing %}<span class="text-destructive">{{ ngettext("%(missing)s of %(of)s case unanswered", "%(missing)s of %(of)s cases unanswered", held.cases, missing=p.missing, of=held.cases) }}</span>{% else %}—{% endif %}{% endset %}
+  {% set before %}{% if b %}<a href="/gatherings/{{ b.point.started }}">v{{ b.point.version }} · {{ b.point.at | when }}</a>{% else %}—{% endif %}{% endset %}
+  {{ facts([
+    (_("Baseline"), held.tag ~ " · " ~ ngettext("%(num)s case", "%(num)s cases", held.cases, num=held.cases)),
+    (_("Languages"), languages),
+    (_("Unanswered"), unanswered),
+    (_("Scored"), _("not as things are now") if p.stale else _("as things are now")),
+    (_("Runs"), runs),
+    (_("The run before"), before),
+  ]) }}
+  {% endcall %}
+
+  {% call section(_("How it fared")) %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-left text-xs text-muted-foreground">
+        <tr>
+          <th class="pb-2 pr-4 font-medium">{{ _("View") }}</th>
+          <th class="pb-2 pr-4 text-right font-medium">{{ _("Mean") }}</th>
+          <th class="pb-2 pr-4 text-right font-medium">±95%</th>
+          <th class="pb-2 pr-4 text-right font-medium">{{ _("Cases") }}</th>
+          <th class="pb-2 pr-4 text-right font-medium">{{ _("Repeats") }}</th>
+          <th class="pb-2 text-right font-medium">Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in held.views %}
+        {% set e = g.estimates[loop.index0] %}
+        {% set d = g.paired[loop.index0] %}
+        {% set off = p.spread[loop.index0] %}
+        <tr class="border-t border-border/60{{ ' bg-primary/5' if loop.index0 == at }}">
+          <th scope="row" class="py-1.5 pr-4 text-left font-medium"><a class="view" href="?view={{ loop.index0 }}#by-case"{% if loop.index0 == at %} aria-current="true"{% endif %}>{{ v.label }}</a></th>
+          <td class="py-1.5 pr-4 text-right font-mono">{{ mean(e.mean if e else none, units[loop.index0]) }}</td>
+          <td class="py-1.5 pr-4 text-right font-mono">{{ "%.2f" | format(e.half) if e and e.half is not none else "—" }}</td>
+          <td class="py-1.5 pr-4 text-right tabular-nums">{{ e.n if e else 0 }}</td>
+          <td class="py-1.5 pr-4 text-right font-mono">{{ "±%.2f" | format(off) if off is not none else "—" }}</td>
+          <td class="py-1.5 text-right font-mono">{% if d %}{{ "%+.2f" | format(d.mean) }} <span class="text-xs text-muted-foreground">(n={{ d.n }})</span>{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-3 text-xs text-muted-foreground">{{ _("Its repeats: how far, on average, each case's repeat was from its replicate, and %(alike)s of %(compared)s answered alike to the letter.", alike=p.alike, compared=p.compared) }} {{ _("Δ is against the run before, case by case on the cases both sent.") }}</p>
+  {% endcall %}
+
+  {% if held.views %}
+  {% set view = held.views[at] %}
+  {% set unit = units[at] %}
+  {% call section(_("By case, under %(view)s", view=view.label), "by-case") %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-left text-xs text-muted-foreground">
+        <tr>
+          <th class="pb-2 pr-4 font-medium">{{ _("Case") }}</th>
+          <th class="pb-2 pr-4 font-medium">{{ _("Language") }}</th>
+          <th class="pb-2 pr-4 text-right font-medium">{{ _("Replicate") }}</th>
+          <th class="pb-2 pr-4 text-right font-medium">{{ _("Repeat") }}</th>
+          <th class="pb-2 pr-4 text-right font-medium">≡</th>
+          <th class="pb-2 pr-4 text-right font-medium">{{ _("The run before") }}</th>
+          <th class="pb-2 text-right font-medium">Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in held.rows %}
+        {% set mine = r.replicate[at] %}
+        {% set again = r.repeat[at] %}
+        {% set then = r.before[at] %}
+        <tr class="border-t border-border/60">
+          <th scope="row" class="py-1.5 pr-4 text-left align-top font-medium">{{ titles[r.case] }}{% if not r.answered %} <span class="font-normal text-destructive">{{ _("unanswered") }}</span>{% endif %}</th>
+          <td class="py-1.5 pr-4 align-top">{{ r.language | language if r.language else "—" }}</td>
+          <td class="py-1.5 pr-4 text-right align-top font-mono">{% if mine %}<a href="/scores/{{ mine.score }}/{{ r.case }}/0/{{ view.view }}">{{ mean(mine.value, unit) }}</a>{% else %}—{% endif %}</td>
+          <td class="py-1.5 pr-4 text-right align-top font-mono">{% if again %}<a href="/scores/{{ again.score }}/{{ r.case }}/0/{{ view.view }}">{{ mean(again.value, unit) }}</a>{% else %}—{% endif %}</td>
+          <td class="py-1.5 pr-4 text-right align-top">{{ "—" if r.alike is none else ("≡" if r.alike else "≠") }}</td>
+          <td class="py-1.5 pr-4 text-right align-top font-mono">{{ mean(then, unit) }}</td>
+          <td class="py-1.5 text-right align-top font-mono">{{ "%+.2f" | format(mine.value - then) if mine and then is not none else "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-3 text-xs text-muted-foreground">{{ _("A value leads to its score, where its answer is read against the expectation.") }}</p>
+  {% endcall %}
+  {% endif %}
+</div>
+{% endblock %}

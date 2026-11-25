@@ -123,7 +123,10 @@
         class="-mb-px border-b-2 px-3 py-1.5 {shown === l ? 'border-primary font-medium' : 'border-transparent'}"
         aria-current={shown === l ? "page" : undefined}
         onclick={() => (tab = l)}
-        >{displayLanguage(l)}
+        >{displayLanguage(l)}{#if done < all}<span
+            class="ml-1 inline-block size-1.5 rounded-full bg-destructive align-super"
+            aria-hidden="true"
+          ></span>{/if}
         <span class="text-xs text-muted-foreground"
           >{done}/{all}{#if looked}, <span class="text-warning">{t("%(n)s to look over", { n: looked })}</span
             >{/if}</span

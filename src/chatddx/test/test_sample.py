@@ -115,11 +115,13 @@ def test_kompismoln_s_facts_are_the_bundled_ones_as_its_engines_serve_them() -> 
     assert resolve(plan.registry.get, stored, ModelFacts) == qwen
 
 
-def test_kompismoln_s_data_is_the_sample_s_without_its_appendices() -> None:
+def test_kompismoln_s_data_is_the_sample_s_without_its_appendices_under_its_own_tags() -> (
+    None
+):
     sample, kompismoln = load_cases(SAMPLE), load_cases(KOMPISMOLN)
     assert {id for id, c in sample.items() if c.appendices} == {"akm-01", "dutch-11"}
-    assert kompismoln == {
-        id: replace(c, appendices={}, ordered=()) for id, c in sample.items()
+    assert {id: replace(c, tags=()) for id, c in kompismoln.items()} == {
+        id: replace(c, tags=(), appendices={}, ordered=()) for id, c in sample.items()
     }
     assert sorted(
         p.name for p in KOMPISMOLN.iterdir() if p.resolve().parent != SAMPLE

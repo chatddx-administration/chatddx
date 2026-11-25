@@ -631,8 +631,8 @@ run them, the giftbag left out unless asked for.
 
 * ∟`None`
 
-## `test_kompismoln_s_data_is_the_sample_s_without_its_appendices`
-`src/chatddx/test/test_sample.py:test_kompismoln_s_data_is_the_sample_s_without_its_appendices`
+## `test_kompismoln_s_data_is_the_sample_s_without_its_appendices_under_its_own_tags`
+`src/chatddx/test/test_sample.py:test_kompismoln_s_data_is_the_sample_s_without_its_appendices_under_its_own_tags`
 
 * ∟`None`
 

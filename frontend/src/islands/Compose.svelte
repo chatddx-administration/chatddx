@@ -7,7 +7,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { api, why } from "$lib/api/client";
-  import { t, tn, tp } from "$lib/locale";
+  import { displayLanguage, t, tn, tp } from "$lib/locale";
   import {
     type Body,
     type Chunk,
@@ -18,14 +18,17 @@
     settled as lookedOver,
     type Stale,
   } from "$lib/compose/drafting";
+  import { said, tally } from "$lib/compose/baseline";
+  import type { Following } from "$lib/compose/following.svelte";
   import { whereSaveGoes } from "$lib/compose/logic";
+  import Cases from "$lib/compose/Cases.svelte";
   import type { Props } from "$lib/compose/props";
   import type { Sending } from "$lib/compose/sending.svelte";
   import Settings from "$lib/compose/Settings.svelte";
   import Texts from "$lib/compose/Texts.svelte";
   import { untrack } from "svelte";
 
-  let { held, sending }: { held: Props; sending: Sending } = $props();
+  let { held, sending, following }: { held: Props; sending: Sending; following: Following } = $props();
   const given = untrack(() => held);
   const { configuration, me, versions, head, drafted } = given;
   const latest = versions.at(-1)?.id ?? head;
@@ -87,13 +90,16 @@
       !waiting &&
       !running &&
       (goes.to === "nothing"
-        ? !changed && !given.baseline.running && (given.baseline.behind || given.baseline.whole)
+        ? !changed && !following.running && (given.baseline.behind || following.whole || following.ended)
         : true),
   );
+  const counted = $derived(tally(following.runs));
 
   function saves(): string {
     if (goes.to === "nothing" && goes.because === "nameless") return t("Give it a name to save it.");
     if (goes.to === "nothing") return t("Nothing to save: this is the configuration as it is.");
+    if (goes.to === "version" && goes.restoring)
+      return t("Saves version %(n)s of this configuration, from version %(was)s.", { n: goes.version, was: version });
     if (goes.to === "version") return t("Saves version %(n)s of this configuration.", { n: goes.version });
     if (independent)
       return t("Saves a new configuration of yours, “%(name)s”, independent of this one.", { name: name.trim() });
@@ -167,10 +173,10 @@
     if (id !== null) location.assign(`/compose/${id}`);
   }
 
-  const again = $derived(goes.to === "nothing" && !!given.baseline?.whole);
+  const again = $derived(goes.to === "nothing" && following.whole);
 
-  // Policy: Run saves what there is to save first, and runs the configuration it saved into; with nothing to save, it
-  // runs the version open, an earlier one among them.
+  // Policy: Run saves what there is to save first, an earlier version being brought back, and runs the configuration it
+  // saved into; with nothing to save, it runs the version open.
   async function run(): Promise<void> {
     const id = goes.to === "nothing" ? configuration.id : await written();
     if (id === null) return;
@@ -187,6 +193,22 @@
     }
     document.body.append(form);
     form.submit();
+  }
+
+  // Policy: running on cases saves what there is to save first, as Run does, and runs the configuration it saved into.
+  async function runOn(families: number[], replicates: number, score: boolean): Promise<string | null> {
+    const kept = goes.to === "nothing";
+    const id = kept ? configuration.id : await written();
+    if (id === null) return unsaved;
+    const got = await api.POST("/api/runs", {
+      body: { configuration: id, ...(kept ? { head } : {}), families, replicates, score },
+    });
+    if (!got.data) {
+      saving = false;
+      return why(got.error);
+    }
+    location.assign(`/runs/${got.data.runs[0]?.run}`);
+    return null;
   }
 
   async function written(): Promise<number | null> {
@@ -206,7 +228,11 @@
         head: to === "version" ? latest : head,
         ...(to === "fork" ? { name: name.trim(), independent } : {}),
         chunks: $state.snapshot(chunks) ?? {},
-        ...(model !== null && model !== drafted?.model ? { model } : {}),
+        ...(model !== null && model !== drafted?.model
+          ? { model }
+          : goes.to === "version" && goes.restoring && drafted
+            ? { model: drafted.model }
+            : {}),
         translations: cleaned($state.snapshot(into)),
       },
     });
@@ -303,8 +329,56 @@
               >
             {/if}
           </div>
+          {#if following.running}
+            <div class="max-w-md space-y-2 text-sm" role="status" aria-live="polite">
+              <p class="flex items-center gap-2 text-muted-foreground">
+                <LoaderCircleIcon class="size-4 animate-spin" aria-hidden="true" />{t("under way")}
+                {#if counted.of}
+                  ·
+                  {tn("%(ended)s of %(of)s item ended", "%(ended)s of %(of)s items ended", counted.of, {
+                    ended: counted.ended,
+                    of: counted.of,
+                  })}
+                {/if}
+              </p>
+              {#if counted.of}
+                <div class="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    class="h-full bg-primary transition-[width]"
+                    style:width="{(100 * counted.ended) / counted.of}%"
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax={counted.of}
+                    aria-valuenow={counted.ended}
+                    aria-label={t("Items ended")}
+                  ></div>
+                </div>
+              {/if}
+              {#if following.runs.length}
+                <ul class="space-y-0.5">
+                  {#each following.runs as r (r.id)}
+                    <li>
+                      <a href={`/runs/${r.id}`} class="flex flex-wrap items-baseline gap-x-2">
+                        <code class="text-xs">{r.id.slice(0, 8)}</code>
+                        {#if r.language}<span>{displayLanguage(r.language)}</span>{/if}
+                        <span class="text-muted-foreground">{said(r)}</span>
+                      </a>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+              {#if following.problem}<p role="alert" class="text-destructive">{following.problem}</p>{/if}
+            </div>
+          {/if}
         </form>
       </section>
+      {#if given.cases.length}
+        <Cases
+          cases={given.cases}
+          held={saving || waiting || running || (goes.to === "nothing" && changed)}
+          start={runOn}
+        />
+      {/if}
     </div>
   </div>
 {:else}

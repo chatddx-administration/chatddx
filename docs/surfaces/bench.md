@@ -40,6 +40,20 @@ Finds:
 
 `APPENDICES = ("‹appendix 1›", "‹appendix 2›")`
 
+## `Baseline` `@dataclass(frozen=True)`
+`src/chatddx/bench/breakdown.py:Baseline`
+
+One baseline gathering of a configuration as a page shows it: itself as its
+breakdown has it, the one before it, its runs, and each case it sent or the
+baseline holds now, those the baseline holds first.
+
+* `configuration: int`
+* `views: tuple[View, ...]`
+* `gathered: Gathered`
+* `before: Gathered | None`
+* `runs: tuple[GatheredRun, ...]`
+* `cases: tuple[GatheredCase, ...]`
+
 ## `Bench` `@final` `(Seen)`
 `src/chatddx/bench/bench.py:Bench`
 
@@ -62,6 +76,17 @@ Raises:
 1. `ValueError`: `"run {run.run} was sent to no endpoint, so it can't run again"`
 2. `NotFound`: `"no case {missing[0]} for {seen.person.login}"`
 3. `Invalid`: `"run %(run)s is out of date: run its configuration instead, once that is updated", run=str(run.run)`
+
+## `Bench.baseline`
+`src/chatddx/bench/breakdown.py:baseline`
+
+The person's baseline gathering begun by `started` on the cases, with the
+configuration's gathering before it, None if it is no such gathering. Costs what
+`breakdown` costs.
+
+* `started: UUID`
+* `cases: Collection[str]`
+* ∟`Baseline | None`
 
 ## `Bench.behind_own`
 `src/chatddx/bench/updating.py:behind_own`
@@ -553,11 +578,11 @@ Raises:
 `src/chatddx/bench/breakdown.py:Breakdown`
 
 How a configuration fared on the baseline cases: the views its skeleton offers,
-its versions pooled by what they compile to in the order first saved, and its
-peers among the configurations given.
+its baseline gatherings in the order they ran, a version once for each time it
+ran, and its peers among the configurations given.
 
 * `views: tuple[View, ...]`
-* `timeline: tuple[Pooled, ...]`
+* `timeline: tuple[Gathered, ...]`
 * `peers: tuple[Peer, ...]`
 
 ## `broken`
@@ -703,6 +728,42 @@ averaged before they get here. None for none.
 `src/chatddx/bench/model.py:Family.name`
 
 * ∟`str`
+
+## `Gathered` `@dataclass(frozen=True)`
+`src/chatddx/bench/breakdown.py:Gathered`
+
+One baseline gathering of the configuration, `digest` the skeleton it ran:
+each view's estimate over its cases, each case's value, and its mean difference
+from the gathering before it on the cases both sent, case by case.
+
+* `digest: str`
+* `point: Point`
+* `estimates: dict[View, Estimate]`
+* `values: dict[View, dict[str, float]]`
+* `paired: dict[View, Estimate]`
+
+## `GatheredCase` `@dataclass(frozen=True)`
+`src/chatddx/bench/breakdown.py:GatheredCase`
+
+A baseline case in one gathering: the language it went in, whether its
+replicate answered without failing, whether its repeat answered alike to the
+letter, None where either said nothing, and by view its replicate's value, its
+repeat's and the gathering before's.
+
+* `case: str`
+* `language: str | None`
+* `answered: bool`
+* `alike: bool | None`
+* `replicate: dict[View, Scored]`
+* `repeat: dict[View, Scored]`
+* `before: dict[View, float]`
+
+## `GatheredRun` `@dataclass(frozen=True)`
+`src/chatddx/bench/breakdown.py:GatheredRun`
+
+* `run: UUID`
+* `language: str | None`
+* `repeat: bool`
 
 ## `Graded` `@dataclass(frozen=True)`
 `src/chatddx/bench/model.py:Graded`
@@ -868,7 +929,8 @@ Raises:
 `src/chatddx/bench/breakdown.py:Point`
 
 One baseline gathering of a configuration: `means` over its replicates alone,
-`spread` and `alike` its repeats against them.
+`spread` and `alike` its repeats against them, `missing` the baseline cases none
+of its replicates answered without failing.
 
 * `started: UUID`
 * `at: datetime`
@@ -881,20 +943,7 @@ One baseline gathering of a configuration: `means` over its replicates alone,
 * `seconds: float`
 * `tokens: float | None`
 * `stale: bool`
-
-## `Pooled` `@dataclass(frozen=True)`
-`src/chatddx/bench/breakdown.py:Pooled`
-
-The baseline gatherings of the versions that compile to one skeleton, by its
-digest: each view's estimate over the cases, each case its replicates' mean, and
-its mean difference from the pooled before it on the cases both sent, case by
-case.
-
-* `digest: str`
-* `versions: tuple[int, ...]`
-* `points: tuple[Point, ...]`
-* `estimates: dict[View, Estimate]`
-* `paired: dict[View, Estimate]`
+* `missing: int`
 
 ## `Previewed` `@dataclass(frozen=True)`
 `src/chatddx/bench/composing.py:Previewed`
@@ -971,6 +1020,14 @@ A finished run as a breakdown reads it, `digest` its version's skeleton and
 `src/chatddx/bench/model.py:SAVED`
 
 `SAVED: dict[Kept, Literal['created', 'a new version', 'unchanged']] = {…}`
+
+## `Scored` `@dataclass(frozen=True)`
+`src/chatddx/bench/breakdown.py:Scored`
+
+A case's value under a view, with the score it is read from.
+
+* `value: float`
+* `score: UUID`
 
 ## `ScorerStarted` `@dataclass(frozen=True)`
 `src/chatddx/bench/runs.py:ScorerStarted`
