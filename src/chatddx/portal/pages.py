@@ -68,6 +68,7 @@ templates.env.filters.update(
     titled=display_thread,
     localized=locale.localized,
     refusal=_refusal,
+    upfirst=locale.upfirst,
 )
 
 # Accommodating for Jinja, whose globals are typed as its own defaults are.

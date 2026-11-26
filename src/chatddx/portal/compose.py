@@ -69,8 +69,9 @@ def compose(
     judged = recipe is not None and recipe.purpose == "judge"
     models = [h for h, at in bench.handles() if at is not None]
     look = api.variation(bench, thread, query)
-    versions = api.edits(bench, thread)
-    at = next(i for i, v in enumerate(versions) if v.id == look.head.id)
+    edits = api.edits(bench, thread)
+    versions = _versions(edits)
+    at = next(e.version for e in edits if e.id == look.head.id)
     mine = shown.owner == bench.person.login
     proposal = api.proposal(bench, thread) if mine and not shown.deleted else None
     purpose = "judge" if judged else "generation"
@@ -78,7 +79,7 @@ def compose(
     props: dict[str, Any] = {
         "configuration": shown.model_dump(mode="json"),
         "me": bench.person.login,
-        "versions": [v.model_dump(mode="json") for v in versions],
+        "versions": [e.model_dump(mode="json") for e in edits],
         "head": look.head.id,
         "varied": bool(query.given()),
         "modelChoices": [
@@ -116,8 +117,10 @@ def compose(
         configuration=shown,
         configurations=_forks(bench, configurations(bench)),
         versions=versions,
-        at=at,
-        links=[linked(query, v.id, versions[-1].id) for v in versions],
+        at=at - 1,
+        current=edits[-1].version - 1,
+        latest=edits[-1],
+        links=[linked(query, v.held.id, edits[-1].id) for v in versions],
         proposal=proposal,
         changes=[
             (
@@ -251,6 +254,21 @@ def _found(
         return []
     variation, at = at_hand
     return bench.findings(variation, at.engine, 0, bench.languages(variation, cases))
+
+
+@dataclass(frozen=True)
+class Version:
+    first: schemas.Versioned
+    held: schemas.Versioned
+
+
+def _versions(edits: list[schemas.Versioned]) -> list[Version]:
+    firsts: dict[int, schemas.Versioned] = {}
+    held: dict[int, schemas.Versioned] = {}
+    for e in edits:
+        _ = firsts.setdefault(e.version, e)
+        held[e.version] = e
+    return [Version(firsts[n], held[n]) for n in sorted(firsts)]
 
 
 @dataclass(frozen=True)

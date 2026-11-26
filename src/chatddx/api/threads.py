@@ -198,11 +198,15 @@ def thread(bench: BenchDep, thread: int) -> schemas.ThreadDetail:
 
 
 @router.get("/threads/{thread}/edits")
-def edits(bench: BenchDep, thread: int) -> list[schemas.Edit]:
+def edits(bench: BenchDep, thread: int) -> list[schemas.Versioned]:
     _ = bench.thread(thread, deleted=True)
     kind = catalog.threads.thread(bench.rows, thread).kind
+    numbered = catalog.threads.versions(bench.rows, thread)
     return [
-        _edit_of(bench, e, kind) for e in catalog.threads.history(bench.rows, thread)
+        schemas.Versioned(
+            **_edit_of(bench, e, kind).model_dump(), version=numbered[e.id]
+        )
+        for e in catalog.threads.history(bench.rows, thread)
     ]
 
 

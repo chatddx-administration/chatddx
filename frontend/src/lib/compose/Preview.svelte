@@ -5,7 +5,7 @@
   import { untrack } from "svelte";
   import { api, type Schemas, why } from "$lib/api/client";
   import { worded } from "$lib/kinds";
-  import { displayLanguage, t, tp } from "$lib/locale";
+  import { displayLanguage, t, tp, upFirst } from "$lib/locale";
   import { SLOTS } from "$lib/scorer/texts";
   import { lines, overlaid, type Piece, pretty, read, type Row, rows } from "./diffing";
   import { same } from "./drafting";
@@ -92,7 +92,7 @@
     few_shot: () => worded("few_shot"),
     prompt: () => worded("prompt"),
     output_guidance: () => t("Output guidance"),
-    output_schema: () => t("The answer's schema"),
+    output_schema: () => upFirst(t("the answer's schema")),
     tool_guidance: () => t("Tool guidance"),
     appendix_layout: () => t("How appendices are laid out"),
     joining: () => t("Put between them as it is compiled"),
@@ -116,7 +116,7 @@
     if (contract.kind === "tool")
       return t("As a call to %(name)s, its schema the tool's parameters.", { name: String(contract.name) });
     if (contract.json_schema) return t("As text, its schema told where it is inserted.");
-    return t("As text.");
+    return `${upFirst(t("as text"))}.`;
   }
 
   function offered(request: Record<string, unknown>, contract: Record<string, unknown>): string[] {
@@ -257,7 +257,7 @@
               <dt class="text-muted-foreground">{t("Tools offered")}</dt>
               <dd>{tools.join(", ")}</dd>
             {/if}
-            <dt class="text-muted-foreground">{t("The answer")}</dt>
+            <dt class="text-muted-foreground">{upFirst(t("the answer"))}</dt>
             <dd>{answered(contract)}</dd>
           </dl>
         {/if}

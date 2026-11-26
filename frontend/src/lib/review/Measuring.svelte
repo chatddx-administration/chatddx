@@ -5,7 +5,7 @@
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import XIcon from "@lucide/svelte/icons/x";
   import { api, why } from "$lib/api/client";
-  import { t } from "$lib/locale";
+  import { t, tp } from "$lib/locale";
   import { fieldName } from "$lib/schema/form";
   import { kept, type Measure, type Measured, segments, type Shown, shownAs, type Text } from "./measure.svelte";
 
@@ -87,7 +87,7 @@
   };
   const said: Record<Shown, () => string> = {
     missed: () => t("Missed"),
-    unscored: () => t("Not scored"),
+    unscored: () => tp("items", "Not scored"),
     found: () => t("Found"),
   };
   const counted: Record<Shown, (m: Measured) => number> = {

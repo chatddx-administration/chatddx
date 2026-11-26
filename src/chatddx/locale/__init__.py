@@ -21,7 +21,9 @@ from .locale import (
     proofs,
     refusal,
     restamped,
+    said_alike,
     tr,
+    upfirst,
     whoops,
     write,
 )
@@ -49,7 +51,9 @@ __all__ = [
     "proofs",
     "refusal",
     "restamped",
+    "said_alike",
     "tr",
+    "upfirst",
     "whoops",
     "write",
 ]

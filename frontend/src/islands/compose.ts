@@ -44,7 +44,7 @@ if (breakdown && held) {
     target: breakdown,
     props: {
       thread: props.configuration.id,
-      version: props.versions.findIndex((v) => v.id === props.head) + 1,
+      version: props.versions.find((v) => v.id === props.head)?.version ?? 0,
       following,
     },
   });

@@ -10,9 +10,11 @@ in `docs/surfaces/catalog.md`.
 ## Principles
 
 - **Append-only, derived when read.** Threads, edits, families, bindings, entries, labels and languages are inserted and
-  never changed. A thread's head is its latest edit (`src/chatddx/catalog/threads.py:head`), a family's current binding
-  its latest, and what is said of a subject is `About.of` its entries, latest winning, tags and collaborators each by
-  their own latest (`src/chatddx/catalog/model.py:About.of`). Deleting is an entry too, and so is restoring.
+  never changed. A thread's head is its latest edit (`src/chatddx/catalog/threads.py:head`), and a version what an edit
+  holds, numbered by the first edit to hold it, so that one brought back is that version again
+  (`src/chatddx/catalog/threads.py:versions`); a family's current binding its latest, and what is said of a subject is
+  `About.of` its entries, latest winning, tags and collaborators each by their own latest
+  (`src/chatddx/catalog/model.py:About.of`). Deleting is an entry too, and so is restoring.
 - **Checked before every write.** Each of `Catalog`'s writes runs the catalog's check in its transaction:
   `check_create`, `check_edit`, `check_note`, `check_language` and `check_adoptable`, and `plan_repair` for a repair.
   The database's tier 2 repeats the rules concurrent writers could break, as each `Duplication:` comment says, and

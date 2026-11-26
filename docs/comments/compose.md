@@ -162,7 +162,7 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 
 ```
 // Policy: an earlier version saved is brought back as the latest, rather than forked, as going back is what saving
-// one is for here.
+// one is for here; unchanged, it stays the version it was, versions being numbered by what they hold.
 ```
 
 ## `src/chatddx/portal/compose.py:_set`

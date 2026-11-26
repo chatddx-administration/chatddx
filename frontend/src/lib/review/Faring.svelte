@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { api, type Schemas, why } from "$lib/api/client";
-  import { t } from "$lib/locale";
+  import { t, upFirst } from "$lib/locale";
   import { fieldName } from "$lib/schema/form";
   import { BINS, type Bin, below, binned, grouped, said, ticks } from "./faring";
 
@@ -156,9 +156,9 @@
   {:else}
     <div class="space-y-8">
       {#each groups as group (group.field)}
-        <section aria-label={group.field === null ? t("The whole answer") : fieldName(group.field)}>
+        <section aria-label={group.field === null ? upFirst(t("the whole answer")) : fieldName(group.field)}>
           <h3 class="mb-3 text-sm font-semibold">
-            {group.field === null ? t("The whole answer") : fieldName(group.field)}
+            {group.field === null ? upFirst(t("the whole answer")) : fieldName(group.field)}
           </h3>
           <div class="space-y-5">
             {#each group.metrics as metric (metric.at)}

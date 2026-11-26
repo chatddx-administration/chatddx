@@ -52,7 +52,9 @@ TypeScript and Svelte:
 * ∟`None`
 
 Raises:
-1. `SystemExit`: `"locale: {shown} behind the code: run chatddx locale write"`
+1. `ValueError`: `"{where}:{lineno}: {msgid!r} is said both counted and not, which gettext holds as one message: give one a context"` (through `_extracted`)
+2. `SystemExit`: `"locale: messages said alike: one message for one scenario, raised with upfirst where it starts a heading, a label or a sentence, or a context for what tells them apart"`
+3. `SystemExit`: `"locale: {shown} behind the code: run chatddx locale write"`
 
 ## `CHOSEN`
 `src/chatddx/locale/locale.py:CHOSEN`
@@ -251,12 +253,29 @@ Raises:
 Raises:
 1. `ValueError`: `"{where}:{lineno}: {msgid!r} is said both counted and not, which gettext holds as one message: give one a context"` (through `_extracted`)
 
+## `said_alike`
+`src/chatddx/locale/locale.py:said_alike`
+
+The groups of a catalog's messages said alike: their words the same but for
+case and the punctuation that ends them, in the same context or in one that says
+only where the message comes from. What fills a message is named as it is said,
+as a translation inflects by it. Costs a pass over the catalog.
+
+* `catalog: Catalog`
+* ∟`list[list[Message]]`
+
 ## `tr`
 `src/chatddx/locale/locale.py:tr`
 
 * `message: str`
 * `/`
 * `**values: object`
+* ∟`str`
+
+## `upfirst`
+`src/chatddx/locale/locale.py:upfirst`
+
+* `said: str`
 * ∟`str`
 
 ## `whoops`
@@ -348,6 +367,12 @@ Raises:
 * `context: string`
 * `message: string`
 * `given: Given = {}`
+* ∟`string`
+
+## `upFirst`
+`frontend/src/lib/locale.ts:upFirst`
+
+* `said: string`
 * ∟`string`
 
 ## `whoops`

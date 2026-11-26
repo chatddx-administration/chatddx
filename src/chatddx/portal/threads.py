@@ -456,18 +456,22 @@ def _thread_page(
             thread=thread,
         )
     versions = api.edits(bench, thread)
-    at = len(versions) if version is None else version
-    if not 1 <= at <= len(versions):
+    last = max(v.version for v in versions)
+    current = versions[-1].version
+    at = current if version is None else version
+    if not 1 <= at <= last:
         raise NotFound.of(
             "no version %(at)s of %(kind)s %(thread)s: it has %(versions)s",
             at=at,
             kind=display_kind(word),
             thread=thread,
-            versions=len(versions),
+            versions=last,
         )
-    edit = versions[at - 1]
+    edit = next(v for v in reversed(versions) if v.version == at)
+    first = next(i for i, v in enumerate(versions) if v.version == at)
+    saved_on = None if first == 0 else versions[first - 1]
     held = bench.store.get(edit.digest)
-    before = None if at == 1 else bench.store.get(versions[at - 2].digest)
+    before = None if saved_on is None else bench.store.get(saved_on.digest)
     origin = None
     if shown.forked_from is not None:
         found = bench.rows.edit(shown.forked_from)
@@ -477,7 +481,7 @@ def _thread_page(
             origin = None
     mine = shown.owner == bench.person.login
     proposal = api.proposal(bench, thread) if mine and not shown.deleted else None
-    latest = at == len(versions)
+    latest = at == current
     gone = unshipped(held) if isinstance(held, Scorer) else None
     editable = mine and latest and not shown.deleted and gone is None
     body = held.model_dump(mode="json")
@@ -512,7 +516,7 @@ def _thread_page(
     }
     earlier = None
     if recipe is not None and before is not None:
-        earlier = _recipe(bench, versions[at - 2].id)
+        earlier = None if saved_on is None else _recipe(bench, saved_on.id)
     if earlier is not None:
         titles |= {
             d: bench.title(d)
@@ -532,6 +536,11 @@ def _thread_page(
         home=_home(word, thread),
         versions=versions,
         at=at,
+        last=last,
+        current=current,
+        saved=versions[first],
+        edit=edit,
+        saved_on=None if saved_on is None else saved_on.version,
         fields=found,
         parts=parts,
         editable=any(f.editable for f in every),
@@ -601,9 +610,9 @@ def _editable(held: Component, body: dict[str, JsonValue]) -> list[str]:
 
 
 def _ran(
-    bench: Bench, versions: list[schemas.Edit]
+    bench: Bench, versions: list[schemas.Versioned]
 ) -> list[tuple[int, RunStarted, Titled]]:
-    at = {v.digest: i for i, v in enumerate(versions, 1)}
+    at = {v.digest: v.version for v in versions}
     return [(at[r.trial], r, bench.titled(r)) for r in bench.runs() if r.trial in at]
 
 

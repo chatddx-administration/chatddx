@@ -67,6 +67,26 @@ messages', which Babel's catalog checks find. A translation pending is left out 
 to translate is a flag, not a failure (see "Checks"). A message with no translation is written anew from the code each
 time, so that Babel matches a changed message only to one translated.
 
+### The scenario index
+
+Decided: a catalog is the scenario index, a message to a scenario, so that every code path that says a scenario says it
+by the one message and a translation is made once. A message is tested against it as it is written or changed: what
+scenario its code says it in, and whether a message says that scenario already, in which case the code says that one, as
+it is or reworded for each code path that says it.
+
+- **Its case is the running text's**, raised to start a heading, a label or a sentence by the portal's `upfirst` filter
+  and the islands' `upFirst()` (`src/chatddx/locale/locale.py:upfirst`), and its ending punctuation, or an ellipsis,
+  where it is shown, so that `cases` is one message as a heading and in a list.
+- **A context says what tells scenarios said alike apart** for a translator, never where a message comes from: two
+  translations that differ, by gender, number or meaning, are two scenarios (`Unanswered` of cases, `unanswered` of a
+  case). What fills a message is named as it is said, as a translation inflects by it: `%(trial)s` and
+  `%(configuration)s` are told apart in Swedish.
+- **Checked**, built: `chatddx locale check` fails on messages said alike, their words the same but for case and ending
+  punctuation, in the same context or in one that says only where it comes from, `refusal` or `whoops`
+  (`src/chatddx/locale/locale.py:said_alike`); what holds no words, `%(label)s: %(said)s`, is layout and left out.
+- **Left as they are**: the kinds' words in their context `kind`, beside the same word said otherwise, till "Open" 1 is
+  settled; and a finding's message in its code's context, its code the scenario.
+
 ### The server
 
 - **The locale**, built: picked a request at a time, from `Accept-Language` against the catalogs there are, with Babel's
@@ -207,9 +227,10 @@ and not in the same context, which gettext holds as one plural message, leaving 
 ### Checks
 
 - **`chatddx locale check`** and **`chatddx locale pending`**, built: in the `locale` and `pending` checks of
-  `dev/check.sh`, the first failing while a catalog is behind the code, the second while a message is left untranslated.
-  A turn's end writes the catalogs, has the agent translate what is left untranslated, and stamps each translation that
-  changed since the turn's start (`chatddx-dev stamp docs`), which `chatddx-dev stamp pending` flags till it is stamped.
+  `dev/check.sh`, the first failing while a catalog is behind the code or messages are said alike (see "The scenario
+  index"), the second while a message is left untranslated. A turn's end writes the catalogs, has the agent translate
+  what is left untranslated, and stamps each translation that changed since the turn's start (`chatddx-dev stamp docs`),
+  which `chatddx-dev stamp pending` flags till it is stamped.
 - **Tests**: the ones there were stay English, as no request of theirs asks for another language. Built: in
   `src/chatddx/locale/test/test_locale.py`, a request's language negotiated, boot failing on wrong placeholders, the
   islands' messages found, a finding's found where it is made, a finding said by its code, a catalog kept in step with

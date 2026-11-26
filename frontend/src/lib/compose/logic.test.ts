@@ -45,21 +45,22 @@ describe("where a save goes", () => {
     configuration: configuration("alice", "plan"),
     me: "alice",
     versions: 2,
+    version: 2,
     latest: true,
     changed: true,
     configurations,
   };
 
   it("is a new version of the person's own, on its latest version and under its name", () => {
-    expect(whereSaveGoes(given)).toEqual({ to: "version", version: 3, restoring: false });
-    expect(whereSaveGoes({ ...given, name: "  plan " })).toEqual({ to: "version", version: 3, restoring: false });
+    expect(whereSaveGoes(given)).toEqual({ to: "version", version: 3, from: null });
+    expect(whereSaveGoes({ ...given, name: "  plan " })).toEqual({ to: "version", version: 3, from: null });
     expect(whereSaveGoes({ ...given, changed: false })).toEqual({ to: "nothing", because: "unchanged" });
   });
 
-  it("brings an earlier version of the person's own back as the latest, changed or not", () => {
-    const back = { to: "version", version: 3, restoring: true };
-    expect(whereSaveGoes({ ...given, latest: false })).toEqual(back);
-    expect(whereSaveGoes({ ...given, latest: false, changed: false })).toEqual(back);
+  it("brings an earlier version of the person's own back as the latest, as that version unless changed", () => {
+    const earlier = { ...given, version: 1, latest: false };
+    expect(whereSaveGoes(earlier)).toEqual({ to: "version", version: 3, from: 1 });
+    expect(whereSaveGoes({ ...earlier, changed: false })).toEqual({ to: "version", version: 1, from: 1 });
     expect(whereSaveGoes({ ...given, latest: false, name: "fresh" })).toEqual({ to: "fork", namesakes: 0 });
   });
 

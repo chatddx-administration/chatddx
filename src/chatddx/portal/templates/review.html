@@ -45,10 +45,10 @@
 <div data-slides data-review{% if measuring %} data-slid{% endif %} class="grid gap-4 max-xl:grid-cols-[minmax(0,1fr)] px-4 pb-4 sm:px-6 xl:h-[calc(100dvh-5rem)] xl:grid-rows-[minmax(0,1fr)_auto] xl:overflow-x-clip">
 
   {% set filtered = query(case=case.case, schema=keep.schema) %}
-  <section aria-label="{{ _('Cases') }}" data-cases data-slide-out class="pane relative min-h-0 overflow-y-auto rounded-2xl p-3 max-xl:max-h-[45dvh] xl:row-span-2 xl:w-60">
+  <section aria-label="{{ _('cases') | upfirst }}" data-cases data-slide-out class="pane relative min-h-0 overflow-y-auto rounded-2xl p-3 max-xl:max-h-[45dvh] xl:row-span-2 xl:w-60">
     {% if tags or languages %}
     <nav data-filters class="mb-3 space-y-1.5 text-xs" aria-label="{{ _('Filters') }}">
-      <p class="flex flex-wrap gap-x-2.5 gap-y-1"><a href="{{ here }}{{ filtered }}" data-all{% if not keep.tag and not keep.language %} aria-current="true"{% endif %} class="view">{{ pgettext("tags", "all") }}</a></p>
+      <p class="flex flex-wrap gap-x-2.5 gap-y-1"><a href="{{ here }}{{ filtered }}" data-all{% if not keep.tag and not keep.language %} aria-current="true"{% endif %} class="view">{{ _("all") }}</a></p>
       {% if tags %}
       <p class="flex flex-wrap gap-x-2.5 gap-y-1" aria-label="{{ _('Tags') }}">
         {% for t in tags %}
@@ -65,7 +65,7 @@
       {% endif %}
     </nav>
     {% endif %}
-    <nav aria-label="{{ _('Cases') }}">
+    <nav aria-label="{{ _('cases') | upfirst }}">
     <ol class="space-y-0.5 text-sm">
       {% for f in every %}
       {% set m = marks[f.id] %}

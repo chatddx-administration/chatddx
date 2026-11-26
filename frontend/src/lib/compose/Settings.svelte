@@ -2,7 +2,7 @@
   import * as NativeSelect from "$lib/components/ui/native-select";
   import type { Schemas } from "$lib/api/client";
   import { worded } from "$lib/kinds";
-  import { t } from "$lib/locale";
+  import { t, tp, upFirst } from "$lib/locale";
   import { type Body, type Chunk, type Chunks } from "./drafting";
   import JsonField from "./JsonField.svelte";
   import type { Facts, ToolChoice } from "./props";
@@ -46,7 +46,11 @@
   const ANSWERS: [string, () => string, () => string][] = [
     ["native", () => t("JSON"), () => t("Held to its schema by the engine, as response_format.")],
     ["tool", () => t("A tool call"), () => t("A call to an answer tool, its parameters the schema.")],
-    ["text", () => t("Text"), () => t("As the model writes it; JSON read out of it if it has a schema.")],
+    [
+      "text",
+      () => upFirst(tp("an output", "text")),
+      () => t("As the model writes it; JSON read out of it if it has a schema."),
+    ],
   ];
 
   const known = $derived(model === null ? null : (facts[model] ?? null));
@@ -139,7 +143,7 @@
     </fieldset>
 
     <fieldset>
-      <legend class="mb-2 font-medium">{t("The answer")}</legend>
+      <legend class="mb-2 font-medium">{upFirst(t("the answer"))}</legend>
       <div class="grid gap-2 @xl:grid-cols-3">
         {#each ANSWERS as [kind, name, about] (kind)}
           {@const no = refused(kind)}
@@ -202,10 +206,10 @@
       {/if}
       {#if output.json_schema != null}
         <div class="mt-3">
-          <p class="mb-1 text-xs text-muted-foreground">{t("The answer's schema")}</p>
+          <p class="mb-1 text-xs text-muted-foreground">{upFirst(t("the answer's schema"))}</p>
           <JsonField
             value={output.json_schema}
-            label={t("The answer's schema")}
+            label={upFirst(t("the answer's schema"))}
             rows={8}
             set={(v) => set("output", { ...output, json_schema: v })}
           />
@@ -291,7 +295,7 @@
     </fieldset>
 
     <fieldset>
-      <legend class="mb-2 font-medium">{t("Sampling")}</legend>
+      <legend class="mb-2 font-medium">{upFirst(t("sampling"))}</legend>
       <label class="flex items-center gap-2">
         <input
           type="checkbox"

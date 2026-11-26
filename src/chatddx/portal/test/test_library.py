@@ -12,6 +12,7 @@ from chatddx.factors.engine import FileDigest, LocalModel
 from chatddx.factors.request import CHUNK_PARTS, RECIPE_PARTS
 from chatddx.factors.scoring import Scorer
 from chatddx.identity import Person
+from chatddx.locale import upfirst
 from chatddx.portal.shelves import SHELVES
 from chatddx.portal.test.helpers import said, shown, submitted
 from chatddx.store import Catalog, Store
@@ -52,7 +53,7 @@ def test_the_library_shelves_every_kind_under_its_heading_with_what_it_is(
 ) -> None:
     page = shown(signed, "/library")
     for shelf in SHELVES:
-        assert f"{shelf.heading}</h2>" in page and shelf.about in page
+        assert f"{upfirst(shelf.heading)}</h2>" in page and shelf.about in page
         for word, about in shelf.kinds.items():
             assert f'href="/library?kind={word}"' in page and about in page
     listed = signed.get("/api/threads", params={"kind": "reasoning"}).json()
@@ -912,7 +913,29 @@ def test_an_earlier_version_is_made_the_latest_as_an_edit(signed: TestClient) ->
         head.json()["digest"],
         off["head"]["digest"],
     ]
-    got = signed.post(f"{path}/revert", data=form)
+    assert [v["version"] for v in versions] == [1, 2, 1]
+    page = shown(signed, path)
+    assert "Version 1 of 2" in page and "is brought back" not in page
+    assert f'name="edit" value="{versions[-1]["id"]}"' not in page
+    page = shown(signed, f"{path}?version=2")
+    assert (
+        "Version 2 of 2" in page and "Version 1 is brought back as the latest" in page
+    )
+    assert f'name="edit" value="{head.json()["id"]}"' in page
+
+    later = signed.post(
+        edits,
+        json={
+            "head": versions[-1]["id"],
+            "component": {**body, "thinking_token_budget": 32},
+        },
+    )
+    assert later.status_code == 201
+    page = shown(signed, path)
+    assert "Version 3 of 3" in page
+    assert "Against version 1, the one it was saved over." in page
+    form = {"head": later.json()["id"], "edit": off["head"]["id"]}
+    got = signed.post(f"{path}/revert", data={**form, "head": head.json()["id"]})
     assert got.status_code == 409
     got = signed.post(f"{path}/revert", data={**form, "edit": 1})
     assert got.status_code == 422 and f"isn&#39;t a version of thread {off['id']}" in (

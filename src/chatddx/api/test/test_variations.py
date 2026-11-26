@@ -473,7 +473,7 @@ def test_an_edit_is_a_new_version_of_one_s_own_configuration(
         variation(signed, mine, reasoning=off)["skeleton"],
     )
     assert (edited.pop("findings"), edited.pop("cases")) == ([], {})
-    assert signed.get(path).json()[-1] == edited
+    assert signed.get(path).json()[-1] == {**edited, "version": 2}
 
     now = edited["id"]
     again = signed.post(path, json={"head": now, "parts": {"reasoning": off}})
@@ -538,7 +538,7 @@ def test_only_one_s_own_configuration_is_edited_and_a_seen_one_forked(
         422,
         {"detail": f"{off} isn't a stored chunk of prompt", "code": "refused"},
     )
-    assert signed.get(edits).json()[-1] == mine["head"]
+    assert signed.get(edits).json()[-1] == {**mine["head"], "version": 1}
 
 
 def test_trying_forking_and_editing_need_a_session(

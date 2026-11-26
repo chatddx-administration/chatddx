@@ -32,7 +32,7 @@
 
   {% call pane(_("Scorers and judges")) %}
   <nav aria-label="{{ _('Scorers and judges') }}">
-  <h2 class="mb-1 text-sm font-semibold">{{ _("Scorers") }}</h2>
+  <h2 class="mb-1 text-sm font-semibold">{{ _("scorers") | upfirst }}</h2>
   {% for schema, held in scorers %}
   <h3 class="mt-3 text-xs text-muted-foreground">{{ _("reading %(schema)s", schema=schema) }}</h3>
   <ol class="mt-1 space-y-0.5 text-sm">{% for t in held %}{{ entry(t) }}{% endfor %}</ol>

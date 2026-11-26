@@ -49,8 +49,8 @@ def test_a_gathering_binds_each_group_s_seedings_to_runs(reg: Registry) -> None:
     )
     assert held.cross_check(reg.get) == []
     assert [list(g) for g in held.groups()] == [
-        ["replicates", "repeat"],
-        ["replicates"],
+        ["original", "repeat"],
+        ["original"],
     ]
     assert parse_component(held.canonical) == held
     assert {s.path for s in held.refs()} >= {"/center/component", "/gathered/2/trial"}
@@ -111,22 +111,20 @@ def test_runs_go_in_order_once_each(reg: Registry) -> None:
 def test_the_cross_check_holds_each_run_to_its_seeding(reg: Registry) -> None:
     three, one = seeded(reg, 11, 12, 13), seeded(reg, 13)
     assert gathered(reg, (seeded(reg, 1, 2), one)).cross_check(reg.get) == [
-        "group 0's replicates ran 2 seeds, not 3",
-        "group 0's repeat ran other than replicates's trial on its last seeds",
+        "group 0's original ran 2 seeds, not 3",
+        "group 0's repeat ran other than original's trial on its last seeds",
     ]
     assert gathered(reg, (three, seeded(reg, 12))).cross_check(reg.get) == [
-        "group 0's repeat ran other than replicates's trial on its last seeds"
+        "group 0's repeat ran other than original's trial on its last seeds"
     ]
     uncleaned = seeded(reg, 13, cleanup=())
     assert gathered(reg, (three, uncleaned)).cross_check(reg.get) == [
-        "group 0's repeat ran other than replicates's trial on its last seeds"
+        "group 0's repeat ran other than original's trial on its last seeds"
     ]
     alone = gathered(reg, (three, one)).model_copy(
         update={"gathered": (gathered(reg, (three, one)).gathered[1],)}
     )
-    assert alone.cross_check(reg.get) == [
-        "group 0's repeat has no replicates to repeat"
-    ]
+    assert alone.cross_check(reg.get) == ["group 0's repeat has no original to repeat"]
 
 
 def test_a_greedy_repeat_names_its_replicate_by_position(reg: Registry) -> None:
@@ -183,7 +181,7 @@ def test_gather_fills_each_group_s_seedings_with_the_first_run_that_fits(
     a = by_run[runs["three"]][0]
     assert by_run[runs["one"]] == (a, "repeat")
     assert runs["older"] not in by_run and runs["stray"] not in by_run
-    assert by_run[runs["b"]] == (1 - a, "replicates")
+    assert by_run[runs["b"]] == (1 - a, "original")
     assert len(held.groups()) == 2
 
     again = gather(center(reg), REVIEW, reversed(found), reg.get)

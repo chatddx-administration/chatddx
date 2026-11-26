@@ -22,9 +22,9 @@
   {% set tagged %}{% for t in thread.tags %}{{ chip(t) }} {% else %}—{% endfor %}{% endset %}
   {{ facts([
     (_("Kind"), word | kind),
-    (_("Owner"), thread.owner or "—"),
+    ((_("owner") | upfirst), thread.owner or "—"),
     (_("Shared with"), thread.collaborators | join(", ") or "—"),
-    (_("Language"), thread.language | language if thread.language else "—"),
+    ((_("language") | upfirst), thread.language | language if thread.language else "—"),
     (_("Forked from"), origin_link),
     (_("Tags"), tagged),
     (_("Description"), thread.description or "—"),
@@ -33,25 +33,23 @@
   {% if thread.kind in ("scorer", "judge") and not thread.deleted %}<p class="mt-3 text-sm">{% trans thread=thread.id %}<a class="bench" href="/scoring/{{ thread }}">Weigh it on Scoring</a>, beside the scorers and judges it works with and how they scored{% endtrans %}</p>{% endif %}
   {% endcall %}
 
-  {% set last = versions | length %}
-  {% set shown = versions[at - 1] %}
   {% set link = "/threads/" ~ thread.id ~ "?" ~ ("into=" ~ (translating.into | urlencode) ~ "&" if translating and translating.into else "") ~ "version=" %}
   {% call section(_("What it holds"), "holds") %}
   <nav class="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="{{ _('Versions') }}">
     {% if at > 1 %}<a class="view" href="{{ link ~ (at - 1) }}" aria-label="{{ _('The version before') }}">◀</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">◀</span>{% endif %}
-    <span class="font-medium">{{ _("Version %(at)s of %(last)s", at=at, last=last) }}</span>
+    <span class="font-medium">{{ _("version %(at)s of %(last)s", at=at, last=last) | upfirst }}</span>
     {% if at < last %}<a class="view" href="{{ link ~ (at + 1) }}" aria-label="{{ _('The version after') }}">▶</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">▶</span>{% endif %}
-    <span class="text-muted-foreground">{{ shown.at | when }}, {{ shown.by }}</span>
-    <span class="font-mono text-xs text-muted-foreground">{{ shown.digest | short }}</span>
+    <span class="text-muted-foreground">{{ saved.at | when }}, {{ saved.by }}</span>
+    <span class="font-mono text-xs text-muted-foreground">{{ edit.digest | short }}</span>
   </nav>
-  {% if at < last %}
+  {% if at != current %}
   <div class="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-warning/10 p-3 text-sm">
-    <span>{{ _("A newer version is saved: version %(n)s, %(at)s by %(by)s.", n=last, at=versions[-1].at | when, by=versions[-1].by) }}</span>
+    <span>{% if current == last %}{{ _("A newer version is saved: version %(n)s, %(at)s by %(by)s.", n=current, at=versions[-1].at | when, by=versions[-1].by) }}{% else %}{{ _("Version %(n)s is brought back as the latest, %(at)s by %(by)s.", n=current, at=versions[-1].at | when, by=versions[-1].by) }}{% endif %}</span>
     <a class="view" href="/threads/{{ thread.id }}">{{ _("Open the latest") }}</a>
     {% if revertible %}
     <form method="post" action="/threads/{{ thread.id }}/revert">
       <input type="hidden" name="head" value="{{ thread.head.id }}">
-      <input type="hidden" name="edit" value="{{ shown.id }}">
+      <input type="hidden" name="edit" value="{{ edit.id }}">
       <button class="primary">{{ _("Make it the latest") }}</button>
     </form>
     {% endif %}
@@ -62,7 +60,7 @@
     <input type="hidden" name="head" value="{{ thread.head.id }}">
   {% endif %}
   {% if translating %}
-  {{ translations(thread, translating, translatable, at, at == last) }}
+  {{ translations(thread, translating, translatable, at, at == current) }}
   {% elif parts %}
   <h3>{{ _("Its recipe") }}</h3>
   {{ rows(parts, picked, titles, links) }}
@@ -98,6 +96,9 @@
   {{ findings(found) }}
   {% endif %}
   <h3>{{ _("What this version changed in its recipe") if composed else _("What this version changed") }}</h3>
+  {% if saved_on is not none and saved_on != at - 1 %}
+  <p class="mb-2 text-sm text-muted-foreground">{{ _("Against version %(n)s, the one it was saved over.", n=saved_on) }}</p>
+  {% endif %}
   {% if changed is none %}
   <p class="text-sm text-muted-foreground">{{ _("It is the first.") }}</p>
   {% elif not changed %}
@@ -128,9 +129,9 @@
   {% call paged(versions | length) %}
   <ol class="space-y-1 text-sm" data-paged>
     {% for v in versions | reverse %}
-    {% set i = last - loop.index0 %}
+    {% set i = v.version %}
     <li class="flex flex-wrap gap-x-3">
-      {% if i == at %}<span class="font-medium" aria-current="true">{{ _("Version %(n)s", n=i) }}</span>{% else %}<a class="view" href="{{ link ~ i }}">{{ _("Version %(n)s", n=i) }}</a>{% endif %}
+      {% if v.id == edit.id %}<span class="font-medium" aria-current="true">{{ _("Version %(n)s", n=i) }}</span>{% else %}<a class="view" href="{{ link ~ i }}">{{ _("Version %(n)s", n=i) }}</a>{% endif %}
       <span class="text-muted-foreground">{{ v.at | when }}, {{ v.by }}</span>
       <span class="font-mono text-xs text-muted-foreground">{{ v.digest | short }}</span>
     </li>
@@ -140,7 +141,7 @@
   {% endcall %}
 
   {% if ran is not none %}
-  {% call section(_("Runs"), "runs") %}
+  {% call section((_("runs") | upfirst), "runs") %}
   {% if not thread.deleted %}<p class="mb-3 text-sm">{% trans thread=thread.id %}<a class="bench" href="/lab/run?trial={{ thread }}">Run it</a>{% endtrans %}</p>{% endif %}
   {% call paged(ran | length) %}
   <ul class="space-y-1 text-sm" data-paged>
@@ -164,7 +165,7 @@
   {% call section(_("What is said of it"), "said") %}
   {% set about = typed.about if typed and typed.about else {"name": thread.name or "", "description": thread.description or "", "tags": thread.tags | join(", "), "shared": thread.collaborators | join(", ")} %}
   <form method="post" action="/threads/{{ thread.id }}/said" class="grid max-w-xl gap-3 text-sm">
-    <label class="grid gap-1"><span class="font-medium">{{ _("Name") }}</span>
+    <label class="grid gap-1"><span class="font-medium">{{ _("name") | upfirst }}</span>
       <input name="name" value="{{ about.name }}" class="h-9 rounded-md border border-input bg-transparent px-2.5" placeholder="{{ thread.title }}">
       <span class="text-xs text-muted-foreground">{{ _("Left empty, it goes by its title.") }}</span></label>
     <label class="grid gap-1"><span class="font-medium">{{ _("Description") }}</span>
@@ -194,7 +195,7 @@
   {% if authored and not thread.deleted %}
   {% call section(_("Fork it"), "fork") %}
   <form method="post" action="/threads/{{ thread.id }}/fork" class="flex flex-wrap items-end gap-3 text-sm">
-    <label class="grid gap-1"><span class="font-medium">{{ _("Name") }}</span>
+    <label class="grid gap-1"><span class="font-medium">{{ _("name") | upfirst }}</span>
       <input name="name" required value="{{ thread | titled }}" class="h-9 w-72 rounded-md border border-input bg-transparent px-2.5"></label>
     <button>{{ _("Fork it as it is") }}</button>
   </form>

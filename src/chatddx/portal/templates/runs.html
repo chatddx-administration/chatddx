@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% from "macros.html" import heading, tabs, runs_table, section %}
-{% block title %}{{ _("Runs") }} · ChatDDX{% endblock %}
+{% block title %}{{ _("runs") | upfirst }} · ChatDDX{% endblock %}
 {% block main %}
 <div class="mx-auto max-w-5xl px-4 py-8">
-  {{ heading(_("Runs"), _("Your runs, newest first, to follow what is under way and open what has finished.")) }}
+  {{ heading((_("runs") | upfirst), _("Your runs, newest first, to follow what is under way and open what has finished.")) }}
   {% call section(_("Your queue")) %}
   <div class="flex flex-wrap items-center gap-3 text-sm">
     {% set queued, under_way = ngettext("%(num)s queued", "%(num)s queued", queue.queued), ngettext("%(num)s under way", "%(num)s under way", queue.under_way) %}
@@ -18,7 +18,7 @@
   </div>
   <p class="mt-3 text-xs text-muted-foreground">{{ _("Pausing holds what is queued and queues the runs under way again after the items being sent. Stop takes what is queued out, its runs left unfinished to be resumed; once nothing is queued, Stop now halts the runs under way.") }}</p>
   {% endcall %}
-  {{ tabs([("/runs", _("All"), not left), ("/runs?left=true", _("Left to score"), left)]) }}
+  {{ tabs([("/runs", _("all") | upfirst, not left), ("/runs?left=true", _("Left to score"), left)]) }}
   {% call section(_("Left to score") if left else _("All runs")) %}
   {% if searched %}
   <form method="get" action="/runs" role="search" class="mb-4 flex flex-wrap items-center gap-2 text-sm">

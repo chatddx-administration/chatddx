@@ -2,7 +2,7 @@
   import { onMount, untrack } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { api, type Schemas, why } from "$lib/api/client";
-  import { t, tn, tp } from "$lib/locale";
+  import { t, tn, tp, upFirst } from "$lib/locale";
   import { fieldName } from "$lib/schema/form";
   import { differs, estimated, grouped, languages, mean, named, scattered, unanswered } from "./breakdown";
   import type { Following } from "./following.svelte";
@@ -108,7 +108,7 @@
         <svg width="14" height="14" aria-hidden="true"
           ><circle cx="7" cy="7" r="2.5" class="fill-muted-foreground/40" /></svg
         >
-        {t("Cases")}
+        {upFirst(t("cases"))}
       </li>
       {#if incomplete}
         <li class="flex items-center gap-1.5">
@@ -140,9 +140,9 @@
   {:else}
     <div class="space-y-8">
       {#each groups as group (group.field)}
-        <section aria-label={group.field === null ? t("The whole answer") : fieldName(group.field)}>
+        <section aria-label={group.field === null ? upFirst(t("the whole answer")) : fieldName(group.field)}>
           <h3 class="mb-3 text-sm font-semibold">
-            {group.field === null ? t("The whole answer") : fieldName(group.field)}
+            {group.field === null ? upFirst(t("the whole answer")) : fieldName(group.field)}
           </h3>
           <div class="space-y-6">
             {#each group.views as view (view)}
@@ -316,10 +316,10 @@
           <thead>
             <tr class="text-left text-[0.7rem] tracking-wide text-muted-foreground uppercase">
               <th class="py-1 pr-3 font-medium">{t("View")}</th>
-              <th class="py-1 pr-3 font-medium">{t("Runs")}</th>
+              <th class="py-1 pr-3 font-medium">{upFirst(t("runs"))}</th>
               <th class="py-1 pr-3 text-right font-medium">{t("Mean")}</th>
               <th class="py-1 pr-3 text-right font-medium">±95%</th>
-              <th class="py-1 pr-3 text-right font-medium">{t("Cases")}</th>
+              <th class="py-1 pr-3 text-right font-medium">{upFirst(t("cases"))}</th>
               <th class="py-1 text-right font-medium">Δ</th>
             </tr>
           </thead>
@@ -343,7 +343,7 @@
         <table class="mt-6 w-full">
           <thead>
             <tr class="text-left text-[0.7rem] tracking-wide text-muted-foreground uppercase">
-              <th class="py-1 pr-3 font-medium">{t("Runs")}</th>
+              <th class="py-1 pr-3 font-medium">{upFirst(t("runs"))}</th>
               <th class="py-1 pr-3 text-right font-medium">{t("Repeats")}</th>
               <th class="py-1 pr-3 text-right font-medium">{tp("job", "failed")}</th>
               <th class="py-1 pr-3 text-right font-medium">{t("Tokens")}</th>

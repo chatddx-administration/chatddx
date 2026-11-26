@@ -88,7 +88,7 @@ def test_a_thread_is_shown_with_its_recipe_and_its_versions(signed: TestClient) 
     assert shown["collaborators"] == []
 
     edits = signed.get(f"/api/threads/{mine['id']}/edits").json()
-    assert edits[-1] == mine["head"]
+    assert edits[-1] == {**mine["head"], "version": 1}
 
 
 def test_a_thread_the_person_doesn_t_see_isn_t_found(

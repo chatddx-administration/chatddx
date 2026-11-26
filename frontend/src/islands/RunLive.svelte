@@ -8,7 +8,7 @@
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import { Badge } from "$lib/components/ui/badge";
-  import { localized, t, tn, tp } from "$lib/locale";
+  import { localized, t, tn, tp, upFirst } from "$lib/locale";
   import Finding from "$lib/paging/Finding.svelte";
   import Pages from "$lib/paging/Pages.svelte";
   import { found, paged } from "$lib/paging/paging";
@@ -59,7 +59,7 @@
 
 <section class="pane mb-6 rounded-2xl p-5 sm:p-6" aria-live="polite">
   <div class="mb-4 flex flex-wrap items-center gap-3">
-    <h2 class="text-lg font-semibold">{t("Under way")}</h2>
+    <h2 class="text-lg font-semibold">{upFirst(t("under way"))}</h2>
     {#if progress.done}
       <span class="text-sm text-muted-foreground">
         {progress.done.halted ? t("Halted; showing what it came to…") : t("Done; showing what it came to…")}

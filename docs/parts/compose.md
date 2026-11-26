@@ -12,8 +12,8 @@ query (`schemas.Varying`, its parts, `head`, `under`, `tag`).
   as Review's branches are (`src/chatddx/portal/compose.py:_forks`); no archive's.
 
 - **The configuration**: its name, with **Show in the Library** across from it, as Review's case is; its versions by
-  link; **Update** it where it is behind what it was made from; and its island (`frontend/src/islands/compose.ts`),
-  which writes its chunks in place rather than picking them:
+  link, numbered by what they hold; **Update** it where it is behind what it was made from; and its island
+  (`frontend/src/islands/compose.ts`), which writes its chunks in place rather than picking them:
 
   - **Its texts**: a tab in its own language with the chunks that hold text, an output's and a toolset's guidance among
     them, and a tab for each language it is translated into, one at a time, marked red while texts are left to translate
@@ -64,8 +64,8 @@ query (`schemas.Varying`, its parts, `head`, `under`, `tag`).
     name, and then the configuration, as a version or a fork; a fork of the configuration forks the chunks it changes. A
     chunk held by no thread starts one named after the configuration and the part. Saved under a new name, it can be
     **independent of this one** instead: forked from nothing, each chunk it changes starting a thread named after it. An
-    earlier version of the person's own, saved under its name, changed or not, is brought back as the latest version
-    rather than forked (`frontend/src/lib/compose/logic.ts:whereSaveGoes`). Tags stay the Library's.
+    earlier version of the person's own, saved under its name, is brought back as the latest rather than forked, and is
+    still that version unless changed (`frontend/src/lib/compose/logic.ts:whereSaveGoes`). Tags stay the Library's.
 
   - **Run**, beside Save, offered where the World names a baseline tag: saves what there is to save, as Save does, then
     `POST /compose/{id}/runs` (`src/chatddx/portal/compose.py:running_in_compose`) brings the configuration it saved
@@ -88,13 +88,13 @@ query (`schemas.Varying`, its parts, `head`, `under`, `tag`).
 A configuration's baseline sets it on the World's baseline cases, so that what a variation of it changes has something
 to be measured against: the bare case of each family tagged with the World's baseline tag
 (`src/chatddx/api/standing.py:baseline_cases`). It is a gathering as Review's are, through the same pipeline
-(docs/parts/review.md, "Gatherings"), in the baseline's shape, a replicate and its seed repeated (`BASELINE`), over the
-baseline cases rather than one. Each language the cases are sent in is a run of its own, and a case that can't be sent,
-in a language the configuration has no translations into or one whose translation fails to compile, keeps the whole
-baseline from running: Run is disabled, the language's tab is marked where it has one with texts left to translate, the
-top of the configuration pane says which language to translate it into where it has none, and why its translation fails
-otherwise (`src/chatddx/api/standing.py:standing`). A change to an expectation or a scorer that a view reads puts it
-behind as not scored as things are now, which Run mends by scoring again alone
+(docs/parts/review.md, "Gatherings"), in the baseline's shape, an original of one replicate and a repeat of its seed
+(`BASELINE`), over the baseline cases rather than one. Each language the cases are sent in is a run of its own, and a
+case that can't be sent, in a language the configuration has no translations into or one whose translation fails to
+compile, keeps the whole baseline from running: Run is disabled, the language's tab is marked where it has one with
+texts left to translate, the top of the configuration pane says which language to translate it into where it has none,
+and why its translation fails otherwise (`src/chatddx/api/standing.py:standing`). A change to an expectation or a scorer
+that a view reads puts it behind as not scored as things are now, which Run mends by scoring again alone
 (`src/chatddx/portal/test/test_running.py`).
 
 ## How it fared
@@ -134,7 +134,7 @@ Drafted: `/gatherings/{started}` (`src/chatddx/portal/templates/gathering.html`)
 (`src/chatddx/bench/breakdown.py:baseline`), is one baseline gathering of a configuration, the page a column leads to:
 
 - **The run**: the baseline's tag and cases, the languages its cases went in, how many it left unanswered, whether it is
-  scored as things are now, its runs, each a replicate or a repeat in its language, each leading to its page, and the
+  scored as things are now, its runs, each the original or the repeat in its language, each leading to its page, and the
   run before it.
 - **How it fared**: by view, its mean, 95% interval and cases, how far its repeats were from its replicates, and its Δ
   from the run before; a view picked shows below.

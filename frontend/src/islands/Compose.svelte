@@ -7,7 +7,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { api, why } from "$lib/api/client";
-  import { displayLanguage, t, tn, tp } from "$lib/locale";
+  import { displayLanguage, t, tn, tp, upFirst } from "$lib/locale";
   import {
     type Body,
     type Chunk,
@@ -31,8 +31,8 @@
   let { held, sending, following }: { held: Props; sending: Sending; following: Following } = $props();
   const given = untrack(() => held);
   const { configuration, me, versions, head, drafted } = given;
-  const latest = versions.at(-1)?.id ?? head;
-  const version = versions.findIndex((v) => v.id === head) + 1;
+  const latest = versions.at(-1);
+  const version = versions.find((v) => v.id === head)?.version ?? 0;
 
   let chunks = $state(structuredClone(drafted?.chunks));
   let model = $state(drafted?.model ?? null);
@@ -77,8 +77,9 @@
       name,
       configuration,
       me,
-      versions: versions.length,
-      latest: head === latest,
+      versions: Math.max(0, ...versions.map((v) => v.version)),
+      version,
+      latest: version === latest?.version,
       changed,
       configurations: given.configurations,
     }),
@@ -98,8 +99,10 @@
   function saves(): string {
     if (goes.to === "nothing" && goes.because === "nameless") return t("Give it a name to save it.");
     if (goes.to === "nothing") return t("Nothing to save: this is the configuration as it is.");
-    if (goes.to === "version" && goes.restoring)
-      return t("Saves version %(n)s of this configuration, from version %(was)s.", { n: goes.version, was: version });
+    if (goes.to === "version" && goes.from === goes.version)
+      return t("Brings version %(n)s of this configuration back as the latest.", { n: goes.version });
+    if (goes.to === "version" && goes.from !== null)
+      return t("Saves version %(n)s of this configuration, from version %(was)s.", { n: goes.version, was: goes.from });
     if (goes.to === "version") return t("Saves version %(n)s of this configuration.", { n: goes.version });
     if (independent)
       return t("Saves a new configuration of yours, “%(name)s”, independent of this one.", { name: name.trim() });
@@ -225,12 +228,12 @@
     const got = await api.POST("/api/threads/{thread}/saves", {
       params: { path: { thread: configuration.id } },
       body: {
-        head: to === "version" ? latest : head,
+        head: to === "version" ? (latest?.id ?? head) : head,
         ...(to === "fork" ? { name: name.trim(), independent } : {}),
         chunks: $state.snapshot(chunks) ?? {},
         ...(model !== null && model !== drafted?.model
           ? { model }
-          : goes.to === "version" && goes.restoring && drafted
+          : goes.to === "version" && goes.from !== null && drafted
             ? { model: drafted.model }
             : {}),
         translations: cleaned($state.snapshot(into)),
@@ -290,7 +293,7 @@
       <section class="mb-6 border-t border-border/60 pt-4" aria-label={t("Saving it")}>
         <form class="space-y-3" onsubmit={save}>
           <div class="space-y-1.5">
-            <Label for="saved-name">{t("Name")}</Label>
+            <Label for="saved-name">{upFirst(t("name"))}</Label>
             <Input id="saved-name" bind:value={name} class="max-w-md" autocomplete="off" />
           </div>
           {#if goes.to === "fork"}

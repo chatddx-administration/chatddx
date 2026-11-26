@@ -8,7 +8,7 @@
   {% if vignette.drifted %}
   <p role="alert" class="mb-6 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">{{ _("This isn't the text the case was made from any more.") }}</p>
   {% endif %}
-  {% call section(_("The vignette")) %}
+  {% call section((_("the vignette") | upfirst)) %}
   <div class="whitespace-pre-wrap leading-relaxed">{{ vignette.text }}</div>
   {% endcall %}
 </div>

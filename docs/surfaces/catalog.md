@@ -690,3 +690,15 @@ Raises:
 * `rows: Reader`
 * `digest: str`
 * ∟`str`
+
+## `versions`
+`src/chatddx/catalog/threads.py:versions`
+
+Each edit of the thread by the version it holds, numbered by the first edit to
+hold the same, as `holds` has it, so that an earlier version brought back is that
+version again. Costs the thread's history and labels, and a recipe resolved for
+each compilation.
+
+* `rows: Reader`
+* `thread: int`
+* ∟`dict[int, int]`

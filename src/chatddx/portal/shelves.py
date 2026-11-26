@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from chatddx.bench import KINDS, WRITTEN, Bench
 from chatddx.catalog import threads as catalog_threads
 from chatddx.identity import sees
-from chatddx.locale import N_, pgettext, pgettext_noop, tr
+from chatddx.locale import N_, pgettext, pgettext_noop, tr, upfirst
 
 
 @dataclass(frozen=True)
@@ -16,7 +16,7 @@ class Shelf:
 
 SHELVES = (
     Shelf(
-        N_("Cases"),
+        N_("cases"),
         N_(
             "So that every model is asked about the same patients, and graded against "
             + "the same good answers."
@@ -219,7 +219,9 @@ def shelved(bench: Bench) -> list[tuple[Shelf, list[Shelved]]]:
                 for w in shelf.kinds
             ],
         )
-        for shelf in sorted(SHELVES, key=lambda s: (s.read_only, tr(s.heading)))
+        for shelf in sorted(
+            SHELVES, key=lambda s: (s.read_only, upfirst(tr(s.heading)))
+        )
     ]
 
 

@@ -27,7 +27,7 @@
   <div class="space-y-24">{{ caller() }}</div>
 </div>
 {% endmacro %}
-{% block title %}{{ _("ChatDDX: how well does a language model reason about a patient?") }}{% endblock %}
+{% block title %}{{ _("How well does a language model reason about a patient?") }} · ChatDDX{% endblock %}
 {% block visiting %}
 <nav aria-label="{{ _('Pages') }}" class="text-sm"><a href="/sign-in" class="px-2 py-1.5">{{ _("Log in") }}</a></nav>
 {% endblock %}
@@ -52,7 +52,7 @@
   </section>
 
   {% call part("tour", _("A tour, with fictional cases"), _("The cases, answers and scores below are scripted: made up to show the portal at work, not results of any model.")) %}
-    {% call feature("review", pgettext("a step of the tour", "Review"), "review", _("The Review page: a fictional case of abdominal pain, its vignette beside the expectation written for it, with the latest version's change to the disposition highlighted."), step=1) %}
+    {% call feature("review", _("Review"), "review", _("The Review page: a fictional case of abdominal pain, its vignette beside the expectation written for it, with the latest version's change to the disposition highlighted."), step=1) %}
     <p>{{ _("A case's vignette beside what a good answer to it holds, its diagnosis, the warnings it should raise, where the patient should go and what must not be missed, each in plain words and as a pattern a scorer can match.") }}</p>
     {% endcall %}
 

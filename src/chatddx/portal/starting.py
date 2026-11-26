@@ -9,7 +9,7 @@ from chatddx.api.state import refused
 from chatddx.bench import Bench, Endpoint, NotFound
 from chatddx.factors.base import Invalid, resolve
 from chatddx.factors.trial import Order, Trial
-from chatddx.locale import tr
+from chatddx.locale import pgettext_noop, refusal
 
 from .pages import BenchDep, page
 
@@ -19,7 +19,7 @@ router = APIRouter()
 @dataclass(frozen=True)
 class _Starting:
     thread: schemas.Thread
-    versions: list[schemas.Edit]
+    versions: list[schemas.Versioned]
     trial: Trial
     endpoint: Endpoint | None
     refused: str | None
@@ -80,6 +80,9 @@ def _starting(bench: Bench, thread: int) -> _Starting:
         at = bench.endpoint(bench.inventory.serving(held.engine))
     except LookupError:
         named = shown.name or shown.title
-        why = tr("%(trial)s is out of date: update it on its page", trial=named)
+        why = refusal(
+            pgettext_noop("refusal", "%(trial)s is out of date: update it on its page"),
+            {"trial": named},
+        )
         return _Starting(shown, versions, held, None, why)
     return _Starting(shown, versions, held, at, None)

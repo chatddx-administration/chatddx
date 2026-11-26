@@ -1,4 +1,4 @@
-2026-11-25T14:34:07Z 5e8c843 ./dev/check.sh frontend
+2026-11-25T16:37:53Z 8cf349a ./dev/check.sh frontend
 • frontend
 
 > chatddx-portal@0.0.0 check /home/user/chatddx/frontend
@@ -9,9 +9,9 @@
 > openapi-typescript openapi.json --default-non-nullable false --output src/lib/api/schema.d.ts
 
 ✨ openapi-typescript 7.13.0
-🚀 openapi.json → src/lib/api/schema.d.ts [562.8ms]
-1795617262422 START "/home/user/chatddx/frontend"
-1795617262428 COMPLETED 899 FILES 0 ERRORS 0 WARNINGS 0 FILES_WITH_PROBLEMS
+🚀 openapi.json → src/lib/api/schema.d.ts [601ms]
+1795624691090 START "/home/user/chatddx/frontend"
+1795624691093 COMPLETED 899 FILES 0 ERRORS 0 WARNINGS 0 FILES_WITH_PROBLEMS
 
 > chatddx-portal@0.0.0 test /home/user/chatddx/frontend
 > vitest run
@@ -22,10 +22,10 @@
 
  Test Files  25 passed (25)
       Tests  110 passed (110)
-   Start at  14:34:23
-   Duration  2.87s (transform 67%, import 21%, tests 9%, worker 4%)
+   Start at  16:38:12
+   Duration  4.26s (transform 62%, import 23%, tests 10%, worker 5%)
 
-  Transform  transforming modules took 2.74s · 67% of tracked time, re-done on every run
+  Transform  transforming modules took 3.21s · 62% of tracked time, re-done on every run
              persist transforms across runs with fsModuleCache: true
              learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
 

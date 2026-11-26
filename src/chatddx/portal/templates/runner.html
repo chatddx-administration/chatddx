@@ -11,7 +11,7 @@
       <label class="flex flex-wrap items-center gap-2"><span class="text-muted-foreground">{{ _("version") }}</span>
         <select name="version" aria-label="{{ _('version of %(name)s', name=named) }}" class="{{ box }}">
           {% if optional %}<option value="">{{ _("not this time") }}</option>{% endif %}
-          {% for v in s.versions | reverse %}<option value="{{ v.id }}">{{ _("Version %(n)s, %(at)s", n=s.versions | length - loop.index0, at=v.at | when) }}</option>{% endfor %}
+          {% for v in s.versions | reverse %}<option value="{{ v.id }}">{{ _("version %(n)s, %(at)s", n=v.version, at=v.at | when) | upfirst }}</option>{% endfor %}
         </select></label>
       {% if s.endpoint %}
       <p class="text-muted-foreground">{{ _("at %(endpoint)s: %(concurrency)s at once, %(order)s", endpoint=s.endpoint.name, concurrency=s.endpoint.spec.execution.concurrency, order=s.endpoint.spec.execution.order) }}</p>

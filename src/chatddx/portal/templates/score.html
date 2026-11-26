@@ -80,7 +80,7 @@
   {% endif %}
   {% for seeded in judging.seeds %}
   <div class="mb-6 last:mb-0 border-t border-border/60 pt-4 first:border-0 first:pt-0">
-    <h3>{{ _("Seed %(seed)s", seed=seeded.seed) }}{% if seeded.pick and seeded.pick.counted is not none %} <span class="font-normal tabular-nums text-muted-foreground">· {{ mean(seeded.pick.counted) }}</span>{% endif %}</h3>
+    <h3>{{ ngettext("seed %(seeds)s", "seeds %(seeds)s", 1, seeds=seeded.seed) | upfirst }}{% if seeded.pick and seeded.pick.counted is not none %} <span class="font-normal tabular-nums text-muted-foreground">· {{ mean(seeded.pick.counted) }}</span>{% endif %}</h3>
     {% if not seeded.rebuilt %}
     <p role="alert" class="mb-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">{{ _("Rebuilt now, this isn't the request that was sent: what it pins, or the code, has changed since.") }}</p>
     {% endif %}
@@ -150,7 +150,7 @@
   {% endcall %}
 
 {% endif %}
-  {% call section(_("The answer")) %}
+  {% call section((_("the answer") | upfirst)) %}
   {% if answer.problem %}<p class="mb-2 text-sm text-warning">{{ answer.problem }}{% if answer.salvaged %} {{ _("(cut short)") }}{% endif %}</p>{% endif %}
   {% if answer.value is string %}
   <div class="whitespace-pre-wrap text-sm">{{ answer.value }}</div>

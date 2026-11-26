@@ -138,7 +138,7 @@
       <a href="/" class="font-display text-lg font-bold tracking-tight text-foreground no-underline">ChatDDX</a>
       {% if person %}
       <nav aria-label="{{ _('Pages') }}" class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-        {% for href, label in [("/review", _("Review")), ("/compose", _("Compose")), ("/scoring", _("Scoring")), ("/runs", _("Runs")), ("/library", _("Library")), ("/world", _("World"))] %}
+        {% for href, label in [("/review", _("Review")), ("/compose", _("Compose")), ("/scoring", _("Scoring")), ("/runs", (_("runs") | upfirst)), ("/library", _("Library")), ("/world", _("World"))] %}
         {% set here = request.url.path == href or request.url.path.startswith(href ~ "/") or (href == "/library" and request.url.path.startswith(("/threads/", "/cases/")) and not in_world) or (href == "/world" and in_world) %}
         <a href="{{ href }}"{% if here %} aria-current="page"{% endif %} class="px-2 py-1.5">{{ label }}</a>
         {% endfor %}
@@ -147,7 +147,7 @@
     </div>
     <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
       {% set staying = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") if request.method == "GET" else "/" %}
-      <form method="post" action="/locale" aria-label="{{ _('Language') }}" class="flex items-center gap-3 text-xs">
+      <form method="post" action="/locale" aria-label="{{ _('language') | upfirst }}" class="flex items-center gap-3 text-xs">
         <input type="hidden" name="next" value="{{ staying }}">
         {% for tag, offered in request.app.state.locales.by_tag.items() %}
         <button class="view" name="tag" value="{{ tag }}" lang="{{ tag }}"{% if tag == locale.tag %} aria-current="true"{% endif %}>{{ offered.name }}</button>

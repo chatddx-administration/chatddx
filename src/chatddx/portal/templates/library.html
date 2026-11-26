@@ -9,8 +9,8 @@
   <ul><li><a href="/library"{% if not word %} aria-current="page"{% endif %} class="block px-2 py-1">{{ _("Overview") }}</a></li></ul>
   {% for shelf, kinds in shelves %}
   <div>
-    <p aria-hidden="true" class="mb-1 border-t border-border px-2 pt-3 font-semibold text-foreground">{{ _(shelf.heading) }}</p>
-    <ul aria-label="{{ _(shelf.heading) }}" class="grid gap-0.5">
+    <p aria-hidden="true" class="mb-1 border-t border-border px-2 pt-3 font-semibold text-foreground">{{ _(shelf.heading) | upfirst }}</p>
+    <ul aria-label="{{ _(shelf.heading) | upfirst }}" class="grid gap-0.5">
       {% for k in kinds | sort(attribute="display_kind") %}
       {% set here = k.word == word %}
       <li><a href="/library?kind={{ k.word }}"{% if here %} aria-current="page"{% endif %} class="flex items-center gap-2 px-2 py-1">
@@ -59,7 +59,7 @@
       {% endif %}
       {% if not word %}
       {% for shelf, kinds in shelves %}
-      {% call section(_(shelf.heading), about=_(shelf.about)) %}
+      {% call section((_(shelf.heading) | upfirst), about=_(shelf.about)) %}
       <ul class="grid gap-3 text-sm">
         {% for k in kinds | sort(attribute="display_kind") %}
         <li class="grid gap-x-4 gap-y-0.5 sm:grid-cols-[11rem_1fr]">
@@ -117,7 +117,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr><th class="pb-2 pr-2 font-medium"><span class="sr-only">{{ _("Picked") }}</span></th><th class="pb-2 pr-4 font-medium">{{ _("Name") }}</th><th class="pb-2 pr-4 font-medium">{{ _("Owner") }}</th><th class="{{ narrow }} pb-2 pr-4 font-medium">{{ _("Language") }}</th><th class="pb-2 font-medium">{{ _("Tags") }}</th></tr>
+              <tr><th class="pb-2 pr-2 font-medium"><span class="sr-only">{{ _("Picked") }}</span></th><th class="pb-2 pr-4 font-medium">{{ _("name") | upfirst }}</th><th class="pb-2 pr-4 font-medium">{{ _("owner") | upfirst }}</th><th class="{{ narrow }} pb-2 pr-4 font-medium">{{ _("language") | upfirst }}</th><th class="pb-2 font-medium">{{ _("Tags") }}</th></tr>
             </thead>
             <tbody data-paged>
               {% for f in cases %}
@@ -165,7 +165,7 @@
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>{% if runnable %}<th class="pb-2 pr-2 font-medium"><span class="sr-only">{{ _("Picked") }}</span></th>{% endif %}<th class="pb-2 pr-4 font-medium">{{ _("Name") }}</th>{% if purposes %}<th class="pb-2 pr-4 font-medium">{{ _("Purpose") }}</th>{% endif %}<th class="pb-2 pr-4 font-medium">{{ _("Owner") }}</th><th class="{{ narrow }} pb-2 pr-4 font-medium">{{ _("Language") }}</th><th class="pb-2 pr-4 font-medium">{{ _("Tags") }}</th><th class="{{ narrow }} pb-2 font-medium">{{ _("Latest version") }}</th></tr>
+            <tr>{% if runnable %}<th class="pb-2 pr-2 font-medium"><span class="sr-only">{{ _("Picked") }}</span></th>{% endif %}<th class="pb-2 pr-4 font-medium">{{ _("name") | upfirst }}</th>{% if purposes %}<th class="pb-2 pr-4 font-medium">{{ _("Purpose") }}</th>{% endif %}<th class="pb-2 pr-4 font-medium">{{ _("owner") | upfirst }}</th><th class="{{ narrow }} pb-2 pr-4 font-medium">{{ _("language") | upfirst }}</th><th class="pb-2 pr-4 font-medium">{{ _("Tags") }}</th><th class="{{ narrow }} pb-2 font-medium">{{ _("Latest version") }}</th></tr>
           </thead>
           <tbody data-paged>
             {% for t in threads %}

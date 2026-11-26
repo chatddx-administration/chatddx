@@ -159,7 +159,7 @@
   {% endcall %}
   {% endcall %}
 
-  {% call section(_("Engines"), "engines") %}
+  {% call section((_("engines") | upfirst), "engines") %}
   <p class="mb-3 text-sm text-muted-foreground">{{ _("What answers requests, pinned by all that can change an answer, so that a run says exactly what answered it.") }}</p>
   {% call paged(engines | length) %}
   <div class="space-y-2" data-paged>

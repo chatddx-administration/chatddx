@@ -336,13 +336,15 @@ def test_an_earlier_version_saved_is_brought_back_as_the_latest(page: Page) -> N
 
     _ = page.goto(f"{compose}?head={first}")
     expect(
-        page.get_by_text("Saves version 3 of this configuration, from version 1.")
+        page.get_by_text("Brings version 1 of this configuration back as the latest.")
     ).to_be_visible()
     with page.expect_navigation():
         save.click()
     page.wait_for_url(re.compile(rf"/compose/{guided['id']}$"))
-    expect(page.get_by_text("Version 3 of 3", exact=True)).to_be_visible()
+    expect(page.get_by_text("Version 1 of 2", exact=True)).to_be_visible()
     assert sampled() == was
+    edits = page.request.get(f"/api/threads/{guided['id']}/edits").json()
+    assert [e["version"] for e in edits][-3:] == [1, 2, 1]
     assert len(page.request.get("/api/threads", params=query).json()) == 1
     assert errors == []
 

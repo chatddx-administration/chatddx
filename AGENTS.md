@@ -41,6 +41,17 @@ In order of preference:
    Either way, tell the user in `message` what's going on and what they can do now, and, if `Whoops`, put in `pass_on`
    what they are to pass on to developers and ops, as it is.
 
+## Messages
+
+Every message touched or created is tested against the scenario index, `src/chatddx/locale/catalogs/sv.po`, before it is
+added (`docs/parts/locale.md`, "The scenario index"):
+
+1. Work out the scenario the code says it in.
+2. Find a message saying that scenario: its words, case and context aside.
+3. Found: say that one, as it is if apt, else reworded for every code path saying it. Not found: add it, a new scenario.
+4. Its case is the running text's, raised with `upfirst`/`upFirst()` where it starts a heading, a label or a sentence; a
+   context only for what tells scenarios apart that Swedish says differently.
+
 ## Development stages
 
 `settings.toml`'s `[parts.<part>]` declares each part of the project: its class, its doc, the code that makes it, and

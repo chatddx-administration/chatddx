@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import ExpectationEditor from "$lib/editors/ExpectationEditor.svelte";
-  import { t } from "$lib/locale";
+  import { t, upFirst } from "$lib/locale";
   import type { ExpectationEditing } from "$lib/editors/ExpectationEditor.svelte";
   import Changed from "$lib/thread/Changed.svelte";
   import type { Edited } from "./edited.svelte";
@@ -61,7 +61,9 @@
         aria-label={t("The version before")}
         onclick={() => step(-1)}>◀</button
       >
-      <span class="font-medium">{t("Version %(at)s of %(last)s", { at: shown + 1, last: given.history.length })}</span>
+      <span class="font-medium"
+        >{upFirst(t("version %(at)s of %(last)s", { at: shown + 1, last: given.history.length }))}</span
+      >
       <button
         type="button"
         class="rounded-md border border-border px-2 py-0.5 hover:bg-muted disabled:opacity-40"

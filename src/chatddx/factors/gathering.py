@@ -78,18 +78,19 @@ Seedings = Annotated[
     tuple[Seeding, ...], AfterValidator(_seedings), Field(min_length=1)
 ]
 
-# Policy: the shape of a review of a case, three replicates under seeds drawn and the
-# third seed repeated, which tells whether what it answered reproduces.
+# Policy: the shape of a review of a case, an original of three replicates under seeds
+# drawn and a repeat of its third seed, which tells whether what it answered reproduces.
 REVIEW: tuple[Seeding, ...] = (
-    Seeding(name="replicates", seeds=3),
-    Seeding(name="repeat", seeds=1, repeats="replicates"),
+    Seeding(name="original", seeds=3),
+    Seeding(name="repeat", seeds=1, repeats="original"),
 )
 
-# Policy: the shape of a configuration's baseline on the World's baseline cases, a
-# replicate and its seed repeated, fewer than a review's as it spans many cases.
+# Policy: the shape of a configuration's baseline on the World's baseline cases, an
+# original of one replicate and a repeat of its seed, fewer than a review's as it spans
+# many cases.
 BASELINE: tuple[Seeding, ...] = (
-    Seeding(name="replicates", seeds=1),
-    Seeding(name="repeat", seeds=1, repeats="replicates"),
+    Seeding(name="original", seeds=1),
+    Seeding(name="repeat", seeds=1, repeats="original"),
 )
 
 

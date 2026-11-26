@@ -33,6 +33,13 @@ Written by `chatddx-dev index` from the comments in `[parts.locale]`'s code in `
 // what is put into it is escaped, as a {% trans %} block's variables are.
 ```
 
+## `frontend/src/lib/locale.ts:upFirst`
+
+```
+// Policy: a message is said in its case where it is said in the running text, and raised to start a heading, a
+// label or a sentence, as the server's upfirst raises it.
+```
+
 ## `frontend/src/lib/locale.ts:worded`
 
 ```
@@ -120,4 +127,12 @@ Written by `chatddx-dev index` from the comments in `[parts.locale]`'s code in `
 
 ```
 # Policy: the cookie that keeps the locale a person chose over their browser's.
+```
+
+## `src/chatddx/locale/locale.py:upfirst`
+
+```
+# Policy: a message is said in its case where it is said in the running text, and raised
+# to start a heading, a label or a sentence, so that it is one message wherever it is
+# said; raising, unlike lowering, holds in every language.
 ```

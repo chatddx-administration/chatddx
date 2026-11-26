@@ -82,3 +82,19 @@ def test_behind_names_every_thread_that_moved_on() -> None:
     ]
     rows.note(Subject(thread=forked.thread), Entry(field=EntryField.DELETED))
     assert [b.head for b in threads.behind(rows, skeleton.thread)] == [one]
+
+
+def test_an_earlier_version_brought_back_is_that_version_again() -> None:
+    reg = Registry()
+    rows = Memory(reg)
+    cool, warm = reg.add(Sampling(temperature=0.6)), reg.add(Sampling(temperature=0.9))
+    first = rows.start(cool)
+    second = rows.save(first.thread, warm)
+    back = rows.save(first.thread, cool)
+    later = rows.save(first.thread, reg.add(Sampling(temperature=0.7)))
+    assert threads.versions(rows, first.thread) == {
+        first.id: 1,
+        second.id: 2,
+        back.id: 1,
+        later.id: 3,
+    }

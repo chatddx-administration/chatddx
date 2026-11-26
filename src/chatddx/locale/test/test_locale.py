@@ -3,6 +3,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
+from babel.messages.catalog import Catalog
 
 import chatddx.locale.locale as catalogs
 from chatddx.factors import Finding
@@ -16,7 +17,9 @@ from chatddx.locale import (
     pending,
     proofs,
     refusal,
+    said_alike,
     tr,
+    upfirst,
 )
 from chatddx.locale.test.helpers import catalog
 from chatddx.markers import applied, restamped, stamps
@@ -440,11 +443,16 @@ def test_check_fails_on_a_catalog_behind_the_code_and_pending_on_one_left_to_tra
 ) -> None:
     sv = tmp_path / "sv.po"
     held = [Proof(sv, "a", "a", 0)]
+    said = Catalog()
 
     def found() -> list[Proof]:
         return held
 
+    def extracted() -> Catalog:
+        return said
+
     monkeypatch.setattr(catalogs, "proofs", found)
+    monkeypatch.setattr(catalogs, "_extracted", extracted)
     check()
     pending()
     assert capsys.readouterr() == ("ok\nok\n", "")
@@ -459,3 +467,25 @@ def test_check_fails_on_a_catalog_behind_the_code_and_pending_on_one_left_to_tra
     held[:] = [Proof(sv, "a", "b", 0)]
     with pytest.raises(SystemExit, match=f"^locale: {sv} behind the code: run chatddx"):
         check()
+
+
+def test_messages_said_alike_are_one_scenario_said_twice() -> None:
+    held = Catalog()
+    for message, context in (
+        ("cases", None),
+        ("Cases", None),
+        ("%(trial)s is out of date", None),
+        ("%(trial)s is out of date.", "refusal"),
+        ("%(judge)s is out of date", "refusal"),
+        ("none", "no language"),
+        ("None.", None),
+        ("%(a)s: %(b)s", None),
+        ("%(c)s: %(d)s", None),
+    ):
+        _ = held.add(message, context=context)
+    alike = [sorted((m.context or "", m.id) for m in g) for g in said_alike(held)]
+    assert sorted(alike) == [
+        [("", "%(trial)s is out of date"), ("refusal", "%(trial)s is out of date.")],
+        [("", "Cases"), ("", "cases")],
+    ]
+    assert upfirst("cases") == "Cases" and upfirst("") == ""

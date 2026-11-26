@@ -36,6 +36,12 @@ export function tnp(context: string, singular: string, plural: string, n: number
   return filled(counted(singular, plural, n, context), given);
 }
 
+// Policy: a message is said in its case where it is said in the running text, and raised to start a heading, a
+// label or a sentence, as the server's upfirst raises it.
+export function upFirst(said: string): string {
+  return said.slice(0, 1).toUpperCase() + said.slice(1);
+}
+
 export function whoops(message: string): string {
   return translation(message, "whoops");
 }

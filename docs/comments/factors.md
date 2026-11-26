@@ -98,8 +98,9 @@ Written by `chatddx-dev index` from the comments in `[parts.factors]`'s code in 
 ## `src/chatddx/factors/gathering.py:BASELINE`
 
 ```
-# Policy: the shape of a configuration's baseline on the World's baseline cases, a
-# replicate and its seed repeated, fewer than a review's as it spans many cases.
+# Policy: the shape of a configuration's baseline on the World's baseline cases, an
+# original of one replicate and a repeat of its seed, fewer than a review's as it spans
+# many cases.
 ```
 
 ## `src/chatddx/factors/gathering.py:CENTER_KINDS`
@@ -111,8 +112,8 @@ Written by `chatddx-dev index` from the comments in `[parts.factors]`'s code in 
 ## `src/chatddx/factors/gathering.py:REVIEW`
 
 ```
-# Policy: the shape of a review of a case, three replicates under seeds drawn and the
-# third seed repeated, which tells whether what it answered reproduces.
+# Policy: the shape of a review of a case, an original of three replicates under seeds
+# drawn and a repeat of its third seed, which tells whether what it answered reproduces.
 ```
 
 ## `src/chatddx/factors/kinds.py:KINDS`

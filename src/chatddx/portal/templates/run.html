@@ -3,7 +3,7 @@
 {% block title %}{{ _("Run") }} · ChatDDX{% endblock %}
 {% block main %}
 <div class="mx-auto max-w-5xl px-4 py-8">
-  <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="/runs">← {{ _("Runs") }}</a></nav>
+  <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="/runs">← {{ _("runs") | upfirst }}</a></nav>
   {{ heading(run_title(run.titled)) }}
 
   {% if under_way or left or run.endpoint or resumable %}
@@ -28,18 +28,18 @@
   {% call section(_("The run")) %}
   {% set trial_held %}{% if trial %}<a href="/threads/{{ trial[0] }}">{{ trial[1] }}</a> {% endif %}<span class="font-mono text-xs text-muted-foreground">{{ run.trial | short }}</span>{% endset %}
   {% set held %}{% if configuration %}<a href="{{ configuration[0] }}">{{ configuration[1] }}</a>{% else %}{{ run.skeleton | short }}{% endif %}{% endset %}
-  {% set started_with %}{% for other, language in together %}<a href="/runs/{{ other }}">{{ _("%(run)s, in %(language)s", run=(other | string)[:8], language=language | language if language else _("a language unknown")) }}</a>{% if not loop.last %}; {% endif %}{% else %}—{% endfor %}{% endset %}
+  {% set started_with %}{% for other, language in together %}<a href="/runs/{{ other }}">{{ _("%(name)s, in %(language)s", name=(other | string)[:8], language=language | language if language else _("a language unknown")) }}</a>{% if not loop.last %}; {% endif %}{% else %}—{% endfor %}{% endset %}
   {{ facts([
     (_("Started"), run.at | when),
-    (_("Language"), run.language | language if run.language else "—"),
+    ((_("language") | upfirst), run.language | language if run.language else "—"),
     (_("Started with"), started_with),
     (_("Finished"), run.finished_at | when),
     (_("Job"), job(run.job)),
     (_("Configuration"), held),
     (_("Model"), (run.model or "—") if run.latest else _("%(model)s, an earlier engine", model=run.model or "—")),
     (_("Engine"), engine),
-    (_("Cases"), run.cases | length),
-    (_("Seeds"), run.seeds | join(", ")),
+    ((_("cases") | upfirst), run.cases | length),
+    ((_("seeds") | upfirst), run.seeds | join(", ")),
     (_("Trial"), trial_held),
     (_("Rig"), run.rig.distribution ~ " " ~ run.rig.version ~ (" (" ~ run.rig.revision ~ ")" if run.rig.revision else "")),
   ]) }}
@@ -54,7 +54,7 @@
 
   {% if under_way %}
   <div id="run-live">
-    {% call section(_("Under way")) %}
+    {% call section((_("under way") | upfirst)) %}
     <p class="text-sm text-muted-foreground">{{ _("Something is under way for this run. Reload the page to see how far it has come.") }}</p>
     {% endcall %}
   </div>
@@ -118,7 +118,7 @@
     {% endif %}
   </div>
   {% else %}
-  <p class="text-sm text-muted-foreground">{{ _("Not scored.") }}</p>
+  <p class="text-sm text-muted-foreground">{{ pgettext("a run", "Not scored.") }}</p>
   {% endfor %}
   {% endcall %}
 
@@ -131,7 +131,7 @@
     {% if item.why %}<span class="text-muted-foreground">{{ item.why }}</span>{% endif %}
   </div>
   {% set answer = item.answer %}
-  <h3>{{ _("The answer") }}</h3>
+  <h3>{{ _("the answer") | upfirst }}</h3>
   {% if answer.problem %}<p class="mb-2 text-sm text-warning">{{ answer.problem }}{% if answer.salvaged %} {{ _("(cut short)") }}{% endif %}</p>{% endif %}
   {% if answer.value is none %}
   <p class="text-sm text-muted-foreground">{{ _("Nothing could be read.") }}</p>

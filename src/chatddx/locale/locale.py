@@ -45,7 +45,9 @@ __all__ = [
     "proofs",
     "refusal",
     "restamped",
+    "said_alike",
     "tr",
+    "upfirst",
     "whoops",
     "write",
 ]
@@ -63,6 +65,7 @@ _CALLED = re.compile(
     rf"(?<![\w$.])(tnp|tn|tp|th|t)\(\s*{_STRING}(?:\s*,\s*{_STRING})?(?:\s*,\s*{_STRING})?"
 )
 _FILLED = re.compile(r"%\(\w+\)s|%%")
+_ENDING = re.compile(r"[\s.…:;,!?]+$")
 # Policy: a parameter named so holds a language's tag, and one named languages tags
 # separated by ", ", each said by its name where the message is said.
 _LANGUAGE_PARAMS = ("language", "into")
@@ -154,6 +157,13 @@ def npgettext(context: str, singular: str, plural: str, n: int) -> str:
 
 def N_(message: str) -> str:
     return message
+
+
+# Policy: a message is said in its case where it is said in the running text, and raised
+# to start a heading, a label or a sentence, so that it is one message wherever it is
+# said; raising, unlike lowering, holds in every language.
+def upfirst(said: str) -> str:
+    return said[:1].upper() + said[1:]
 
 
 def pgettext_noop(_context: str, message: str) -> str:
@@ -446,11 +456,46 @@ def _po(catalog: Catalog) -> str:
 
 
 def check() -> None:
+    alike = said_alike(_extracted())
+    if alike:
+        print("\n".join(_alike(group) for group in alike), file=sys.stderr)
+        raise SystemExit(
+            "locale: messages said alike: one message for one scenario, raised with "
+            + "upfirst where it starts a heading, a label or a sentence, or a context "
+            + "for what tells them apart"
+        )
     behind = [p for p in proofs() if p.behind]
     if behind:
         shown = ", ".join(_shown(p.path) for p in behind)
         raise SystemExit(f"locale: {shown} behind the code: run chatddx locale write")
     print("ok")
+
+
+def said_alike(catalog: Catalog) -> list[list[Message]]:
+    """The groups of a catalog's messages said alike: their words the same but for
+    case and the punctuation that ends them, in the same context or in one that says
+    only where the message comes from. What fills a message is named as it is said,
+    as a translation inflects by it. Costs a pass over the catalog."""
+    groups: dict[tuple[str, str | None], list[Message]] = {}
+    for m in catalog:
+        if not m.id:
+            continue
+        msgid = m.id if isinstance(m.id, str) else m.id[0]
+        words = _ENDING.sub("", " ".join(msgid.casefold().split()))
+        if not any(c.isalpha() for c in _FILLED.sub("", words)):
+            continue
+        context = None if m.context in (_REFUSAL, _WHOOPS) else m.context
+        groups.setdefault((words, context), []).append(m)
+    return [g for g in groups.values() if len(g) > 1]
+
+
+def _alike(group: list[Message]) -> str:
+    said = [
+        f"  {m.context + ': ' if m.context else ''}{m.id!r}, in "
+        + ", ".join(sorted({where for where, _ in m.locations}))
+        for m in group
+    ]
+    return "\n".join(["said alike:", *said])
 
 
 def pending() -> None:

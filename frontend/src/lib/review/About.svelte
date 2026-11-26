@@ -12,7 +12,7 @@
   import { untrack } from "svelte";
   import PencilIcon from "@lucide/svelte/icons/pencil";
   import { api, why } from "$lib/api/client";
-  import { t } from "$lib/locale";
+  import { t, tp, upFirst } from "$lib/locale";
   import type { Edited, Wrote } from "./edited.svelte";
   import { added } from "./review";
 
@@ -85,8 +85,8 @@
       {/each}
       <input
         class="min-w-24 flex-1 bg-transparent px-1 py-0.5 outline-none"
-        aria-label={t("A new tag")}
-        placeholder={t("a new tag…")}
+        aria-label={upFirst(t("a new tag"))}
+        placeholder={`${t("a new tag")}…`}
         bind:value={typed}
         onkeydown={(e) => {
           if (e.key === "Enter" || e.key === ",") {
@@ -115,7 +115,7 @@
         onchange={(e) => spoken(e.currentTarget.value)}
         onblur={() => (picking = false)}
       >
-        {#if !language}<option value="" disabled>{t("none")}</option>{/if}
+        {#if !language}<option value="" disabled>{tp("no language", "none")}</option>{/if}
         {#each given.languages as [tag, name] (tag)}<option value={tag}>{name}</option>{/each}
       </select>
     {:else}

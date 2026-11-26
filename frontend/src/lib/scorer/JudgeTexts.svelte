@@ -10,7 +10,7 @@
   import { api } from "$lib/api/client";
   import Findings from "$lib/editors/Findings.svelte";
   import { type Checked, checked, type Component } from "$lib/editors/writing";
-  import { displayList, t } from "$lib/locale";
+  import { displayList, t, tp, upFirst } from "$lib/locale";
   import { type Part, rewritten } from "./rewriting";
   import TextSegments from "./TextSegments.svelte";
   import { asked, type Seg, segmentsOf, textOf } from "./texts";
@@ -134,7 +134,7 @@
     <div class="space-y-3">
       {#if parts.instructions}
         <TextSegments
-          label={t("Its instructions")}
+          label={tp("a label", "Its instructions")}
           segs={instructions}
           set={(s) => (instructions = s)}
           inserts={guiding}
@@ -142,7 +142,7 @@
       {/if}
       {#if parts.output}
         <TextSegments
-          label={t("What it is told to answer")}
+          label={upFirst(t("what it is told to answer"))}
           segs={guidance}
           set={(s) => (guidance = s)}
           inserts={parts.output.body.json_schema ? ["schema"] : []}
@@ -150,7 +150,7 @@
       {/if}
       {#if parts.prompt}
         <TextSegments
-          label={t("Its prompt")}
+          label={tp("a label", "Its prompt")}
           segs={prompt}
           set={(s) => (prompt = s)}
           slots={judgeSlots}

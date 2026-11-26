@@ -277,6 +277,23 @@ def test_its_versions_are_stepped_through_keeping_what_is_set(
     assert f'href="?head={first}" data-head="{first}"' in page
     assert compose_props(page)["drafted"]["chunks"]["reasoning"] is not None
 
+    back = signed.post(
+        f"/threads/{mine['id']}/revert", data={"head": latest, "edit": first}
+    )
+    assert back.status_code == 303
+    restored = signed.get(edits).json()[-1]
+    assert restored["version"] == 1
+    page = shown(signed, path)
+    assert "Version 1 of 2" in page and "brought back as the latest" not in page
+    assert f'href="?head={latest}" data-head="{latest}"' in page
+    page = shown(signed, f"{path}?head={first}")
+    assert "Version 1 of 2" in page and "brought back as the latest" not in page
+    page = shown(signed, f"{path}?head={latest}")
+    assert (
+        "Version 2 of 2" in page and "Version 1 is brought back as the latest" in page
+    )
+    assert f'href="?" data-head="{restored["id"]}"' in page
+
 
 @pytest.mark.slow
 def test_a_variation_the_bench_refuses_is_a_page_of_its_own(

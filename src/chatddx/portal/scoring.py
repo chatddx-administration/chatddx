@@ -521,9 +521,10 @@ def _judge(
 
 def _lineage(bench: Bench, shown: schemas.ThreadDetail) -> dict[str, str]:
     edits = api.edits(bench, shown.id)
+    last = max(e.version for e in edits)
     found = {
-        e.digest: tr("version %(n)s of %(of)s", n=i, of=len(edits))
-        for i, e in enumerate(edits, 1)
+        e.digest: tr("version %(at)s of %(last)s", at=e.version, last=last)
+        for e in edits
     }
     found[shown.head.digest] = tr("its latest version")
     origin = shown.forked_from

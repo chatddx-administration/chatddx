@@ -4,7 +4,7 @@
   import * as Alert from "$lib/components/ui/alert";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
-  import { displayLanguage, t, tn } from "$lib/locale";
+  import { displayLanguage, t, tn, upFirst } from "$lib/locale";
   import { type Group, groups, holds, type Listed, toggled } from "./cases";
 
   let {
@@ -32,7 +32,7 @@
   });
 
   function said(g: Group): string {
-    if (g.by === "all") return t("All");
+    if (g.by === "all") return upFirst(t("all"));
     return g.by === "language" ? displayLanguage(g.value ?? "") : (g.value ?? "");
   }
 

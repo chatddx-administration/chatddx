@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "macros.html" import heading, section %}
-{% block title %}{{ _("Taken") }} · ChatDDX{% endblock %}
+{% block title %}{{ pgettext("expectations", "Taken") }} · ChatDDX{% endblock %}
 {% block main %}
 <div class="mx-auto max-w-5xl px-4 py-8">
   <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="{{ back }}">← {{ "case" | kind }}</a></nav>
-  {{ heading(_("Taken"), _("Under %(schema)s, for each picked case.", schema=schema)) }}
+  {{ heading(pgettext("expectations", "Taken"), _("Under %(schema)s, for each picked case.", schema=schema)) }}
   {% call section(_("What became of each")) %}
   <ul class="space-y-1.5 text-sm">
     {% for case, name in named.items() %}

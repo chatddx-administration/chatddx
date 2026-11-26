@@ -1,6 +1,6 @@
 <script lang="ts">
   import { worded } from "$lib/kinds";
-  import { displayLanguage, t } from "$lib/locale";
+  import { displayLanguage, t, upFirst } from "$lib/locale";
   import SchemaField from "$lib/schema/SchemaField.svelte";
   import TextSegments from "$lib/scorer/TextSegments.svelte";
   import { merged, type Seg, segmentsOf, textOf } from "$lib/scorer/texts";
@@ -345,7 +345,7 @@
             <div class="min-w-0 space-y-3">
               {#if chunks.output?.json_schema}
                 <div>
-                  <h4 class="mb-1 text-xs text-muted-foreground">{t("The answer's schema")}</h4>
+                  <h4 class="mb-1 text-xs text-muted-foreground">{upFirst(t("the answer's schema"))}</h4>
                   <pre class="max-h-[60vh] overflow-auto rounded-md bg-muted/40 p-2 text-xs">{shownJson(
                       chunks.output.json_schema,
                     )}</pre>

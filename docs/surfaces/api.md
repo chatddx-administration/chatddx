@@ -467,7 +467,7 @@ Raises:
 
 * `bench: BenchDep`
 * `thread: int`
-* ∟`list[schemas.Edit]`
+* ∟`list[schemas.Versioned]`
 
 ## `Endpoint` `(_Schema)`
 `src/chatddx/api/schemas.py:Endpoint`
@@ -732,7 +732,7 @@ Raises:
 
 * `run: UUID`
 * `language: str | None`
-* `repeat: bool = Field(description="whether it repeats a replicate's seed")`
+* `repeat: bool = Field(description="whether it is the repeat, else the original")`
 
 ## `GatheredValue` `(_Schema)`
 `src/chatddx/api/schemas.py:GatheredValue`
@@ -2338,6 +2338,11 @@ Raises:
 * `under: str | None = Field(…)`
 * `tag: list[str] = Field(…)`
 * `seed: int | None = Field(None, description="drawn when not given")`
+
+## `Versioned` `(Edit)`
+`src/chatddx/api/schemas.py:Versioned`
+
+* `version: int = Field(…)`
 
 ## `Vignette` `(_Schema)`
 `src/chatddx/api/schemas.py:Vignette`

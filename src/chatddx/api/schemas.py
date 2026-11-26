@@ -131,6 +131,13 @@ class Edit(_Schema):
     labels: Labels | None = Field(default=None, description="a scorer edit's")
 
 
+class Versioned(Edit):
+    version: int = Field(
+        description="the version it holds, numbered by the first edit of its thread "
+        + "to hold the same"
+    )
+
+
 class CaseTitle(_Schema):
     name: str = Field(description="its family's name, else its vignette's SOURCE/ID")
     appendices: list[str] = Field(description="its appendices' titles, in order")
@@ -1470,7 +1477,7 @@ class GatheredValue(_Schema):
 class GatheredRun(_Schema):
     run: UUID
     language: str | None
-    repeat: bool = Field(description="whether it repeats a replicate's seed")
+    repeat: bool = Field(description="whether it is the repeat, else the original")
 
 
 class GatheredCase(_Schema):

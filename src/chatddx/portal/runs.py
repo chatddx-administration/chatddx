@@ -254,10 +254,12 @@ def _configuration(
     except LookupError:
         return _version(bench, skeleton)
     latest = threads.head(bench.rows, ran.configuration).id
+    numbered = threads.versions(bench.rows, ran.configuration)
+    current = numbered.get(ran.head) == numbered[latest]
     query = schemas.Varying.model_validate({p: d or "" for p, d in ran.parts.items()})
-    given = linked(query, ran.head, latest).removesuffix("?")
+    given = linked(query, latest if current else ran.head, latest).removesuffix("?")
     link = f"/compose/{ran.configuration}{given}"
-    if ran.head == latest:
+    if current:
         return link, tried.label
     return link, tr("%(configuration)s, an earlier version", configuration=tried.label)
 

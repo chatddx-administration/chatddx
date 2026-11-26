@@ -1,4 +1,4 @@
-2026-11-25T14:42:45Z c686ea1 ./dev/check.sh python-tests
+2026-11-26T20:48:13Z 0c051c5 ./dev/check.sh python-tests
 • python-tests
 ============================= test session starts ==============================
 platform linux -- Python 3.13.18, pytest-9.1.1, pluggy-1.6.0
@@ -7,36 +7,32 @@ configfile: pyproject.toml
 testpaths: dev/src, src
 plugins: xdist-3.8.0, anyio-4.15.1
 created: 4/4 workers
-4 workers [1215 items]
+4 workers [1217 items]
 
 ........................................................................ [  5%]
 ........................................................................ [ 11%]
 ........................................................................ [ 17%]
 ........................................................................ [ 23%]
 ........................................................................ [ 29%]
-.....ssssssssssssssssssssssssssssssss................................... [ 35%]
+.....................ssssssssssssssssssssssssssssssss................... [ 35%]
 ........................................................................ [ 41%]
 ........................................................................ [ 47%]
 ........................................................................ [ 53%]
 ........................................................................ [ 59%]
 ........................................................................ [ 65%]
-........................................................................ [ 71%]
-........................................................................ [ 77%]
+........................................................................ [ 70%]
+........................................................................ [ 76%]
 ........................................................................ [ 82%]
 ........................................................................ [ 88%]
 ........................................................................ [ 94%]
-...............................................................          [100%]
+.................................................................        [100%]
 ================================= slow budget ==================================
-491.6 s in 1183 tests; slow from 0.421 s on
-the quick run takes 41.2 s of it, 8%
-set up once for many tests: tmp_path_factory 0.0 s, cheap_hashing 0.0 s, shipped_test_tools 0.0 s, unsynced_commits 0.0 s, copies 0.0 s, migrated 1.0 s, curated 4.2 s, plan 0.9 s, described 1.0 s, loaded 1.6 s, ran 6.0 s, sampled 10.2 s, pytestconfig 0.0 s, parsed 2.0 s, each 0.2 s
-waited for, made ahead: db 39.1 s
-mark slow: src/chatddx/portal/test/test_running.py::test_a_baseline_with_texts_left_to_translate_runs_nothing_and_says_nothing_above (2.039 s)
-mark slow: src/chatddx/portal/test/test_scores.py::test_a_judge_s_request_rebuilt_otherwise_than_sent_is_told (1.280 s)
-unmark: dev/src/chatddx_dev/stamp/test/test_stamp.py::test_docs_stamps_a_catalog_s_translations_since_the_commit_alone (0.128 s)
-unmark: src/chatddx/bench/test/test_seen.py::test_a_judged_scorer_applies_where_the_world_lets_its_judges_run (0.096 s)
-unmark: src/chatddx/bench/test/test_seen.py::test_a_run_s_scores_are_read_the_latest_every_one_or_one_by_id (0.107 s)
-unmark: src/chatddx/repl/test/test_choosing.py::test_set_model_swaps_the_model_keeping_every_pick_and_runs_under_its_handle (0.097 s)
-unmark: src/chatddx/repl/test/test_listing.py::test_judge_configurations_are_listed_apart (0.102 s)
-unmark: src/chatddx/repl/test/test_scoring.py::test_take_names_the_cases_shared_by_several_owners (0.126 s)
-================= 1183 passed, 32 skipped in 165.12s (0:02:45) =================
+367.8 s in 1185 tests; slow from 0.324 s on
+the quick run takes 32.4 s of it, 9%
+set up once for many tests: tmp_path_factory 0.0 s, cheap_hashing 0.0 s, shipped_test_tools 0.0 s, unsynced_commits 0.0 s, copies 0.0 s, migrated 0.7 s, curated 2.9 s, plan 0.7 s, described 0.8 s, loaded 1.1 s, ran 4.0 s, sampled 6.7 s, pytestconfig 0.0 s, parsed 1.2 s, each 0.3 s
+waited for, made ahead: db 28.2 s
+mark slow: src/chatddx/locale/test/test_locale.py::test_check_fails_on_a_catalog_behind_the_code_and_pending_on_one_left_to_translate (2.674 s)
+unmark: src/chatddx/bench/test/test_seen.py::test_a_run_s_scores_are_read_the_latest_every_one_or_one_by_id (0.071 s)
+unmark: src/chatddx/repl/test/test_running.py::test_a_structured_answer_cut_short_is_salvaged (0.092 s)
+unmark: src/chatddx/runner/test/test_run.py::test_rounds_run_on_the_workers_above_concurrency_1 (0.105 s)
+================= 1185 passed, 32 skipped in 122.98s (0:02:02) =================

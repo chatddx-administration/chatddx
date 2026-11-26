@@ -1,7 +1,7 @@
 <script lang="ts">
   import { type Snippet, untrack } from "svelte";
   import type { Schemas } from "$lib/api/client";
-  import { t, tn, tp } from "$lib/locale";
+  import { t, tn, tp, upFirst } from "$lib/locale";
   import type { Schema } from "$lib/schema/form";
   import { FIELD } from "$lib/utils";
   import JudgeEditor from "./JudgeEditor.svelte";
@@ -202,7 +202,7 @@
               {#each judges as j (j.thread)}
                 <option value={j.digest}>{described(j)}</option>
               {/each}
-              <option value="new">{t("a new judge…")}</option>
+              <option value="new">{t("a new judge")}…</option>
             </select>
           </span>
         {/if}
@@ -236,9 +236,12 @@
         {@render inline?.(at)}
       </div>
       {#if writing === at}
-        <section class="space-y-2 rounded-lg border border-dashed border-border p-2.5" aria-label={t("A new judge")}>
+        <section
+          class="space-y-2 rounded-lg border border-dashed border-border p-2.5"
+          aria-label={upFirst(t("a new judge"))}
+        >
           <div class="flex items-center gap-2">
-            <p class="text-sm font-medium">{t("A new judge")}</p>
+            <p class="text-sm font-medium">{upFirst(t("a new judge"))}</p>
             <button
               type="button"
               class="ml-auto rounded-md border border-border px-3 py-1 hover:bg-muted"

@@ -36,8 +36,8 @@ def test_a_gathering_groups_the_runs_about_a_center_by_configuration(
 
     held = bench.gathering(Center(component=crlf), REVIEW)
     assert sorted(seedings(held), key=len) == [
-        {"replicates": guided},
-        {"replicates": lines, "repeat": repeated},
+        {"original": guided},
+        {"original": lines, "repeat": repeated},
     ]
     assert held is not None
     referred = bench.store.load([g.trial for g in held.gathered])
@@ -46,11 +46,11 @@ def test_a_gathering_groups_the_runs_about_a_center_by_configuration(
     trial = resolve(bench.store.get, bench.run(lines).trial, Trial)
     model = model_of(trial.engine, bench.store.get).digest
     every = seedings(bench.gathering(Center(component=model), REVIEW))
-    assert {"replicates": elsewhere} in every
-    assert {"replicates": lines, "repeat": repeated} not in every
-    assert seedings(bench.gathering(Center(seed=12), REVIEW)) == [{"replicates": lines}]
+    assert {"original": elsewhere} in every
+    assert {"original": lines, "repeat": repeated} not in every
+    assert seedings(bench.gathering(Center(seed=12), REVIEW)) == [{"original": lines}]
     assert bench.gathering(Center(seed=99), REVIEW) is None
     alone = bench.gathering(Center(component=crlf), REVIEW, started_with=lines)
-    assert seedings(alone) == [{"replicates": lines}]
+    assert seedings(alone) == [{"original": lines}]
     among = bench.gathering(Center(component=crlf), REVIEW, among={guided})
-    assert seedings(among) == [{"replicates": guided}]
+    assert seedings(among) == [{"original": guided}]

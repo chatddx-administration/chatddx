@@ -3,7 +3,7 @@
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import { t } from "$lib/locale";
+  import { t, upFirst } from "$lib/locale";
   import Findings from "./Findings.svelte";
   import {
     type Checked,
@@ -103,7 +103,7 @@
   <form class="space-y-3" onsubmit={save}>
     {#if editing.mode !== "edit"}
       <label class="grid max-w-md gap-1 text-sm">
-        <span class="font-medium">{t("Name")}</span>
+        <span class="font-medium">{upFirst(t("name"))}</span>
         <Input bind:value={name} autocomplete="off" />
       </label>
     {/if}

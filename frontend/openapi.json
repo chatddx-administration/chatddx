@@ -448,7 +448,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Edit"
+                    "$ref": "#/components/schemas/Versioned"
                   },
                   "title": "Response Edits Api Threads  Thread  Edits Get"
                 }
@@ -5399,7 +5399,7 @@
           "repeat": {
             "type": "boolean",
             "title": "Repeat",
-            "description": "whether it repeats a replicate's seed"
+            "description": "whether it is the repeat, else the original"
           }
         },
         "additionalProperties": false,
@@ -9617,6 +9617,77 @@
           "fork"
         ],
         "title": "Varied"
+      },
+      "Versioned": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "digest": {
+            "type": "string",
+            "title": "Digest"
+          },
+          "compilation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compilation"
+          },
+          "based_on": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Based On"
+          },
+          "by": {
+            "type": "string",
+            "title": "By"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "labels": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Labels"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "a scorer edit's"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "description": "the version it holds, numbered by the first edit of its thread to hold the same"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "digest",
+          "compilation",
+          "based_on",
+          "by",
+          "at",
+          "version"
+        ],
+        "title": "Versioned"
       },
       "Vignette": {
         "properties": {

@@ -291,13 +291,11 @@ def _baselines(seen: Seen, found: Sequence[Observed], within: set[str]) -> list[
         if held is None:
             continue
         groups = held.groups()
-        replicates = tuple(
-            by_run[g["replicates"].run] for g in groups if "replicates" in g
-        )
+        replicates = tuple(by_run[g["original"].run] for g in groups if "original" in g)
         repeats = {
-            by_run[g["replicates"].run].ran.run: by_run[g["repeat"].run]
+            by_run[g["original"].run].ran.run: by_run[g["repeat"].run]
             for g in groups
-            if "replicates" in g and "repeat" in g
+            if "original" in g and "repeat" in g
         }
         if not replicates:
             continue

@@ -15,7 +15,7 @@ export type ToolChoice = { digest: string; name: string; description: string };
 export type Props = {
   configuration: Schemas["ThreadDetail"];
   me: string;
-  versions: Schemas["Edit"][];
+  versions: Schemas["Versioned"][];
   head: number;
   varied: boolean;
   modelChoices: Schemas["Thread"][];

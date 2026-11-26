@@ -28,6 +28,7 @@ from .model import (
     EntryField,
     Labels,
     MovedOn,
+    Part,
     Subject,
     Thread,
 )
@@ -184,6 +185,32 @@ def history(rows: Reader, thread: int) -> list[Edit]:
 
 def head(rows: Reader, thread: int) -> Edit:
     return history(rows, thread)[-1]
+
+
+def versions(rows: Reader, thread: int) -> dict[int, int]:
+    """Each edit of the thread by the version it holds, numbered by the first edit to
+    hold the same, as `holds` has it, so that an earlier version brought back is that
+    version again. Costs the thread's history and labels, and a recipe resolved for
+    each compilation."""
+    edits = history(rows, thread)
+    labelled: dict[int, dict[tuple[Part, int], str]] = {e.id: {} for e in edits}
+    for edit, part, position, value in rows.labels([e.id for e in edits]):
+        labelled[edit][(part, position)] = value
+    recipes: dict[str, Recipe | None] = {}
+    held: list[tuple[str, Recipe | None, Labels]] = []
+    numbered: dict[int, int] = {}
+    for e in edits:
+        if e.compilation is not None and e.compilation not in recipes:
+            recipes[e.compilation] = recipe(rows, e)
+        holding = (
+            e.digest,
+            None if e.compilation is None else recipes[e.compilation],
+            labelled[e.id],
+        )
+        if holding not in held:
+            held.append(holding)
+        numbered[e.id] = held.index(holding) + 1
+    return numbered
 
 
 def heads(rows: Reader, kind: str) -> list[tuple[Edit, About]]:

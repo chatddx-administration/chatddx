@@ -31,7 +31,7 @@ def breakdown(bench: BenchDep, thread: int) -> schemas.Broken:
     cases = baseline_cases(bench)
     if tag is None or not cases:
         raise NotFound("this World names no baseline cases")
-    numbered = {e.id: n for n, e in enumerate(edits(bench, thread), start=1)}
+    numbered = {e.id: e.version for e in edits(bench, thread)}
     login = bench.person.login
     owned = {
         t.id: t
@@ -78,7 +78,7 @@ def gathering(bench: BenchDep, started: UUID) -> schemas.Gathering:
     if held is None:
         raise NotFound(f"no baseline of yours begun by run {started}")
     thread = held.configuration
-    numbered = {e.id: n for n, e in enumerate(edits(bench, thread), start=1)}
+    numbered = {e.id: e.version for e in edits(bench, thread)}
     shown = threads_detail(bench, thread)
     views = list(held.views)
 
