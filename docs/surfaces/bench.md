@@ -537,10 +537,10 @@ Raises:
 * ∟`Family`
 
 Raises:
-1. `Invalid`: `"a typed case holds text"`
+1. `Self`: `"a typed case holds text"` (through `raw`)
 2. `Invalid`: `"U+0000 can't be stored"`
-3. `Invalid`: `"a typed case holds at most %(num)s character, not %(given)s" / "a typed case holds at most %(num)s characters, not %(given)s", num=settings.TYPED_TEXT_LIMIT, given=len(text)`
-4. `Invalid`: `"a name can't be empty: none leaves the case unnamed"`
+3. `Self`: `"a typed case holds at most %(num)s characters, not %(given)s", num=settings.TYPED_TEXT_LIMIT, given=len(text)` (through `raw`)
+4. `Self`: `"a name can't be empty: none leaves the case unnamed"` (through `raw`)
 5. `ValueError`: `str(e)` (from `LookupError`)
 6. `OverQuota`: `"over the day's quota: %(used)s of %(limit)s", used=typed + 1, limit=settings.TYPED_PER_DAY`
 

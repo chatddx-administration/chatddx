@@ -2,22 +2,7 @@
 {% from "macros.html" import heading, section, refusal %}
 {% from "fields.html" import rows %}
 {% from "translations.html" import entry %}
-{% set titled = {
-  "configuration": _("A new configuration"),
-  "expectation": _("A new expectation"),
-  "few_shot": _("A new few shot"),
-  "instructions": _("A new instructions"),
-  "judge": (_("a new judge") | upfirst),
-  "output": _("A new output"),
-  "passthrough": _("A new passthrough"),
-  "prompt": _("A new prompt"),
-  "reasoning": _("A new reasoning"),
-  "sampling": _("A new sampling"),
-  "scorer": _("A new scorer"),
-  "toolset": _("A new toolset"),
-  "translations": _("A new translations"),
-  "trial": _("A new trial"),
-}.get(word, _("A new %(kind)s", kind=word | kind)) %}
+{% set titled = word | kind | upfirst %}
 {% macro naming(typed) %}
 <label class="grid max-w-xl gap-1 text-sm"><span class="text-muted-foreground">{{ _("name") }}</span>
   <input name="name" required pattern=".*\S.*" value="{{ typed.name or '' if typed else '' }}" class="h-9 rounded-md border border-input bg-transparent px-2.5">
@@ -40,7 +25,7 @@
       </select></label>
     <label class="grid gap-1"><span class="text-muted-foreground">{{ pgettext("a language", "into") }}</span>
       <input name="into" required pattern="{{ language_pattern }}" title="{{ _('a language tag, such as sv or pt-BR') }}" value="{{ into or '' }}" placeholder="{{ _('such as sv') }}" class="h-9 w-36 rounded-md border border-input bg-transparent px-2.5"></label>
-    <button>{{ _("Show its texts") }}</button>
+    <button>{{ _("Show") }}</button>
     <span class="basis-full text-xs text-muted-foreground">{{ _("Translations are begun of a configuration's texts, into a language; its recipe holds them once it picks them, in the Library or in Compose.") }}</span>
   </form>
   {% else %}

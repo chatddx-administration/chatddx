@@ -330,7 +330,7 @@ Tool guidance
 ```
 
 ```
-Tools offered
+Tools
 ```
 
 ```
@@ -482,15 +482,11 @@ Read JSON out of the answer, checked against a schema
 ```
 
 ```
-Recommended for its thinking level
+Recommended sampling
 ```
 
 ```
 repetition penalty
-```
-
-```
-Rounds of calls at most
 ```
 
 ```
@@ -545,6 +541,10 @@ Thinking
 
 ```
 Thinking token budget
+```
+
+```
+Tool rounds
 ```
 
 ```

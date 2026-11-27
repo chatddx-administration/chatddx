@@ -9,7 +9,7 @@ from chatddx.locale import N_, pgettext, pgettext_noop, tr, upfirst
 @dataclass(frozen=True)
 class Shelf:
     heading: str
-    about: str
+    about: str | None
     kinds: dict[str, str]
     read_only: bool = False
 
@@ -17,10 +17,7 @@ class Shelf:
 SHELVES = (
     Shelf(
         N_("cases"),
-        N_(
-            "So that every model is asked about the same patients, and graded against "
-            + "the same good answers."
-        ),
+        None,
         {
             "case": N_(
                 "A vignette and the appendices sent with it, so that every model is "
@@ -34,10 +31,7 @@ SHELVES = (
     ),
     Shelf(
         N_("Configurations"),
-        N_(
-            "So that what is sent to a model can be changed a part at a time, and the "
-            + "changes compared."
-        ),
+        None,
         {
             "configuration": N_(
                 "Everything sent with a case, put together from parts, so that one can "
@@ -79,10 +73,7 @@ SHELVES = (
     ),
     Shelf(
         N_("Scoring"),
-        N_(
-            "So that answers can be compared, each graded against what a good answer "
-            + "holds."
-        ),
+        None,
         {
             "judge": N_(
                 "A model that grades what no pattern can, asked the same way each time."
@@ -95,10 +86,7 @@ SHELVES = (
     ),
     Shelf(
         N_("Trials"),
-        N_(
-            "So that a run can be repeated: the same configuration, cases and seeds "
-            + "again."
-        ),
+        None,
         {
             "trial": N_(
                 "A configuration with its cases and seeds fixed, so that its run can be "

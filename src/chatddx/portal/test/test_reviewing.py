@@ -47,7 +47,10 @@ def test_a_case_is_reviewed_with_what_is_expected_and_not_what_reads_it(
     held = signed.get(f"/api/components/{judged['head']['digest']}").json()["body"]
     for v in held["views"]:
         assert escape(v["expectation"]) not in page
-    assert "Read by" not in page and f'href="/scoring/{judged["id"]}"' not in page
+    assert (
+        'aria-label="Read with"' not in page
+        and f'href="/scoring/{judged["id"]}"' not in page
+    )
     schema = signed.get(f"/api/components/{expected['expectation_schema']}").json()
     assert f"under {schema['title']}" not in page
 

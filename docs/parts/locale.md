@@ -170,7 +170,14 @@ each code path that says it.
     naming what it is or follows (`"outcome"`, `"after the button Run the picked"`);
   - two counts in one sentence each counted on its own, then put into a sentence of its own
     (`_("%(queued)s, %(under_way)s.", queued=ngettext(…), under_way=ngettext(…))`);
-  - no variable of a template named `_`, which is the callable that translates.
+  - no variable of a template named `_`, which is the callable that translates;
+  - a heading or a label a plain name, the glossary's where it has one (`Origin`, `Execution`, `Tool rounds`), and the
+    same name wherever the same thing is labelled (`Model`, `Metric`, `View`), never a phrase around it
+    (`Asked under the model`, `Reads of the answer`);
+  - an explanation once to a word: a kind's, where it is shown, by its shelf's
+    (`src/chatddx/portal/shelves.py:SHELVES`), a shelf of kinds left to theirs, and a rule said in more than one place
+    by one message of its own beside what else is said there
+    (`A scorer asks the version of a judge it names until it follows another.`).
 
   A message's translation is trusted markup, as newstyle marks it safe: an apostrophe in it is written as itself, not as
   `&#39;`, which tests reading a page's HTML meet.
@@ -394,7 +401,7 @@ Each step leaves the portal working in English, and Swedish appearing only where
    explanation (one to a word, wherever the word is shown), a refusal (each a case to prevent), a layout (names and
    values put together), or free prose (under a budget of its own). The states are each a fixed set (see "How a message
    is written"), and the refusals left are what a person can cause through the portal. From 1211 messages and 107
-   refusals to 1036 and 69. Whether `chatddx locale check` holds a message to a class is open.
+   refusals to 991 and 65. Whether `chatddx locale check` holds a message to a class is open.
 
 ## Next
 
@@ -407,10 +414,15 @@ The steps left of bounding the catalog, in order, each a session of its own and 
 2. **A check that keeps it bounded**: `chatddx locale check` failing on a message that is of no class, a state not of
    its set and a refusal said where a set's word would do, so that what is added is held to the sets rather than growing
    the catalog again.
-3. **The headings, labels and explanations left**: some 400 headings and labels the phrase filter didn't catch, reviewed
-   by eye into plain names; and an explanation once to a word, wherever the word is shown, perhaps drawn from
-   docs/glossary.md.
-4. **The refusals a person can still cause**: the sensitive sources' two, kept refused as docs/chatddx.md has it, with
-   what isn't cleared no longer offered (read with docs/parts/clearance.md); then the out of date and newer version
-   refusals, the typed case's limits, `no person %(login)s` and `a fork is named`, each prevented where the portal can,
-   or said by a set's word.
+3. **The refusals a person can still cause**, begun: a trial the gate would refuse isn't offered where trials are run,
+   its refusal said in its place (`src/chatddx/portal/starting.py`); `a fork is named` and the typed case's limits are
+   prevented by the fork's form and Home, and raised with `raw`. Left, each a decision:
+   - the sensitive sources' two where cases are offered to a configuration, Compose's cases and Home's configurations
+     with tools, for which an island needs each case's source and each endpoint's clearances as the person edits;
+   - the newer version refusals, `thread %(thread)s has moved on since edit %(edit)s…` and
+     `scorer %(scorer)s has a newer version…`, which nothing prevents: said by the set's `newer version` with
+     `saved %(at)s by %(by)s` beside it, a refusal needs saying by a message of no context, the context `refusal`
+     dropped (see "Refusals");
+   - `run %(run)s is out of date…`, prevented by offering no Run again where the run's handle holds other weights, which
+     `Run.latest` doesn't tell, being of the engine;
+   - `no person %(login)s`, which only offering the logins there are would prevent, and a person doesn't see them.

@@ -23,9 +23,9 @@
     (_("Value"), mean(item.value, unit)),
     (_("Seed"), seed if seed is not none else _("none, it is greedy")),
     (_("Metric"), view.metric),
-    (_("Picked from the answer"), view.output or "—"),
+    (_("Answer"), view.output or "—"),
     (_("Split"), view.split or "—"),
-    (_("Picked from the expectation"), view.expectation or "—"),
+    (_("Expectation"), view.expectation or "—"),
     (_("Scored"), score.at | when),
   ]) }}
   {% endcall %}

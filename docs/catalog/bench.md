@@ -24,28 +24,6 @@ Written by `chatddx-dev index` from the messages said in `[parts.bench]`'s code 
 `refusal`
 
 ```
-a name can't be empty: none leaves the case unnamed
-```
-
-`refusal`
-
-```
-a typed case holds at most %(num)s character, not %(given)s
-```
-
-```
-a typed case holds at most %(num)s characters, not %(given)s
-```
-
-`refusal`
-
-```
-a typed case holds text
-```
-
-`refusal`
-
-```
 over the day's quota: %(used)s of %(limit)s
 ```
 

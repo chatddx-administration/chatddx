@@ -53,7 +53,8 @@ def test_the_library_shelves_every_kind_under_its_heading_with_what_it_is(
 ) -> None:
     page = shown(signed, "/library")
     for shelf in SHELVES:
-        assert f"{upfirst(shelf.heading)}</h2>" in page and shelf.about in page
+        assert f"{upfirst(shelf.heading)}</h2>" in page
+        assert shelf.about is None or shelf.about in page
         for word, about in shelf.kinds.items():
             assert f'href="/library?kind={word}"' in page and about in page
     listed = signed.get("/api/threads", params={"kind": "reasoning"}).json()
@@ -442,7 +443,7 @@ def test_every_kind_a_person_writes_is_begun_from_the_library(
             signed, f"/library?kind={word}"
         )
         begun = signed.get(f"/library/new?kind={word}", follow_redirects=True).text
-        assert ("Show its texts" if word == "translations" else "Write it") in begun
+        assert (">Show<" if word == "translations" else "Write it") in begun
         if word in ("instructions", "translations"):
             assert 'pattern="[a-z]{2,3}(-[A-Za-z0-9]{1,8})*"' in begun
     for word in ("tool", "expectation_schema", "canary_set"):

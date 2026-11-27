@@ -13,7 +13,14 @@ from chatddx.identity import Person
 from chatddx.portal.test.helpers import said, shown, submitted, world_served
 from chatddx.store import Catalog, Store
 from chatddx.store.store import Connection
-from chatddx.test.world import JUDGE, LINES, LINES_GUIDED, QWEN, QWEN_ARTIFACT
+from chatddx.test.world import (
+    JUDGE,
+    LINES,
+    LINES_GUIDED,
+    NATIVE_TOOLS,
+    QWEN,
+    QWEN_ARTIFACT,
+)
 
 __all__ = ["world_served"]
 
@@ -23,12 +30,16 @@ def begun(signed: TestClient, *families: str) -> str:
     return f"/library/new?kind=trial&{picked}&expectation_schema=&owner="
 
 
-def written(signed: TestClient, action: str, name: str) -> Any:
+def written(
+    signed: TestClient, action: str, name: str, configuration: str = LINES_GUIDED
+) -> Any:
     page = shown(signed, action)
     given = {
         **submitted(page, action),
         "name": [name],
-        "f.skeleton": [thread(signed, "configuration", LINES_GUIDED)["head"]["digest"]],
+        "f.skeleton": [
+            thread(signed, "configuration", configuration)["head"]["digest"]
+        ],
         "f.engine": [endpoint(signed, QWEN)["engine"]],
     }
     return signed.post(action, data=given)
@@ -97,6 +108,18 @@ def test_a_trial_is_begun_of_the_picked_cases_and_run(
     )
     got = signed.get("/runs/compare")
     assert (got.status_code, got.headers["location"]) == (303, "/runs")
+
+
+@pytest.mark.slow
+def test_a_trial_the_gate_would_refuse_is_not_offered_to_run(
+    signed: TestClient,
+) -> None:
+    got = written(signed, begun(signed, "crlf"), "searching", NATIVE_TOOLS)
+    assert got.status_code == 303, got.text[:500]
+    made = signed.get(f"/api{got.headers['location']}").json()
+    page = shown(signed, f"/lab/run?trial={made['id']}")
+    assert "tools can&#39;t be cleared yet" in page
+    assert f"at {QWEN}:" not in page
 
 
 @pytest.mark.slow

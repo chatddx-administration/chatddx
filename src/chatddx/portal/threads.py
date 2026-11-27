@@ -833,7 +833,7 @@ def reverting(
 @router.post("/threads/{thread}/fork")
 def forking(bench: BenchDep, thread: int, name: Annotated[str, Form()]) -> Response:
     if not name.strip():
-        raise Invalid.of("a fork is named")
+        raise Invalid.raw("a fork is named")
     with refused():
         made = bench.fork(thread, name.strip())
     return RedirectResponse(f"/threads/{made.edit.thread}", 303)

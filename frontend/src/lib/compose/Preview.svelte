@@ -254,7 +254,7 @@
               </dd>
             {/each}
             {#if tools.length}
-              <dt class="text-muted-foreground">{t("Tools offered")}</dt>
+              <dt class="text-muted-foreground">{t("Tools")}</dt>
               <dd>{tools.join(", ")}</dd>
             {/if}
             <dt class="text-muted-foreground">{upFirst(t("the answer"))}</dt>

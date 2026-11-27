@@ -151,16 +151,16 @@
     {% set configuration %}{% call asks(judge.configuration) %}/compose/{{ judge.configuration.thread }}{% endcall %}{% endset %}
     {{ facts([
       (_("Request"), configuration),
-      (_("Asked under"), judge.model),
-      (_("Seeds, a call each"), judge.seeds | join(", ")),
+      (_("Model"), judge.model),
+      ((_("seeds") | upfirst), judge.seeds | join(", ")),
       (_("Slots"), judge.fill),
-      (_("Served now at"), judge.sent or judge.unsent),
+      (_("Endpoint"), judge.sent or judge.unsent),
     ]) }}
-    <p class="mt-3 text-xs text-muted-foreground">{{ _("Its request is a judge's configuration, written and saved in Compose; a scorer asks the version of a judge it names until it follows another, below.") }}</p>
+    <p class="mt-3 text-xs text-muted-foreground">{{ _("Its request is a judge's configuration, written and saved in Compose.") }} {{ _("A scorer asks the version of a judge it names until it follows another.") }}</p>
   </section>
 
-  <section class="{{ part }}" aria-label="{{ _('Asked by') }}">
-    <h2 class="{{ h2 }}">{{ _("Asked by") }}</h2>
+  <section class="{{ part }}" aria-label="{{ _('scorers') | upfirst }}">
+    <h2 class="{{ h2 }}">{{ _("scorers") | upfirst }}</h2>
     {% if judge.asked_by %}
     <ul class="space-y-1 text-sm">
       {% for a in judge.asked_by %}
@@ -185,7 +185,7 @@
     {% set r = judge.read %}
     {% if r.by %}
     <form method="get" action="/scoring/{{ shown.id }}" class="mb-3 flex flex-wrap items-end gap-3 text-sm" aria-label="{{ _('Read with') }}">
-      <label class="grid gap-1"><span class="text-xs text-muted-foreground">{{ _("Read by") }}</span>
+      <label class="grid gap-1"><span class="text-xs text-muted-foreground">{{ _("View") }}</span>
         <select name="view" class="{{ field }}">
           {% for a in judge.asked_by %}<option value="{{ a.key }}"{% if a.key == r.by.key %} selected{% endif %}>{{ named(a.scorer) }} · {{ a.label }}</option>{% endfor %}
         </select></label>
@@ -222,7 +222,7 @@
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="text-left text-xs text-muted-foreground">
-          <tr><th class="{{ th }}">{{ _("Scorer · view") }}</th><th class="{{ th }}">{{ _("Items judged") }}</th><th class="{{ th }}">{{ _("Agreement") }}</th><th class="{{ th }}">{{ _("A seed gave none") }}</th><th class="{{ th }}">{{ _("Mean") }}</th></tr>
+          <tr><th class="{{ th }}">{{ _("Scorer") }} · {{ _("View") }}</th><th class="{{ th }}">{{ _("Items judged") }}</th><th class="{{ th }}">{{ _("Agreement") }}</th><th class="{{ th }}">{{ _("A seed gave none") }}</th><th class="{{ th }}">{{ _("Mean") }}</th></tr>
         </thead>
         <tbody data-paged>
           {% for j in judge.judged %}

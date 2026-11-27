@@ -14,7 +14,7 @@
 {% macro to_endpoint(name) %}{% if name %}<a href="#endpoint-{{ name }}">{{ name }}</a>{% else %}—{% endif %}{% endmacro %}
 {% macro to_host(name) %}<a href="#host-{{ name }}">{{ name }}</a>{% endmacro %}
 {% macro bound(name) %}{% if named.get(name) %}{{ to_handle(named[name]) }}{% else %}{{ name }}{% endif %}{% endmacro %}
-{% macro history(thread) %}<a href="/threads/{{ thread }}">{{ _("its versions") }}</a>{% endmacro %}
+{% macro history(thread) %}<a href="/threads/{{ thread }}">{{ _("Versions") }}</a>{% endmacro %}
 {% macro level(name) %}<span class="font-mono text-xs">{{ name }}</span>{% endmacro %}
 {% macro said(r) -%}
 {%- if r.refused is not none and r.nearest -%}
@@ -42,8 +42,8 @@
   {% set read %}<ul class="space-y-0.5 font-mono text-xs">{% for f in files %}<li>{{ f }}</li>{% endfor %}</ul>{% endset %}
   {{ facts([
     (_("Directory"), world.path),
-    (_("Read from"), read),
-    (_("Served by"), _("%(rig)s at %(revision)s", rig=rig.distribution ~ " " ~ rig.version, revision=rig.revision) if rig.revision else rig.distribution ~ " " ~ rig.version),
+    (_("Files"), read),
+    (_("Rig"), _("%(rig)s at %(revision)s", rig=rig.distribution ~ " " ~ rig.version, revision=rig.revision) if rig.revision else rig.distribution ~ " " ~ rig.version),
   ]) }}
   {% endcall %}
 
@@ -227,11 +227,11 @@
         (_("Address"), e.url),
         (_("Host"), to_host(e.host) if e.host else _("none: a remote engine")),
         (_("Capacity"), ngettext("%(num)s at once", "%(num)s at once", e.capacity)),
-        (_("Runs by default"), _("%(concurrency)s, %(order)s, %(retries)s", concurrency=ngettext("%(num)s at once", "%(num)s at once", s.spec.execution.concurrency), order=s.spec.execution.order, retries=ngettext("%(num)s retry", "%(num)s retries", s.spec.execution.retries))),
+        (_("Execution"), _("%(concurrency)s, %(order)s, %(retries)s", concurrency=ngettext("%(num)s at once", "%(num)s at once", s.spec.execution.concurrency), order=s.spec.execution.order, retries=ngettext("%(num)s retry", "%(num)s retries", s.spec.execution.retries))),
         (_("Canaries"), s.canaries or "—"),
         (_("Secret variable"), e.credential or _("none: it takes no secret")),
         (_("Cleared for"), e.cleared_for | join(", ") or "—"),
-        (_("Takes typed cases"), _("yes") if e.takes_typed else _("no")),
+        (_("Typed cases"), _("yes") if e.takes_typed else _("no")),
       ]) }}
       </div>
     </details>
@@ -280,9 +280,9 @@
       {% set cleared %}{% for e in s.cleared %}{{ to_endpoint(e) }}{{ ", " if not loop.last }}{% else %}—{% endfor %}{% endset %}
       {{ facts([
         (_("Where"), where),
-        (_("Holds"), held),
-        (_("Cleaned up by"), s.source.cleanup | join(", ") or "—"),
-        (_("Cleared for it"), cleared),
+        (_("Contents"), held),
+        (_("Text cleanup"), s.source.cleanup | join(", ") or "—"),
+        (_("Cleared for"), cleared),
       ]) }}
       </div>
     </div>
@@ -297,8 +297,8 @@
   <p class="mb-3 text-sm text-muted-foreground">{{ _("So that a data set's configurations and judges run on models this portal serves.") }}</p>
   {% set judged %}{% for judge, handle in judges %}{% trans judge=judge, handle=bound(handle) %}<span class="font-medium">{{ judge }}</span> to {{ handle }}{% endtrans %}{{ ", " if not loop.last }}{% else %}—{% endfor %}{% endset %}
   {{ facts([
-    (_("Configurations are made for"), bound(configurations) if configurations else "—"),
-    (_("Judges are bound"), judged),
+    (_("Configurations"), bound(configurations) if configurations else "—"),
+    (_("Judges"), judged),
   ]) }}
   {% endcall %}
 </div>

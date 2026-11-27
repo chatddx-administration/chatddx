@@ -50,20 +50,17 @@ def type_case(
     source: str | None = None,
 ) -> Family:
     if not text.strip():
-        raise Invalid.of("a typed case holds text")
+        raise Invalid.raw("a typed case holds text")
     if "\0" in text:
         raise Invalid.of("U+0000 can't be stored")
     if len(text) > settings.TYPED_TEXT_LIMIT:
-        raise Invalid.of(
-            (
-                "a typed case holds at most %(num)s character, not %(given)s",
-                "a typed case holds at most %(num)s characters, not %(given)s",
-            ),
+        raise Invalid.raw(
+            "a typed case holds at most %(num)s characters, not %(given)s",
             num=settings.TYPED_TEXT_LIMIT,
             given=len(text),
         )
     if name == "":
-        raise Invalid.of("a name can't be empty: none leaves the case unnamed")
+        raise Invalid.raw("a name can't be empty: none leaves the case unnamed")
     entries = [Entry(field=EntryField.LANGUAGE, value=language)]
     if name is not None:
         entries.append(Entry(field=EntryField.NAME, value=name))

@@ -262,13 +262,13 @@ trial
 ## `frontend/src/lib/scorer/JudgeEditor.svelte`
 
 ```
-A scorer asks the version of a judge it names, so the scorers asking this one keep asking the version they ask until they are changed.
+A scorer asks the version of a judge it names until it follows another.
 ```
 
 ## `frontend/src/lib/scorer/JudgeFields.svelte`
 
 ```
-Asked under the model
+Model
 ```
 
 ```
@@ -276,10 +276,14 @@ Request
 ```
 
 ```
-Seeds, a call each
+seeds
 ```
 
 ## `frontend/src/lib/scorer/JudgeTexts.svelte`
+
+```
+A scorer asks the version of a judge it names until it follows another.
+```
 
 ```
 Instructions
@@ -322,7 +326,7 @@ Texts
 ```
 
 ```
-What %(judge)s is asked, written as you would have it. Saving keeps each text you change as a version of your own, the judge's request with them, and a judge of your own asked through it. The scorers asking %(judge)s keep asking the version they ask until they follow yours, from its page.
+What %(judge)s is asked, written as you would have it. Saving keeps each text you change as a version of your own, the judge's request with them, and a judge of your own asked through it.
 ```
 
 ```
@@ -359,6 +363,10 @@ a new judge
 a view
 ```
 
+```
+Answer
+```
+
 `a verdict`
 
 ```
@@ -366,7 +374,7 @@ at
 ```
 
 ```
-Compared by
+Expectation
 ```
 
 ```
@@ -390,6 +398,10 @@ line by line, as a list
 ```
 
 ```
+Metric
+```
+
+```
 Move it down
 ```
 
@@ -403,14 +415,6 @@ Not now
 
 ```
 Out of
-```
-
-```
-Reads of the answer
-```
-
-```
-Reads of what is expected
 ```
 
 ```
@@ -830,22 +834,6 @@ Shipped with the data sets by developers and ops, so that everyone picks from th
 ```
 
 ```
-So that a run can be repeated: the same configuration, cases and seeds again.
-```
-
-```
-So that answers can be compared, each graded against what a good answer holds.
-```
-
-```
-So that every model is asked about the same patients, and graded against the same good answers.
-```
-
-```
-So that what is sent to a model can be changed a part at a time, and the changes compared.
-```
-
-```
 The first message, telling the model its role and its task.
 ```
 
@@ -958,66 +946,6 @@ a language tag, such as sv or pt-BR
 ```
 
 ```
-A new %(kind)s
-```
-
-```
-A new configuration
-```
-
-```
-A new expectation
-```
-
-```
-A new few shot
-```
-
-```
-A new instructions
-```
-
-```
-a new judge
-```
-
-```
-A new output
-```
-
-```
-A new passthrough
-```
-
-```
-A new prompt
-```
-
-```
-A new reasoning
-```
-
-```
-A new sampling
-```
-
-```
-A new scorer
-```
-
-```
-A new toolset
-```
-
-```
-A new translations
-```
-
-```
-A new trial
-```
-
-```
 A thread of your own, from what is given here.
 ```
 
@@ -1052,7 +980,7 @@ Pick another
 ```
 
 ```
-Show its texts
+Show
 ```
 
 ```
@@ -1330,7 +1258,7 @@ By item, under %(view)s
 ```
 
 ```
-Comparing runs
+Comparison
 ```
 
 ```
@@ -1781,10 +1709,6 @@ Loaded with data sets: read here, not written
 
 ```
 name
-```
-
-```
-None is begun here: a case comes from a data set, or is typed on Home.
 ```
 
 ```
@@ -2330,7 +2254,7 @@ Languages
 ```
 
 ```
-Measuring the expectation
+Measuring
 ```
 
 ```
@@ -2756,6 +2680,10 @@ Pausing holds what is queued and queues the runs under way again after the items
 ```
 
 ```
+Queue
+```
+
+```
 Resume
 ```
 
@@ -2773,10 +2701,6 @@ Stop
 
 ```
 Stop now
-```
-
-```
-Your queue
 ```
 
 ```
@@ -2859,14 +2783,6 @@ not scored by this scorer
 
 ```
 Parameters
-```
-
-```
-Picked from the answer
-```
-
-```
-Picked from the expectation
 ```
 
 ```
@@ -2972,6 +2888,10 @@ a scorer
 ```
 
 ```
+A scorer asks the version of a judge it names until it follows another.
+```
+
+```
 a scorer grading against %(schema)s
 ```
 
@@ -3009,14 +2929,6 @@ Ask its latest version
 
 ```
 Ask its latest version, in a scorer of your own
-```
-
-```
-Asked by
-```
-
-```
-Asked under
 ```
 
 ```
@@ -3060,6 +2972,10 @@ Each one you see, yours first: the scorers by the expectation schema they grade 
 ```
 
 ```
+Endpoint
+```
+
+```
 Expectation
 ```
 
@@ -3096,7 +3012,7 @@ its page in the Library
 ```
 
 ```
-Its request is a judge's configuration, written and saved in Compose; a scorer asks the version of a judge it names until it follows another, below.
+Its request is a judge's configuration, written and saved in Compose.
 ```
 
 ```
@@ -3113,6 +3029,10 @@ Mean
 
 ```
 Metric
+```
+
+```
+Model
 ```
 
 ```
@@ -3144,10 +3064,6 @@ Parameters
 ```
 
 ```
-Read by
-```
-
-```
 Read with
 ```
 
@@ -3176,10 +3092,6 @@ Scorer
 ```
 
 ```
-Scorer · view
-```
-
-```
 scorers
 ```
 
@@ -3196,11 +3108,7 @@ Scoring
 ```
 
 ```
-Seeds, a call each
-```
-
-```
-Served now at
+seeds
 ```
 
 ```
@@ -3446,10 +3354,6 @@ Fork it as it is
 ```
 
 ```
-Forked from
-```
-
-```
 It is the first.
 ```
 
@@ -3513,6 +3417,10 @@ one you don't see
 
 ```
 Open the latest
+```
+
+```
+Origin
 ```
 
 ```
@@ -3874,19 +3782,15 @@ Chat templates
 ```
 
 ```
-Cleaned up by
-```
-
-```
 Cleared for
 ```
 
 ```
-Cleared for it
+Configurations
 ```
 
 ```
-Configurations are made for
+Contents
 ```
 
 ```
@@ -3930,11 +3834,19 @@ Environment
 ```
 
 ```
+Execution
+```
+
+```
 Facts
 ```
 
 ```
 Family
+```
+
+```
+Files
 ```
 
 ```
@@ -3958,10 +3870,6 @@ History
 ```
 
 ```
-Holds
-```
-
-```
 Host
 ```
 
@@ -3974,11 +3882,7 @@ its directory can't be read: %(why)s
 ```
 
 ```
-its versions
-```
-
-```
-Judges are bound
+Judges
 ```
 
 ```
@@ -4058,10 +3962,6 @@ Quantization
 ```
 
 ```
-Read from
-```
-
-```
 Reasoning
 ```
 
@@ -4078,7 +3978,7 @@ refused: %(why)s, so %(nearest)s is asked for instead
 ```
 
 ```
-Runs by default
+Rig
 ```
 
 ```
@@ -4095,10 +3995,6 @@ sends %(sent)s
 
 ```
 sensitive
-```
-
-```
-Served by
 ```
 
 ```
@@ -4126,7 +4022,7 @@ taken: %(note)s
 ```
 
 ```
-Takes typed cases
+Text cleanup
 ```
 
 ```
@@ -4147,6 +4043,14 @@ The World
 
 ```
 thinking budget
+```
+
+```
+Typed cases
+```
+
+```
+Versions
 ```
 
 ```
@@ -4194,12 +4098,6 @@ yes
 ```
 
 ## `src/chatddx/portal/threads.py`
-
-`refusal`
-
-```
-a fork is named
-```
 
 `refusal`
 

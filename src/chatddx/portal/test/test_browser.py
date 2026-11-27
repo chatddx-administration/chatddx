@@ -876,16 +876,16 @@ def test_a_judged_view_is_written_with_a_new_judge_and_scored_through_the_worker
             page.locator("li").filter(has=page.get_by_label("Label", exact=True)).last
         )
         view.get_by_label("Label", exact=True).fill("met")
-        _ = view.get_by_label("Reads of what is expected").select_option(
+        _ = view.get_by_label("Expectation", exact=True).select_option(
             label="each of notes › comment"
         )
-        _ = view.get_by_role("combobox", name="Compared by").select_option("verdict")
+        _ = view.get_by_role("combobox", name="Metric").select_option("verdict")
         judge = view.get_by_role("combobox", name="Judge")
         _ = judge.select_option("new")
         written = page.get_by_role("region", name="A new judge")
         written.get_by_label("Name").fill("strict")
-        _ = written.get_by_label("Asked under the model").select_option(QWEN_ARTIFACT)
-        written.get_by_label("Seeds, a call each").fill("1, 2")
+        _ = written.get_by_label("Model").select_option(QWEN_ARTIFACT)
+        written.get_by_label("Seeds", exact=True).fill("1, 2")
         written.get_by_role("button", name="Save").click()
         expect(written).to_have_count(0)
         expect(judge.locator("option:checked")).to_contain_text("strict")
@@ -1518,7 +1518,7 @@ def test_a_field_is_measured_in_a_column_of_its_own_and_closed_again(
         _settled(page, run)
     _ = page.goto(f"/review/{noted['id']}")
     review = page.locator("[data-review]")
-    measuring = page.get_by_role("region", name="Measuring the expectation")
+    measuring = page.get_by_role("region", name="Measuring", exact=True)
     diagnosis = page.locator('details[data-field="diagnosis"]')
     warning = page.locator('details[data-field="warning"]')
     expect(measuring).to_be_hidden()

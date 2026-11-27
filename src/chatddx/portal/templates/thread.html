@@ -25,7 +25,7 @@
     ((_("owner") | upfirst), thread.owner or "—"),
     (_("Shared with"), thread.collaborators | join(", ") or "—"),
     ((_("language") | upfirst), thread.language | language if thread.language else "—"),
-    (_("Forked from"), origin_link),
+    (_("Origin"), origin_link),
     (_("Tags"), tagged),
     (_("Description"), thread.description or "—"),
   ]) }}
@@ -196,7 +196,7 @@
   {% call section(_("Fork it"), "fork") %}
   <form method="post" action="/threads/{{ thread.id }}/fork" class="flex flex-wrap items-end gap-3 text-sm">
     <label class="grid gap-1"><span class="font-medium">{{ _("name") | upfirst }}</span>
-      <input name="name" required value="{{ thread | titled }}" class="h-9 w-72 rounded-md border border-input bg-transparent px-2.5"></label>
+      <input name="name" required pattern=".*\S.*" value="{{ thread | titled }}" class="h-9 w-72 rounded-md border border-input bg-transparent px-2.5"></label>
     <button>{{ _("Fork it as it is") }}</button>
   </form>
   <p class="mt-2 text-sm text-muted-foreground">{{ pgettext("after the button Fork it as it is", "A thread of your own, starting from its latest version, which follows this one's changes when you ask.") }}</p>

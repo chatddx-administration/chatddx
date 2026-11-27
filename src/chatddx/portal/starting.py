@@ -11,8 +11,9 @@ from chatddx.bench import Bench, Endpoint, NotFound
 from chatddx.factors.base import Invalid, resolve
 from chatddx.factors.trial import Order, Trial
 from chatddx.locale import pgettext_noop, refusal
+from chatddx.runner.gate import Refused, bar
 
-from .pages import BenchDep, page
+from .pages import BenchDep, page, refusal_of
 
 router = APIRouter()
 
@@ -89,4 +90,8 @@ def _starting(bench: Bench, thread: int) -> _Starting:
             {"name": named},
         )
         return _Starting(shown, versions, held, None, why)
+    try:
+        bar(bench.inventory, bench.store.get, at.name, held)
+    except Refused as e:
+        return _Starting(shown, versions, held, None, refusal_of(e))
     return _Starting(shown, versions, held, at, None)

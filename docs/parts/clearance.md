@@ -40,7 +40,8 @@ Before a run or a judged scoring writes anything, the gate refuses (`src/chatddx
 - an endpoint the inventory can't confirm serves its engine, for runs, canaries and judges alike.
 
 The first three hold for as long as the World is as it is (`gate.bar`); the last two may pass later (`gate.admit` adds
-them). The bench leaves a judged scorer that `bar` refuses out of what applies to a run.
+them). The page that runs trials offers none `gate.bar` refuses, saying why in its place
+(`src/chatddx/portal/starting.py`). The bench leaves a judged scorer that `bar` refuses out of what applies to a run.
 
 ### Sensitive sources
 

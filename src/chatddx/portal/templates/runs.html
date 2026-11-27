@@ -4,7 +4,7 @@
 {% block main %}
 <div class="mx-auto max-w-5xl px-4 py-8">
   {{ heading((_("runs") | upfirst), _("Your runs, newest first, to follow what is under way and open what has finished.")) }}
-  {% call section(_("Your queue")) %}
+  {% call section(_("Queue")) %}
   <div class="flex flex-wrap items-center gap-3 text-sm">
     {% set queued, under_way = ngettext("%(num)s queued", "%(num)s queued", queue.queued), ngettext("%(num)s under way", "%(num)s under way", queue.under_way) %}
     <span>{{ queued }}, {{ under_way }}{% if queue.paused %}, {{ _("paused") }}{% endif %}</span>

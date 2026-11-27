@@ -224,8 +224,8 @@ def test_what_the_portal_s_python_says_is_said_in_the_locale_asked_for(
             msgid "Trials"
             msgstr "Försök"
 
-            msgid "So that a run can be repeated: the same configuration, cases and seeds again."
-            msgstr "Så att en körning kan upprepas."
+            msgid "A configuration with its cases and seeds fixed, so that its run can be repeated."
+            msgstr "En konfiguration med sina fall och seeds fasta, så att dess körning kan upprepas."
             """,
         )
     )
@@ -233,7 +233,7 @@ def test_what_the_portal_s_python_says_is_said_in_the_locale_asked_for(
     overview = signed.get("/library", headers=sv).text
     headings = re.findall(r"<h2[^>]*>([^<]+)</h2>", overview)
     assert headings == ["Cases", "Configurations", "Försök", "Scoring", "Operations"]
-    assert "Så att en körning kan upprepas." in overview
+    assert "En konfiguration med sina fall och seeds fasta" in overview
 
     nowhere = signed.get("/library?kind=nope", headers=sv)
     assert nowhere.status_code == 404 and "no kind" in nowhere.text

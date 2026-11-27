@@ -167,7 +167,7 @@ def test_cases_are_listed_by_tag_in_the_library_and_read_without_their_vignette(
 ) -> None:
     families = signed.get("/api/families").json()
     listed = shown(signed, "/library?kind=case")
-    assert "None is begun here" in listed
+    assert "Loaded with data sets, or typed on Home." in listed
     for f in families:
         assert f'href="/cases/{f["id"]}"' in listed
     tagged = signed.get("/api/families", params={"tag": "swedish"}).json()

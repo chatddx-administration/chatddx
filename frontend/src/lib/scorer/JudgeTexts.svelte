@@ -123,9 +123,10 @@
 <section class="space-y-3 rounded-lg border border-dashed border-primary/40 p-2.5" aria-label={t("Texts")}>
   <p class="text-muted-foreground">
     {t(
-      "What %(judge)s is asked, written as you would have it. Saving keeps each text you change as a version of your own, the judge's request with them, and a judge of your own asked through it. The scorers asking %(judge)s keep asking the version they ask until they follow yours, from its page.",
+      "What %(judge)s is asked, written as you would have it. Saving keeps each text you change as a version of your own, the judge's request with them, and a judge of your own asked through it.",
       { judge: given.name },
     )}
+    {t("A scorer asks the version of a judge it names until it follows another.")}
   </p>
   <div class="grid gap-3 lg:grid-cols-2">
     <div class="space-y-3">

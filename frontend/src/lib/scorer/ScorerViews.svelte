@@ -141,14 +141,14 @@
           choices={asked}
           value={view.expectation ?? ""}
           set={(v) => (view.expectation = v)}
-          label={t("Reads of what is expected")}
+          label={t("Expectation")}
         />
         <div class="grid content-start gap-1">
           <SelectorPicker
             choices={answered}
             value={view.output ?? ""}
             set={(v) => (view.output = v)}
-            label={t("Reads of the answer")}
+            label={t("Answer")}
           />
           <label class="flex items-center gap-2">
             <input
@@ -162,9 +162,9 @@
       </div>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span class="flex items-center gap-2">
-          <span class="text-muted-foreground" aria-hidden="true">{t("Compared by")}</span>
+          <span class="text-muted-foreground" aria-hidden="true">{t("Metric")}</span>
           <select
-            aria-label={t("Compared by")}
+            aria-label={t("Metric")}
             class={FIELD}
             title={metric?.measures ?? ""}
             value={view.metric}

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% from "macros.html" import heading, mean, run_title, section %}
 
-{% block title %}{{ _("Comparing runs") }} · ChatDDX{% endblock %}
+{% block title %}{{ _("Comparison") }} · ChatDDX{% endblock %}
 {% block main %}
 <div class="mx-auto max-w-6xl px-4 py-8">
   <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="/runs">← {{ _("runs") }}</a></nav>
-  {{ heading(_("Comparing runs"), _("To see how runs fare against each other, side by side over the items they all hold.")) }}
+  {{ heading(_("Comparison"), _("To see how runs fare against each other, side by side over the items they all hold.")) }}
 
   {% call section(_("Scores")) %}
   {% if grouped %}<p class="mb-3 rounded-lg bg-warning/10 p-3 text-sm">{{ _("Some ran under %(models)s at different engines: grouped under it, they aren't like for like.", models=grouped | join(pgettext("between the last two names", " and "))) }}</p>{% endif %}

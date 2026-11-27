@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import { t } from "$lib/locale";
+  import { t, upFirst } from "$lib/locale";
   import { FIELD } from "$lib/utils";
   import type { Option } from "./judging";
 
@@ -39,14 +39,14 @@
   </select></label
 >
 <label class="grid gap-1"
-  ><span class="text-muted-foreground">{t("Asked under the model")}</span>
+  ><span class="text-muted-foreground">{t("Model")}</span>
   <select class={FIELD} bind:value={weights}>
     {#each models as m (m.key)}<option value={m.value}>{m.label}</option>{/each}
   </select>
   {#if hint}<span class="text-xs text-warning">{hint}</span>{/if}</label
 >
 <label class="grid gap-1"
-  ><span class="text-muted-foreground">{t("Seeds, a call each")}</span><input
+  ><span class="text-muted-foreground">{upFirst(t("seeds"))}</span><input
     class="{FIELD} font-mono"
     inputmode="numeric"
     placeholder="1"

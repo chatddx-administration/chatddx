@@ -1,5 +1,4 @@
-2026-11-27T13:14:48Z d216635 ./dev/check.sh stamps
+2026-11-27T15:13:04Z f92dec3 ./dev/check.sh stamps
 • stamps
 ok
-against d216635 stamp
-stamp docs: docs/parts/locale.md behind: run ./dev/write.sh stamps
+stamps: no commit known to be stamped, as dev/stamped.sh tells, so the prose isn't checked

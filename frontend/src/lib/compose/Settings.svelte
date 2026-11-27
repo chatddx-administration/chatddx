@@ -315,7 +315,7 @@
           disabled={!sampling.recommended && !recommendable}
           onchange={(e) => set("sampling", with_(sampling, "recommended", e.currentTarget.checked || undefined))}
         />
-        {t("Recommended for its thinking level")}
+        {t("Recommended sampling")}
         {#if sampling.recommended && followed}<span class="text-xs text-muted-foreground">({followed})</span>{/if}
       </label>
       <p class="mt-1 mb-3 text-xs text-muted-foreground">
@@ -419,7 +419,7 @@
         {/if}
         {#if chunks.toolset}
           <label class="mt-2 grid max-w-48 gap-1">
-            <span class="text-xs text-muted-foreground">{t("Rounds of calls at most")}</span>
+            <span class="text-xs text-muted-foreground">{t("Tool rounds")}</span>
             <input
               type="number"
               min="1"
