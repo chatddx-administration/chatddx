@@ -5,14 +5,14 @@
 <div class="mx-auto max-w-5xl px-4 py-8">
   <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="{{ back }}">← {{ "case" | kind }}</a></nav>
   {{ heading(pgettext("expectations", "Taken"), _("Under %(schema)s, for each picked case.", schema=schema)) }}
-  {% call section(_("What became of each")) %}
+  {% call section(_("Outcomes")) %}
   <ul class="space-y-1.5 text-sm">
     {% for case, name in named.items() %}
     <li><span class="font-medium">{{ name }}</span>:
       {% if case in taken.taken %}{% trans thread=taken.taken[case] %}taken, into <a href="/threads/{{ thread }}">your thread {{ thread }}</a>{% endtrans %}
-      {% elif case in taken.kept %}{% trans thread=taken.kept[case] %}<a href="/threads/{{ thread }}">yours</a>, left as it is{% endtrans %}
+      {% elif case in taken.kept %}<a href="/threads/{{ taken.kept[case] }}">{{ _("yours") }}</a>
       {% elif case in taken.choosing %}{% set taking %}{% for t in taken.choosing[case] %}<a href="/threads/{{ t }}">{{ _("%(owner)s's", owner=owners[t]) }}</a>{{ ", " if not loop.last }}{% endfor %}{% endset %}{{ _("shared by several, to take from one: %(owners)s", owners=taking) }}
-      {% else %}{{ _("none shared with you") }}{% endif %}
+      {% else %}{{ _("none you see") }}{% endif %}
     </li>
     {% endfor %}
   </ul>

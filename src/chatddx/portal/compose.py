@@ -59,7 +59,7 @@ def compose(
     query = _varying(request)
     shown = api.thread(bench, thread)
     if shown.kind != "skeleton":
-        raise NotFound.of(
+        raise NotFound.raw(
             "no configuration %(thread)s for %(login)s",
             thread=thread,
             login=bench.person.login,
@@ -159,7 +159,7 @@ def running_in_compose(
 ) -> Response:
     shown = api.thread(bench, thread)
     if shown.kind != "skeleton":
-        raise NotFound.of(
+        raise NotFound.raw(
             "no configuration %(thread)s for %(login)s",
             thread=thread,
             login=bench.person.login,

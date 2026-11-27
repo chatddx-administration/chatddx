@@ -8,6 +8,7 @@
 !/.claude/
 
 # Compromise: chatddx-dev index writes what changed as a git conflict, which prettier reads as markdown and reformats.
+/docs/catalog/
 /docs/comments/
 /docs/surfaces/
 /docs/whoopses/

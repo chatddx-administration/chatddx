@@ -261,15 +261,13 @@ def test_a_start_runs_each_language_its_cases_are_in_and_leaves_out_the_rest(
     assert (left.language, left.cases, left.refused) == (
         "sv",
         [svenska, nfd],
-        "lines has no translations into sv",
+        "lines has no translation into sv",
     )
-    with pytest.raises(
-        ValueError, match="lines has no translations into sv, which its cases are in"
-    ):
+    with pytest.raises(ValueError, match="lines has no translation into sv"):
         _ = bench.start(lines, QWEN, [svenska, nfd], (7,))
 
     monkeypatch.setattr(settings, "RUNS_PER_DAY", 6)
-    with pytest.raises(OverQuota, match="a day takes 6, not 2 more"):
+    with pytest.raises(OverQuota, match="over the day.s quota: 7 of 6"):
         _ = bench.start(guided, QWEN, cases, (7,))
 
 

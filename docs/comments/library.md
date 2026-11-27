@@ -27,6 +27,20 @@ Written by `chatddx-dev index` from the comments in `[parts.library]`'s code in 
 // what is changed in it, so that a form sent as it is writes nothing.
 ```
 
+## `frontend/src/islands/library.ts:gated`
+
+```
+// Policy: a library form is read as it is typed as the server reads it when it is sent,
+// and isn't sent while it would be refused, rather than coming back refused.
+```
+
+## `frontend/src/lib/library/editors.ts:inBrackets`
+
+```
+// Dependency: a box's brackets, which src/chatddx/portal/templates/fields.html shows around it and names in
+// data-brackets, the box holding what is between them.
+```
+
 ## `frontend/src/lib/library/editors.ts:segsOf`
 
 ```

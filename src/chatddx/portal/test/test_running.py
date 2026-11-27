@@ -31,7 +31,7 @@ def test_a_run_under_way_is_followed_and_halted_on_its_page(
     with faked(world, Store(conn).get, delay=0.2):
         run = started(signed)
         page = shown(signed, f"/runs/{run}")
-        assert "Something is under way for this run" in page
+        assert "Reload the page to see how far it has come." in page
         assert 'id="run-live-props"' in page and f'"run": "{run}"' in page
         assert f'action="/runs/{run}/halt"' in page
         assert "Run again" not in page and "Items</h2>" not in page
@@ -43,7 +43,7 @@ def test_a_run_under_way_is_followed_and_halted_on_its_page(
     page = shown(signed, f"/runs/{run}")
     assert "Items</h2>" in page and 'id="run-live"' not in page
     assert f'action="/runs/{run}/halt"' not in page
-    assert f'action="/runs/{run}/scores"' in page and "Left to score by" in page
+    assert f'action="/runs/{run}/scores"' in page and "Left to score:" in page
     assert f'action="/runs/{run}/again"' in page
     left = shown(signed, "/runs?left=true")
     assert f'action="/runs/{run}/scores"' in left
@@ -57,12 +57,12 @@ def test_a_run_under_way_is_followed_and_halted_on_its_page(
 def test_a_run_is_scored_again_and_run_again_from_its_page(signed: TestClient) -> None:
     run = started(signed, score=False)
     _ = settled(signed, run)
-    assert "Left to score by" in shown(signed, f"/runs/{run}")
+    assert "Left to score:" in shown(signed, f"/runs/{run}")
 
     got = signed.post(f"/runs/{run}/scores")
     assert (got.status_code, got.headers["location"]) == (303, f"/runs/{run}")
     scored = settled(signed, run)
-    assert scored["scores"] and "Left to score by" not in shown(signed, f"/runs/{run}")
+    assert scored["scores"] and "Left to score:" not in shown(signed, f"/runs/{run}")
     stale = signed.post(f"/runs/{run}/scores")
     assert (stale.status_code, stale.headers["location"]) == (303, f"/runs/{run}")
     assert signed.get(f"/api/runs/{run}").json()["job"] == scored["job"]
@@ -101,14 +101,14 @@ def test_the_runs_page_says_how_the_queue_stands_and_pauses_stops_and_resumes_it
     signed: TestClient,
 ) -> None:
     page = shown(signed, "/runs")
-    assert "0 queued, 0 under way." in page and 'action="/queue/pause"' in page
+    assert "0 queued, 0 under way<" in page and 'action="/queue/pause"' in page
     assert 'action="/queue/stop"' not in page
 
     got = signed.post("/queue/pause")
     assert (got.status_code, got.headers["location"]) == (303, "/runs")
     run = started(signed)
     page = shown(signed, "/runs")
-    assert "1 queued, 0 under way; paused." in page
+    assert "1 queued, 0 under way, paused" in page
     assert 'action="/queue/resume"' in page and "queued, paused" in page
     assert ">Stop</button>" in page and ">Stop now</button>" not in page
 
@@ -260,7 +260,7 @@ def test_a_review_starts_nothing_over_the_quota(
     form = {"case": crlf["case"], "back": review}
     got = signed.post(f"/review/{crlf['id']}/runs", data=form)
     assert got.status_code == 429
-    assert "as many as a day takes" in html.unescape(got.text) or (
+    assert "over the day's quota" in html.unescape(got.text) or (
         "a day takes 1" in html.unescape(got.text)
     )
     assert signed.get("/api/runs").json() == []
@@ -498,7 +498,7 @@ def test_a_baseline_with_a_case_it_has_no_translation_for_runs_nothing(
     lines = thread(signed, "configuration", LINES)
     compose = f"/compose/{lines['id']}"
     assert based(signed, compose) == {"running": False, "behind": False, "whole": False}
-    assert "Its baseline has cases in" in html.unescape(shown(signed, compose))
+    assert "No translation into" in html.unescape(shown(signed, compose))
 
     assert signed.post(f"{compose}/runs").status_code == 303
     assert signed.get("/api/runs", params={"limit": 200}).json() == []
@@ -526,7 +526,7 @@ def test_a_baseline_with_texts_left_to_translate_runs_nothing_and_says_nothing_a
     assert got.status_code == 201, got.json()
     assert based(signed, compose) == {"running": False, "behind": False, "whole": False}
     page = html.unescape(shown(signed, compose))
-    assert "Its baseline has cases in" not in page and "can't be done" not in page
+    assert "No translation into" not in page and "can't be done" not in page
 
     assert signed.post(f"{compose}/runs").status_code == 303
     assert signed.get("/api/runs", params={"limit": 200}).json() == []

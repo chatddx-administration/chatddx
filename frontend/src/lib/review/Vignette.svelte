@@ -24,7 +24,7 @@
   {/if}
   <div class="whitespace-pre-wrap leading-relaxed">{shown.text}</div>
 {:else if problem}
-  <p class="text-sm text-destructive">{t("The vignette can't be shown: %(problem)s.", { problem })}</p>
+  <p class="text-sm text-destructive">{upFirst(t("can't be shown"))}: {problem}.</p>
 {:else}
   <p class="flex items-center gap-2 text-sm text-muted-foreground">
     <LoaderCircleIcon class="size-4 animate-spin" aria-hidden="true" />

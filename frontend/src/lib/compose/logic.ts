@@ -1,4 +1,6 @@
 import type { Schemas } from "$lib/api/client";
+import type { Body } from "./drafting";
+import type { Facts } from "./props";
 
 export type Saving =
   | { to: "nothing"; because: "nameless" | "unchanged" }
@@ -29,4 +31,25 @@ export function whereSaveGoes(given: {
   }
   const namesakes = given.configurations.filter((t) => t.owner === given.me && (t.name ?? t.title) === name).length;
   return { to: "fork", namesakes };
+}
+
+type Fitted = { reasoning: Body | null; sampling: Body };
+
+// Dependency: src/chatddx/factors/request.py:landings, which a level the facts don't land, a budget they don't know
+// and a sampling they recommend nothing of at the level followed refuse.
+export function fitted(reasoning: Body | null, sampling: Body, facts: Facts | null): Fitted {
+  const lands = (level: unknown): boolean => facts?.levels[String(level)]?.lands != null;
+  let held = reasoning;
+  if (held?.level != null && !lands(held.level)) {
+    const { level: _, ...rest } = held;
+    held = lands("default") ? { ...rest, level: "default" } : null;
+  }
+  if (held?.level != null && held.thinking_token_budget != null && facts?.budget !== true) {
+    const { thinking_token_budget: _, ...rest } = held;
+    held = rest;
+  }
+  const followed = facts?.levels[String(held?.level ?? "default")]?.lands ?? facts?.levels.default?.lands;
+  if (!sampling.recommended || (followed != null && facts?.recommended[followed])) return { reasoning: held, sampling };
+  const { recommended: _, ...rest } = sampling;
+  return { reasoning: held, sampling: rest };
 }

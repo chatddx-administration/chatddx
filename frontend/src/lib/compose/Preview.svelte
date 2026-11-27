@@ -94,7 +94,7 @@
     output_guidance: () => t("Output guidance"),
     output_schema: () => upFirst(t("the answer's schema")),
     tool_guidance: () => t("Tool guidance"),
-    appendix_layout: () => t("How appendices are laid out"),
+    appendix_layout: () => t("Appendix layout"),
     joining: () => t("Put between them as it is compiled"),
   };
   // Policy: what a message holds of its own part stands unmarked, what is put into it is tinted.
@@ -139,7 +139,7 @@
       class="{TINTS[r.origin ?? ''] ?? ''} {r.untranslated ? 'underline decoration-warning decoration-wavy' : ''} {added
         ? 'bg-success/15 text-success'
         : ''}"
-      title={r.untranslated ? t("%(part)s, not yet translated", { part: origin(r.origin) }) : origin(r.origin)}
+      title={r.untranslated ? `${origin(r.origin)}, ${t("not translated yet")}` : origin(r.origin)}
       >{#if added}<ins class="no-underline">{text}</ins>{:else}{text}{/if}</span
     >{/if}{/snippet}
 
@@ -150,9 +150,9 @@
   <header class="border-b border-border/60 px-4 pt-3 pb-2">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <h2 class="text-base font-semibold">{t("What it sends")}</h2>
+        <h2 class="text-base font-semibold">{t("Request")}</h2>
         <p class="text-xs text-muted-foreground">
-          {language ? displayLanguage(language) : t("As written")}
+          {language ? displayLanguage(language) : t("Original")}
         </p>
       </div>
       <div class="flex shrink-0 items-center gap-2">
@@ -177,13 +177,13 @@
           type="button"
           class="rounded-md px-2 py-0.5 {raw ? '' : 'bg-muted font-medium'}"
           aria-current={raw ? undefined : "page"}
-          onclick={() => (raw = false)}>{t("As read")}</button
+          onclick={() => (raw = false)}>{t("Formatted")}</button
         >
         <button
           type="button"
           class="rounded-md px-2 py-0.5 {raw ? 'bg-muted font-medium' : ''}"
           aria-current={raw ? "page" : undefined}
-          onclick={() => (raw = true)}>{t("As sent")}</button
+          onclick={() => (raw = true)}>{t("Raw")}</button
         >
       </nav>
     {/if}

@@ -7,9 +7,9 @@
   <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="/library?kind=trial">← {{ "trial" | kind }}</a></nav>
   {{ heading(npgettext("trials", "Run it", "Run them", trials | length), _("Each trial's version at the endpoint serving its engine.")) }}
   {% if not trials %}
-  <p class="text-sm text-muted-foreground">{% trans %}No trial is given: pick them on the <a href="/library?kind=trial">trial tab</a> of the Library.{% endtrans %}</p>
+  <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}. {% trans %}Trials are picked on the <a href="/library?kind=trial">trial tab</a> of the Library.{% endtrans %}</p>
   {% else %}
-  {% call section(_("The trials")) %}{{ runner(trials, orders) }}{% endcall %}
+  {% call section(_("Trials")) %}{{ runner(trials, orders) }}{% endcall %}
   {% endif %}
 </div>
 {% endblock %}

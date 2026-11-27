@@ -249,14 +249,12 @@ def test_a_start_is_a_run_per_language_and_leaves_out_what_it_can_t_send(
     assert run["cases"] == first["cases"]
     assert [
         (o["language"], sorted(o["cases"]), o["why"]) for o in plain["left_out"]
-    ] == [("sv", swedish, "lines has no translations into sv")]
+    ] == [("sv", swedish, "lines has no translation into sv")]
     _ = followed(signed, run["run"])
     alone = [f["id"] for f in tagged if f["language"] == "sv"][:1]
     got = signed.post("/api/runs", json={**asked(signed), "families": alone})
     assert got.status_code == 422
-    assert got.json()["detail"] == (
-        "lines has no translations into sv, which its cases are in"
-    )
+    assert got.json()["detail"] == ("lines has no translation into sv")
 
 
 @pytest.mark.usefixtures("fake")
@@ -553,7 +551,7 @@ def test_runs_are_held_to_a_day_s_quota_and_a_run_to_its_items(
     got = signed.post("/api/runs", json=asked(signed))
     assert (got.status_code, got.json()["detail"], got.json()["code"]) == (
         429,
-        "alice has started 1 runs in the last day, as many as a day takes",
+        "over the day's quota: 2 of 1",
         "over_quota",
     )
     assert len(signed.get("/api/runs").json()) == 1
@@ -611,7 +609,7 @@ def test_a_run_takes_replicates_cleanup_a_concurrency_and_an_order(
     _ = followed(signed, again.json()["run"])
     got = signed.post("/api/runs", json={**body, "concurrency": 5})
     assert got.status_code == 422
-    assert "takes 4 requests at once" in got.json()["detail"]
+    assert "takes 4 at once" in got.json()["detail"]
 
 
 @pytest.mark.usefixtures("fake")

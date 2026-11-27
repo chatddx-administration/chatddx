@@ -57,10 +57,11 @@ reads as it is, and `src/chatddx/portal/templates/base.html` has a `lang` to set
 
 ### The catalog
 
-Built: one `.po` file a locale in `src/chatddx/locale/catalogs/`, `sv.po` begun empty, packaged with `chatddx.locale`
-and read at boot (`src/chatddx/locale/locale.py:Locales`) with Babel's `read_po`, then turned into a gettext catalog in
-memory: no compiled file in git or in the build. A catalog is read as last stamped (`src/chatddx/markers.py:signed`), so
-that a translation pending is said as it was, and a message whose translation is missing in English.
+Built: one `.po` file a locale in `src/chatddx/locale/catalogs/`, the scenario index's translation (see "The scenario
+index"), `sv.po` begun empty, packaged with `chatddx.locale` and read at boot (`src/chatddx/locale/locale.py:Locales`)
+with Babel's `read_po`, then turned into a gettext catalog in memory: no compiled file in git or in the build. A catalog
+is read as last stamped (`src/chatddx/markers.py:signed`), so that a translation pending is said as it was, and a
+message whose translation is missing in English.
 
 Built: boot fails on a catalog that doesn't parse, or whose reviewed translations' `%(name)s` placeholders aren't their
 messages', which Babel's catalog checks find. A translation pending is left out of that, as it isn't said; what is left
@@ -69,18 +70,19 @@ time, so that Babel matches a changed message only to one translated.
 
 ### The scenario index
 
-Decided: a catalog is the scenario index, a message to a scenario, so that every code path that says a scenario says it
-by the one message and a translation is made once. A message is tested against it as it is written or changed: what
-scenario its code says it in, and whether a message says that scenario already, in which case the code says that one, as
-it is or reworded for each code path that says it.
+Decided: the scenario index is the catalog, `docs/catalog/<part>.md`, which `chatddx-dev index` writes from what is
+extracted for the `.po` files (`docs/parts/index.md`): a message to a scenario, so that every code path that says a
+scenario says it by the one message and a translation is made once. A stamp in it is a scenario to review, and one in a
+`.po` file its translation. A message is tested against it as it is written or changed: what scenario its code says it
+in, and whether a message says that scenario already, in which case the code says that one, as it is or reworded for
+each code path that says it.
 
 - **Its case is the running text's**, raised to start a heading, a label or a sentence by the portal's `upfirst` filter
   and the islands' `upFirst()` (`src/chatddx/locale/locale.py:upfirst`), and its ending punctuation, or an ellipsis,
   where it is shown, so that `cases` is one message as a heading and in a list.
 - **A context says what tells scenarios said alike apart** for a translator, never where a message comes from: two
   translations that differ, by gender, number or meaning, are two scenarios (`Unanswered` of cases, `unanswered` of a
-  case). What fills a message is named as it is said, as a translation inflects by it: `%(trial)s` and
-  `%(configuration)s` are told apart in Swedish.
+  case).
 - **Checked**, built: `chatddx locale check` fails on messages said alike, their words the same but for case and ending
   punctuation, in the same context or in one that says only where it comes from, `refusal` or `whoops`
   (`src/chatddx/locale/locale.py:said_alike`); what holds no words, `%(label)s: %(said)s`, is layout and left out.
@@ -119,15 +121,53 @@ it is or reworded for each code path that says it.
   shown in the World, so that whether Swedish translates it is decided in the catalog (see "Open"). A list of kinds is
   sorted by its words as said (`src/chatddx/portal/shelves.py:Shelved.display_kind`).
 - **How a message is written**, as every page's are:
-  - a sentence whole, its alternatives each a message (`_("None you see of these.") if … else _("None you see.")`);
   - a sentence with links or markup in it a `{% trans %}` block, the markup in its message;
   - what is set apart by `·` a message apiece, the separator left out;
+  - an empty value `—`, as said in no language, and an empty list one of `none`, `none yet`, `none you see` and
+    `none of yours`, raised and ended with a full stop where it stands alone, the list it empties beside it, so that
+    Swedish says _inga_ whatever it lists; a reason or a way on is said beside it, in a message of its own;
+  - a state of work in progress one of a set, its words put together with `, ` where several hold at once
+    (`queued, 2 ahead, halting`): a job's `queued`, `%(num)s ahead`, `paused`, `halting`, `under way`, `unfinished` and,
+    in the context `job`, `finished`, `stopped` and `failed`; and, in the context `in progress`, what is being done:
+    `sending`, `scoring`, `waiting`, `thinking`, `writing`, `calling a tool`, `saving` and `reading`, raised and ended
+    with `…` where it stands alone, and a count beside it in a message of its own (`thinking, 12 tokens`);
+  - whether what is shown is current one of `up to date`, `out of date`, `latest version` and `an earlier version`, said
+    beside what it is of (`%(name)s, an earlier version` put together with `, `), and why it is out of date or what
+    brings it up to date in a message of its own (`out of date: update it on its page`), and that a version was saved
+    since what is shown `newer version`, what was saved and when beside it (`Newer version: saved … by …`);
+  - what can't be done here one of `needs scripts`, `can't be used`, `can't be shown`, `can't be updated`,
+    `can't be checked` and `can't be done`, why after a colon (`Can't be shown: …`) and a way on in a message of its
+    own;
+  - whose what is shown is one of `yours`, `shared with you`, `%(owner)s's`, `one you don't see` and `deleted`, beside
+    what it is of, in a form a translation needn't inflect by it (_delat med dig_);
+  - what went wrong one of `not found`, `not allowed`, `Sign in`, `can't be done`, `newer version` and
+    `something went wrong`, by what the person can do about it, a refusal's wording or a whoops's message after it, and
+    what is passed on after `Copy this and send it to drift@chatddx.com:`;
+  - what is left of what is shown one of `not scored`, `Unanswered` of cases and `unanswered` of a case, in those
+    contexts, `no translation into %(language)s`, and an answer's outcome by its word (`salvaged`, `invalid`);
+  - a confirmation the action's own word and a question mark, what it does after it in the action's own note
+    (`Delete? Deletes the appendix …`), or `Discard what you changed?` before what is changed is thrown away;
+  - nothing a field can hold for itself: a name the browser holds to `required` and a pattern of more than spaces, a
+    pick nothing may be `required`, and a judge's seeds read from whatever is typed, each whole number once and the seed
+    1 while none is (`frontend/src/lib/scorer/judging.ts:seedsOf`), and an object's or a list's box what is between its
+    brackets, which the page shows around it and the server puts back as it reads the form;
+  - nothing a form sends refused: a library form is read as it is typed as it is read when it is sent
+    (`src/chatddx/portal/threads.py:_checked`, the island's `gated`), and isn't sent while it would be refused, what
+    would refuse it said under it; a list of whole numbers is read from whatever is typed, each once; a pick made twice
+    once; and a label left empty none;
+  - nothing to pick that a person must have picked: comparing no runs leads to the runs page, a trial to run is its
+    latest version till another or none is picked, and running none leads back to the trials; a scorer reading no
+    expectation of a run's cases has nothing to score;
+  - nothing the facts about a model can't work out: Compose offers a reasoning level only where the facts land one, a
+    budget at a level only where they know it, and a recommended sampling only where they recommend one at the level
+    followed, and drops what a model picked anew doesn't hold (`frontend/src/lib/compose/logic.ts:fitted`); a library
+    form's recipe is compiled as it is checked;
+  - nothing an endpoint takes less of: a concurrency asked past an endpoint's capacity is its capacity; what ops are to
+    mend, an endpoint that can't be confirmed, is passed on as it comes;
   - anything counted with `ngettext()`, even where English says it the same either way (`%(num)s yours`), as Swedish
     doesn't;
   - a word that could be read more ways than one, or a note that follows a button, with `pgettext()` and a context
     naming what it is or follows (`"outcome"`, `"after the button Run the picked"`);
-  - a sentence a kind's word agrees with, such as `A new configuration`, a message per kind, as `begun.html`'s titles
-    are, since Swedish says `en ny` or `ett nytt` by the word;
   - two counts in one sentence each counted on its own, then put into a sentence of its own
     (`_("%(queued)s, %(under_way)s.", queued=ngettext(…), under_way=ngettext(…))`);
   - no variable of a template named `_`, which is the callable that translates.
@@ -208,6 +248,14 @@ it is or reworded for each code path that says it.
   kinds a person doesn't write, the store's integrity); the facts' reasons, which are data; a scorer's problems, which
   the Composer is to prevent; and the gate's secret and engine, which boot is to check. pydantic's own messages on a
   field are said as they come.
+- **Unworded where it is raised**, built: what a person can't cause through the portal, such as an address that names
+  nothing, is raised with `raw` (`src/chatddx/factors/base.py:Worded.raw`), its English filled as `of` fills it and left
+  out of the catalog, and passed on as it comes under its code's title.
+- **A refusal once**, built: what refuses the same is said by one wording whatever it is of, `%(name)s` naming it:
+  `%(name)s has no translation into %(languages)s`, `over the day's quota: %(used)s of %(limit)s`,
+  `U+0000 can't be stored` and
+  `%(login)s has their own expectation of %(case)s under %(schema)s already, in thread %(thread)s`, the page it is said
+  on offering the way on.
 
 ### Extraction
 
@@ -341,3 +389,28 @@ Each step leaves the portal working in English, and Swedish appearing only where
    format, and left out of these steps.
 4. **A locale with more plural forms** than one and other: the islands' `t()` would need gettext's forms in the order of
    CLDR's categories, which Babel derives its own from.
+5. **A catalog bounded by its classes**: a message is of a word (a kind, field, outcome, action or heading), a state
+   (with what it is about beside it rather than in it, so that a state is one message whatever it is about), an
+   explanation (one to a word, wherever the word is shown), a refusal (each a case to prevent), a layout (names and
+   values put together), or free prose (under a budget of its own). The states are each a fixed set (see "How a message
+   is written"), and the refusals left are what a person can cause through the portal. From 1211 messages and 107
+   refusals to 1036 and 69. Whether `chatddx locale check` holds a message to a class is open.
+
+## Next
+
+The steps left of bounding the catalog, in order, each a session of its own and its own commit:
+
+1. **Clean up**: hold the comments and docstrings of the files bounding the catalog touched to AGENTS.md's "Comments"
+   and "Docstrings", `raw`'s and `extracted`'s among them; settle whether `docs/catalog/` is split by part, as it is, or
+   by class; and gather this doc's "How a message is written", where each set was added as it came, so that a set is
+   said once and the rules before the sets that they replace go.
+2. **A check that keeps it bounded**: `chatddx locale check` failing on a message that is of no class, a state not of
+   its set and a refusal said where a set's word would do, so that what is added is held to the sets rather than growing
+   the catalog again.
+3. **The headings, labels and explanations left**: some 400 headings and labels the phrase filter didn't catch, reviewed
+   by eye into plain names; and an explanation once to a word, wherever the word is shown, perhaps drawn from
+   docs/glossary.md.
+4. **The refusals a person can still cause**: the sensitive sources' two, kept refused as docs/chatddx.md has it, with
+   what isn't cleared no longer offered (read with docs/parts/clearance.md); then the out of date and newer version
+   refusals, the typed case's limits, `no person %(login)s` and `a fork is named`, each prevented where the portal can,
+   or said by a set's word.

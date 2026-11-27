@@ -107,11 +107,11 @@ def test_a_refusal_is_said_by_its_wording_and_what_isn_t_worded_is_passed_on(
             msgid "a fork is named"
             msgstr "en förgrening har ett namn"
 
-            msgid "That can't be done"
-            msgstr "Det går inte"
+            msgid "can't be done"
+            msgstr "det går inte"
 
-            msgid "%(title)s. Copy this and send it to drift@chatddx.com: %(pass_on)s"
-            msgstr "%(title)s. Kopiera och skicka detta till drift@chatddx.com: %(pass_on)s"
+            msgid "Copy this and send it to drift@chatddx.com:"
+            msgstr "Kopiera och skicka detta till drift@chatddx.com:"
             """,
         )
     ).negotiate("sv")
@@ -121,7 +121,7 @@ def test_a_refusal_is_said_by_its_wording_and_what_isn_t_worded_is_passed_on(
             "Det går inte. Kopiera och skicka detta till drift@chatddx.com: slots used twice"
         )
     assert refusal_of(ValueError("slots used twice")) == (
-        "That can't be done. Copy this and send it to drift@chatddx.com: slots used twice"
+        "Can't be done. Copy this and send it to drift@chatddx.com: slots used twice"
     )
 
 
@@ -226,14 +226,6 @@ def test_what_the_portal_s_python_says_is_said_in_the_locale_asked_for(
 
             msgid "So that a run can be repeated: the same configuration, cases and seeds again."
             msgstr "Så att en körning kan upprepas."
-
-            msgctxt "refusal"
-            msgid "no kind %(kind)s: the kinds are %(kinds)s"
-            msgstr "ingen sort %(kind)s: sorterna är %(kinds)s"
-
-            msgctxt "refusal"
-            msgid "%(field)s isn't a number: %(given)s"
-            msgstr "%(field)s är inget tal: %(given)s"
             """,
         )
     )
@@ -244,13 +236,12 @@ def test_what_the_portal_s_python_says_is_said_in_the_locale_asked_for(
     assert "Så att en körning kan upprepas." in overview
 
     nowhere = signed.get("/library?kind=nope", headers=sv)
-    assert nowhere.status_code == 404 and "ingen sort" in nowhere.text
+    assert nowhere.status_code == 404 and "no kind" in nowhere.text
 
     action = "/library/new?kind=sampling"
     form = {"name": "warm", "f.temperature": "warm"}
     refused = signed.post(action, data=form, headers=sv)
-    assert refused.status_code == 422 and "temperature är inget tal" in refused.text
-    assert "isn&#39;t a number" in signed.post(action, data=form).text
+    assert refused.status_code == 422 and "isn&#39;t a number" in refused.text
 
 
 def test_a_locale_chosen_is_kept_over_the_browser_s(client: TestClient) -> None:

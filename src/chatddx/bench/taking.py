@@ -49,8 +49,8 @@ def take_from(seen: Seen, thread: int, replace: bool = False) -> int:
     mine = sorted(choices(seen, [case], schema)[case])
     if mine and not replace:
         raise Conflict.of(
-            "%(login)s has their own expectation of %(case)s under %(schema)s, in "
-            + "thread %(thread)s: replace it to take this one",
+            "%(login)s has their own expectation of %(case)s under %(schema)s "
+            + "already, in thread %(thread)s",
             login=seen.person.login,
             case=seen.title(case),
             schema=seen.title(schema),

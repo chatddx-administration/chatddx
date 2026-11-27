@@ -74,13 +74,19 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 ## `frontend/src/lib/compose/Settings.svelte`
 
 ```
-<!-- Policy: a budget the model's facts refuse is offered only to be taken out, as it compiles to nothing else. -->
+<!-- Policy: a budget the model's facts refuse, or at a level don't know, is offered only to be taken out, as it compiles to nothing else. -->
 ```
 
 ## `frontend/src/lib/compose/Settings.svelte:followed`
 
 ```
 // Dependency: src/chatddx/factors/request.py:landings follows the level reasoning lands at, or else the default.
+```
+
+## `frontend/src/lib/compose/Settings.svelte:levelled`
+
+```
+// Policy: only what the model's facts work out is offered, so that what is picked compiles.
 ```
 
 ## `frontend/src/lib/compose/Texts.svelte:pairedNow`
@@ -156,6 +162,13 @@ Written by `chatddx-dev index` from the comments in `[parts.compose]`'s code in 
 ```
 // Policy: each run of the baseline is read again so long after while any is open, rather than a stream held open for
 // each, as only how far it has come is shown here.
+```
+
+## `frontend/src/lib/compose/logic.ts:fitted`
+
+```
+// Dependency: src/chatddx/factors/request.py:landings, which a level the facts don't land, a budget they don't know
+// and a sampling they recommend nothing of at the level followed refuse.
 ```
 
 ## `frontend/src/lib/compose/logic.ts:whereSaveGoes`

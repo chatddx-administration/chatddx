@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Annotated, cast, get_args
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Form, Query, Request, Response
 from fastapi.responses import RedirectResponse
@@ -44,20 +45,23 @@ def beginning(
 def starting(
     bench: BenchDep,
     version: Annotated[list[str] | None, Form()] = None,
+    trial: Annotated[list[int] | None, Form()] = None,
     concurrency: Annotated[str, Form()] = "",
     order: Annotated[str, Form()] = "",
     score: Annotated[bool, Form()] = False,
 ) -> Response:
     with refused():
         if order and order not in get_args(Order):
-            raise Invalid.of(
+            raise Invalid.raw(
                 "no order %(order)s: the orders are %(orders)s",
                 order=repr(order),
                 orders=", ".join(get_args(Order)),
             )
         picked = [int(v) for v in version or () if v]
         if not picked:
-            raise Invalid.of("pick a trial to run")
+            return RedirectResponse(
+                f"/lab/run?{urlencode([('trial', t) for t in trial or ()])}", 303
+            )
         runs = bench.start_trials(
             picked,
             int(concurrency) if concurrency.strip() else None,
@@ -71,7 +75,7 @@ def starting(
 def _starting(bench: Bench, thread: int) -> _Starting:
     shown = api.thread(bench, thread)
     if shown.kind != "trial":
-        raise NotFound.of(
+        raise NotFound.raw(
             "no trial %(thread)s for %(login)s", thread=thread, login=bench.person.login
         )
     held = resolve(bench.store.get, shown.head.digest, Trial)
@@ -81,8 +85,8 @@ def _starting(bench: Bench, thread: int) -> _Starting:
     except LookupError:
         named = shown.name or shown.title
         why = refusal(
-            pgettext_noop("refusal", "%(trial)s is out of date: update it on its page"),
-            {"trial": named},
+            pgettext_noop("refusal", "%(name)s is out of date: update it on its page"),
+            {"name": named},
         )
         return _Starting(shown, versions, held, None, why)
     return _Starting(shown, versions, held, at, None)

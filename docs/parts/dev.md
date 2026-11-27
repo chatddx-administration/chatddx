@@ -16,8 +16,8 @@ passed wrote it, as `settings.toml`'s `[checks.inputs]` names it, which `flake.n
 In step with the code:
 
 - `./dev/check.sh openapi` ~1.7s, `frontend/openapi.json` against `chatddx openapi`.
-- `./dev/check.sh index`, `chatddx-dev index --check`: the surfaces, comments and whoopses against the code, and what
-  the parts hold amiss (`docs/parts/index.md`).
+- `./dev/check.sh index`, `chatddx-dev index --check`: the surfaces, comments, whoopses and catalog against the code,
+  and what the parts hold amiss (`docs/parts/index.md`).
 - `./dev/check.sh stamps`, `chatddx-dev stamp check`: no conflict in a doc that isn't a stamp, and
   `chatddx-dev stamp docs --check`: the stamps pending in the prose and the catalogs against the commit stamped, if
   known.
@@ -71,7 +71,7 @@ the docs, and says what it wrote. Each but `costs` and `logs` writes what the ch
   - TOML: `taplo fmt`, on what `.taplo.toml` names
 - `openapi`, the OpenAPI document, `frontend/openapi.json`: `chatddx openapi`
 - `locale`, the catalogs: `chatddx locale write`
-- `index`, the surfaces, comments and whoopses, with what changed as stamps pending: `chatddx-dev index`
+- `index`, the surfaces, comments, whoopses and catalog, with what changed as stamps pending: `chatddx-dev index`
 - `stamps`, the prose and the catalogs, with what changed since the commit stamped as stamps pending:
   `chatddx-dev stamp docs <commit>`
 

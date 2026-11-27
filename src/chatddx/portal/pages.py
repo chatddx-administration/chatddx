@@ -51,6 +51,11 @@ def _display_json(value: JsonValue) -> str:
     return json.dumps(value, indent=2, ensure_ascii=False)
 
 
+def _display_between(value: JsonValue) -> str:
+    lines = _display_json(value).split("\n")
+    return "\n".join(line.removeprefix("  ") for line in lines[1:-1])
+
+
 def _refusal(error: schemas.Error) -> str:
     assert error.wording is not None
     return locale.refusal(error.wording, error.params or {})
@@ -60,6 +65,7 @@ templates.env.filters.update(
     when=_display_time,
     short=_display_digest,
     pretty=_display_json,
+    between=_display_between,
     visible=visible,
     kind=display_kind,
     language=locale.display_language,
@@ -150,11 +156,8 @@ def refusable(e: ValueError) -> bool:
 def refusal_of(e: Exception) -> str:
     if isinstance(e, Worded) and e.wording is not None:
         return locale.refusal(e.wording, e.params)
-    return locale.tr(
-        "%(title)s. Copy this and send it to drift@chatddx.com: %(pass_on)s",
-        title=locale.tr("That can't be done"),
-        pass_on=str(e),
-    )
+    title = locale.upfirst(locale.tr("can't be done"))
+    return f"{title}. {locale.tr('Copy this and send it to drift@chatddx.com:')} {e}"
 
 
 def own_first(bench: Bench, found: list[schemas.Thread]) -> list[schemas.Thread]:

@@ -22,7 +22,7 @@ def test_a_score_on_the_run_page_leads_to_what_its_metric_read(
     assert links
     for link in links:
         page = shown(signed, link)
-        assert "What it read" in page or "How the judge decided" in page, link
+        assert "<h2>Reading</h2>" in page or "<h2>Verdict</h2>" in page, link
         assert "Scored again now" not in page, link
 
 
@@ -69,7 +69,7 @@ def test_a_judged_score_shows_what_its_judge_was_asked_and_decided(
     assert links
     for link in links:
         page = shown(signed, link)
-        assert "The answer, as it was given" in page and "Seed " in page, link
+        assert "<h3>Answer</h3>" in page and "Seed " in page, link
         assert "Rebuilt now" not in page and "Scored again now" not in page, link
         assert "<mark" in page, link
 

@@ -61,7 +61,7 @@ def test_what_can_t_be_typed_is_refused(
     monkeypatch.setattr(settings, "TYPED_TEXT_LIMIT", 1000)
     monkeypatch.setattr(settings, "TYPED_PER_DAY", 1)
     _ = bench.type_case(TYPED, language="en")
-    with pytest.raises(OverQuota, match="alice has typed 1 cases in the last day"):
+    with pytest.raises(OverQuota, match="over the day's quota"):
         _ = bench.type_case(TYPED, language="en")
 
 

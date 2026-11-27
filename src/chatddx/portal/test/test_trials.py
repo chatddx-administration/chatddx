@@ -40,7 +40,7 @@ def test_a_trial_is_begun_of_the_picked_cases_and_run(
     signed: TestClient,
 ) -> None:
     none = shown(signed, "/library?kind=trial")
-    assert "None you see yet" in none and 'href="/review">Review</a>' in none
+    assert "None you see." in none and 'href="/review">Review</a>' in none
     tab = shown(signed, "/library?kind=case")
     assert 'formaction="/library/new"' in tab and 'name="kind" value="trial"' in tab
     action = begun(signed, "nfd", "svenska")
@@ -90,8 +90,13 @@ def test_a_trial_is_begun_of_the_picked_cases_and_run(
     assert signed.get("/lab/run?trial=1").status_code == 404
     got = signed.post("/lab/run", data={"version": [], "order": "sideways"})
     assert got.status_code == 422 and escape("no order 'sideways'") in got.text
-    got = signed.post("/lab/run", data={"version": [""]})
-    assert got.status_code == 422 and "pick a trial to run" in got.text
+    got = signed.post("/lab/run", data={"version": [""], "trial": ["7", "8"]})
+    assert (got.status_code, got.headers["location"]) == (
+        303,
+        "/lab/run?trial=7&trial=8",
+    )
+    got = signed.get("/runs/compare")
+    assert (got.status_code, got.headers["location"]) == (303, "/runs")
 
 
 @pytest.mark.slow

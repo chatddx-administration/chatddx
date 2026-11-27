@@ -5,7 +5,7 @@
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import XIcon from "@lucide/svelte/icons/x";
   import { api, why } from "$lib/api/client";
-  import { t, tp } from "$lib/locale";
+  import { t, tn, tp, upFirst } from "$lib/locale";
   import { fieldName } from "$lib/schema/form";
   import { kept, type Measure, type Measured, segments, type Shown, shownAs, type Text } from "./measure.svelte";
 
@@ -87,7 +87,7 @@
   };
   const said: Record<Shown, () => string> = {
     missed: () => t("Missed"),
-    unscored: () => tp("items", "Not scored"),
+    unscored: () => upFirst(t("not scored")),
     found: () => t("Found"),
   };
   const counted: Record<Shown, (m: Measured) => number> = {
@@ -130,7 +130,7 @@
     {:else if got === null}
       {#if field !== null}
         <p role="status" class="flex items-center gap-2 text-sm text-muted-foreground">
-          <LoaderCircleIcon class="size-4 animate-spin" />{t("Scoring every answer of the case's…")}
+          <LoaderCircleIcon class="size-4 animate-spin" />{upFirst(tp("in progress", "scoring"))}…
         </p>
       {/if}
     {:else}
@@ -157,7 +157,9 @@
       {#if got.alternatives.length > 1}
         <details open class="group mb-4">
           <summary class="mb-1 cursor-pointer text-xs text-muted-foreground">
-            {t("What each of its %(num)s alternatives finds", { num: got.alternatives.length })}
+            {tn("%(num)s alternative", "%(num)s alternatives", got.alternatives.length, {
+              num: got.alternatives.length,
+            })}
           </summary>
           <ol class="max-h-56 space-y-1 overflow-y-auto">
             {#each got.alternatives as a, i (i)}
@@ -193,7 +195,7 @@
             <span aria-hidden="true" class="absolute inset-y-0 left-0 w-1 {tones[at]}"></span>
             <span class="sr-only">{said[at]()}</span>
             {#if text.texts === null || text.texts.length === 0}
-              <p class="text-muted-foreground">{text.reason ?? t("Nothing picked from the answer.")}</p>
+              <p class="text-muted-foreground">{text.reason ?? `${upFirst(t("none"))}.`}</p>
             {:else}
               <ol class="space-y-0.5 {text.texts.length > 1 ? 'list-decimal pl-5' : ''}">
                 {#each text.texts as item, i (i)}
@@ -219,7 +221,7 @@
                     <span class="font-medium">{s.configuration}</span>
                     <span class="text-muted-foreground tabular-nums">{when(s.at)} · #{s.replicate + 1}</span>
                     <span class="text-muted-foreground">{s.view}</span>
-                    {#if s.href}<a href={s.href}>{t("Its score")}</a>{/if}
+                    {#if s.href}<a href={s.href}>{t("Score")}</a>{/if}
                   </li>
                 {/each}
                 {#if text.count > text.seen.length}
@@ -231,7 +233,7 @@
             </details>
           </li>
         {:else}
-          <li class="text-sm text-muted-foreground">{t("Nothing to show.")}</li>
+          <li class="text-sm text-muted-foreground">{upFirst(t("none"))}.</li>
         {/each}
       </ol>
       {#if texts.length > paged}

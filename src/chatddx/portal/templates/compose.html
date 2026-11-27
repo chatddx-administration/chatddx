@@ -13,7 +13,7 @@
 {% block main %}
 {% if not configuration %}
 <div class="mx-auto max-w-3xl px-4 py-8">
-  <p class="text-muted-foreground">{% trans %}No configuration to try: <a class="begin" href="/library/new?kind=configuration">write one from a recipe</a>, in the Library.{% endtrans %}</p>
+  <p class="text-muted-foreground">{{ _("none you see") | upfirst }}. {% trans %}A configuration is <a class="begin" href="/library/new?kind=configuration">written from a recipe</a> in the Library.{% endtrans %}</p>
 </div>
 {% else %}
 {% set here = "/compose/" ~ configuration.id %}
@@ -27,7 +27,7 @@
   </nav>
   </section>
 
-  {% call pane(_("The configuration")) %}
+  {% call pane(_("Configuration")) %}
   <header class="mb-4">
     <div class="flex flex-wrap items-baseline justify-between gap-x-2">
       <h1 class="text-xl font-bold tracking-tight">{{ named(configuration) }}</h1>
@@ -35,33 +35,33 @@
     </div>
     {% set last = versions | length - 1 %}
     <nav class="mt-3 flex flex-wrap items-center gap-2 text-sm" aria-label="{{ _('Versions') }}">
-      {% if at > 0 %}<a class="view" aria-label="{{ _('The version before') }}" href="{{ links[at - 1] }}" data-head="{{ versions[at - 1].held.id }}">◀</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">◀</span>{% endif %}
+      {% if at > 0 %}<a class="view" aria-label="{{ _('Previous version') }}" href="{{ links[at - 1] }}" data-head="{{ versions[at - 1].held.id }}">◀</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">◀</span>{% endif %}
       <span class="font-medium">{{ _("version %(at)s of %(last)s", at=at + 1, last=versions | length) | upfirst }}</span>
-      {% if at < last %}<a class="view" aria-label="{{ _('The version after') }}" href="{{ links[at + 1] }}" data-head="{{ versions[at + 1].held.id }}">▶</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">▶</span>{% endif %}
+      {% if at < last %}<a class="view" aria-label="{{ _('Next version') }}" href="{{ links[at + 1] }}" data-head="{{ versions[at + 1].held.id }}">▶</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">▶</span>{% endif %}
       <span class="text-xs text-muted-foreground">{{ versions[at].first.at | when }}, {{ versions[at].first.by }}</span>
     </nav>
     {% if at != current %}
-    <p class="mt-2 rounded-lg bg-warning/10 p-3 text-sm">{% if current == last %}{{ _("A newer version is saved: version %(n)s, %(at)s by %(by)s.", n=current + 1, at=latest.at | when, by=latest.by) }}{% else %}{{ _("Version %(n)s is brought back as the latest, %(at)s by %(by)s.", n=current + 1, at=latest.at | when, by=latest.by) }}{% endif %} <a class="view" href="{{ links[current] }}" data-head="{{ latest.id }}">{{ _("Open the latest") }}</a></p>
+    <p class="mt-2 rounded-lg bg-warning/10 p-3 text-sm">{{ _("newer version") | upfirst }}: {{ _("saved %(at)s by %(by)s", at=latest.at | when, by=latest.by) }}. <a class="view" href="{{ links[current] }}" data-head="{{ latest.id }}">{{ _("Open the latest") }}</a></p>
     {% endif %}
   </header>
   {{ updating(configuration, proposal, changes, here) }}
   {% if baseline and (baseline.refusal or baseline.outdated or baseline.untranslated or baseline.findings) %}
-  <section aria-label="{{ _('Its findings') }}" class="mb-4 text-sm">
-    {% if baseline.outdated %}<p class="mb-2 text-warning">{{ _("it is out of date: update it on its page") }}</p>{% endif %}
-    {% if baseline.untranslated %}<p class="mb-2 text-warning">{{ _("Its baseline has cases in %(language)s, which it has no translation into: translate it to run the baseline.", language=baseline.untranslated | language) }}</p>{% endif %}
+  <section aria-label="{{ _('Findings') }}" class="mb-4 text-sm">
+    {% if baseline.outdated %}<p class="mb-2 text-warning">{{ _("out of date") | upfirst }}: {{ _("update it on its page") }}</p>{% endif %}
+    {% if baseline.untranslated %}<p class="mb-2 text-warning">{{ _("no translation into %(language)s", language=baseline.untranslated | language) | upfirst }}: {{ _("translate it to run the baseline") }}</p>{% endif %}
     {% if baseline.refusal %}<p class="mb-2 text-warning">{{ baseline.refusal }}</p>{% endif %}
     {% if baseline.findings %}{{ findings(baseline.findings) }}{% endif %}
   </section>
   {% endif %}
 
   <div id="compose">
-    <p class="mb-6 border-t border-border/60 pt-4 text-sm text-muted-foreground">{{ _("Writing it and saving it take scripts.") }}</p>
+    <p class="mb-6 border-t border-border/60 pt-4 text-sm text-muted-foreground">{{ _("needs scripts") | upfirst }}.</p>
   </div>
   <script type="application/json" id="compose-props">{{ props | tojson }}</script>
 
   {% endcall %}
 
-  <section id="compose-preview" data-slide-in aria-label="{{ _('What it sends') }}" class="pane relative min-h-0 overflow-hidden rounded-2xl xl:col-start-3 xl:row-start-1" inert>
+  <section id="compose-preview" data-slide-in aria-label="{{ _('Request') }}" class="pane relative min-h-0 overflow-hidden rounded-2xl xl:col-start-3 xl:row-start-1" inert>
   </section>
 </div>
 {% if baseline %}

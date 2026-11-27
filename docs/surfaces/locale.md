@@ -52,9 +52,8 @@ TypeScript and Svelte:
 * ∟`None`
 
 Raises:
-1. `ValueError`: `"{where}:{lineno}: {msgid!r} is said both counted and not, which gettext holds as one message: give one a context"` (through `_extracted`)
-2. `SystemExit`: `"locale: messages said alike: one message for one scenario, raised with upfirst where it starts a heading, a label or a sentence, or a context for what tells them apart"`
-3. `SystemExit`: `"locale: {shown} behind the code: run chatddx locale write"`
+1. `SystemExit`: `"locale: messages said alike: one message for one scenario, raised with upfirst where it starts a heading, a label or a sentence, or a context for what tells them apart"`
+2. `SystemExit`: `"locale: {shown} behind the code: run chatddx locale write"`
 
 ## `CHOSEN`
 `src/chatddx/locale/locale.py:CHOSEN`
@@ -95,6 +94,18 @@ Raises:
 
 * `items: Sequence[str]`
 * ∟`str`
+
+## `extracted`
+`src/chatddx/locale/locale.py:extracted`
+
+Each message the code under root says, untranslated, with its context and each
+file and line that says it: parses every source the catalogs are extracted from.
+
+* `root: Path = settings.PROJECT_ROOT`
+* ∟`Catalog`
+
+Raises:
+1. `ValueError`: `"{where}:{lineno}: {msgid!r} is said both counted and not, which gettext holds as one message: give one a context"`
 
 ## `gettext`
 `src/chatddx/locale/locale.py:gettext`
@@ -231,9 +242,6 @@ Raises:
 * `catalogs: Path = _CATALOGS`
 * ∟`list[Proof]`
 
-Raises:
-1. `ValueError`: `"{where}:{lineno}: {msgid!r} is said both counted and not, which gettext holds as one message: give one a context"` (through `_extracted`)
-
 ## `refusal`
 `src/chatddx/locale/locale.py:refusal`
 
@@ -249,9 +257,6 @@ Raises:
 * `now: str`
 * `root: Path = settings.PROJECT_ROOT`
 * ∟`str`
-
-Raises:
-1. `ValueError`: `"{where}:{lineno}: {msgid!r} is said both counted and not, which gettext holds as one message: give one a context"` (through `_extracted`)
 
 ## `said_alike`
 `src/chatddx/locale/locale.py:said_alike`

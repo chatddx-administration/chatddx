@@ -17,8 +17,8 @@
 {%- endmacro %}
 
 {% macro pick(name, held, options, nullable) -%}
-<select name="f.{{ name }}" aria-label="{{ name | replace('_', ' ') }}" class="{{ box }} h-9">
-  {% if nullable or held is none %}<option value="">{{ pgettext("no pick", "none") if nullable else _("pick one") }}</option>{% endif %}
+<select name="f.{{ name }}" aria-label="{{ name | replace('_', ' ') }}" class="{{ box }} h-9"{% if not nullable %} required{% endif %}>
+  {% if nullable or held is none %}<option value="">{{ "—" if nullable else _("pick one") }}</option>{% endif %}
   {% for digest, label in options %}<option value="{{ digest }}"{% if digest == held %} selected{% endif %}>{{ label }}</option>{% endfor %}
 </select>
 {%- endmacro %}
@@ -36,15 +36,15 @@
 <div class="grid gap-1.5">
   {% for held in (f.value or []) + [""] %}
   <select name="f.{{ f.name }}" aria-label="{{ label }} {{ loop.index }}" class="{{ box }} h-9">
-    <option value="">{{ pgettext("no pick", "none") }}</option>
+    <option value="">—</option>
     {% for o in f.options %}<option value="{{ o }}"{% if o == held %} selected{% endif %}>{{ o }}</option>{% endfor %}
   </select>
   {% endfor %}
   <span class="text-xs text-muted-foreground">{{ _("One a line, in order; none takes one out, and the last adds one.") }}</span>
 </div>
 {%- elif f.shape == "choose" %}
-<select name="f.{{ f.name }}" aria-label="{{ label }}" class="{{ box }} h-9">
-  {% if f.nullable or f.value is none %}<option value="">{{ pgettext("no pick", "none") if f.nullable else _("pick one") }}</option>{% endif %}
+<select name="f.{{ f.name }}" aria-label="{{ label }}" class="{{ box }} h-9"{% if not f.nullable %} required{% endif %}>
+  {% if f.nullable or f.value is none %}<option value="">{{ "—" if f.nullable else _("pick one") }}</option>{% endif %}
   {% for o in f.options %}<option value="{{ o }}"{% if o == f.value %} selected{% endif %}>{{ o }}</option>{% endfor %}
 </select>
 {%- elif f.shape == "number" %}
@@ -69,9 +69,11 @@
   <option value="json"{% if not text %} selected{% endif %}>{{ _("as JSON") }}</option>
 </select>
 {% endif %}
-{% set shown = f.typed if f.typed is not none else (f.value or "") if text else (f.value | pretty) if f.given else "" %}
-<textarea name="f.{{ f.name }}" aria-label="{{ label }}" rows="{{ [2, shown.count('\n') + 2] | max }}" class="{{ box }}{% if not text %} font-mono text-xs{% endif %}">
+{% set shown = f.typed if f.typed is not none else (f.value or "") if text else (f.value | between if f.brackets else f.value | pretty) if f.given else "" %}
+{% if f.brackets %}<span class="font-mono text-xs text-muted-foreground" aria-hidden="true">{{ f.brackets[0] }}</span>{% endif %}
+<textarea name="f.{{ f.name }}" aria-label="{{ label }}" rows="{{ [2, shown.count('\n') + 2] | max }}" class="{{ box }}{% if not text %} font-mono text-xs{% endif %}{% if f.brackets %} ml-3{% endif %}"{% if f.brackets %} data-brackets="{{ f.brackets }}"{% endif %}>
 {{ shown }}</textarea>
+{% if f.brackets %}<span class="font-mono text-xs text-muted-foreground" aria-hidden="true">{{ f.brackets[1] }}</span>{% endif %}
 {%- endif %}
 {%- endmacro %}
 

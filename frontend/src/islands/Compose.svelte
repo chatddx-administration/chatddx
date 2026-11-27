@@ -253,7 +253,7 @@
     <div>
       {#if !sending.open}
         <div class="mb-2 flex justify-end">
-          <button type="button" class="small" onclick={() => sending.show()}>{t("What it sends")}</button>
+          <button type="button" class="small" onclick={() => sending.show()}>{t("Request")}</button>
         </div>
       {/if}
       <Texts

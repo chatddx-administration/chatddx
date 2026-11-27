@@ -951,7 +951,7 @@ def landings(
     recipe: Recipe, get: Resolver, facts: ModelFacts | None
 ) -> tuple[Landing | None, Landing | None]:
     if facts is not None and (model := model_of(recipe.model, get).name) != facts.model:
-        raise StructuralError.of(
+        raise StructuralError.raw(
             "facts about %(facts)s can't compile for %(model)s",
             facts=facts.model,
             model=model,

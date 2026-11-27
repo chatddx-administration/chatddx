@@ -14,7 +14,7 @@ from chatddx.api.state import refused
 from chatddx.bench import Bench, NotFound
 from chatddx.catalog import threads
 from chatddx.catalog.language import language_of
-from chatddx.factors.base import Invalid, resolve
+from chatddx.factors.base import resolve
 from chatddx.factors.request import Skeleton
 from chatddx.factors.response import Part, parts
 from chatddx.factors.trial import Trial, suggest_seeds
@@ -94,7 +94,7 @@ def comparing(
     by: str | None = None,
 ) -> Response:
     if not run:
-        raise Invalid.of("pick the runs to compare on the runs page")
+        return RedirectResponse("/runs", 303)
     compared = api.compared(bench, run)
     cases = [i.case for i in compared.items] + [c.case for c in compared.apart]
     picked = _viewed(compared.views, by)
@@ -261,7 +261,7 @@ def _configuration(
     link = f"/compose/{ran.configuration}{given}"
     if current:
         return link, tried.label
-    return link, tr("%(configuration)s, an earlier version", configuration=tried.label)
+    return link, f"{tried.label}, {tr('an earlier version')}"
 
 
 def _version(bench: Bench, skeleton: str) -> tuple[str, str] | None:
@@ -282,7 +282,7 @@ def _version(bench: Bench, skeleton: str) -> tuple[str, str] | None:
         return f"/compose/{found.thread}", title
     return (
         f"/compose/{found.thread}?head={found.id}",
-        tr("%(configuration)s, an earlier version", configuration=title),
+        f"{title}, {tr('an earlier version')}",
     )
 
 

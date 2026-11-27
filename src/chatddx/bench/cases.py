@@ -52,7 +52,7 @@ def type_case(
     if not text.strip():
         raise Invalid.of("a typed case holds text")
     if "\0" in text:
-        raise Invalid.of("a typed case may not hold U+0000, which can't be stored")
+        raise Invalid.of("U+0000 can't be stored")
     if len(text) > settings.TYPED_TEXT_LIMIT:
         raise Invalid.of(
             (
@@ -75,14 +75,9 @@ def type_case(
     since = datetime.now(UTC) - timedelta(days=1)
     if (typed := texts.typed_since(seen.person.id, since)) >= settings.TYPED_PER_DAY:
         raise OverQuota.of(
-            (
-                "%(login)s has typed %(num)s cases in the last day, as many as a day "
-                + "takes",
-                "%(login)s has typed %(num)s cases in the last day, as many as a day "
-                + "takes",
-            ),
-            login=seen.person.login,
-            num=typed,
+            "over the day's quota: %(used)s of %(limit)s",
+            used=typed + 1,
+            limit=settings.TYPED_PER_DAY,
         )
     with seen.conn.transaction():
         id = texts.add(into, text, seen.person.id)

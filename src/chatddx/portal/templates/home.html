@@ -5,6 +5,6 @@
   {% if not assets.island(island).scripts %}
   <p class="mx-auto max-w-xl px-4 py-16 text-center text-muted-foreground">{{ _("The home page's script isn't built.") }}</p>
   {% endif %}
-  <noscript><p class="mx-auto max-w-xl px-4 py-16 text-center text-muted-foreground">{{ _("The home page needs JavaScript.") }}</p></noscript>
+  <noscript><p class="mx-auto max-w-xl px-4 py-16 text-center text-muted-foreground">{{ _("needs scripts") | upfirst }}.</p></noscript>
 </div>
 {% endblock %}

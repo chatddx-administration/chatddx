@@ -59,6 +59,14 @@ class Worded(Exception):
         made.wording, made.params = wording, params
         return made
 
+    @classmethod
+    def raw(cls, english: str, /, **params: Param) -> Self:
+        """Its English and parameters as `of` has them, unworded: what a person can't
+        cause through the portal, which is passed on as it comes rather than said."""
+        made = cls(_filled(english, params))
+        made.params = params
+        return made
+
 
 class StructuralError(Worded, ValueError):
     pass
@@ -250,10 +258,7 @@ class Component(Frozen):
     @model_validator(mode="after")
     def _storable(self) -> Self:
         if _holds_nul(self.canonical_doc()):
-            raise Invalid.of(
-                "a %(kind)s may not hold U+0000, which can't be stored",
-                kind=self.kind_name,
-            )
+            raise Invalid.of("U+0000 can't be stored")
         return self
 
     @property

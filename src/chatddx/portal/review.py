@@ -175,7 +175,7 @@ def _under(visible: list[schemas.Thread], schema: str | None) -> str | None:
         (t.head.digest for t in visible if schema in (None, t.head.digest)), None
     )
     if schema is not None and under is None:
-        raise NotFound.of("no expectation schema %(schema)s for you", schema=schema)
+        raise NotFound.raw("no expectation schema %(schema)s for you", schema=schema)
     return under
 
 
@@ -198,7 +198,7 @@ def deleting_in_review(
     seen = _seen(bench)
     branch = _branches(bench, shown, seen).get(case)
     if branch is None:
-        raise NotFound.of(
+        raise NotFound.raw(
             "no appendix to delete in case %(case)s of %(family)s",
             case=case,
             family=shown.name,
@@ -224,7 +224,7 @@ def _query(**given: _Given) -> str:
 def _picked(shown: schemas.FamilyDetail, case: str | None) -> schemas.FamilyCase:
     picked = next((c for c in shown.cases if case in (None, c.case)), None)
     if picked is None:
-        raise NotFound.of(
+        raise NotFound.raw(
             "no case %(case)s of %(family)s", case=str(case), family=shown.name
         )
     return picked

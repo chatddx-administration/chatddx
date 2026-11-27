@@ -1,5 +1,5 @@
 import createClient from "openapi-fetch";
-import { refusal, t, whoops } from "$lib/locale";
+import { refusal, t, upFirst, whoops } from "$lib/locale";
 import type { components, paths } from "./schema";
 
 export type Schemas = components["schemas"];
@@ -8,18 +8,18 @@ export const api = createClient<paths>();
 
 function titled(code: Schemas["Error"]["code"] | undefined): string {
   const titles: Partial<Record<Schemas["Error"]["code"], string>> = {
-    not_found: t("Not found"),
-    not_allowed: t("Not allowed"),
-    cross_site: t("Refused"),
+    not_found: upFirst(t("not found")),
+    not_allowed: upFirst(t("not allowed")),
+    cross_site: upFirst(t("not allowed")),
     unauthenticated: t("Sign in"),
-    refused: t("That can't be done"),
-    unprocessable: t("That can't be done"),
-    conflict: t("A conflict"),
-    moved_on: t("It has moved on"),
-    ambiguous: t("That names several"),
-    over_quota: t("Over the day's quota"),
+    refused: upFirst(t("can't be done")),
+    unprocessable: upFirst(t("can't be done")),
+    conflict: upFirst(t("can't be done")),
+    moved_on: upFirst(t("newer version")),
+    ambiguous: upFirst(t("can't be done")),
+    over_quota: upFirst(t("can't be done")),
   };
-  return (code && titles[code]) ?? t("Something went wrong");
+  return (code && titles[code]) ?? upFirst(t("something went wrong"));
 }
 
 // Policy: what a person can cause is worded, and what isn't worded they couldn't have
@@ -28,15 +28,10 @@ export function why(error: unknown): string {
   const failure = error as Partial<Schemas["Error"]> | undefined;
   const detail = failure?.detail;
   if (typeof detail === "string" && failure?.code === "whoops") {
-    return t("%(message)s Copy this and send it to drift@chatddx.com: %(pass_on)s", {
-      message: whoops(detail),
-      pass_on: failure.pass_on ?? "",
-    });
+    return `${whoops(detail)} ${t("Copy this and send it to drift@chatddx.com:")} ${failure.pass_on ?? ""}`;
   }
   if (typeof detail === "string" && failure?.wording) return refusal(detail, failure.wording, failure.params ?? {});
-  if (detail === undefined) return t("the server didn't say why");
-  return t("%(title)s. Copy this and send it to drift@chatddx.com: %(pass_on)s", {
-    title: titled(failure?.code),
-    pass_on: typeof detail === "string" ? detail : detail.map((d) => JSON.stringify(d)).join("; "),
-  });
+  if (detail === undefined) return `${upFirst(t("something went wrong"))}.`;
+  const passed = typeof detail === "string" ? detail : detail.map((d) => JSON.stringify(d)).join("; ");
+  return `${titled(failure?.code)}. ${t("Copy this and send it to drift@chatddx.com:")} ${passed}`;
 }

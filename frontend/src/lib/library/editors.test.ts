@@ -38,11 +38,10 @@ describe("a scorer's labels", () => {
 
 describe("a JSON box", () => {
   it("says what keeps what is typed in it from being sent, and nothing while it holds what it is to", () => {
-    expect(misread("", "object")).toBeNull();
-    expect(misread('{"enable_thinking": false}', "object")).toBeNull();
-    expect(misread('{"enable_thinking": fals}', "object")).toMatch(/^It isn't JSON yet: /);
-    expect(misread("[]", "object")).toBe("It is to be an object, between { and }.");
-    expect(misread("{}", "array")).toBe("It is to be a list, between [ and ].");
+    expect(misread("", "{}")).toBeNull();
+    expect(misread('"enable_thinking": false', "{}")).toBeNull();
+    expect(misread('"enable_thinking": fals', "{}")).toMatch(/^It isn't JSON yet: /);
+    expect(misread('"a", "b"', "[]")).toBeNull();
     expect(misread("null", null)).toBeNull();
   });
 });

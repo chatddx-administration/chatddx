@@ -50,9 +50,9 @@ export function said(behind: Behind): string {
     case "under_way":
       return t("under way");
     case "outdated":
-      return t("it is out of date: update it on its page");
+      return `${t("out of date")}: ${t("update it on its page")}`;
     case "untranslated":
-      return t("it has no translation into %(language)s", { language: displayLanguage(behind.language ?? "") });
+      return t("no translation into %(language)s", { language: displayLanguage(behind.language ?? "") });
     case "refused":
       return why(behind.refusal);
     case "no_runs":

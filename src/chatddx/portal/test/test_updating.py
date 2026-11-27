@@ -37,7 +37,7 @@ def test_what_is_out_of_date_is_tagged_and_updated_one_by_one_or_all(
     assert "Out of date" in library and "Update all" in library
     lab = said(shown(signed, f"/compose/{configuration['id']}"))
     assert f"Its model, {QWEN_MODEL}, has a new version." in lab
-    assert "It can't be used until it is updated." in lab
+    assert "Can't be used." in lab
     scoring = said(shown(signed, f"/scoring/{mine}"))
     assert f"Its model, {QWEN_MODEL}, has a new version." in scoring
     read_only = shown(signed, f"/threads/{theirs['id']}")

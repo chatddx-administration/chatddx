@@ -5,7 +5,7 @@
   let { edited }: { edited: Edited } = $props();
 
   function restore(): void {
-    if (!edited.pending || confirm(t("Undo everything you changed on this page since it was last saved?"))) {
+    if (!edited.pending || confirm(t("Discard what you changed?"))) {
       edited.restore();
     }
   }

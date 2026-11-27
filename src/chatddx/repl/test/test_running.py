@@ -276,7 +276,7 @@ def test_run_tag_runs_the_cases_with_any_of_its_tags(bench: Bench, say: Say):
 
     assert f"{english} cases tagged targets or nowhere or swedish (seed 7)" in written
     assert (
-        f"left out: {len(swedish)} cases in sv, as lines has no translations into sv"
+        f"left out: {len(swedish)} cases in sv, as lines has no translation into sv"
     ) in written
     [run] = ran(bench)
     assert len(run.items) == english

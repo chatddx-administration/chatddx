@@ -14,7 +14,7 @@
   import { found, paged } from "$lib/paging/paging";
   import { watch } from "$lib/runs/events";
   import { outcome, outcomes } from "$lib/runs/outcomes";
-  import { begun, fold, type Item, tally } from "$lib/runs/progress";
+  import { begun, fold, type Item, streaming, tally } from "$lib/runs/progress";
 
   let { live }: { live: Live } = $props();
   const given = untrack(() => live);
@@ -48,12 +48,10 @@
 
   function doing(item: Item): string {
     const n = item.tokens;
-    if (item.phase === "waiting") return t("waiting");
+    if (item.phase === "waiting") return tp("in progress", "waiting");
     if (item.phase === "ended") return t("%(sent)s in, %(got)s out", { sent: item.sent, got: item.received });
     if (item.kind === null) return t("sent");
-    if (item.kind === "reasoning") return tn("thinking, %(n)s token", "thinking, %(n)s tokens", n, { n });
-    if (item.kind === "tool_call") return tn("calling a tool, %(n)s token", "calling a tool, %(n)s tokens", n, { n });
-    return tn("writing, %(n)s token", "writing, %(n)s tokens", n, { n });
+    return `${streaming(item.kind)}, ${tn("%(num)s token", "%(num)s tokens", n, { num: n })}`;
   }
 </script>
 
@@ -62,18 +60,18 @@
     <h2 class="text-lg font-semibold">{upFirst(t("under way"))}</h2>
     {#if progress.done}
       <span class="text-sm text-muted-foreground">
-        {progress.done.halted ? t("Halted; showing what it came to…") : t("Done; showing what it came to…")}
+        {upFirst(progress.done.halted ? tp("job", "stopped") : tp("job", "finished"))}…
       </span>
     {:else}
       <LoaderCircleIcon class="size-4 animate-spin text-muted-foreground" aria-hidden="true" />
       <span class="text-sm text-muted-foreground"
-        >{scoring ? tp("a run under way", "Scoring") : tp("a run under way", "Sending")}</span
+        >{upFirst(scoring ? tp("in progress", "scoring") : tp("in progress", "sending"))}…</span
       >
     {/if}
   </div>
 
   {#if lost}
-    <p class="mb-4 text-sm text-destructive">{t("%(lost)s. Reload the page to see how far it has come.", { lost })}</p>
+    <p class="mb-4 text-sm text-destructive">{lost}. {t("Reload the page to see how far it has come.")}</p>
   {/if}
 
   {#if counted.of}
@@ -132,7 +130,9 @@
               {item.text.content}{item.text.tool_call}
             </div>
           {/if}
-          {#if item.phase === "waiting"}<p class="mt-2 text-xs text-muted-foreground">{t("Not sent yet.")}</p>{/if}
+          {#if item.phase === "waiting"}<p class="mt-2 text-xs text-muted-foreground">
+              {upFirst(tp("in progress", "waiting"))}.
+            </p>{/if}
           {#if item.phase === "ended" && !item.text.content && !item.text.reasoning}
             <p class="mt-2 text-xs text-muted-foreground">
               {t("It ended before this page followed it; its answer is on the run's page once it is done.")}
@@ -154,7 +154,7 @@
         <li class="flex flex-wrap items-center gap-x-3">
           <span class="font-medium">{s.name}</span>
           {#if s.score === null}
-            <span class="text-muted-foreground">{t("waiting")}</span>
+            <span class="text-muted-foreground">{tp("in progress", "waiting")}</span>
           {:else}
             {#if !after && progress.scores === null}<LoaderCircleIcon
                 class="size-3.5 animate-spin text-muted-foreground"

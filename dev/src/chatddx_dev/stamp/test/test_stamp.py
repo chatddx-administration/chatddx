@@ -49,6 +49,7 @@ def faked(
     monkeypatch.setattr(stamp, "SURFACES", docs)
     monkeypatch.setattr(stamp, "COMMENTS", tmp_path / "docs" / "comments")
     monkeypatch.setattr(stamp, "WHOOPSES", tmp_path / "docs" / "whoopses")
+    monkeypatch.setattr(stamp, "CATALOG", tmp_path / "docs" / "catalog")
     catalogs = tmp_path / "src" / "chatddx" / "locale" / "catalogs"
     monkeypatch.setattr(locale, "catalogs", lambda: locale.locale.catalogs(catalogs))
 
@@ -177,7 +178,7 @@ def test_docs_stamps_each_change_to_a_doc_since_the_commit_it_is_given_or_checks
     base = git(tmp_path, "rev-parse", "HEAD")
     shown = git(tmp_path, "log", "-1", "--format=%h %s")
     monkeypatch.setattr(project, "PROJECT_ROOT", tmp_path)
-    for docs in ("surfaces", "comments", "whoopses"):
+    for docs in ("surfaces", "comments", "whoopses", "catalog"):
         monkeypatch.setattr(stamp, docs.upper(), tmp_path / "docs" / docs)
 
     (tmp_path / "docs" / "parts").mkdir(parents=True, exist_ok=True)
@@ -257,7 +258,7 @@ def test_docs_stamps_a_catalog_s_translations_since_the_commit_alone(
     base = git(tmp_path, "rev-parse", "HEAD")
     monkeypatch.setattr(project, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(locale, "catalogs", lambda: [sv])
-    for docs in ("surfaces", "comments", "whoopses"):
+    for docs in ("surfaces", "comments", "whoopses", "catalog"):
         monkeypatch.setattr(stamp, docs.upper(), tmp_path / "docs" / docs)
 
     _ = code.write_text(code.read_text() + 'LAB = N_("Lab")\n')

@@ -57,13 +57,11 @@ export function madeFor(judging: Judging[], models: Serving[]): Record<string, s
   );
 }
 
-export function seedsOf(text: string): number[] | string {
-  const given = text.split(/[\s,]+/).filter(Boolean);
-  if (!given.length) return t("a judge has a seed or more");
-  const seeds = given.map(Number);
-  if (seeds.some((s) => !Number.isInteger(s) || s < 0)) return t("seeds are whole numbers, 0 or more");
-  if (new Set(seeds).size !== seeds.length) return t("each seed once");
-  return seeds;
+// Policy: seeds are read from what is typed, whatever it is, so that nothing typed is
+// refused: each whole number once, and the seed 1 while none is typed.
+export function seedsOf(text: string): number[] {
+  const seeds = [...new Set((text.match(/\d+/g) ?? []).map(Number))];
+  return seeds.length ? seeds : [1];
 }
 
 export function verdictAt(schema: Schema | null): string[] {

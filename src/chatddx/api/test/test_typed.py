@@ -48,4 +48,4 @@ def test_what_can_t_be_typed_is_refused_and_a_day_s_quota_held(
     assert signed.post("/api/families", json=typed).status_code == 201
     got = signed.post("/api/families", json=typed)
     assert got.status_code == 429
-    assert "alice has typed 1 cases in the last day" in got.json()["detail"]
+    assert "over the day's quota" in got.json()["detail"]

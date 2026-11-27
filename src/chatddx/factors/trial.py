@@ -115,7 +115,7 @@ class Execution(Frozen):
     @model_validator(mode="after")
     def _shuffle_seed(self) -> "Execution":
         if (self.order == "shuffled@1") != (self.shuffle_seed is not None):
-            raise Invalid.of("shuffle_seed goes with shuffled order, and only with it")
+            raise Invalid.raw("shuffle_seed goes with shuffled order, and only with it")
         return self
 
     def overlaid(

@@ -10,7 +10,7 @@
   import { api } from "$lib/api/client";
   import Findings from "$lib/editors/Findings.svelte";
   import { type Checked, checked, type Component } from "$lib/editors/writing";
-  import { displayList, t, tp, upFirst } from "$lib/locale";
+  import { displayList, t, upFirst } from "$lib/locale";
   import { type Part, rewritten } from "./rewriting";
   import TextSegments from "./TextSegments.svelte";
   import { asked, type Seg, segmentsOf, textOf } from "./texts";
@@ -120,10 +120,7 @@
   }
 </script>
 
-<section
-  class="space-y-3 rounded-lg border border-dashed border-primary/40 p-2.5"
-  aria-label={t("What its judge is asked, as you write it")}
->
+<section class="space-y-3 rounded-lg border border-dashed border-primary/40 p-2.5" aria-label={t("Texts")}>
   <p class="text-muted-foreground">
     {t(
       "What %(judge)s is asked, written as you would have it. Saving keeps each text you change as a version of your own, the judge's request with them, and a judge of your own asked through it. The scorers asking %(judge)s keep asking the version they ask until they follow yours, from its page.",
@@ -133,12 +130,7 @@
   <div class="grid gap-3 lg:grid-cols-2">
     <div class="space-y-3">
       {#if parts.instructions}
-        <TextSegments
-          label={tp("a label", "Its instructions")}
-          segs={instructions}
-          set={(s) => (instructions = s)}
-          inserts={guiding}
-        />
+        <TextSegments label={t("Instructions")} segs={instructions} set={(s) => (instructions = s)} inserts={guiding} />
       {/if}
       {#if parts.output}
         <TextSegments
@@ -150,7 +142,7 @@
       {/if}
       {#if parts.prompt}
         <TextSegments
-          label={tp("a label", "Its prompt")}
+          label={t("Prompt")}
           segs={prompt}
           set={(s) => (prompt = s)}
           slots={judgeSlots}
@@ -159,8 +151,8 @@
       {/if}
     </div>
     <div>
-      <p class="mb-1 font-medium">{t("As it would read")}</p>
-      <ol class="space-y-1.5" aria-label={t("As it would read")}>
+      <p class="mb-1 font-medium">{t("Preview")}</p>
+      <ol class="space-y-1.5" aria-label={t("Preview")}>
         {#each preview as m, i (i)}
           <li>
             <span class="font-medium text-muted-foreground">{m.role}</span>

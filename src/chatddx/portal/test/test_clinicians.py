@@ -99,7 +99,7 @@ def test_a_case_s_versions_are_its_bindings_and_earlier_cases_offer_a_replacemen
     assert f'href="{path}?version=1"' in page and "/fingerprint/hex" in page
 
     page = shown(signed, f"{path}?version=1")
-    assert "A repair has moved its vignette since" in page and first not in page
+    assert "Newer version: version" in page and first not in page
     assert f'value="{late}"' in page
     got = signed.post(f"{path}/replacement", data={"case": late, "version": "1"})
     assert (got.status_code, got.headers["location"]) == (303, f"{path}?version=1")
@@ -120,7 +120,7 @@ def test_what_is_said_of_a_typed_case_is_changed_and_it_is_deleted_and_restored(
         "/api/families", json={"text": TYPED, "language": "en", "name": "flight"}
     ).json()
     path = f"/cases/{typed['id']}"
-    assert "What is said of it" in shown(signed, path)
+    assert "<h2>Edit</h2>" in shown(signed, path)
     form = {
         "name": "breathless",
         "description": "After a flight.",
@@ -147,13 +147,13 @@ def test_what_is_said_of_a_typed_case_is_changed_and_it_is_deleted_and_restored(
 
     assert signed.post(f"{path}/delete").status_code == 303
     page = shown(signed, path)
-    assert "You deleted it" in page and "What is said of it" not in page
+    assert "You deleted it" in page and "<h2>Edit</h2>" not in page
     assert f'action="{path}/restore"' in shown(signed, "/library?kind=case")
     assert signed.post(f"{path}/restore").status_code == 303
     assert "You deleted it" not in shown(signed, path)
 
     crlf = family(signed)
-    assert "What is said of it" not in shown(signed, f"/cases/{crlf['id']}")
+    assert "<h2>Edit</h2>" not in shown(signed, f"/cases/{crlf['id']}")
     got = signed.post(f"/cases/{crlf['id']}/said", data=form)
     assert got.status_code == 422 and "of yours" in got.text
 

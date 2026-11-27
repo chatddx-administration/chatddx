@@ -48,6 +48,7 @@ class Field:
     minimum: int | float | None = None
     typed: str | None = None
     refused: str | None = None
+    brackets: str | None = None
 
 
 class _Unparsed(Invalid):
@@ -71,7 +72,7 @@ def fresh(
     given = given or {}
     properties = _properties(model)
     if unknown := [n for n in given if n not in properties]:
-        raise Invalid.of(
+        raise Invalid.raw(
             "no field %(field)s to give: the fields are %(fields)s",
             field=repr(unknown[0]),
             fields=", ".join(properties),
@@ -146,7 +147,8 @@ def _field(name: str, held: dict[str, Any], value: JsonValue, editable: bool) ->
         return Field(name, "text", value, editable, nullable)
     if "string" in types:
         return Field(name, "either", value, editable, nullable)
-    return Field(name, "json", value, editable, nullable)
+    brackets = "{}" if types == {"object"} else "[]" if types == {"array"} else None
+    return Field(name, "json", value, editable, nullable, brackets=brackets)
 
 
 def choices(
@@ -260,7 +262,9 @@ def parsed(found: list[Field], form: FormData) -> dict[str, JsonValue]:
         match f.shape:
             case "picks" | "chooses":
                 picks = form.getlist(f"f.{f.name}")
-                body[f.name] = [v for v in picks if isinstance(v, str) and v]
+                body[f.name] = list(
+                    dict.fromkeys(v for v in picks if isinstance(v, str) and v)
+                )
             case "pick" | "choose":
                 if given or f.nullable:
                     body[f.name] = given or None
@@ -279,8 +283,14 @@ def parsed(found: list[Field], form: FormData) -> dict[str, JsonValue]:
                 body[f.name] = None if given == "" and f.nullable else given
             case _:
                 if given.strip():
-                    body[f.name] = _json(f.name, given)
+                    body[f.name] = _json(f.name, _bracketed(f, given))
     return body
+
+
+# Policy: a box whose field is an object or a list holds what is between its brackets,
+# which the page shows around it, so that what is typed is of its shape whatever it is.
+def _bracketed(f: Field, given: str) -> str:
+    return given if f.brackets is None else f"{f.brackets[0]}{given}{f.brackets[1]}"
 
 
 def _given(form: FormData, name: str) -> str:
@@ -295,19 +305,21 @@ def _number(f: Field, given: str) -> int | float:
     except ValueError:
         found = math.nan
     if not math.isfinite(found) and f.whole:
-        raise _Unparsed.of(
+        raise _Unparsed.raw(
             "%(field)s isn't a whole number: %(given)s", field=f.name, given=repr(given)
         )
     if not math.isfinite(found):
-        raise _Unparsed.of(
+        raise _Unparsed.raw(
             "%(field)s isn't a number: %(given)s", field=f.name, given=repr(given)
         )
     return found
 
 
+# Policy: a list of whole numbers is read from whatever is typed, each whole number once,
+# so that nothing typed in it is refused.
 def _lines(f: Field, given: str) -> list[JsonValue]:
     if f.whole:
-        return [_number(f, held) for held in re.split(r"[\s,]+", given) if held]
+        return list(dict.fromkeys(int(n) for n in re.findall(r"\d+", given)))
     return [line for line in given.split("\n") if line]
 
 
@@ -351,8 +363,6 @@ def _refusals(
 
 
 def _refusal(error: ErrorDetails) -> str:
-    if error["type"] == "missing":
-        return tr("This is needed.")
     if isinstance(cause := error.get("ctx", {}).get("error"), Worded):
         return refusal_of(cause)
     return error["msg"].removeprefix("Value error, ")

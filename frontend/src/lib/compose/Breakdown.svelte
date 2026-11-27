@@ -75,7 +75,7 @@
     const said = [estimated(g, view), new Date(g.point.at).toLocaleString()];
     const left = unanswered(g.point, got?.cases ?? 0);
     if (left) said.push(left);
-    if (g.point.stale) said.push(t("not as things are now"));
+    if (g.point.stale) said.push(t("out of date"));
     return said.join(" · ");
   }
 </script>
@@ -115,7 +115,7 @@
           <svg width="14" height="14" aria-hidden="true"
             ><circle cx="7" cy="7" r="4" class="fill-destructive stroke-card" stroke-width="2" /></svg
           >
-          {t("not every case answered")}
+          {tp("cases", "Unanswered")}
         </li>
       {/if}
       {#if stale}
@@ -123,7 +123,7 @@
           <svg width="14" height="14" aria-hidden="true"
             ><circle cx="7" cy="7" r="4" class="fill-primary stroke-warning" stroke-width="1.5" /></svg
           >
-          {t("not as things are now")}
+          {upFirst(t("out of date"))}
         </li>
       {/if}
     </ul>
@@ -136,7 +136,7 @@
       <LoaderCircleIcon class="size-4 animate-spin" />
     </p>
   {:else if !got.gatherings.length}
-    <p class="text-sm text-muted-foreground">{t("None.")}</p>
+    <p class="text-sm text-muted-foreground">{upFirst(t("none"))}.</p>
   {:else}
     <div class="space-y-8">
       {#each groups as group (group.field)}
@@ -310,7 +310,7 @@
     </div>
 
     <details class="mt-8 text-sm">
-      <summary class="cursor-pointer text-muted-foreground">{t("The numbers")}</summary>
+      <summary class="cursor-pointer text-muted-foreground">{t("Numbers")}</summary>
       <div class="mt-2 overflow-x-auto">
         <table class="w-full">
           <thead>

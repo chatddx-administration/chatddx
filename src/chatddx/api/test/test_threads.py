@@ -121,7 +121,7 @@ def test_a_person_takes_one_expectation_replacing_theirs_only_when_they_say_so(
 
     got = signed.post(taking, json={})
     assert got.status_code == 409
-    assert "replace it to take this one" in got.json()["detail"]
+    assert "already, in thread" in got.json()["detail"]
 
     got = signed.post(taking, json={"replace": True})
     assert got.status_code == 201

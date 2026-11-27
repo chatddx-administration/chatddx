@@ -167,13 +167,9 @@ class Runner:
         toolbox = load(resolve(registry.get, trial.skeleton, Skeleton), registry.get)
         spec = self._inventory.endpoint(endpoint)
         if execution.concurrency > spec.capacity:
-            raise Invalid.of(
-                (
-                    "endpoint %(endpoint)s takes %(num)s request at once, the "
-                    + "execution sends %(sends)s",
-                    "endpoint %(endpoint)s takes %(num)s requests at once, the "
-                    + "execution sends %(sends)s",
-                ),
+            raise Invalid.raw(
+                "endpoint %(endpoint)s takes %(num)s at once, the execution sends "
+                + "%(sends)s",
                 endpoint=repr(endpoint),
                 num=spec.capacity,
                 sends=execution.concurrency,

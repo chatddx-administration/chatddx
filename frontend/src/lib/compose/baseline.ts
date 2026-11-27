@@ -22,14 +22,17 @@ export function said(run: Followed): string {
   const job = run.job;
   if (job === null || job === undefined) return run.finished ? tp("job", "finished") : "—";
   switch (job.status) {
-    case "queued":
-      if (job.ahead === null) return job.halt ? t("queued, paused, halting") : t("queued, paused");
-      return job.halt
-        ? tn("queued, %(num)s ahead, halting", "queued, %(num)s ahead, halting", job.ahead, { num: job.ahead })
-        : tn("queued, %(num)s ahead", "queued, %(num)s ahead", job.ahead, { num: job.ahead });
+    case "queued": {
+      const said = [
+        t("queued"),
+        job.ahead === null ? t("paused") : tn("%(num)s ahead", "%(num)s ahead", job.ahead, { num: job.ahead }),
+      ];
+      if (job.halt) said.push(t("halting"));
+      return said.join(", ");
+    }
     case "under way":
       if (job.halt) return t("halting");
-      return run.finished ? tp("a run under way", "Scoring") : tp("a run under way", "Sending");
+      return run.finished ? tp("in progress", "scoring") : tp("in progress", "sending");
     default: {
       const status = {
         finished: tp("job", "finished"),

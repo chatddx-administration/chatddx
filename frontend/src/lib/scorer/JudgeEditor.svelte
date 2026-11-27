@@ -45,7 +45,7 @@
   const hint = $derived(weights === given.body?.model ? given.problem : null);
 
   function component(): Component | null {
-    if (!configuration || !weights || typeof read === "string") return null;
+    if (!configuration || !weights) return null;
     const fill = given.body?.fill ?? "text@1";
     return { kind: "judge", skeleton: configuration, model: weights, seeds: read, fill } as never;
   }
@@ -59,7 +59,7 @@
       owner: given.me,
       configuration: from?.name ?? "",
       model: given.models.find((m) => m.weights === weights)?.name ?? null,
-      seeds: typeof read === "string" ? [] : read,
+      seeds: read,
       output_schema: from?.output_schema ?? null,
     });
   }
@@ -77,7 +77,6 @@
       bind:seeds
     />
   </div>
-  {#if typeof read === "string"}<p class="text-destructive">{read}</p>{/if}
   {#if given.mode !== "new"}
     <p class="text-muted-foreground">
       {t(

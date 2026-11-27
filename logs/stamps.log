@@ -1,5 +1,5 @@
-2026-11-25T16:41:09Z 8cf349a ./dev/check.sh stamps
+2026-11-27T13:14:48Z d216635 ./dev/check.sh stamps
 • stamps
 ok
-against 8cf349a stamp
-ok
+against d216635 stamp
+stamp docs: docs/parts/locale.md behind: run ./dev/write.sh stamps

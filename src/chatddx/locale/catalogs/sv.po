@@ -79,41 +79,8 @@ msgstr "%(configuration)s har inget recept vars texter kan översättas"
 #: src/chatddx/bench/seen.py
 #, python-format
 msgctxt "refusal"
-msgid "%(configuration)s has no translations into %(into)s"
-msgstr "%(configuration)s har inga översättningar till %(into)s"
-
-#: src/chatddx/bench/components.py
-#, python-format
-msgctxt "refusal"
-msgid "%(configuration)s has no translations into %(into)s, its cases' language"
-msgstr "%(configuration)s har inga översättningar till %(into)s, dess falls språk"
-
-#: src/chatddx/bench/runs.py
-#, python-format
-msgctxt "refusal"
-msgid ""
-"%(configuration)s has no translations into %(languages)s, which its cases"
-" are in"
-msgstr ""
-"%(configuration)s har inga översättningar till %(languages)s, som dess "
-"fall är på"
-
-#: src/chatddx/bench/seen.py
-#, python-format
-msgctxt "refusal"
-msgid "%(configuration)s is out of date: update it on its page"
-msgstr "%(configuration)s är ouppdaterad: uppdatera den på dess sida"
-
-#: src/chatddx/bench/seen.py
-#, python-format
-msgctxt "refusal"
 msgid "%(configuration)s names no model: name the one to run it under"
 msgstr "%(configuration)s namnger ingen modell: namnge den den ska köras under"
-
-#: src/chatddx/portal/runs.py
-#, python-format
-msgid "%(configuration)s, an earlier version"
-msgstr "%(configuration)s, en tidigare version"
 
 #: frontend/src/lib/scorer/judging.ts
 #, python-format
@@ -156,18 +123,6 @@ msgctxt "refusal"
 msgid "%(field)s isn't JSON: %(error)s"
 msgstr "%(field)s är inte JSON: %(error)s"
 
-#: src/chatddx/portal/fields.py
-#, python-format
-msgctxt "refusal"
-msgid "%(field)s isn't a number: %(given)s"
-msgstr "%(field)s är inget tal: %(given)s"
-
-#: src/chatddx/portal/fields.py
-#, python-format
-msgctxt "refusal"
-msgid "%(field)s isn't a whole number: %(given)s"
-msgstr "%(field)s är inget heltal: %(given)s"
-
 #: frontend/src/lib/scorer/selectors.ts
 #, python-format
 msgid "%(field)s where %(by)s is %(value)s › %(member)s"
@@ -197,12 +152,6 @@ msgstr "%(handle)s, vikterna det pekar på"
 msgctxt "refusal"
 msgid "%(insert)s is inserted in both the instructions and the prompt"
 msgstr "%(insert)s infogas både i instruktionerna och i prompten"
-
-#: src/chatddx/bench/seen.py
-#, python-format
-msgctxt "refusal"
-msgid "%(judge)s is out of date: update it on its page"
-msgstr "%(judge)s är ouppdaterad: uppdatera den på dess sida"
 
 #: frontend/src/lib/scorer/rewriting.ts
 #, python-format
@@ -242,85 +191,15 @@ msgctxt "a selector"
 msgid "%(label)s, typed"
 msgstr "%(label)s, skriven"
 
-#: src/chatddx/bench/runs.py
+#: src/chatddx/bench/seen.py src/chatddx/bench/taking.py
 #, python-format
 msgctxt "refusal"
 msgid ""
-"%(login)s has started %(num)s runs in the last day, and a day takes "
-"%(limit)s, not %(more)s more"
-msgid_plural ""
-"%(login)s has started %(num)s runs in the last day, and a day takes "
-"%(limit)s, not %(more)s more"
-msgstr[0] ""
-"%(login)s har startat %(num)s körning det senaste dygnet, och ett dygn "
-"rymmer %(limit)s, inte %(more)s till"
-msgstr[1] ""
-"%(login)s har startat %(num)s körningar det senaste dygnet, och ett dygn "
-"rymmer %(limit)s, inte %(more)s till"
-
-#: src/chatddx/bench/runs.py
-#, python-format
-msgctxt "refusal"
-msgid "%(login)s has started %(num)s runs in the last day, as many as a day takes"
-msgid_plural "%(login)s has started %(num)s runs in the last day, as many as a day takes"
-msgstr[0] ""
-"%(login)s har startat %(num)s körning det senaste dygnet, så många som "
-"ett dygn rymmer"
-msgstr[1] ""
-"%(login)s har startat %(num)s körningar det senaste dygnet, så många som "
-"ett dygn rymmer"
-
-#: src/chatddx/bench/seen.py
-#, python-format
-msgctxt "refusal"
-msgid ""
-"%(login)s has their own expectation of %(case)s under %(schema)s, in "
-"thread %(thread)s: delete that one to restore this"
+"%(login)s has their own expectation of %(case)s under %(schema)s already,"
+" in thread %(thread)s"
 msgstr ""
-"%(login)s har ett eget facit för %(case)s under %(schema)s, i tråden "
-"%(thread)s: radera det för att återställa det här"
-
-#: src/chatddx/bench/seen.py
-#, python-format
-msgctxt "refusal"
-msgid ""
-"%(login)s has their own expectation of %(case)s under %(schema)s, in "
-"thread %(thread)s: edit that one"
-msgstr ""
-"%(login)s har ett eget facit för %(case)s under %(schema)s, i tråden "
-"%(thread)s: redigera det"
-
-#: src/chatddx/bench/taking.py
-#, python-format
-msgctxt "refusal"
-msgid ""
-"%(login)s has their own expectation of %(case)s under %(schema)s, in "
-"thread %(thread)s: replace it to take this one"
-msgstr ""
-"%(login)s har ett eget facit för %(case)s under %(schema)s, i tråden "
-"%(thread)s: ersätt det för att ta det här"
-
-#: src/chatddx/bench/cases.py
-#, python-format
-msgctxt "refusal"
-msgid "%(login)s has typed %(num)s cases in the last day, as many as a day takes"
-msgid_plural "%(login)s has typed %(num)s cases in the last day, as many as a day takes"
-msgstr[0] ""
-"%(login)s har skrivit %(num)s fall det senaste dygnet, så många som ett "
-"dygn rymmer"
-msgstr[1] ""
-"%(login)s har skrivit %(num)s fall det senaste dygnet, så många som ett "
-"dygn rymmer"
-
-#: frontend/src/islands/RunLive.svelte
-#, python-format
-msgid "%(lost)s. Reload the page to see how far it has come."
-msgstr "%(lost)s. Ladda om sidan för att se hur långt den har kommit."
-
-#: frontend/src/lib/api/client.ts
-#, python-format
-msgid "%(message)s Copy this and send it to drift@chatddx.com: %(pass_on)s"
-msgstr "%(message)s Kopiera och skicka detta till drift@chatddx.com: %(pass_on)s"
+"%(login)s har redan ett eget facit för %(case)s under %(schema)s, i "
+"tråden %(thread)s"
 
 #: frontend/src/lib/scorer/ScorerViews.svelte
 #, python-format
@@ -397,6 +276,20 @@ msgstr "%(name)s kan inte uppdateras: %(refused)s"
 msgid "%(name)s from %(provider)s"
 msgstr "%(name)s från %(provider)s"
 
+#: src/chatddx/bench/components.py src/chatddx/bench/runs.py
+#: src/chatddx/bench/seen.py
+#, python-format
+msgctxt "refusal"
+msgid "%(name)s has no translation into %(languages)s"
+msgstr "%(name)s har ingen översättning till %(languages)s"
+
+#: src/chatddx/bench/runs.py src/chatddx/bench/seen.py
+#: src/chatddx/portal/starting.py
+#, python-format
+msgctxt "refusal"
+msgid "%(name)s is out of date: update it on its page"
+msgstr "%(name)s är ouppdaterad: uppdatera den på dess sida"
+
 #: src/chatddx/portal/fields.py
 #, python-format
 msgid "%(name)s, as it is held"
@@ -413,6 +306,21 @@ msgid "%(num)s %(language)s case"
 msgid_plural "%(num)s %(language)s cases"
 msgstr[0] "%(num)s %(language)s fall"
 msgstr[1] "%(num)s %(language)s fall"
+
+#: frontend/src/lib/compose/baseline.ts
+#: src/chatddx/portal/templates/macros.html
+#, python-format
+msgid "%(num)s ahead"
+msgid_plural "%(num)s ahead"
+msgstr[0] "%(num)s före"
+msgstr[1] "%(num)s före"
+
+#: frontend/src/lib/review/Measuring.svelte
+#, python-format
+msgid "%(num)s alternative"
+msgid_plural "%(num)s alternatives"
+msgstr[0] "%(num)s alternativ"
+msgstr[1] "%(num)s alternativ"
 
 #: src/chatddx/portal/templates/world.html
 #, python-format
@@ -531,6 +439,13 @@ msgid_plural "%(num)s items were sent before items scheduled ahead of them"
 msgstr[0] "%(num)s post skickades före poster schemalagda före den"
 msgstr[1] "%(num)s poster skickades före poster schemalagda före dem"
 
+#: src/chatddx/portal/templates/score.html
+#, python-format
+msgid "%(num)s message"
+msgid_plural "%(num)s messages"
+msgstr[0] "%(num)s meddelande"
+msgstr[1] "%(num)s meddelanden"
+
 #: src/chatddx/portal/templates/macros.html
 #, python-format
 msgid "%(num)s missing"
@@ -548,17 +463,17 @@ msgstr[1] "%(num)s av körningens fall har inget facit i rättningen"
 
 #: src/chatddx/portal/templates/library.html
 #, python-format
-msgid "%(num)s of yours can't be used until it is updated."
-msgid_plural "%(num)s of yours can't be used until they are updated."
-msgstr[0] "%(num)s av dina kan inte användas förrän den uppdateras."
-msgstr[1] "%(num)s av dina kan inte användas förrän de uppdateras."
+msgid "%(num)s of yours can't be used."
+msgid_plural "%(num)s of yours can't be used."
+msgstr[0] "%(num)s av dina kan inte användas."
+msgstr[1] "%(num)s av dina kan inte användas."
 
 #: src/chatddx/portal/templates/library.html
 #, python-format
-msgid "%(num)s of yours is behind what it was made from."
-msgid_plural "%(num)s of yours are behind what they were made from."
-msgstr[0] "%(num)s av dina ligger efter det den gjordes av."
-msgstr[1] "%(num)s av dina ligger efter det de gjordes av."
+msgid "%(num)s of yours is out of date."
+msgid_plural "%(num)s of yours are out of date."
+msgstr[0] "%(num)s av dina är ouppdaterad."
+msgstr[1] "%(num)s av dina är ouppdaterade."
 
 #: src/chatddx/portal/templates/runs.html
 #, python-format
@@ -624,6 +539,7 @@ msgid_plural "%(num)s to go"
 msgstr[0] "%(num)s kvar"
 msgstr[1] "%(num)s kvar"
 
+#: frontend/src/islands/Home.svelte frontend/src/islands/RunLive.svelte
 #: src/chatddx/portal/templates/world.html
 #, python-format
 msgid "%(num)s token"
@@ -697,11 +613,6 @@ msgstr ""
 msgid "%(owner)s's"
 msgstr "%(owner)ss"
 
-#: frontend/src/lib/compose/Preview.svelte
-#, python-format
-msgid "%(part)s, not yet translated"
-msgstr "%(part)s, ännu inte översatt"
-
 #: frontend/src/lib/scorer/rewriting.ts
 #, python-format
 msgid "%(part)s: %(problem)s"
@@ -745,16 +656,6 @@ msgstr "förfrågningar för %(purpose)s kan inte använda luckorna %(slots)s"
 msgctxt "refusal"
 msgid "%(purpose)s requests need slots %(slots)s"
 msgstr "förfrågningar för %(purpose)s behöver luckorna %(slots)s"
-
-#: src/chatddx/portal/templates/runs.html
-#, python-format
-msgid "%(queued)s, %(under_way)s."
-msgstr "%(queued)s, %(under_way)s."
-
-#: src/chatddx/portal/templates/runs.html
-#, python-format
-msgid "%(queued)s, %(under_way)s; paused."
-msgstr "%(queued)s, %(under_way)s; pausad."
 
 #: src/chatddx/factors/request.py
 #, python-format
@@ -852,11 +753,6 @@ msgstr "%(text)s: ~ måste följas av 0 eller 1"
 msgid "%(thread)s, which it is forked from"
 msgstr "%(thread)s, som den är förgrenad från"
 
-#: frontend/src/lib/api/client.ts src/chatddx/portal/pages.py
-#, python-format
-msgid "%(title)s. Copy this and send it to drift@chatddx.com: %(pass_on)s"
-msgstr "%(title)s. Kopiera och skicka detta till drift@chatddx.com: %(pass_on)s"
-
 #: src/chatddx/scorers/patterns.py
 #, python-format
 msgctxt "refusal"
@@ -872,12 +768,6 @@ msgstr "%(total)s miljarder"
 #, python-format
 msgid "%(total)s billion, %(active)s billion active"
 msgstr "%(total)s miljarder, %(active)s miljarder aktiva"
-
-#: src/chatddx/bench/runs.py src/chatddx/portal/starting.py
-#, python-format
-msgctxt "refusal"
-msgid "%(trial)s is out of date: update it on its page"
-msgstr "%(trial)s är ouppdaterat: uppdatera det på dess sida"
 
 #: src/chatddx/factors/base.py
 #, python-format
@@ -899,15 +789,6 @@ msgstr "%(value)s: %(num)s fall, %(drawn)s av dem dragna: %(names)s"
 #, python-format
 msgid "%(view)s for %(case)s"
 msgstr "%(view)s till %(case)s"
-
-#: src/chatddx/portal/templates/translations.html
-#, python-format
-msgid ""
-"(an earlier version: <a href=\"%(tried)s\">try it with the latest in "
-"Compose</a>)"
-msgstr ""
-"(en tidigare version: <a href=\"%(tried)s\">prova den med den senaste i "
-"Sammansättningen</a>)"
 
 #: src/chatddx/portal/templates/run.html
 #: src/chatddx/portal/templates/score.html
@@ -937,6 +818,15 @@ msgstr ""
 "65-årig man med plötslig bröstsmärta sedan 2 timmar, som strålar ut i "
 "vänster arm, illamående, kallsvett. Tidigare hypertoni och typ "
 "2-diabetes."
+
+#: src/chatddx/portal/templates/review.html
+#, python-format
+msgid ""
+"<a class=\"begin\" href=\"/cases/%(family)s#holds\">Write yours</a> in "
+"the Library."
+msgstr ""
+"<a class=\"begin\" href=\"/cases/%(family)s#holds\">Skriv din</a> i "
+"Biblioteket."
 
 #: src/chatddx/portal/templates/scoring.html
 #, python-format
@@ -970,10 +860,10 @@ msgstr ""
 "<a class=\"bench\" href=\"/scoring/%(thread)s\">Väg den i Rättning</a>, "
 "bredvid rättarna och bedömarna den arbetar med och hur de rättade"
 
-#: src/chatddx/portal/templates/taken.html
+#: src/chatddx/portal/templates/translations.html
 #, python-format
-msgid "<a href=\"/threads/%(thread)s\">yours</a>, left as it is"
-msgstr "<a href=\"/threads/%(thread)s\">din</a>, lämnad som den är"
+msgid "<a href=\"%(tried)s\">try it with the latest in Compose</a>"
+msgstr "<a href=\"%(tried)s\">prova den med den senaste i Sammansättningen</a>"
 
 #: src/chatddx/portal/templates/world.html
 #, python-format
@@ -1038,6 +928,16 @@ msgstr ""
 "som inte får missas, vart och ett i klartext och som ett mönster en "
 "rättare kan matcha."
 
+#: src/chatddx/portal/templates/compose.html
+msgid ""
+"A configuration is <a class=\"begin\" "
+"href=\"/library/new?kind=configuration\">written from a recipe</a> in the"
+" Library."
+msgstr ""
+"En konfiguration <a class=\"begin\" "
+"href=\"/library/new?kind=configuration\">skrivs från ett recept</a> i "
+"Biblioteket."
+
 #: src/chatddx/portal/templates/landing.html
 msgid ""
 "A configuration that has changed since it ran, or whose runs aren't "
@@ -1063,10 +963,6 @@ msgid ""
 msgstr ""
 "En konfigurations texter på ett annat språk, så att ett fall frågas på "
 "sitt eget språk."
-
-#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
-msgid "A conflict"
-msgstr "En konflikt"
 
 #: src/chatddx/portal/shelves.py
 msgid ""
@@ -1158,12 +1054,6 @@ msgstr "Ett nytt försök"
 msgid "A new version of each"
 msgstr "En ny version av var och en"
 
-#: src/chatddx/portal/templates/compose.html
-#: src/chatddx/portal/templates/thread.html
-#, python-format
-msgid "A newer version is saved: version %(n)s, %(at)s by %(by)s."
-msgstr "En nyare version är sparad: version %(n)s, %(at)s av %(by)s."
-
 #: src/chatddx/portal/templates/landing.html
 msgid ""
 "A pattern too broad scores every answer well, one too narrow none. "
@@ -1175,11 +1065,6 @@ msgstr ""
 "inget. Mät tar ett enda mönster och visar hur det har matchat de svar det"
 " har läst: vad vart och ett av dess alternativ hittade, och vad det "
 "missade, det vanligaste först."
-
-#: src/chatddx/portal/templates/case.html
-#, python-format
-msgid "A repair has moved its vignette since: version %(n)s, %(at)s."
-msgstr "En reparation har flyttat dess vinjett sedan dess: version %(n)s, %(at)s."
 
 #: src/chatddx/portal/templates/landing.html
 msgid "A research rig for emergency care"
@@ -1222,6 +1107,14 @@ msgstr ""
 " frågar den här fortsätter fråga den version de frågar tills de ändras."
 
 #: src/chatddx/portal/templates/scoring.html
+msgid ""
+"A scorer is <a class=\"begin\" href=\"/library/new?kind=scorer\">written "
+"in the Library</a>."
+msgstr ""
+"En rättare <a class=\"begin\" href=\"/library/new?kind=scorer\">skrivs i "
+"Biblioteket</a>."
+
+#: src/chatddx/portal/templates/scoring.html
 msgid "A seed gave none"
 msgstr "Ett seed gav inget"
 
@@ -1249,6 +1142,19 @@ msgstr "En rundtur i portalen"
 #: src/chatddx/portal/templates/landing.html
 msgid "A tour, with fictional cases"
 msgstr "En rundtur, med fiktiva fall"
+
+#: src/chatddx/portal/templates/library.html
+msgid ""
+"A trial is begun of the cases picked on the <a "
+"href=\"/library?kind=case\">case shelf</a>, with <span class=\"font-"
+"medium\">Begin a trial of the picked</span>; or run a configuration on a "
+"case straight away in <a class=\"bench\" href=\"/review\">Review</a>."
+msgstr ""
+"Ett försök påbörjas av de fall som väljs på <a "
+"href=\"/library?kind=case\">hyllan för fall</a>, med <span class=\"font-"
+"medium\">Påbörja ett försök av de valda</span>; eller kör en "
+"konfiguration på ett fall direkt i <a class=\"bench\" "
+"href=\"/review\">Granskningen</a>."
 
 #: frontend/src/lib/compose/Settings.svelte
 msgid "A value given here is used in place of the one recommended."
@@ -1287,8 +1193,9 @@ msgid "API"
 msgstr "API"
 
 #: src/chatddx/portal/templates/case.html
+#: src/chatddx/portal/templates/scoring.html
 #: src/chatddx/portal/templates/thread.html
-msgid "About it"
+msgid "About"
 msgstr "Uppgifter"
 
 #: frontend/src/lib/review/Faring.svelte
@@ -1324,6 +1231,10 @@ msgstr "Efter den:"
 msgid "Against version %(n)s, the one it was saved over."
 msgstr "Mot version %(n)s, den som den sparades över."
 
+#: src/chatddx/portal/templates/scoring.html
+msgid "Agreement"
+msgstr "Samstämmighet"
+
 #: src/chatddx/portal/templates/runs.html
 msgid "All runs"
 msgstr "Alla körningar"
@@ -1341,13 +1252,19 @@ msgstr "Och %(count)s tidigare."
 msgid "Another language"
 msgstr "Ett annat språk"
 
-#: frontend/src/islands/RunLive.svelte
+#: frontend/src/islands/RunLive.svelte src/chatddx/portal/templates/score.html
+#: src/chatddx/portal/templates/scoring.html
 msgid "Answer"
 msgstr "Svar"
 
-#: src/chatddx/portal/templates/scoring.html
-msgid "Answers of"
-msgstr "Svar från"
+#: frontend/src/lib/compose/Settings.svelte
+msgid "Answer tool name"
+msgstr "Svarsverktygets namn"
+
+#: frontend/src/lib/compose/Preview.svelte
+#: frontend/src/lib/compose/Texts.svelte
+msgid "Appendix layout"
+msgstr "Bilagornas upplägg"
 
 #: src/chatddx/portal/templates/world.html
 msgid "Arguments"
@@ -1362,38 +1279,13 @@ msgstr "Som JSON enligt sitt schema, som response_format håller."
 msgid "As a call to %(name)s, its schema the tool's parameters."
 msgstr "Som ett anrop till %(name)s, med schemat som verktygets parametrar."
 
-#: src/chatddx/portal/templates/run.html
-msgid "As it ran"
-msgstr "Under körningen"
-
-#: frontend/src/lib/scorer/JudgeTexts.svelte
-msgid "As it would read"
-msgstr "Som den skulle läsas"
-
-#: frontend/src/lib/compose/Preview.svelte
-msgid "As read"
-msgstr "Som det läses"
-
-#: frontend/src/lib/compose/Preview.svelte
-msgid "As sent"
-msgstr "Som det skickas"
-
 #: frontend/src/lib/compose/Preview.svelte
 msgid "As text, its schema told where it is inserted."
 msgstr "Som text, med schemat återgivet där det infogas."
 
 #: frontend/src/lib/compose/Settings.svelte
-msgid "As the model does"
-msgstr "Som modellen gör"
-
-#: frontend/src/lib/compose/Settings.svelte
 msgid "As the model writes it; JSON read out of it if it has a schema."
 msgstr "Som modellen skriver det; JSON läses ut ur det om det har ett schema."
-
-#: frontend/src/lib/compose/Preview.svelte
-#: frontend/src/lib/compose/Texts.svelte
-msgid "As written"
-msgstr "Som den är skriven"
 
 #: src/chatddx/portal/templates/scoring.html
 msgid "Ask its latest version"
@@ -1534,22 +1426,10 @@ msgstr "Av %(scorer)s, replikat %(replicate)s."
 msgid "By case, under %(view)s"
 msgstr "Per fall, under %(view)s"
 
-#: frontend/src/lib/compose/Settings.svelte
-msgid "By hand"
-msgstr "För hand"
-
 #: src/chatddx/portal/templates/compare.html
 #, python-format
 msgid "By item, under %(view)s"
 msgstr "Per post, under %(view)s"
-
-#: frontend/src/lib/compose/Settings.svelte
-msgid "By level"
-msgstr "Efter nivå"
-
-#: src/chatddx/portal/templates/review.html
-msgid "Can't be checked"
-msgstr "Kan inte kontrolleras"
 
 #: src/chatddx/portal/templates/world.html
 msgid "Canaries"
@@ -1563,12 +1443,10 @@ msgstr "Kapacitet"
 msgid "Cardiac markers"
 msgstr "Hjärtmarkörer"
 
-#: frontend/src/lib/compose/Said.svelte
-msgid "Carried over from the text as it was."
-msgstr "Överförd från texten som den var."
-
-#: src/chatddx/portal/templates/gathering.html
+#: frontend/src/islands/Home.svelte src/chatddx/portal/templates/gathering.html
+#: src/chatddx/portal/templates/review.html
 #: src/chatddx/portal/templates/run.html
+#: src/chatddx/portal/templates/scoring.html
 msgid "Case"
 msgstr "Fall"
 
@@ -1596,9 +1474,10 @@ msgstr "Ändra språk"
 msgid "Change what it is asked"
 msgstr "Ändra vad den frågas"
 
-#: src/chatddx/portal/templates/scoring.html
-msgid "Changing what it is asked takes scripts."
-msgstr "Att ändra vad den frågas kräver skript."
+#: src/chatddx/portal/templates/case.html
+#: src/chatddx/portal/templates/thread.html
+msgid "Changes"
+msgstr "Ändringar"
 
 #: src/chatddx/portal/templates/world.html
 msgid "Chat template"
@@ -1694,11 +1573,13 @@ msgid "Compose"
 msgstr "Sammansättning"
 
 #: frontend/src/islands/Home.svelte frontend/src/lib/review/Faring.svelte
+#: src/chatddx/portal/templates/compose.html
 #: src/chatddx/portal/templates/run.html
 msgid "Configuration"
 msgstr "Konfiguration"
 
-#: frontend/src/lib/compose/Breakdown.svelte src/chatddx/portal/shelves.py
+#: frontend/src/lib/compose/Breakdown.svelte
+#: frontend/src/lib/review/Faring.svelte src/chatddx/portal/shelves.py
 #: src/chatddx/portal/templates/compose.html
 msgid "Configurations"
 msgstr "Konfigurationer"
@@ -1706,6 +1587,20 @@ msgstr "Konfigurationer"
 #: src/chatddx/portal/templates/world.html
 msgid "Configurations are made for"
 msgstr "Konfigurationer görs för"
+
+#: src/chatddx/portal/templates/scoring.html
+msgid "Configurations left out"
+msgstr "Konfigurationer som utelämnas"
+
+#: src/chatddx/portal/templates/scoring.html
+msgid "Configurations read"
+msgstr "Konfigurationer som läses"
+
+#: src/chatddx/portal/templates/begun.html
+#: src/chatddx/portal/templates/case.html
+#: src/chatddx/portal/templates/thread.html
+msgid "Contents"
+msgstr "Innehåll"
 
 #: src/chatddx/portal/templates/world.html
 msgid "Context"
@@ -1715,6 +1610,7 @@ msgstr "Kontext"
 msgid "Contract"
 msgstr "Kontrakt"
 
+#: frontend/src/lib/api/client.ts src/chatddx/portal/pages.py
 #: src/chatddx/portal/templates/error.html
 msgid "Copy this and send it to drift@chatddx.com:"
 msgstr "Kopiera och skicka detta till drift@chatddx.com:"
@@ -1724,6 +1620,10 @@ msgid "Copyright Alexander Holmbäck and Olof Silfver, all rights reserved."
 msgstr ""
 "Copyright Alexander Holmbäck och Olof Silfver, alla rättigheter "
 "förbehållna."
+
+#: src/chatddx/portal/templates/scoring.html
+msgid "Coverage"
+msgstr "Täckning"
 
 #: frontend/src/lib/plan/DiagnosisCard.svelte
 msgid "Critical"
@@ -1745,15 +1645,6 @@ msgstr "Radera"
 #: src/chatddx/portal/templates/review.html
 #, python-format
 msgid ""
-"Delete the appendix %(appendix)s? This case and those under it leave the "
-"list."
-msgstr ""
-"Ta bort bilagan %(appendix)s? Det här fallet och de under det försvinner "
-"ur listan."
-
-#: src/chatddx/portal/templates/review.html
-#, python-format
-msgid ""
 "Deletes the appendix %(appendix)s: this case and those under it leave the"
 " list"
 msgstr ""
@@ -1768,8 +1659,10 @@ msgstr ""
 "Beskriv patientens symtom och anamnes för en differentialdiagnos och en "
 "behandlingsplan."
 
+#: frontend/src/lib/compose/Settings.svelte
 #: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/thread.html
+#: src/chatddx/portal/templates/world.html
 msgid "Description"
 msgstr "Beskrivning"
 
@@ -1785,6 +1678,14 @@ msgstr "Differentialdiagnoser"
 msgid "Directory"
 msgstr "Katalog"
 
+#: src/chatddx/portal/templates/scoring.html
+msgid "Disagreements"
+msgstr "Oenigheter"
+
+#: frontend/src/lib/review/Expected.svelte frontend/src/lib/review/Save.svelte
+msgid "Discard what you changed?"
+msgstr "Ångra det du har ändrat?"
+
 #: frontend/src/lib/plan/ManagementSection.svelte
 msgid "Disposition"
 msgstr "Fortsatt omhändertagande"
@@ -1793,10 +1694,6 @@ msgstr "Fortsatt omhändertagande"
 msgctxt "a field"
 msgid "Disposition"
 msgstr "Disposition"
-
-#: frontend/src/islands/RunLive.svelte
-msgid "Done; showing what it came to…"
-msgstr "Klar; visar vad den kom fram till…"
 
 #: src/chatddx/portal/templates/scoring.html
 #, python-format
@@ -1849,6 +1746,11 @@ msgstr ""
 #: src/chatddx/portal/templates/starting.html
 msgid "Each trial's version at the endpoint serving its engine."
 msgstr "Varje försöks version på ändpunkten för dess inferensserver."
+
+#: src/chatddx/portal/templates/case.html
+#: src/chatddx/portal/templates/thread.html
+msgid "Edit"
+msgstr "Redigera"
 
 #: frontend/src/lib/compose/Settings.svelte
 msgid "Effort"
@@ -1937,8 +1839,14 @@ msgstr ""
 "och varje körning kan spåras till det den körde. Ditt eget först."
 
 #: src/chatddx/portal/templates/review.html
+#: src/chatddx/portal/templates/score.html
+#: src/chatddx/portal/templates/scoring.html
 msgid "Expectation"
 msgstr "Facit"
+
+#: src/chatddx/portal/templates/library.html
+msgid "Expectation schema"
+msgstr "Facitschema"
 
 #: src/chatddx/portal/templates/review.html
 msgid "Expectation schemas"
@@ -1993,6 +1901,13 @@ msgstr "Sök på namn, ägare, tagg eller beskrivning"
 msgid "Find by what it says"
 msgstr "Sök på det som står"
 
+#: src/chatddx/portal/templates/compose.html
+#: src/chatddx/portal/templates/run.html
+#: src/chatddx/portal/templates/scoring.html
+#: src/chatddx/portal/templates/thread.html
+msgid "Findings"
+msgstr "Anmärkningar"
+
 #: src/chatddx/portal/templates/macros.html
 #: src/chatddx/portal/templates/run.html
 msgid "Finished"
@@ -2024,19 +1939,13 @@ msgstr "Förgrena oförändrat"
 msgid "Forked from"
 msgstr "Förgrenad från"
 
+#: frontend/src/lib/compose/Preview.svelte
+msgid "Formatted"
+msgstr "Formaterat"
+
 #: frontend/src/lib/review/Measuring.svelte
 msgid "Found"
 msgstr "Hittade"
-
-#: src/chatddx/portal/templates/score.html
-#: src/chatddx/portal/templates/scoring.html
-msgid "From the answer"
-msgstr "Ur svaret"
-
-#: src/chatddx/portal/templates/score.html
-#: src/chatddx/portal/templates/scoring.html
-msgid "From the expectation"
-msgstr "Ur facit"
 
 #: frontend/src/lib/compose/Settings.svelte
 msgid ""
@@ -2061,10 +1970,6 @@ msgstr "Rättar svar mot facit, så att konfigurationer kan jämföras med siffr
 #: src/chatddx/portal/templates/run.html
 msgid "Halt"
 msgstr "Avbryt"
-
-#: frontend/src/islands/RunLive.svelte
-msgid "Halted; showing what it came to…"
-msgstr "Avbruten; visar vad den kom fram till…"
 
 #: src/chatddx/portal/templates/world.html
 msgid "Handle"
@@ -2116,31 +2021,9 @@ msgstr "Värd"
 msgid "Hosts"
 msgstr "Värdar"
 
-#: frontend/src/lib/compose/Preview.svelte
-#: frontend/src/lib/compose/Texts.svelte
-msgid "How appendices are laid out"
-msgstr "Hur bilagorna läggs upp"
-
-#: src/chatddx/portal/templates/gathering.html
-msgid "How it fared"
-msgstr "Hur det gick"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "How it scored"
-msgstr "Hur den rättade"
-
 #: src/chatddx/portal/shelves.py
 msgid "How much the model thinks before it answers, which can change the answer."
 msgstr "Hur mycket modellen tänker innan den svarar, vilket kan ändra svaret."
-
-#: frontend/src/lib/review/Faring.svelte
-#: src/chatddx/portal/templates/review.html
-msgid "How the case fares"
-msgstr "Hur fallet klarar sig"
-
-#: src/chatddx/portal/templates/review.html
-msgid "How the case fares among the others is shown with scripts."
-msgstr "Hur fallet klarar sig bland de andra visas med skript."
 
 #: src/chatddx/portal/templates/landing.html
 msgid "How the case fares under every configuration"
@@ -2153,14 +2036,6 @@ msgid ""
 msgstr ""
 "Hur fallet klarar sig: för varje konfiguration, dess poäng på fallet "
 "ritad bland alla andra fall under den, fält för fält."
-
-#: src/chatddx/portal/templates/score.html
-msgid "How the judge decided"
-msgstr "Hur bedömaren avgjorde"
-
-#: src/chatddx/portal/templates/compare.html
-msgid "How they fare"
-msgstr "Hur de klarar sig"
 
 #: src/chatddx/portal/templates/landing.html
 msgid "How well does a language model reason about a patient?"
@@ -2182,6 +2057,10 @@ msgstr "Inflammationsmarkörer"
 msgid "Inline the schema's references"
 msgstr "Infoga schemats referenser"
 
+#: frontend/src/lib/scorer/JudgeTexts.svelte
+msgid "Instructions"
+msgstr "Instruktioner"
+
 #: src/chatddx/portal/templates/translations.html
 msgctxt "languages"
 msgid "Into"
@@ -2200,24 +2079,6 @@ msgstr "Stämmer måttstocken?"
 msgid "It asks a judge that is behind."
 msgstr "Den frågar en bedömare som ligger efter."
 
-#: src/chatddx/portal/templates/score.html
-#, python-format
-msgid "It can't be scored again to show it: %(why)s"
-msgstr "Den kan inte rättas igen för att visas: %(why)s"
-
-#: src/chatddx/portal/templates/macros.html
-#, python-format
-msgid "It can't be updated as things are: %(refused)s"
-msgstr "Den kan inte uppdateras som det är nu: %(refused)s"
-
-#: src/chatddx/portal/templates/macros.html
-msgid "It can't be used until it is updated."
-msgstr "Den kan inte användas förrän den uppdateras."
-
-#: frontend/src/islands/Home.svelte
-msgid "It didn't go through"
-msgstr "Det gick inte igenom"
-
 #: frontend/src/islands/RunLive.svelte
 msgid ""
 "It ended before this page followed it; its answer is on the run's page "
@@ -2225,10 +2086,6 @@ msgid ""
 msgstr ""
 "Den avslutades innan den här sidan följde den; dess svar finns på "
 "körningens sida när den är klar."
-
-#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
-msgid "It has moved on"
-msgstr "Den har gått vidare"
 
 #: frontend/src/islands/Compose.svelte
 msgid "It holds no recipe, so its parts can't be changed here."
@@ -2239,15 +2096,6 @@ msgstr "Den har inget recept, så dess delar kan inte ändras här."
 #: src/chatddx/portal/templates/thread.html
 msgid "It is the first."
 msgstr "Den är den första."
-
-#: frontend/src/lib/library/editors.ts
-msgid "It is to be a list, between [ and ]."
-msgstr "Det ska vara en lista, mellan [ och ]."
-
-#: frontend/src/lib/library/editors.ts
-#, python-brace-format
-msgid "It is to be an object, between { and }."
-msgstr "Det ska vara ett objekt, mellan { och }."
 
 #: frontend/src/lib/library/editors.ts
 #: frontend/src/lib/schema/SchemaField.svelte
@@ -2269,10 +2117,6 @@ msgstr ""
 msgid "It still reads right"
 msgstr "Den stämmer fortfarande"
 
-#: src/chatddx/portal/templates/score.html
-msgid "It wasn't asked."
-msgstr "Den tillfrågades inte."
-
 #: src/chatddx/portal/templates/run.html
 msgid "Items"
 msgstr "Poster"
@@ -2291,46 +2135,10 @@ msgid ""
 "(inline_refs@1)."
 msgstr "Dess $refs ersätts med det de pekar på innan det skickas (inline_refs@1)."
 
-#: src/chatddx/portal/templates/compose.html
-#, python-format
-msgid ""
-"Its baseline has cases in %(language)s, which it has no translation into:"
-" translate it to run the baseline."
-msgstr ""
-"Dess baslinje har fall på %(language)s, som den saknar översättning till:"
-" översätt den för att köra baslinjen."
-
 #: src/chatddx/portal/templates/library.html
 msgctxt "after the button Begin a trial of the picked"
 msgid "Its cases are the picked, and its language theirs."
 msgstr "Dess fall är de valda, och dess språk deras."
-
-#: src/chatddx/portal/templates/case.html
-msgid "Its cases at this vignette"
-msgstr "Fall vid den här vinjetten"
-
-#: frontend/src/lib/compose/Settings.svelte
-msgid "Its description"
-msgstr "Dess beskrivning"
-
-#: src/chatddx/portal/templates/compose.html
-#: src/chatddx/portal/templates/scoring.html
-#: src/chatddx/portal/templates/thread.html
-msgid "Its findings"
-msgstr "Anmärkningar"
-
-#: frontend/src/lib/scorer/JudgeTexts.svelte
-msgctxt "a label"
-msgid "Its instructions"
-msgstr "Instruktioner"
-
-#: frontend/src/lib/scorer/ScorerViews.svelte
-msgid "Its label"
-msgstr "Etikett"
-
-#: frontend/src/lib/review/About.svelte
-msgid "Its language"
-msgstr "Dess språk"
 
 #: src/chatddx/portal/templates/translations.html
 msgid "Its leading or trailing whitespace isn't its source's."
@@ -2354,15 +2162,6 @@ msgstr ""
 "Dess ursprung görs nu för %(now)s, där din görs för %(was)s: att "
 "uppdatera flyttar din till %(now)s."
 
-#: frontend/src/lib/scorer/JudgeTexts.svelte
-msgctxt "a label"
-msgid "Its prompt"
-msgstr "Prompt"
-
-#: src/chatddx/portal/templates/thread.html
-msgid "Its recipe"
-msgstr "Recept"
-
 #: src/chatddx/portal/templates/gathering.html
 #, python-format
 msgid ""
@@ -2371,14 +2170,6 @@ msgid ""
 msgstr ""
 "Dess upprepningar: hur långt varje falls upprepning i snitt låg från sitt"
 " replikat, och %(alike)s av %(compared)s svarade ordagrant lika."
-
-#: frontend/src/lib/review/Faring.svelte
-msgid "Its replicates, each a link to its score"
-msgstr "Dess replikat, var och en en länk till dess rättning"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "Its request"
-msgstr "Förfrågan"
 
 #: src/chatddx/portal/templates/scoring.html
 msgid ""
@@ -2397,54 +2188,6 @@ msgid ""
 msgstr ""
 "Dess förfrågan skrevs för hand, inte från ett recept: den ändras i "
 "Biblioteket."
-
-#: frontend/src/lib/scorer/JudgeFields.svelte
-msgid "Its request, a judge configuration"
-msgstr "Förfrågan, en bedömarkonfiguration"
-
-#: src/chatddx/portal/templates/score.html
-msgid "Its run"
-msgstr "Dess körning"
-
-#: frontend/src/lib/review/Measuring.svelte
-msgid "Its score"
-msgstr "Dess rättning"
-
-#: src/chatddx/portal/templates/score.html
-msgid "Its scoring holds no expectation for this case."
-msgstr "Rättningen har inget facit för det här fallet."
-
-#: src/chatddx/portal/templates/world.html
-msgid "Its secret's variable"
-msgstr "Hemlighetens variabel"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "Its seeds agree"
-msgstr "Samstämmighet mellan seeds"
-
-#: frontend/src/lib/compose/Settings.svelte
-msgid "Its settings"
-msgstr "Dess inställningar"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "Its slots filled by"
-msgstr "Luckor fylls av"
-
-#: frontend/src/lib/compose/Texts.svelte
-msgid "Its texts"
-msgstr "Dess texter"
-
-#: src/chatddx/portal/templates/translations.html
-msgid "Its translation"
-msgstr "Översättning"
-
-#: frontend/src/lib/scorer/ScorerViews.svelte
-msgid "Its verdict at"
-msgstr "Omdöme vid"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "Its verdicts"
-msgstr "Omdömen"
 
 #: src/chatddx/portal/templates/case.html
 msgctxt "under the field Language"
@@ -2478,10 +2221,6 @@ msgstr "Bedömare"
 msgid "Judges are bound"
 msgstr "Bedömare är bundna"
 
-#: frontend/src/islands/Home.svelte
-msgid "Keeping the case…"
-msgstr "Sparar fallet…"
-
 #: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/thread.html
 msgid "Kind"
@@ -2496,6 +2235,10 @@ msgstr "Typer"
 msgid "Kinds: %(kind)s"
 msgstr "Typer: %(kind)s"
 
+#: frontend/src/lib/scorer/ScorerViews.svelte
+msgid "Label"
+msgstr "Etikett"
+
 #: frontend/src/lib/compose/Settings.svelte
 #, python-format
 msgid "Lands at %(level)s."
@@ -2508,10 +2251,6 @@ msgstr "Hamnar på %(level)s."
 #: src/chatddx/portal/templates/translations.html
 msgid "Languages"
 msgstr "Språk"
-
-#: src/chatddx/portal/templates/library.html
-msgid "Latest version"
-msgstr "Senaste version"
 
 #: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/thread.html
@@ -2556,18 +2295,10 @@ msgstr "Lämnat tomt går det under sin vinjetts plats."
 msgid "Left empty, it is none."
 msgstr "Lämnat tomt är det inget."
 
-#: src/chatddx/portal/templates/runs.html
+#: src/chatddx/portal/templates/macros.html
+#: src/chatddx/portal/templates/run.html src/chatddx/portal/templates/runs.html
 msgid "Left to score"
 msgstr "Kvar att rätta"
-
-#: src/chatddx/portal/templates/macros.html
-msgid "Left to score by"
-msgstr "Kvar att rätta med"
-
-#: src/chatddx/portal/templates/run.html
-#, python-format
-msgid "Left to score by %(scorers)s."
-msgstr "Kvar att rätta med %(scorers)s."
 
 #: frontend/src/lib/compose/Breakdown.svelte
 #: frontend/src/lib/review/Faring.svelte
@@ -2621,6 +2352,10 @@ msgstr "Gör den till den senaste"
 #: frontend/src/lib/plan/ManagementSection.svelte
 msgid "Management"
 msgstr "Handläggning"
+
+#: frontend/src/lib/compose/Settings.svelte
+msgid "Manual"
+msgstr "Manuellt"
 
 #: frontend/src/lib/schema/form.ts
 msgctxt "a field"
@@ -2677,6 +2412,10 @@ msgstr "Missade"
 msgid "Model"
 msgstr "Modell"
 
+#: frontend/src/lib/compose/Settings.svelte
+msgid "Model default"
+msgstr "Modellens standard"
+
 #: src/chatddx/portal/templates/world.html
 msgid "Models"
 msgstr "Modeller"
@@ -2729,6 +2468,13 @@ msgstr "Nyare"
 msgid "Next"
 msgstr "Nästa"
 
+#: frontend/src/lib/review/Expected.svelte
+#: src/chatddx/portal/templates/case.html
+#: src/chatddx/portal/templates/compose.html
+#: src/chatddx/portal/templates/thread.html
+msgid "Next version"
+msgstr "Nästa version"
+
 #: frontend/src/islands/Home.svelte
 msgid "No answer to show"
 msgstr "Inget svar att visa"
@@ -2741,20 +2487,6 @@ msgstr "Inget fall att granska taggat %(tags)s."
 #: src/chatddx/portal/templates/review.html
 msgid "No case to review."
 msgstr "Inget fall att granska."
-
-#: frontend/src/lib/review/Faring.svelte
-msgid "No configuration of yours has been scored on this case yet."
-msgstr "Ingen av dina konfigurationer har rättats på det här fallet än."
-
-#: src/chatddx/portal/templates/compose.html
-msgid ""
-"No configuration to try: <a class=\"begin\" "
-"href=\"/library/new?kind=configuration\">write one from a recipe</a>, in "
-"the Library."
-msgstr ""
-"Ingen konfiguration att prova: <a class=\"begin\" "
-"href=\"/library/new?kind=configuration\">skriv en från ett recept</a>, i "
-"Biblioteket."
 
 #: src/chatddx/portal/templates/translations.html
 msgid "No configuration you see holds it, so it is offered no text to translate."
@@ -2781,56 +2513,6 @@ msgstr ""
 "Inga fakta är kända om den, så en tankenivå och rekommenderad sampling "
 "kan inte räknas ut."
 
-#: frontend/src/lib/compose/Settings.svelte
-msgid "No facts are known about the model: a level can't be worked out."
-msgstr "Inga fakta är kända om modellen: en nivå kan inte räknas ut."
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "No item of yours is judged by it yet."
-msgstr "Ingen post av dina är bedömd av den än."
-
-#: src/chatddx/portal/templates/run.html
-msgid "No items yet."
-msgstr "Inga poster än."
-
-#: src/chatddx/portal/templates/scoring.html
-msgid ""
-"No run of yours is scored by this version: runs left to score are on <a "
-"class=\"bench\" href=\"/runs?left=true\">Runs</a>."
-msgstr ""
-"Ingen av dina körningar är rättad av den här versionen: körningar kvar "
-"att rätta finns under <a class=\"bench\" "
-"href=\"/runs?left=true\">Körningar</a>."
-
-#: src/chatddx/portal/templates/macros.html
-msgid "No runs."
-msgstr "Inga körningar."
-
-#: src/chatddx/portal/templates/scoring.html
-msgid ""
-"No scorer or judge you see: a scorer is <a class=\"begin\" "
-"href=\"/library/new?kind=scorer\">written in the Library</a>."
-msgstr ""
-"Ingen rättare eller bedömare som du har tillgång till: en rättare <a "
-"class=\"begin\" href=\"/library/new?kind=scorer\">skrivs i "
-"Biblioteket</a>."
-
-#: src/chatddx/portal/templates/score.html
-msgid "No seed was asked."
-msgstr "Ingen seed tillfrågades."
-
-#: src/chatddx/portal/templates/starting.html
-msgid ""
-"No trial is given: pick them on the <a href=\"/library?kind=trial\">trial"
-" tab</a> of the Library."
-msgstr ""
-"Inget försök är givet: välj dem på Bibliotekets <a "
-"href=\"/library?kind=trial\">flik för försök</a>."
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "No view of a scorer you see."
-msgstr "Ingen vy hos en rättare som du har tillgång till."
-
 #: src/chatddx/portal/templates/runs.html
 msgid "No worker is running, so nothing queued is taken."
 msgstr "Ingen arbetare körs, så inget köat tas."
@@ -2841,120 +2523,22 @@ msgstr ""
 "Inga påbörjas här: ett fall kommer från en datamängd, eller skrivs på "
 "Start."
 
-#: src/chatddx/portal/templates/compare.html
-msgid "None of them is scored."
-msgstr "Ingen av dem är rättad."
-
-#: src/chatddx/portal/templates/review.html
-#, python-format
-msgid ""
-"None of your own. <a class=\"begin\" "
-"href=\"/cases/%(family)s#holds\">Write yours</a> in the Library."
-msgstr ""
-"Ingen egen. <a class=\"begin\" href=\"/cases/%(family)s#holds\">Skriv "
-"din</a> i Biblioteket."
-
-#: src/chatddx/portal/templates/thread.html
-msgid "None of yours."
-msgstr "Inga av dina."
-
-#: src/chatddx/portal/templates/case.html
-msgid "None stored."
-msgstr "Ingen lagrad."
-
-#: src/chatddx/portal/templates/score.html
-msgid "None yet."
-msgstr "Inga än."
-
-#: src/chatddx/portal/templates/library.html
-msgid "None you see of these."
-msgstr "Inga som du har tillgång till av dessa."
-
-#: src/chatddx/portal/templates/library.html
-msgid ""
-"None you see yet. A trial is begun of the cases picked on the <a "
-"href=\"/library?kind=case\">case shelf</a>, with <span class=\"font-"
-"medium\">Begin a trial of the picked</span>; or run a configuration on a "
-"case straight away in <a class=\"bench\" href=\"/review\">Review</a>."
-msgstr ""
-"Inga som du har tillgång till än. Ett försök påbörjas av de fall som "
-"väljs på <a href=\"/library?kind=case\">hyllan för fall</a>, med <span "
-"class=\"font-medium\">Påbörja ett försök av de valda</span>; eller kör en"
-" konfiguration på ett fall direkt i <a class=\"bench\" "
-"href=\"/review\">Granskningen</a>."
-
-#: src/chatddx/portal/templates/library.html
-#: src/chatddx/portal/templates/scoring.html
-msgid "None you see."
-msgstr "Inga som du har tillgång till."
-
-#: frontend/src/lib/compose/Breakdown.svelte
-#: src/chatddx/portal/templates/macros.html
-#: src/chatddx/portal/templates/review.html
-#: src/chatddx/portal/templates/updated.html
-#: src/chatddx/portal/templates/world.html
-msgid "None."
-msgstr "Inga."
-
 #: frontend/src/lib/compose/JsonField.svelte
 msgid "Not JSON yet: it is kept as it was till it is."
 msgstr "Inte JSON än: det behålls som det var tills det är det."
 
-#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
-msgid "Not allowed"
-msgstr "Inte tillåtet"
-
 #: frontend/src/lib/editors/ExpectationEditor.svelte
 msgid "Not as a scorer reads it"
 msgstr "Inte som en rättare läser den"
-
-#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
-msgid "Not found"
-msgstr "Hittades inte"
 
 #: frontend/src/lib/scorer/JudgeTexts.svelte
 #: frontend/src/lib/scorer/ScorerViews.svelte
 msgid "Not now"
 msgstr "Inte nu"
 
-#: src/chatddx/portal/templates/scoring.html
-msgid "Not of"
-msgstr "Inte från"
-
-#: frontend/src/lib/review/Measuring.svelte
-msgctxt "items"
-msgid "Not scored"
-msgstr "Ej rättade"
-
-#: frontend/src/lib/review/Faring.svelte
-msgid "Not scored on this case"
-msgstr "Inte rättad på det här fallet"
-
-#: src/chatddx/portal/templates/run.html
-msgctxt "a run"
-msgid "Not scored."
-msgstr "Inte rättad."
-
 #: src/chatddx/portal/templates/translations.html
 msgid "Not sent by the configurations holding it"
 msgstr "Skickas inte av konfigurationerna som håller den"
-
-#: frontend/src/islands/RunLive.svelte
-msgid "Not sent yet."
-msgstr "Inte skickad än."
-
-#: src/chatddx/portal/templates/translations.html
-msgid "Not translated yet"
-msgstr "Inte översatt än"
-
-#: src/chatddx/portal/templates/translations.html
-#, python-format
-msgid ""
-"Not translated yet: started from the translation of a similar text, "
-"“%(similar)s”"
-msgstr ""
-"Inte översatt än: påbörjad från översättningen av en liknande text, "
-"”%(similar)s”"
 
 #: src/chatddx/portal/templates/updated.html
 msgid "Not updated"
@@ -2972,10 +2556,6 @@ msgstr "Inget kunde läsas."
 msgid "Nothing is overwritten"
 msgstr "Inget skrivs över"
 
-#: src/chatddx/portal/templates/score.html
-msgid "Nothing is picked."
-msgstr "Inget plockas ut."
-
 #: src/chatddx/portal/templates/macros.html
 msgid "Nothing is saved yet"
 msgstr "Inget är sparat än"
@@ -2987,30 +2567,14 @@ msgstr ""
 "Inget av det det innehåller; bara vad som sägs om det, eller dess "
 "etiketter."
 
-#: frontend/src/lib/review/Measuring.svelte
-msgid "Nothing picked from the answer."
-msgstr "Inget plockat ur svaret."
-
 #: frontend/src/islands/Compose.svelte
 msgid "Nothing to save: this is the configuration as it is."
 msgstr "Inget att spara: det här är konfigurationen som den är."
 
-#: frontend/src/lib/review/Measuring.svelte
-msgid "Nothing to show."
-msgstr "Inget att visa."
-
-#: src/chatddx/portal/templates/translations.html
-#, python-format
-msgid "Nothing to translate into %(language)s."
-msgstr "Inget att översätta till %(language)s."
-
-#: frontend/src/lib/compose/Texts.svelte
-msgid "Nothing to translate."
-msgstr "Inget att översätta."
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "Of what is expected of"
-msgstr "Ur facit för"
+#: frontend/src/lib/compose/Breakdown.svelte
+#: frontend/src/lib/review/Faring.svelte
+msgid "Numbers"
+msgstr "Siffror"
 
 #: src/chatddx/portal/templates/runs.html
 msgid "Older"
@@ -3038,6 +2602,11 @@ msgstr "Öppna den valda"
 msgid "Operations"
 msgstr "Drift"
 
+#: frontend/src/lib/compose/Preview.svelte
+#: frontend/src/lib/compose/Texts.svelte
+msgid "Original"
+msgstr "Original"
+
 #: frontend/src/lib/review/Faring.svelte
 msgid "Other cases"
 msgstr "Andra fall"
@@ -3054,16 +2623,12 @@ msgstr "Andra fall, körda"
 msgid "Out of"
 msgstr "Av"
 
-#: src/chatddx/portal/templates/macros.html
-msgctxt "a thread"
-msgid "Out of date"
-msgstr "Ouppdaterad"
-
 #: src/chatddx/portal/templates/run.html
 msgid "Outcome"
 msgstr "Utfall"
 
 #: src/chatddx/portal/templates/macros.html
+#: src/chatddx/portal/templates/taken.html
 msgid "Outcomes"
 msgstr "Utfall"
 
@@ -3075,10 +2640,6 @@ msgstr "Svarsformens kontrakt"
 #: frontend/src/lib/compose/Texts.svelte
 msgid "Output guidance"
 msgstr "Vägledning för svaret"
-
-#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
-msgid "Over the day's quota"
-msgstr "Över dygnets kvot"
 
 #: src/chatddx/portal/templates/scoring.html
 msgid ""
@@ -3178,10 +2739,29 @@ msgctxt "a field"
 msgid "Possible warnings"
 msgstr "Eventuella varningar"
 
+#: frontend/src/lib/scorer/JudgeTexts.svelte
+msgid "Preview"
+msgstr "Förhandsvisning"
+
 #: frontend/src/lib/paging/Pages.svelte
 #: src/chatddx/portal/templates/macros.html
 msgid "Previous"
 msgstr "Föregående"
+
+#: src/chatddx/portal/templates/gathering.html
+msgid "Previous run"
+msgstr "Föregående körning"
+
+#: frontend/src/lib/review/Expected.svelte
+#: src/chatddx/portal/templates/case.html
+#: src/chatddx/portal/templates/compose.html
+#: src/chatddx/portal/templates/thread.html
+msgid "Previous version"
+msgstr "Föregående version"
+
+#: frontend/src/lib/scorer/JudgeTexts.svelte
+msgid "Prompt"
+msgstr "Prompt"
 
 #: src/chatddx/portal/templates/library.html
 msgid "Purpose"
@@ -3194,6 +2774,10 @@ msgstr "Insatt mellan dem när det sammanställs"
 #: src/chatddx/portal/templates/world.html
 msgid "Quantization"
 msgstr "Kvantisering"
+
+#: frontend/src/lib/compose/Preview.svelte
+msgid "Raw"
+msgstr "Rått"
 
 #: frontend/src/lib/compose/Settings.svelte
 msgid "Read JSON out of the answer, checked against a schema"
@@ -3211,13 +2795,9 @@ msgstr "Läst från"
 msgid "Read with"
 msgstr "Läst med"
 
-#: frontend/src/lib/review/Faring.svelte
-msgid "Reading how every case fares…"
-msgstr "Läser hur varje fall klarar sig…"
-
-#: frontend/src/islands/Home.svelte
-msgid "Reading the answer…"
-msgstr "Läser svaret…"
+#: src/chatddx/portal/templates/score.html
+msgid "Reading"
+msgstr "Läsning"
 
 #: frontend/src/lib/scorer/ScorerViews.svelte
 msgid "Reads of the answer"
@@ -3239,6 +2819,10 @@ msgstr ""
 "Återskapad, det här är inte förfrågan som skickades: det den pinnar har "
 "ändrats sedan dess."
 
+#: src/chatddx/portal/templates/thread.html
+msgid "Recipe"
+msgstr "Recept"
+
 #: frontend/src/lib/compose/Settings.svelte
 msgid "Recommended for its thinking level"
 msgstr "Rekommenderad för dess tankenivå"
@@ -3247,9 +2831,13 @@ msgstr "Rekommenderad för dess tankenivå"
 msgid "Recommended sampling"
 msgstr "Rekommenderad sampling"
 
-#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
-msgid "Refused"
-msgstr "Avvisad"
+#: src/chatddx/portal/templates/run.html
+msgid "Recorded"
+msgstr "Registrerat"
+
+#: frontend/src/islands/RunLive.svelte src/chatddx/portal/templates/run.html
+msgid "Reload the page to see how far it has come."
+msgstr "Ladda om sidan för att se hur långt den har kommit."
 
 #: frontend/src/lib/plan/labs.ts
 msgid "Renal function"
@@ -3265,11 +2853,6 @@ msgstr "Upprepning"
 msgid "Repeats"
 msgstr "Upprepningar"
 
-#: frontend/src/lib/review/Expected.svelte
-#, python-format
-msgid "Replace what you changed with version %(n)s?"
-msgstr "Ersätta det du ändrat med version %(n)s?"
-
 #: src/chatddx/portal/templates/gathering.html
 #: src/chatddx/portal/templates/run.html
 #: src/chatddx/portal/templates/score.html
@@ -3281,10 +2864,23 @@ msgstr "Replikat"
 msgid "Replicate %(n)s: %(value)s"
 msgstr "Replikat %(n)s: %(value)s"
 
-#: frontend/src/lib/compose/Cases.svelte
+#: frontend/src/lib/compose/Cases.svelte frontend/src/lib/review/Faring.svelte
 #: src/chatddx/portal/templates/score.html
 msgid "Replicates"
 msgstr "Replikat"
+
+#: frontend/src/islands/Compose.svelte frontend/src/lib/compose/Preview.svelte
+#: frontend/src/lib/scorer/JudgeFields.svelte
+#: src/chatddx/portal/templates/compose.html
+#: src/chatddx/portal/templates/score.html
+#: src/chatddx/portal/templates/scoring.html
+#: src/chatddx/portal/templates/thread.html
+msgid "Request"
+msgstr "Förfrågan"
+
+#: src/chatddx/portal/templates/run.html
+msgid "Response"
+msgstr "Respons"
 
 #: frontend/src/lib/review/Save.svelte src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/library.html
@@ -3314,6 +2910,7 @@ msgstr "Rigg"
 msgid "Rounds of calls at most"
 msgstr "Högst antal anropsrundor"
 
+#: src/chatddx/portal/templates/gathering.html
 #: src/chatddx/portal/templates/macros.html
 #: src/chatddx/portal/templates/run.html
 #: src/chatddx/portal/templates/score.html
@@ -3362,6 +2959,14 @@ msgstr "Kör försök"
 #: src/chatddx/portal/templates/world.html
 msgid "Runs by default"
 msgstr "Körs som standard"
+
+#: src/chatddx/portal/templates/scoring.html
+msgid ""
+"Runs left to score are on <a class=\"bench\" "
+"href=\"/runs?left=true\">Runs</a>."
+msgstr ""
+"Körningar kvar att rätta finns under <a class=\"bench\" "
+"href=\"/runs?left=true\">Körningar</a>."
 
 #: src/chatddx/portal/templates/world.html
 msgid "Runtime"
@@ -3448,6 +3053,7 @@ msgstr "Sparande"
 msgid "Schemas and tools"
 msgstr "Scheman och verktyg"
 
+#: frontend/src/lib/review/Measuring.svelte
 #: src/chatddx/portal/templates/score.html
 msgid "Score"
 msgstr "Rättning"
@@ -3457,11 +3063,8 @@ msgstr "Rättning"
 msgid "Score again"
 msgstr "Rätta igen"
 
-#: src/chatddx/portal/templates/runner.html
-msgid "Score it once it is done"
-msgstr "Rätta när körningen är klar"
-
 #: frontend/src/lib/compose/Cases.svelte
+#: src/chatddx/portal/templates/runner.html
 msgid "Score it once it is finished"
 msgstr "Rätta den när den är klar"
 
@@ -3480,6 +3083,10 @@ msgstr ""
 " rättades."
 
 #: src/chatddx/portal/templates/scoring.html
+msgid "Scorer"
+msgstr "Rättare"
+
+#: src/chatddx/portal/templates/scoring.html
 msgid "Scorer · view"
 msgstr "Rättare · vy"
 
@@ -3487,7 +3094,12 @@ msgstr "Rättare · vy"
 msgid "Scorers and judges"
 msgstr "Rättare och bedömare"
 
+#: frontend/src/lib/review/Faring.svelte
+#: src/chatddx/portal/templates/compare.html
+#: src/chatddx/portal/templates/gathering.html
+#: src/chatddx/portal/templates/review.html
 #: src/chatddx/portal/templates/run.html
+#: src/chatddx/portal/templates/scoring.html
 msgid "Scores"
 msgstr "Rättningar"
 
@@ -3503,14 +3115,9 @@ msgstr "Rättar varje svar igen mot fältet som det står nu, sparat eller inte"
 msgid "Scoring"
 msgstr "Rättning"
 
-#: frontend/src/islands/RunLive.svelte frontend/src/lib/compose/baseline.ts
-msgctxt "a run under way"
-msgid "Scoring"
-msgstr "Rättar"
-
-#: frontend/src/lib/review/Measuring.svelte
-msgid "Scoring every answer of the case's…"
-msgstr "Rättar varje svar på fallet…"
+#: src/chatddx/portal/templates/world.html
+msgid "Secret variable"
+msgstr "Hemlighetens variabel"
 
 #: src/chatddx/portal/templates/score.html
 msgid "Seed"
@@ -3521,11 +3128,6 @@ msgstr "Seed"
 msgid "Seeds, a call each"
 msgstr "Seeds, ett anrop vardera"
 
-#: frontend/src/islands/RunLive.svelte frontend/src/lib/compose/baseline.ts
-msgctxt "a run under way"
-msgid "Sending"
-msgstr "Skickar"
-
 #: src/chatddx/portal/templates/world.html
 msgid "Served by"
 msgstr "Serverad av"
@@ -3533,6 +3135,10 @@ msgstr "Serverad av"
 #: src/chatddx/portal/templates/scoring.html
 msgid "Served now at"
 msgstr "Tillhandahålls nu på"
+
+#: frontend/src/lib/compose/Settings.svelte
+msgid "Settings"
+msgstr "Inställningar"
 
 #: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/thread.html
@@ -3543,15 +3149,6 @@ msgstr "Delad med"
 #, python-format
 msgid "Shared with %(parts)s."
 msgstr "Delas med %(parts)s."
-
-#: src/chatddx/portal/templates/case.html
-#: src/chatddx/portal/templates/thread.html
-msgid "Shared with you"
-msgstr "Delad med dig"
-
-#: src/chatddx/portal/templates/review.html
-msgid "Shared with you to take:"
-msgstr "Delad med dig att ta:"
 
 #: src/chatddx/portal/shelves.py
 msgid ""
@@ -3588,6 +3185,10 @@ msgstr "Logga in"
 #: src/chatddx/portal/templates/base.html
 msgid "Sign out"
 msgstr "Logga ut"
+
+#: src/chatddx/portal/templates/scoring.html
+msgid "Slots"
+msgstr "Luckor"
 
 #: src/chatddx/portal/templates/world.html
 msgid ""
@@ -3633,18 +3234,6 @@ msgid ""
 msgstr ""
 "Några kördes under %(models)s på olika inferensservrar: grupperade under "
 "den är de inte jämförbara."
-
-#: src/chatddx/portal/templates/run.html
-msgid ""
-"Something is under way for this run. Reload the page to see how far it "
-"has come."
-msgstr ""
-"Något pågår för den här körningen. Ladda om sidan för att se hur långt "
-"den har kommit."
-
-#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
-msgid "Something went wrong"
-msgstr "Något gick fel"
 
 #: src/chatddx/portal/templates/world.html
 msgid "Sources"
@@ -3744,22 +3333,11 @@ msgstr "Tar skrivna fall"
 msgid "Text, as it is added to the vignette"
 msgstr "Text, som den läggs till vinjetten"
 
-#: frontend/src/lib/api/client.ts src/chatddx/portal/pages.py
-#: src/chatddx/portal/templates/error.html
-msgid "That can't be done"
-msgstr "Det går inte"
-
-#: src/chatddx/portal/templates/macros.html
-msgid "That can't be shown"
-msgstr "Det kan inte visas"
-
-#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
-msgid "That names several"
-msgstr "Det namnger flera"
-
-#: src/chatddx/portal/templates/error.html
-msgid "That shouldn't have happened"
-msgstr "Det borde inte ha hänt"
+#: frontend/src/lib/compose/Texts.svelte
+#: frontend/src/lib/scorer/JudgeTexts.svelte
+#: src/chatddx/portal/templates/scoring.html
+msgid "Texts"
+msgstr "Texter"
 
 #: src/chatddx/portal/templates/landing.html
 msgid ""
@@ -3775,29 +3353,9 @@ msgstr ""
 msgid "The World"
 msgstr "Miljön"
 
-#: frontend/src/islands/Home.svelte
-msgid "The answer breaks its schema"
-msgstr "Svaret bryter mot sitt schema"
-
-#: frontend/src/lib/compose/Settings.svelte
-msgid "The answer tool's name"
-msgstr "Svarsverktygets namn"
-
-#: frontend/src/islands/Home.svelte
-msgid "The answer was cut short"
-msgstr "Svaret avkortades"
-
-#: src/chatddx/portal/templates/score.html
-msgid "The answer, as it was given"
-msgstr "Svaret, så som det gavs"
-
 #: src/chatddx/portal/templates/landing.html
 msgid "The cage"
 msgstr "Buren"
-
-#: frontend/src/islands/Home.svelte src/chatddx/portal/templates/review.html
-msgid "The case"
-msgstr "Fallet"
 
 #: src/chatddx/portal/templates/landing.html
 msgid ""
@@ -3815,10 +3373,6 @@ msgstr ""
 "Klinikern begränsar eller vidgar det precis där det skrivs, innan frågan "
 "ställs hur någon modell presterade."
 
-#: src/chatddx/portal/templates/compose.html
-msgid "The configuration"
-msgstr "Konfigurationen"
-
 #: src/chatddx/portal/templates/landing.html
 msgid ""
 "The environment a run took place in can then be rebuilt from the digests "
@@ -3828,14 +3382,6 @@ msgstr ""
 "Miljön en körning gjordes i kan då byggas upp igen utifrån de "
 "kontrollsummor den namnger, och levereras med dess resultat som ett paket"
 " som vem som helst kan kontrollera offline."
-
-#: src/chatddx/portal/templates/score.html
-msgid "The expectation"
-msgstr "Facit"
-
-#: src/chatddx/portal/templates/score.html
-msgid "The expectation, as it was given"
-msgstr "Facit, så som det gavs"
 
 #: src/chatddx/portal/templates/macros.html
 #, python-format
@@ -3857,16 +3403,8 @@ msgid ""
 msgstr "Formen facit skrivs i, så att en rättare vet var den ska titta."
 
 #: src/chatddx/portal/templates/home.html
-msgid "The home page needs JavaScript."
-msgstr "Startsidan behöver JavaScript."
-
-#: src/chatddx/portal/templates/home.html
 msgid "The home page's script isn't built."
 msgstr "Startsidans skript är inte byggt."
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "The judge"
-msgstr "Bedömaren"
 
 #: frontend/src/lib/compose/Settings.svelte
 msgid "The key for max output tokens"
@@ -3891,31 +3429,9 @@ msgctxt "whoops"
 msgid "The model has no handle and can't be used."
 msgstr "Modellen saknar alias och går inte att använda."
 
-#: frontend/src/lib/compose/Breakdown.svelte
-#: frontend/src/lib/review/Faring.svelte
-msgid "The numbers"
-msgstr "Siffrorna"
-
 #: frontend/src/lib/compose/Settings.svelte
 msgid "The one the engine's API takes."
 msgstr "Den som motorns API tar emot."
-
-#: src/chatddx/portal/templates/error.html
-msgid "The request didn't hold together:"
-msgstr "Förfrågan höll inte ihop:"
-
-#: src/chatddx/portal/templates/run.html
-msgid "The response, part by part"
-msgstr "Svaret, del för del"
-
-#: src/chatddx/portal/templates/gathering.html
-#: src/chatddx/portal/templates/run.html
-msgid "The run"
-msgstr "Körningen"
-
-#: src/chatddx/portal/templates/gathering.html
-msgid "The run before"
-msgstr "Körningen före"
 
 #: src/chatddx/portal/templates/score.html
 msgid ""
@@ -3924,14 +3440,6 @@ msgid ""
 msgstr ""
 "Samma förfrågan i andra körningar: samma skelett, inferensserver, "
 "rensning och fall, med samma seed."
-
-#: src/chatddx/portal/templates/score.html
-msgid "The score"
-msgstr "Rättningen"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "The scorer"
-msgstr "Rättaren"
 
 #: src/chatddx/portal/shelves.py
 msgid "The shape an answer must take, so that it can be read and graded."
@@ -3956,24 +3464,6 @@ msgstr ""
 "Verktygen en konfiguration erbjuder och hur de används, så att en modell "
 "kan slå upp saker."
 
-#: src/chatddx/portal/templates/starting.html
-msgid "The trials"
-msgstr "Försöken"
-
-#: frontend/src/lib/review/Expected.svelte
-#: src/chatddx/portal/templates/case.html
-#: src/chatddx/portal/templates/compose.html
-#: src/chatddx/portal/templates/thread.html
-msgid "The version after"
-msgstr "Versionen efter"
-
-#: frontend/src/lib/review/Expected.svelte
-#: src/chatddx/portal/templates/case.html
-#: src/chatddx/portal/templates/compose.html
-#: src/chatddx/portal/templates/thread.html
-msgid "The version before"
-msgstr "Versionen före"
-
 #: src/chatddx/portal/templates/landing.html
 msgid ""
 "The versions of an expectation in the Library, each with its time, its "
@@ -3983,32 +3473,14 @@ msgstr ""
 "författare och sin kontrollsumma, under vad den senaste versionen "
 "ändrade."
 
-#: frontend/src/lib/review/Vignette.svelte
-#, python-format
-msgid "The vignette can't be shown: %(problem)s."
-msgstr "Vinjetten kan inte visas: %(problem)s."
-
 #: src/chatddx/portal/templates/review.html
 #, python-format
 msgid ""
-"The vignette is shown with scripts, or on <a "
-"href=\"/cases/%(family)s/vignette\">a page of its own</a>."
+"The vignette is also on <a href=\"/cases/%(family)s/vignette\">a page of "
+"its own</a>."
 msgstr ""
-"Vinjetten visas med skript, eller på <a "
-"href=\"/cases/%(family)s/vignette\">en egen sida</a>."
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "The whole request"
-msgstr "Hela förfrågan"
-
-#: src/chatddx/portal/templates/score.html
-#, python-format
-msgid "The whole request, %(count)s messages"
-msgstr "Hela förfrågan, %(count)s meddelanden"
-
-#: src/chatddx/portal/templates/score.html
-msgid "There is no answer to read."
-msgstr "Det finns inget svar att läsa."
+"Vinjetten finns också på <a href=\"/cases/%(family)s/vignette\">en egen "
+"sida</a>."
 
 #: frontend/src/islands/RunLive.svelte frontend/src/lib/compose/Settings.svelte
 msgid "Thinking"
@@ -4017,13 +3489,6 @@ msgstr "Tänkande"
 #: frontend/src/lib/compose/Settings.svelte
 msgid "Thinking token budget"
 msgstr "Tokenbudget för tänkande"
-
-#: frontend/src/islands/Home.svelte
-#, python-format
-msgid "Thinking: %(n)s token"
-msgid_plural "Thinking: %(n)s tokens"
-msgstr[0] "Tänker: %(n)s token"
-msgstr[1] "Tänker: %(n)s token"
 
 #: frontend/src/lib/review/Faring.svelte
 msgid ""
@@ -4040,10 +3505,6 @@ msgid "This case"
 msgstr "Det här fallet"
 
 #: frontend/src/lib/review/Faring.svelte
-msgid "This case, not as things are now"
-msgstr "Det här fallet, inte som det är nu"
-
-#: frontend/src/lib/review/Faring.svelte
 #, python-format
 msgid "This case: %(value)s, above %(share)s%% of the other cases"
 msgstr "Det här fallet: %(value)s, över %(share)s%% av de andra fallen"
@@ -4055,10 +3516,6 @@ msgid ""
 msgstr ""
 "Den här informationen är endast avsedd för utbildning och referens och "
 "ersätter inte klinisk bedömning."
-
-#: src/chatddx/portal/fields.py src/chatddx/portal/templates/begun.html
-msgid "This is needed."
-msgstr "Det här behövs."
 
 #: frontend/src/lib/review/Vignette.svelte
 #: src/chatddx/portal/templates/vignette.html
@@ -4119,6 +3576,10 @@ msgstr "Översätt till det"
 msgid "Translate it into %(language)s no more"
 msgstr "Översätt den inte längre till %(language)s"
 
+#: src/chatddx/portal/templates/translations.html
+msgid "Translation"
+msgstr "Översättning"
+
 #: src/chatddx/portal/templates/begun.html
 msgid ""
 "Translations are begun of a configuration's texts, into a language; its "
@@ -4132,10 +3593,24 @@ msgstr ""
 msgid "Trial"
 msgstr "Försök"
 
-#: src/chatddx/portal/shelves.py
+#: src/chatddx/portal/shelves.py src/chatddx/portal/templates/starting.html
 msgid "Trials"
 msgstr "Försök"
 
+#: src/chatddx/portal/templates/starting.html
+msgid ""
+"Trials are picked on the <a href=\"/library?kind=trial\">trial tab</a> of"
+" the Library."
+msgstr ""
+"Försök väljs på Bibliotekets <a href=\"/library?kind=trial\">flik för "
+"försök</a>."
+
+#: src/chatddx/bench/cases.py src/chatddx/factors/base.py
+msgctxt "refusal"
+msgid "U+0000 can't be stored"
+msgstr "U+0000 kan inte lagras"
+
+#: frontend/src/lib/compose/Breakdown.svelte
 #: src/chatddx/portal/templates/gathering.html
 msgctxt "cases"
 msgid "Unanswered"
@@ -4145,19 +3620,6 @@ msgstr "Obesvarade"
 #, python-format
 msgid "Under %(schema)s, for each picked case."
 msgstr "Under %(schema)s, för varje valt fall."
-
-#: src/chatddx/portal/templates/library.html
-msgid "Under the schema"
-msgstr "Under schemat"
-
-#: frontend/src/lib/review/Save.svelte
-msgid "Undo everything you changed on this page since it was last saved?"
-msgstr "Ångra allt du har ändrat på den här sidan sedan den senast sparades?"
-
-#: src/chatddx/portal/templates/run.html
-msgctxt "after the button Resume"
-msgid "Unfinished: resuming sends what it lacks."
-msgstr "Oavslutad: att återuppta skickar det som saknas."
 
 #: frontend/src/lib/compose/Preview.svelte
 #: frontend/src/lib/review/Measuring.svelte
@@ -4181,17 +3643,23 @@ msgstr "Uppdaterat"
 msgid "Value"
 msgstr "Värde"
 
+#: src/chatddx/portal/templates/score.html
+msgid "Verdict"
+msgstr "Omdöme"
+
+#: frontend/src/lib/scorer/ScorerViews.svelte
+msgid "Verdict at"
+msgstr "Omdöme vid"
+
+#: src/chatddx/portal/templates/scoring.html
+msgid "Verdicts"
+msgstr "Omdömen"
+
 #: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/thread.html
 #, python-format
 msgid "Version %(n)s"
 msgstr "Version %(n)s"
-
-#: src/chatddx/portal/templates/compose.html
-#: src/chatddx/portal/templates/thread.html
-#, python-format
-msgid "Version %(n)s is brought back as the latest, %(at)s by %(by)s."
-msgstr "Version %(n)s är tillbakatagen som den senaste, %(at)s av %(by)s."
 
 #: frontend/src/lib/review/Expected.svelte
 #: src/chatddx/portal/templates/case.html
@@ -4211,10 +3679,6 @@ msgstr "Vy"
 #: src/chatddx/portal/templates/scoring.html
 msgid "Views"
 msgstr "Vyer"
-
-#: frontend/src/islands/Home.svelte
-msgid "Waiting for the model…"
-msgstr "Väntar på modellen…"
 
 #: src/chatddx/portal/templates/world.html
 msgid "Weights"
@@ -4246,15 +3710,6 @@ msgstr ""
 "Det som svarar på förfrågningar, låst till allt som kan ändra ett svar, "
 "så att en körning säger exakt vad som svarade."
 
-#: src/chatddx/portal/templates/taken.html
-msgid "What became of each"
-msgstr "Hur det gick med vart och ett"
-
-#: frontend/src/lib/review/Measuring.svelte
-#, python-format
-msgid "What each of its %(num)s alternatives finds"
-msgstr "Vad vart och ett av dess %(num)s alternativ hittar"
-
 #: src/chatddx/portal/templates/world.html
 msgid ""
 "What is known about each model, so that a configuration asks it only for "
@@ -4263,59 +3718,15 @@ msgstr ""
 "Det som är känt om varje modell, så att en konfiguration bara ber den om "
 "det den kan."
 
-#: src/chatddx/portal/templates/case.html
-#: src/chatddx/portal/templates/thread.html
-msgid "What is said of it"
-msgstr "Vad som sägs om det"
-
-#: src/chatddx/portal/templates/world.html
-msgid "What it does"
-msgstr "Vad den gör"
-
-#: src/chatddx/portal/templates/begun.html
-#: src/chatddx/portal/templates/case.html
-#: src/chatddx/portal/templates/thread.html
-msgid "What it holds"
-msgstr "Innehåll"
-
 #: frontend/src/islands/library.ts
 msgid "What it holds isn't JSON the form can show: set it right here first."
 msgstr ""
 "Det den innehåller är inte JSON som formuläret kan visa: rätta till det "
 "här först."
 
-#: src/chatddx/portal/templates/scoring.html
-msgid "What it is"
-msgstr "Vad den är"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "What it is asked"
-msgstr "Vad den frågas"
-
-#: src/chatddx/portal/templates/score.html
-msgid "What it read"
-msgstr "Vad den läste"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "What it reads"
-msgstr "Vad den läser"
-
-#: frontend/src/islands/Compose.svelte frontend/src/lib/compose/Preview.svelte
-#: src/chatddx/portal/templates/compose.html
-msgid "What it sends"
-msgstr "Vad det skickar"
-
-#: src/chatddx/portal/templates/thread.html
-msgid "What it sends: the request compiled from its recipe"
-msgstr "Vad den skickar: förfrågan kompilerad från dess recept"
-
 #: src/chatddx/portal/templates/macros.html
 msgid "What it was made from has moved on"
 msgstr "Det den gjordes av har gått vidare"
-
-#: frontend/src/lib/scorer/JudgeTexts.svelte
-msgid "What its judge is asked, as you write it"
-msgstr "Vad dess bedömare frågas, som du skriver det"
 
 #: src/chatddx/portal/templates/begun.html
 msgid ""
@@ -4343,10 +3754,6 @@ msgstr ""
 "Det av ditt som låg efter det det gjordes av, uppdaterat i den här "
 "ordningen så att det som läses uppdateras före det som läser det."
 
-#: src/chatddx/portal/templates/score.html
-msgid "What the judge was asked"
-msgstr "Vad bedömaren tillfrågades"
-
 #: src/chatddx/portal/templates/world.html
 msgid ""
 "What the portal runs on that you don't write, so that every run can say "
@@ -4354,19 +3761,6 @@ msgid ""
 msgstr ""
 "Det portalen körs på som du inte skriver, så att varje körning kan säga "
 "vad som svarade och varifrån dess fall kom."
-
-#: src/chatddx/portal/templates/case.html
-#: src/chatddx/portal/templates/thread.html
-msgid "What this version changed"
-msgstr "Vad den här versionen ändrade"
-
-#: src/chatddx/portal/templates/thread.html
-msgid "What this version changed in its recipe"
-msgstr "Vad den här versionen ändrade i dess recept"
-
-#: src/chatddx/portal/templates/run.html
-msgid "What was noted"
-msgstr "Vad som noterades"
 
 #: src/chatddx/portal/templates/landing.html
 msgid ""
@@ -4389,10 +3783,6 @@ msgstr ""
 msgid "Where"
 msgstr "Var"
 
-#: frontend/src/lib/review/Faring.svelte
-msgid "Where each configuration stands"
-msgstr "Var varje konfiguration står"
-
 #: src/chatddx/portal/templates/world.html
 msgid ""
 "Where each engine is reached, so that a run knows where to send, how much"
@@ -4400,10 +3790,6 @@ msgid ""
 msgstr ""
 "Var varje inferensserver nås, så att en körning vet vart den ska skicka, "
 "hur mycket i taget och vilka fall som får gå dit."
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "Where its seeds disagree"
-msgstr "Där omdömena från olika seeds går isär"
 
 #: src/chatddx/portal/templates/world.html
 msgid ""
@@ -4483,17 +3869,6 @@ msgstr "Skriver en ny egen tråd; en översättning som lämnas tom sparas inte.
 msgid "Writes “%(name)s”, a new thread of your own."
 msgstr "Skriver ”%(name)s”, en ny egen tråd."
 
-#: src/chatddx/portal/templates/compose.html
-msgid "Writing it and saving it take scripts."
-msgstr "Att skriva den och spara den kräver skript."
-
-#: frontend/src/islands/Home.svelte
-#, python-format
-msgid "Writing: %(n)s token"
-msgid_plural "Writing: %(n)s tokens"
-msgstr[0] "Skriver: %(n)s token"
-msgstr[1] "Skriver: %(n)s token"
-
 #: frontend/src/islands/Home.svelte
 msgid "Written in"
 msgstr "Skrivet på"
@@ -4518,10 +3893,6 @@ msgid_plural "You have %(n)s named so already; names needn't be unique."
 msgstr[0] "Du har redan en med det namnet; namn behöver inte vara unika."
 msgstr[1] "Du har redan %(n)s med det namnet; namn behöver inte vara unika."
 
-#: src/chatddx/portal/templates/review.html
-msgid "You see no expectation schema."
-msgstr "Du har inte tillgång till något facitschema."
-
 #: src/chatddx/portal/templates/sign-in.html
 msgid ""
 "You were signed in, but your browser didn't keep the session. A browser "
@@ -4531,10 +3902,6 @@ msgstr ""
 "Du loggades in, men webbläsaren behöll inte sessionen. En webbläsare "
 "behåller den bara där portalen nås över HTTPS eller på localhost, med "
 "kakor tillåtna: öppna portalen så och logga in igen."
-
-#: src/chatddx/portal/templates/library.html
-msgid "Your deleted"
-msgstr "Dina raderade"
 
 #: src/chatddx/portal/templates/runs.html
 msgid "Your queue"
@@ -4563,22 +3930,11 @@ msgstr ""
 "Både din och dess ursprung ändrar %(paths)s: att uppdatera behåller din "
 "där."
 
-#: src/chatddx/portal/templates/review.html
-#, python-format
-msgid "Yours, version of %(at)s."
-msgstr "Din, versionen från %(at)s."
-
 #: src/chatddx/factors/lint.py
 #, python-format
 msgctxt "expectation.unchecked"
 msgid "a $ref in the schema can't be resolved: %(ref)s"
 msgstr "en $ref i schemat kan inte lösas upp: %(ref)s"
-
-#: src/chatddx/factors/base.py
-#, python-format
-msgctxt "refusal"
-msgid "a %(kind)s may not hold U+0000, which can't be stored"
-msgstr "en %(kind)s får inte innehålla U+0000, som inte kan lagras"
 
 #: src/chatddx/scorers/patterns.py
 #, python-format
@@ -4594,10 +3950,6 @@ msgstr "en förgrening behöver ett namn"
 #: src/chatddx/portal/templates/scoring.html
 msgid "a judge"
 msgstr "en bedömare"
-
-#: frontend/src/lib/scorer/judging.ts
-msgid "a judge has a seed or more"
-msgstr "en bedömare har ett seed eller fler"
 
 #: src/chatddx/portal/templates/begun.html
 #: src/chatddx/portal/templates/case.html
@@ -4695,11 +4047,6 @@ msgctxt "refusal"
 msgid "a typed case holds text"
 msgstr "ett skrivet fall innehåller text"
 
-#: src/chatddx/bench/cases.py
-msgctxt "refusal"
-msgid "a typed case may not hold U+0000, which can't be stored"
-msgstr "ett skrivet fall får inte innehålla U+0000, som inte kan lagras"
-
 #: frontend/src/lib/scorer/ScorerViews.svelte
 msgid "a view"
 msgstr "en vy"
@@ -4723,7 +4070,8 @@ msgstr "tillagt"
 msgid "all"
 msgstr "alla"
 
-#: src/chatddx/portal/templates/scoring.html
+#: src/chatddx/portal/runs.py src/chatddx/portal/templates/scoring.html
+#: src/chatddx/portal/templates/translations.html
 msgid "an earlier version"
 msgstr "en tidigare version"
 
@@ -4779,10 +4127,6 @@ msgstr "så många som skrivits"
 msgid "as text"
 msgstr "som text"
 
-#: src/chatddx/portal/templates/gathering.html
-msgid "as things are now"
-msgstr "som det är nu"
-
 #: frontend/src/lib/scorer/ScorerViews.svelte
 msgctxt "a verdict"
 msgid "at"
@@ -4793,12 +4137,33 @@ msgstr "vid"
 msgid "at %(endpoint)s: %(concurrency)s at once, %(order)s"
 msgstr "på %(endpoint)s: %(concurrency)s i taget, %(order)s"
 
-#: frontend/src/islands/RunLive.svelte
-#, python-format
-msgid "calling a tool, %(n)s token"
-msgid_plural "calling a tool, %(n)s tokens"
-msgstr[0] "anropar ett verktyg, %(n)s token"
-msgstr[1] "anropar ett verktyg, %(n)s token"
+#: frontend/src/lib/runs/progress.ts
+msgctxt "in progress"
+msgid "calling a tool"
+msgstr "anropar ett verktyg"
+
+#: src/chatddx/portal/templates/review.html
+msgid "can't be checked"
+msgstr "kan inte kontrolleras"
+
+#: frontend/src/lib/api/client.ts src/chatddx/portal/pages.py
+#: src/chatddx/portal/templates/error.html
+msgid "can't be done"
+msgstr "ej möjligt"
+
+#: frontend/src/lib/review/Vignette.svelte
+#: src/chatddx/portal/templates/macros.html
+#: src/chatddx/portal/templates/score.html
+msgid "can't be shown"
+msgstr "kan inte visas"
+
+#: src/chatddx/portal/templates/macros.html
+msgid "can't be updated"
+msgstr "kan inte uppdateras"
+
+#: src/chatddx/portal/templates/macros.html
+msgid "can't be used"
+msgstr "kan inte användas"
 
 #: src/chatddx/ledger/run.py
 #, python-format
@@ -4901,9 +4266,14 @@ msgid ""
 "%(error)s"
 msgstr "avkortat, och läst med sin struktur stängd; anropet slutade med: %(error)s"
 
+#: frontend/src/lib/compose/Settings.svelte
 #: src/chatddx/portal/templates/world.html
 msgid "default"
 msgstr "standard"
+
+#: src/chatddx/portal/templates/library.html
+msgid "deleted"
+msgstr "raderade"
 
 #: frontend/src/lib/review/Faring.svelte
 msgid "drawn"
@@ -4939,42 +4309,6 @@ msgctxt "after the tags picked"
 msgid "each of them"
 msgstr "var och en av dem"
 
-#: frontend/src/lib/scorer/judging.ts
-msgid "each seed once"
-msgstr "varje seed en gång"
-
-#: src/chatddx/portal/threads.py
-#, python-format
-msgctxt "refusal"
-msgid "edit %(edit)s isn't a version of thread %(thread)s"
-msgstr "version %(edit)s är ingen version av tråden %(thread)s"
-
-#: src/chatddx/runner/gate.py
-#, python-format
-msgctxt "refusal"
-msgid "endpoint %(endpoint)s can't be confirmed: %(error)s"
-msgstr "ändpunkten %(endpoint)s kan inte bekräftas: %(error)s"
-
-#: src/chatddx/runner/gate.py
-#, python-format
-msgctxt "refusal"
-msgid ""
-"endpoint %(endpoint)s can't be confirmed: it serves %(served)s at "
-"%(url)s, not %(expected)s"
-msgstr ""
-"ändpunkten %(endpoint)s kan inte bekräftas: den tillhandahåller "
-"%(served)s på %(url)s, inte %(expected)s"
-
-#: src/chatddx/runner/gate.py
-#, python-format
-msgctxt "refusal"
-msgid ""
-"endpoint %(endpoint)s can't be confirmed: it serves nothing at %(url)s, "
-"not %(expected)s"
-msgstr ""
-"ändpunkten %(endpoint)s kan inte bekräftas: den tillhandahåller ingenting"
-" på %(url)s, inte %(expected)s"
-
 #: src/chatddx/runner/gate.py
 #, python-format
 msgctxt "refusal"
@@ -4984,22 +4318,6 @@ msgid ""
 msgstr ""
 "ändpunkten %(endpoint)s är inte godkänd för källan %(sources)s, som är "
 "känslig"
-
-#: src/chatddx/runner/run.py
-#, python-format
-msgctxt "refusal"
-msgid ""
-"endpoint %(endpoint)s takes %(num)s request at once, the execution sends "
-"%(sends)s"
-msgid_plural ""
-"endpoint %(endpoint)s takes %(num)s requests at once, the execution sends"
-" %(sends)s"
-msgstr[0] ""
-"ändpunkten %(endpoint)s tar %(num)s förfrågan i taget, utförandet skickar"
-" %(sends)s"
-msgstr[1] ""
-"ändpunkten %(endpoint)s tar %(num)s förfrågningar i taget, utförandet "
-"skickar %(sends)s"
 
 #: frontend/src/lib/kinds.ts src/chatddx/portal/shelves.py
 msgctxt "kind"
@@ -5040,12 +4358,6 @@ msgctxt "kind"
 msgid "facts"
 msgstr "fakta"
 
-#: src/chatddx/factors/request.py
-#, python-format
-msgctxt "refusal"
-msgid "facts about %(facts)s can't compile for %(model)s"
-msgstr "fakta om %(facts)s kan inte kompileras för %(model)s"
-
 #: frontend/src/lib/compose/Breakdown.svelte
 #: frontend/src/lib/compose/baseline.ts
 #: src/chatddx/portal/templates/macros.html
@@ -5062,7 +4374,7 @@ msgstr "exempel"
 msgid "fingerprint"
 msgstr "fingeravtryck"
 
-#: frontend/src/lib/compose/baseline.ts
+#: frontend/src/islands/RunLive.svelte frontend/src/lib/compose/baseline.ts
 #: src/chatddx/portal/templates/macros.html
 msgctxt "job"
 msgid "finished"
@@ -5078,10 +4390,6 @@ msgstr "för %(handles)s"
 #, python-format
 msgid "forked from %(origin)s"
 msgstr "förgrenad från %(origin)s"
-
-#: src/chatddx/portal/templates/library.html
-msgid "forked from one you don't see"
-msgstr "förgrenad från en du inte har tillgång till"
 
 #: frontend/src/lib/compose/Settings.svelte
 msgid "frequency penalty"
@@ -5161,22 +4469,9 @@ msgctxt "outcome"
 msgid "invalid"
 msgstr "ogiltig"
 
-#: src/chatddx/portal/templates/translations.html
-msgid "it doesn't translate into it yet"
-msgstr "den översätter inte till det än"
-
 #: frontend/src/lib/review/faring.ts
 msgid "it has no runs of the case yet"
 msgstr "den har inga körningar av fallet än"
-
-#: frontend/src/lib/review/faring.ts
-#, python-format
-msgid "it has no translation into %(language)s"
-msgstr "den har ingen översättning till %(language)s"
-
-#: frontend/src/lib/review/faring.ts src/chatddx/portal/templates/compose.html
-msgid "it is out of date: update it on its page"
-msgstr "den är ouppdaterad: uppdatera den på dess sida"
 
 #: frontend/src/lib/review/faring.ts
 msgid "it isn't scored against the expectation as it is"
@@ -5203,10 +4498,6 @@ msgstr "dess konfiguration har ändrats sedan den kördes"
 msgid "its configuration: %(problem)s"
 msgstr "dess konfiguration: %(problem)s"
 
-#: frontend/src/lib/compose/Settings.svelte
-msgid "its default"
-msgstr "dess standard"
-
 #: src/chatddx/portal/templates/world.html
 #, python-format
 msgid "its directory can't be read: %(why)s"
@@ -5223,10 +4514,6 @@ msgstr "dess bedömare"
 #: frontend/src/lib/review/faring.ts
 msgid "its latest runs of the case aren't three replicates and a repeat"
 msgstr "dess senaste körningar av fallet är inte tre replikat och en upprepning"
-
-#: src/chatddx/portal/scoring.py
-msgid "its latest version"
-msgstr "dess senaste version"
 
 #: src/chatddx/portal/templates/scoring.html
 msgid "its page in the Library"
@@ -5290,7 +4577,7 @@ msgctxt "refusal"
 msgid "labels: %(refused)s"
 msgstr "etiketter: %(refused)s"
 
-#: src/chatddx/portal/templates/base.html
+#: frontend/src/lib/review/About.svelte src/chatddx/portal/templates/base.html
 #: src/chatddx/portal/templates/begun.html
 #: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/gathering.html
@@ -5299,6 +4586,10 @@ msgstr "etiketter: %(refused)s"
 #: src/chatddx/portal/templates/thread.html
 msgid "language"
 msgstr "språk"
+
+#: src/chatddx/portal/scoring.py src/chatddx/portal/templates/library.html
+msgid "latest version"
+msgstr "senaste version"
 
 #: frontend/src/lib/scorer/ScorerViews.svelte
 msgid "line by line, as a list"
@@ -5350,16 +4641,24 @@ msgstr "modellvikter"
 msgid "name"
 msgstr "namn"
 
+#: src/chatddx/portal/templates/compose.html
+#: src/chatddx/portal/templates/home.html
+#: src/chatddx/portal/templates/review.html
+#: src/chatddx/portal/templates/scoring.html
+msgid "needs scripts"
+msgstr "kräver skript"
+
+#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/case.html
+#: src/chatddx/portal/templates/compose.html
+#: src/chatddx/portal/templates/error.html
+#: src/chatddx/portal/templates/thread.html
+msgid "newer version"
+msgstr "nyare version"
+
 #: src/chatddx/portal/templates/macros.html
 #: src/chatddx/portal/templates/world.html
 msgid "no"
 msgstr "nej"
-
-#: src/chatddx/portal/threads.py
-#, python-format
-msgctxt "refusal"
-msgid "no %(kind)s is begun here: what is begun here is %(kinds)s"
-msgstr "ingen %(kind)s påbörjas här: det som påbörjas här är %(kinds)s"
 
 #: frontend/src/lib/runs/titles.ts src/chatddx/portal/templates/macros.html
 #, python-format
@@ -5367,39 +4666,11 @@ msgctxt "a part replaced"
 msgid "no %(part)s"
 msgstr "utan %(part)s"
 
-#: src/chatddx/portal/review.py
-#, python-format
-msgctxt "refusal"
-msgid "no appendix to delete in case %(case)s of %(family)s"
-msgstr "ingen bilaga att radera i fall %(case)s av %(family)s"
-
-#: src/chatddx/portal/cases.py
-#, python-format
-msgctxt "refusal"
-msgid "no case %(case)s for %(login)s"
-msgstr "inget fall %(case)s för %(login)s"
-
-#: src/chatddx/portal/review.py
-#, python-format
-msgctxt "refusal"
-msgid "no case %(case)s of %(family)s"
-msgstr "inget fall %(case)s av %(family)s"
-
 #: src/chatddx/bench/runs.py
 #, python-format
 msgctxt "refusal"
 msgid "no case can be sent: %(refused)s"
 msgstr "inget fall kan skickas: %(refused)s"
-
-#: src/chatddx/portal/templates/scoring.html
-msgid "no case you expect something of"
-msgstr "inget fall du har ett facit för"
-
-#: src/chatddx/portal/compose.py
-#, python-format
-msgctxt "refusal"
-msgid "no configuration %(thread)s for %(login)s"
-msgstr "ingen konfiguration %(thread)s för %(login)s"
 
 #: src/chatddx/portal/review.py
 #, python-format
@@ -5407,18 +4678,10 @@ msgctxt "refusal"
 msgid "no configuration can run %(case)s now"
 msgstr "ingen konfiguration kan köra %(case)s nu"
 
-#: src/chatddx/portal/templates/scoring.html
-msgid "no configuration you see"
-msgstr "ingen konfiguration som du har tillgång till"
-
 #: src/chatddx/factors/facts.py
 msgctxt "refusal"
 msgid "no default reasoning level is known"
 msgstr "ingen standardnivå för resonemang är känd"
-
-#: src/chatddx/portal/templates/world.html
-msgid "no endpoint"
-msgstr "ingen ändpunkt"
 
 #: src/chatddx/bench/seen.py
 #, python-format
@@ -5434,61 +4697,15 @@ msgstr "ingen ändpunkt tillhandahåller den"
 msgid "no endpoint serves its weights, so it can't be picked"
 msgstr "ingen ändpunkt tillhandahåller dess vikter, så det kan inte väljas"
 
-#: src/chatddx/portal/review.py
-#, python-format
-msgctxt "refusal"
-msgid "no expectation schema %(schema)s for you"
-msgstr "inget facitschema %(schema)s för dig"
-
 #: src/chatddx/facts/lint.py
 #, python-format
 msgctxt "facts.missing"
 msgid "no facts about %(name)s, so model-level checks were skipped"
 msgstr "inga fakta om %(name)s, så kontrollerna på modellnivå hoppades över"
 
-#: src/chatddx/portal/fields.py
-#, python-format
-msgctxt "refusal"
-msgid "no field %(field)s to give: the fields are %(fields)s"
-msgstr "inget fält %(field)s att ange: fälten är %(fields)s"
-
 #: src/chatddx/portal/templates/world.html
 msgid "no handle here holds it"
 msgstr "inget alias här pekar på den"
-
-#: src/chatddx/portal/scoring.py
-#, python-format
-msgctxt "refusal"
-msgid "no judge %(thread)s for %(login)s"
-msgstr "ingen bedömare %(thread)s för %(login)s"
-
-#: src/chatddx/portal/threads.py
-#, python-format
-msgctxt "refusal"
-msgid "no kind %(kind)s: the kinds are %(kinds)s"
-msgstr "ingen typ %(kind)s: typerna är %(kinds)s"
-
-#: frontend/src/lib/review/About.svelte
-msgid "no language"
-msgstr "inget språk"
-
-#: src/chatddx/portal/templates/world.html
-msgid "no model"
-msgstr "ingen modell"
-
-#: src/chatddx/portal/starting.py
-#, python-format
-msgctxt "refusal"
-msgid "no order %(order)s: the orders are %(orders)s"
-msgstr "ingen ordning %(order)s: ordningarna är %(orders)s"
-
-#: src/chatddx/portal/threads.py
-#, python-format
-msgctxt "refusal"
-msgid "no page of %(kind)s %(thread)s: it is in Review, in the case it goes with"
-msgstr ""
-"ingen sida för %(kind)s %(thread)s: den finns i Granskning, i fallet den "
-"hör till"
 
 #: src/chatddx/api/threads.py src/chatddx/bench/saying.py
 #, python-format
@@ -5506,21 +4723,16 @@ msgctxt "refusal"
 msgid "no sampling is recommended for reasoning %(level)s"
 msgstr "ingen sampling rekommenderas för resonemang %(level)s"
 
-#: src/chatddx/portal/scoring.py
-#, python-format
-msgctxt "refusal"
-msgid "no scorer or judge %(thread)s for %(login)s"
-msgstr "ingen rättare eller bedömare %(thread)s för %(login)s"
-
-#: src/chatddx/portal/templates/world.html
-msgid "no source"
-msgstr "ingen källa"
-
 #: src/chatddx/factors/request.py
 #, python-format
 msgctxt "refusal"
 msgid "no translation into %(into)s for %(texts)s"
 msgstr "ingen översättning till %(into)s för %(texts)s"
+
+#: frontend/src/lib/review/faring.ts src/chatddx/portal/templates/compose.html
+#, python-format
+msgid "no translation into %(language)s"
+msgstr "ingen översättning till %(language)s"
 
 #: src/chatddx/factors/request.py
 #, python-format
@@ -5528,98 +4740,17 @@ msgctxt "refusal"
 msgid "no translations into %(into)s"
 msgstr "inga översättningar till %(into)s"
 
-#: src/chatddx/portal/starting.py
-#, python-format
-msgctxt "refusal"
-msgid "no trial %(thread)s for %(login)s"
-msgstr "inget försök %(thread)s för %(login)s"
-
-#: src/chatddx/portal/threads.py
-#, python-format
-msgctxt "refusal"
-msgid "no version %(at)s of %(kind)s %(thread)s: it has %(versions)s"
-msgstr "ingen version %(at)s av %(kind)s %(thread)s: den har %(versions)s"
-
-#: src/chatddx/portal/cases.py
-#, python-format
-msgctxt "refusal"
-msgid "no version %(at)s of case %(family)s: it has %(versions)s"
-msgstr "ingen version %(at)s av fallet %(family)s: det har %(versions)s"
-
-#: src/chatddx/portal/scoring.py
-#, python-format
-msgctxt "refusal"
-msgid "no view %(view)s asks this judge"
-msgstr "ingen vy %(view)s frågar den här bedömaren"
-
+#: frontend/src/lib/compose/Breakdown.svelte
+#: frontend/src/lib/compose/Texts.svelte
+#: frontend/src/lib/review/Measuring.svelte
 #: src/chatddx/portal/templates/case.html
-msgctxt "no appendices"
-msgid "none"
-msgstr "inga"
-
-#: src/chatddx/portal/templates/world.html
-msgctxt "no arguments"
-msgid "none"
-msgstr "inga"
-
-#: src/chatddx/portal/templates/world.html
-msgctxt "no canaries"
-msgid "none"
-msgstr "inga"
-
-#: src/chatddx/portal/templates/world.html
-msgctxt "no endpoint"
-msgid "none"
-msgstr "ingen"
-
-#: src/chatddx/portal/templates/world.html
-msgctxt "no engine"
-msgid "none"
-msgstr "ingen"
-
-#: src/chatddx/portal/templates/world.html
-msgctxt "no facts"
-msgid "none"
-msgstr "inga"
-
-#: src/chatddx/portal/templates/world.html
-msgctxt "no handle"
-msgid "none"
-msgstr "inget"
-
-#: src/chatddx/portal/templates/world.html
-msgctxt "no host"
-msgid "none"
-msgstr "ingen"
-
+#: src/chatddx/portal/templates/macros.html
 #: src/chatddx/portal/templates/review.html
-msgctxt "no items"
-msgid "none"
-msgstr "inga"
-
+#: src/chatddx/portal/templates/score.html
+#: src/chatddx/portal/templates/starting.html
+#: src/chatddx/portal/templates/translations.html
+#: src/chatddx/portal/templates/updated.html
 #: src/chatddx/portal/templates/world.html
-msgctxt "no judges"
-msgid "none"
-msgstr "inga"
-
-#: frontend/src/lib/review/About.svelte src/chatddx/portal/templates/begun.html
-#: src/chatddx/portal/templates/thread.html
-msgctxt "no language"
-msgid "none"
-msgstr "inget"
-
-#: src/chatddx/portal/templates/fields.html
-msgctxt "no pick"
-msgid "none"
-msgstr "inget"
-
-#: src/chatddx/portal/templates/thread.html
-msgctxt "no value"
-msgid "none"
-msgstr "inget"
-
-#: src/chatddx/portal/templates/world.html
-msgctxt "no variables"
 msgid "none"
 msgstr "inga"
 
@@ -5629,14 +4760,26 @@ msgstr "inga"
 msgid "none expected"
 msgstr "inget förväntat"
 
-#: src/chatddx/bench/runs.py
-msgctxt "refusal"
-msgid "none of the run's cases has an expectation"
-msgstr "inget av körningens fall har något facit"
+#: src/chatddx/portal/templates/review.html
+#: src/chatddx/portal/templates/thread.html
+msgid "none of yours"
+msgstr "inga av dina"
 
+#: frontend/src/lib/review/Faring.svelte
+#: src/chatddx/portal/templates/compare.html
+#: src/chatddx/portal/templates/run.html
+#: src/chatddx/portal/templates/score.html
+#: src/chatddx/portal/templates/scoring.html
+msgid "none yet"
+msgstr "inga än"
+
+#: src/chatddx/portal/templates/compose.html
+#: src/chatddx/portal/templates/library.html
+#: src/chatddx/portal/templates/review.html
+#: src/chatddx/portal/templates/scoring.html
 #: src/chatddx/portal/templates/taken.html
-msgid "none shared with you"
-msgstr "ingen delad med dig"
+msgid "none you see"
+msgstr "inga som du har tillgång till"
 
 #: src/chatddx/portal/templates/score.html
 msgid "none, it is greedy"
@@ -5650,19 +4793,19 @@ msgstr "ingen: en extern inferensserver"
 msgid "none: it takes no secret"
 msgstr "ingen: den tar ingen hemlighet"
 
-#: frontend/src/lib/compose/Breakdown.svelte
+#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
+msgid "not allowed"
+msgstr "inte tillåtet"
+
+#: frontend/src/lib/api/client.ts src/chatddx/portal/templates/error.html
+msgid "not found"
+msgstr "hittades inte"
+
 #: frontend/src/lib/review/Faring.svelte
-#: src/chatddx/portal/templates/gathering.html
-msgid "not as things are now"
-msgstr "inte som det är nu"
-
-#: frontend/src/lib/compose/Breakdown.svelte
-msgid "not every case answered"
-msgstr "inte alla fall besvarade"
-
+#: frontend/src/lib/review/Measuring.svelte
 #: src/chatddx/portal/templates/run.html
-msgid "not finished"
-msgstr "inte avslutad"
+msgid "not scored"
+msgstr "inte rättad"
 
 #: src/chatddx/portal/templates/score.html
 msgid "not scored by this scorer"
@@ -5672,9 +4815,10 @@ msgstr "inte rättad av den här rättaren"
 msgid "not sensitive"
 msgstr "inte känslig"
 
-#: src/chatddx/portal/templates/runner.html
-msgid "not this time"
-msgstr "inte den här gången"
+#: frontend/src/lib/compose/Preview.svelte
+#: src/chatddx/portal/templates/translations.html
+msgid "not translated yet"
+msgstr "inte översatt än"
 
 #: src/chatddx/factors/facts.py
 msgctxt "refusal"
@@ -5692,6 +4836,7 @@ msgstr "inget är känt om resonemang %(level)s"
 msgid "now made for %(now)s, was %(was)s"
 msgstr "görs nu för %(now)s, gjordes för %(was)s"
 
+#: src/chatddx/portal/templates/library.html
 #: src/chatddx/portal/templates/thread.html
 msgid "one you don't see"
 msgstr "en du inte har tillgång till"
@@ -5705,10 +4850,24 @@ msgstr "bara en svarsform med ett schema kan visa det"
 msgid "order"
 msgstr "ordning"
 
+#: frontend/src/lib/compose/Breakdown.svelte
+#: frontend/src/lib/compose/Said.svelte frontend/src/lib/review/Faring.svelte
+#: frontend/src/lib/review/faring.ts src/chatddx/portal/templates/compose.html
+#: src/chatddx/portal/templates/gathering.html
+#: src/chatddx/portal/templates/macros.html
+msgid "out of date"
+msgstr "ouppdaterad"
+
 #: frontend/src/lib/kinds.ts src/chatddx/portal/shelves.py
 msgctxt "kind"
 msgid "output"
 msgstr "svarsform"
+
+#: src/chatddx/bench/cases.py src/chatddx/bench/runs.py
+#, python-format
+msgctxt "refusal"
+msgid "over the day's quota: %(used)s of %(limit)s"
+msgstr "över dygnets kvot: %(used)s av %(limit)s"
 
 #: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/library.html
@@ -5738,25 +4897,16 @@ msgctxt "refusal"
 msgid "passthrough may not set %(keys)s"
 msgstr "ett genomsläpp får inte sätta %(keys)s"
 
-#: src/chatddx/catalog/threads.py
-#, python-format
-msgctxt "refusal"
-msgid ""
-"person %(owner)s owns an expectation of case %(case)s under that schema "
-"already, in thread %(thread)s"
-msgstr ""
-"personen %(owner)s äger redan ett facit för fallet %(case)s under det "
-"schemat, i tråden %(thread)s"
+#: frontend/src/lib/compose/baseline.ts
+#: src/chatddx/portal/templates/macros.html
+#: src/chatddx/portal/templates/runs.html
+msgid "paused"
+msgstr "pausad"
 
 #: src/chatddx/portal/templates/library.html
 #, python-format
 msgid "pick %(name)s"
 msgstr "välj %(name)s"
-
-#: src/chatddx/portal/starting.py
-msgctxt "refusal"
-msgid "pick a trial to run"
-msgstr "välj ett försök att köra"
 
 #: src/chatddx/portal/templates/fields.html
 msgid "pick one"
@@ -5765,11 +4915,6 @@ msgstr "välj en"
 #: src/chatddx/portal/cases.py
 msgid "pick one case or more to take for"
 msgstr "välj ett fall eller fler att ta för"
-
-#: src/chatddx/portal/runs.py
-msgctxt "refusal"
-msgid "pick the runs to compare on the runs page"
-msgstr "välj körningarna att jämföra på sidan Körningar"
 
 #: src/chatddx/portal/templates/world.html
 msgid "pinned by"
@@ -5790,29 +4935,13 @@ msgstr "promptar"
 
 #: frontend/src/lib/compose/baseline.ts
 #: src/chatddx/portal/templates/macros.html
-#, python-format
-msgid "queued, %(num)s ahead"
-msgid_plural "queued, %(num)s ahead"
-msgstr[0] "köad, %(num)s före"
-msgstr[1] "köad, %(num)s före"
+msgid "queued"
+msgstr "köad"
 
-#: frontend/src/lib/compose/baseline.ts
-#: src/chatddx/portal/templates/macros.html
-#, python-format
-msgid "queued, %(num)s ahead, halting"
-msgid_plural "queued, %(num)s ahead, halting"
-msgstr[0] "köad, %(num)s före, avbryts"
-msgstr[1] "köad, %(num)s före, avbryts"
-
-#: frontend/src/lib/compose/baseline.ts
-#: src/chatddx/portal/templates/macros.html
-msgid "queued, paused"
-msgstr "köad, pausad"
-
-#: frontend/src/lib/compose/baseline.ts
-#: src/chatddx/portal/templates/macros.html
-msgid "queued, paused, halting"
-msgstr "köad, pausad, avbryts"
+#: frontend/src/islands/Home.svelte frontend/src/lib/review/Faring.svelte
+msgctxt "in progress"
+msgid "reading"
+msgstr "läser"
 
 #: src/chatddx/portal/templates/scoring.html
 #, python-format
@@ -5883,6 +5012,11 @@ msgstr[0] ""
 msgstr[1] ""
 "återupptagen efter %(done)s av %(num)s poster av %(now)s, där %(then)s "
 "startade den"
+
+#: src/chatddx/portal/templates/run.html
+msgctxt "after the button Resume"
+msgid "resuming sends what it lacks."
+msgstr "att återuppta skickar det som saknas."
 
 #: src/chatddx/factors/lint.py
 #, python-format
@@ -5957,10 +5091,17 @@ msgctxt "kind"
 msgid "sampling"
 msgstr "sampling"
 
+#: src/chatddx/portal/templates/compose.html
 #: src/chatddx/portal/templates/scoring.html
+#: src/chatddx/portal/templates/thread.html
 #, python-format
 msgid "saved %(at)s by %(by)s"
 msgstr "sparad %(at)s av %(by)s"
+
+#: frontend/src/islands/Home.svelte
+msgctxt "in progress"
+msgid "saving"
+msgstr "sparar"
 
 #: src/chatddx/factors/request.py
 msgctxt "refusal"
@@ -5983,6 +5124,12 @@ msgstr "rättaren %(scorer)s har en nyare version: titta på den igen"
 msgid "scorers"
 msgstr "rättare"
 
+#: frontend/src/islands/RunLive.svelte frontend/src/lib/compose/baseline.ts
+#: frontend/src/lib/review/Measuring.svelte
+msgctxt "in progress"
+msgid "scoring"
+msgstr "rättar"
+
 #: frontend/src/lib/runs/titles.ts src/chatddx/portal/templates/macros.html
 #: src/chatddx/portal/templates/score.html
 #, python-format
@@ -5996,9 +5143,10 @@ msgstr[1] "seeds %(seeds)s"
 msgid "seeds"
 msgstr "seeds"
 
-#: frontend/src/lib/scorer/judging.ts
-msgid "seeds are whole numbers, 0 or more"
-msgstr "seeds är heltal, 0 eller mer"
+#: frontend/src/islands/RunLive.svelte frontend/src/lib/compose/baseline.ts
+msgctxt "in progress"
+msgid "sending"
+msgstr "skickar"
 
 #: src/chatddx/portal/templates/world.html
 #, python-format
@@ -6023,21 +5171,27 @@ msgstr "tillhandahåller %(model)s"
 msgid "shared by several, to take from one: %(owners)s"
 msgstr "delad av flera, att ta från en: %(owners)s"
 
+#: src/chatddx/portal/templates/case.html
+#: src/chatddx/portal/templates/review.html
+#: src/chatddx/portal/templates/thread.html
+msgid "shared with you"
+msgstr "delat med dig"
+
 #: src/chatddx/portal/templates/library.html
 #: src/chatddx/portal/templates/runs.html
 msgid "show every one"
 msgstr "visa alla"
-
-#: src/chatddx/factors/trial.py
-msgctxt "refusal"
-msgid "shuffle_seed goes with shuffled order, and only with it"
-msgstr "shuffle_seed hör ihop med blandad ordning, och bara med den"
 
 #: src/chatddx/factors/request.py
 #, python-format
 msgctxt "refusal"
 msgid "slots used more than once: %(slots)s"
 msgstr "luckor använda mer än en gång: %(slots)s"
+
+#: frontend/src/islands/Home.svelte frontend/src/lib/api/client.ts
+#: src/chatddx/portal/templates/error.html
+msgid "something went wrong"
+msgstr "något gick fel"
 
 #: src/chatddx/portal/templates/case.html
 msgid "source"
@@ -6048,11 +5202,16 @@ msgstr "källa"
 msgid "split %(split)s"
 msgstr "delat %(split)s"
 
+#: src/chatddx/portal/templates/translations.html
+#, python-format
+msgid "started from “%(similar)s”"
+msgstr "påbörjad från “%(similar)s”"
+
 #: frontend/src/lib/compose/Settings.svelte
 msgid "stop sequence"
 msgstr "stoppsekvens"
 
-#: frontend/src/lib/compose/baseline.ts
+#: frontend/src/islands/RunLive.svelte frontend/src/lib/compose/baseline.ts
 #: src/chatddx/portal/templates/macros.html
 msgctxt "job"
 msgid "stopped"
@@ -6182,18 +5341,6 @@ msgstr[1] "bedömaren har temperatur 0, så dess %(num)s seeds skickar samma fö
 msgid "the judge: %(problem)s"
 msgstr "bedömaren: %(problem)s"
 
-#: src/chatddx/catalog/threads.py
-#, python-format
-msgctxt "refusal"
-msgid "the label of resource %(position)s is empty"
-msgstr "etiketten för resurs %(position)s är tom"
-
-#: src/chatddx/catalog/threads.py
-#, python-format
-msgctxt "refusal"
-msgid "the label of view %(position)s is empty"
-msgstr "etiketten för vy %(position)s är tom"
-
 #: src/chatddx/factors/lint.py
 #, python-format
 msgctxt "language.unknown"
@@ -6296,10 +5443,6 @@ msgstr ""
 "rättningen kördes med version %(ran)s av %(entry_point)s, men rättaren är"
 " låst till version %(pinned)s"
 
-#: frontend/src/lib/api/client.ts
-msgid "the server didn't say why"
-msgstr "servern sa inte varför"
-
 #: src/chatddx/factors/lint.py
 #, python-format
 msgctxt "trial.engine_unmatched"
@@ -6350,16 +5493,14 @@ msgstr "hela svaret"
 msgid "the whole expectation"
 msgstr "hela facit"
 
+#: frontend/src/lib/runs/progress.ts
+msgctxt "in progress"
+msgid "thinking"
+msgstr "tänker"
+
 #: src/chatddx/portal/templates/world.html
 msgid "thinking budget"
 msgstr "tankebudget"
-
-#: frontend/src/islands/RunLive.svelte
-#, python-format
-msgid "thinking, %(n)s token"
-msgid_plural "thinking, %(n)s tokens"
-msgstr[0] "tänker, %(n)s token"
-msgstr[1] "tänker, %(n)s token"
 
 #: src/chatddx/catalog/threads.py
 #, python-format
@@ -6423,6 +5564,10 @@ msgstr "top k"
 msgid "top p"
 msgstr "top p"
 
+#: src/chatddx/portal/templates/compose.html
+msgid "translate it to run the baseline"
+msgstr "översätt den för att köra baslinjen"
+
 #: frontend/src/lib/kinds.ts src/chatddx/portal/shelves.py
 msgctxt "kind"
 msgid "translations"
@@ -6481,10 +5626,22 @@ msgctxt "refusal"
 msgid "unexpected %(token)s in %(text)s"
 msgstr "oväntat %(token)s i %(text)s"
 
+#: src/chatddx/portal/templates/run.html
+msgid "unfinished"
+msgstr "oavslutad"
+
 #: frontend/src/lib/runs/outcomes.ts src/chatddx/portal/templates/macros.html
 msgctxt "outcome"
 msgid "unread"
 msgstr "oläsbar"
+
+#: src/chatddx/portal/templates/gathering.html
+msgid "up to date"
+msgstr "uppdaterad"
+
+#: frontend/src/lib/review/faring.ts src/chatddx/portal/templates/compose.html
+msgid "update it on its page"
+msgstr "uppdatera den på dess sida"
 
 #: src/chatddx/portal/templates/world.html
 #, python-format
@@ -6544,6 +5701,7 @@ msgstr "version"
 msgid "version %(at)s of %(last)s"
 msgstr "version %(at)s av %(last)s"
 
+#: src/chatddx/portal/templates/case.html
 #: src/chatddx/portal/templates/runner.html
 #: src/chatddx/portal/templates/thread.html
 #, python-format
@@ -6589,7 +5747,8 @@ msgid_plural "view %(view)s's value rests on %(called)s of %(num)s judge seeds"
 msgstr[0] "vy %(view)s:s värde vilar på %(called)s av bedömarens %(num)s seed"
 msgstr[1] "vy %(view)s:s värde vilar på %(called)s av bedömarens %(num)s seeds"
 
-#: frontend/src/islands/RunLive.svelte
+#: frontend/src/islands/Home.svelte frontend/src/islands/RunLive.svelte
+msgctxt "in progress"
 msgid "waiting"
 msgstr "väntar"
 
@@ -6628,12 +5787,10 @@ msgstr ""
 msgid "write yours"
 msgstr "skriv din"
 
-#: frontend/src/islands/RunLive.svelte
-#, python-format
-msgid "writing, %(n)s token"
-msgid_plural "writing, %(n)s tokens"
-msgstr[0] "skriver, %(n)s token"
-msgstr[1] "skriver, %(n)s token"
+#: frontend/src/lib/runs/progress.ts
+msgctxt "in progress"
+msgid "writing"
+msgstr "skriver"
 
 #: src/chatddx/portal/templates/macros.html
 #: src/chatddx/portal/templates/review.html
@@ -6642,7 +5799,8 @@ msgid "yes"
 msgstr "ja"
 
 #: src/chatddx/portal/templates/case.html
-msgctxt "an expectation"
+#: src/chatddx/portal/templates/review.html
+#: src/chatddx/portal/templates/taken.html
 msgid "yours"
 msgstr "din"
 

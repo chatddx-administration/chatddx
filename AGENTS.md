@@ -43,8 +43,8 @@ In order of preference:
 
 ## Messages
 
-Every message touched or created is tested against the scenario index, `src/chatddx/locale/catalogs/sv.po`, before it is
-added (`docs/parts/locale.md`, "The scenario index"):
+Every message touched or created is tested against the scenario index, `docs/catalog/`, every part's, before it is added
+(`docs/parts/locale.md`, "The scenario index"):
 
 1. Work out the scenario the code says it in.
 2. Find a message saying that scenario: its words, case and context aside.

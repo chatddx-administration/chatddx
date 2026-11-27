@@ -125,8 +125,8 @@ docs/surfaces/*. All findings are listed in docs/glossary.md, "Findings".
 - This document: what the rig is for, and what holds across it.
 - docs/glossary.md: every term, one line each (`grep '^:Term' docs/glossary.md`).
 - docs/parts/: a part's doc, at whatever stage it is (AGENTS.md, "Development stages"), beside a module's surface in
-  docs/surfaces/ and the indexes of its comments in docs/comments/ and of its whoopses and asserts in docs/whoopses/,
-  which `chatddx-dev stamp` writes from the code.
+  docs/surfaces/ and the indexes of its comments in docs/comments/, of its whoopses and asserts in docs/whoopses/ and of
+  what it says to a person in docs/catalog/, which `chatddx-dev index` writes from the code.
 - docs/parts/bench.md: the bench, which every edge goes through.
 - docs/backlog.md: open work, a section for each pull request.
 - docs/migrations.md: the database's migrations, by schema and tier.

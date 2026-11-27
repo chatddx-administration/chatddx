@@ -7,7 +7,7 @@
   {% call section(_("Your queue")) %}
   <div class="flex flex-wrap items-center gap-3 text-sm">
     {% set queued, under_way = ngettext("%(num)s queued", "%(num)s queued", queue.queued), ngettext("%(num)s under way", "%(num)s under way", queue.under_way) %}
-    <span>{{ _("%(queued)s, %(under_way)s; paused.", queued=queued, under_way=under_way) if queue.paused else _("%(queued)s, %(under_way)s.", queued=queued, under_way=under_way) }}</span>
+    <span>{{ queued }}, {{ under_way }}{% if queue.paused %}, {{ _("paused") }}{% endif %}</span>
     <form method="post" action="/queue/{{ 'resume' if queue.paused else 'pause' }}"><button>{{ _("Resume") if queue.paused else _("Pause") }}</button></form>
     {% if queue.queued %}
     <form method="post" action="/queue/stop"><button class="primary danger">{{ _("Stop") }}</button></form>

@@ -128,7 +128,7 @@ Raises:
 2. `ValueError`: `"a person doesn't write {component.kind_name} components"`
 3. `NotFound`: `"no case {missing[0]} for {seen.person.login}"` (through `_carried`)
 4. `Invalid`: `"a trial's cases are in one language, not in %(languages)s", languages=", ".join(known)` (through `_carried`)
-5. `Invalid`: `"%(configuration)s has no translations into %(into)s, its cases' language", configuration=seen.title(trial.skeleton), into=into` (through `_carried`)
+5. `Invalid`: `"%(name)s has no translation into %(languages)s", name=seen.title(trial.skeleton), languages=into` (through `_carried`)
 
 Finds:
 1. `expectation.unreadable`: `str(e)` (through `_unreadable`)
@@ -144,8 +144,7 @@ doesn't hold; reads how many runs they started in the last day.
 
 Raises:
 1. `OverQuota`: `"a run holds at most %(num)s item, not %(given)s" / "a run holds at most %(num)s items, not %(given)s", num=settings.ITEMS_PER_RUN, given=items`
-2. `OverQuota`: `"%(login)s has started %(num)s runs in the last day, as many as a day takes", login=login, num=started`
-3. `OverQuota`: `"%(login)s has started %(num)s runs in the last day, and a day takes %(limit)s, not %(more)s more", login=login, num=started, limit=settings.RUNS_PER_DAY, more=len(runs)`
+2. `OverQuota`: `"over the day's quota: %(used)s of %(limit)s", used=started + len(runs), limit=settings.RUNS_PER_DAY`
 
 ## `Bench.compose`
 `src/chatddx/bench/composing.py:compose`
@@ -208,7 +207,7 @@ Raises:
 6. `ValueError`: `"{new.case} isn't a case of the family {old.case} is of"` (through `_written`)
 7. `NotFound`: `"no case {missing[0]} for {seen.person.login}"` (through `_written`)
 8. `Invalid`: `"a trial's cases are in one language, not in %(languages)s", languages=", ".join(known)` (through `_written`)
-9. `Invalid`: `"%(configuration)s has no translations into %(into)s, its cases' language", configuration=seen.title(trial.skeleton), into=into` (through `_written`)
+9. `Invalid`: `"%(name)s has no translation into %(languages)s", name=seen.title(trial.skeleton), languages=into` (through `_written`)
 
 ## `Bench.fork`
 `src/chatddx/bench/components.py:fork`
@@ -229,7 +228,7 @@ Raises:
 6. `ValueError`: `"{new.case} isn't a case of the family {old.case} is of"` (through `_written`)
 7. `NotFound`: `"no case {missing[0]} for {seen.person.login}"` (through `_written`)
 8. `Invalid`: `"a trial's cases are in one language, not in %(languages)s", languages=", ".join(known)` (through `_written`)
-9. `Invalid`: `"%(configuration)s has no translations into %(into)s, its cases' language", configuration=seen.title(trial.skeleton), into=into` (through `_written`)
+9. `Invalid`: `"%(name)s has no translation into %(languages)s", name=seen.title(trial.skeleton), languages=into` (through `_written`)
 
 ## `Bench.gathering`
 `src/chatddx/bench/gathering.py:gathering`
@@ -310,7 +309,7 @@ Raises:
 7. `ValueError`: `"{new.case} isn't a case of the family {old.case} is of"` (through `_written`)
 8. `NotFound`: `"no case {missing[0]} for {seen.person.login}"` (through `_written`)
 9. `Invalid`: `"a trial's cases are in one language, not in %(languages)s", languages=", ".join(known)` (through `_written`)
-10. `Invalid`: `"%(configuration)s has no translations into %(into)s, its cases' language", configuration=seen.title(trial.skeleton), into=into` (through `_written`)
+10. `Invalid`: `"%(name)s has no translation into %(languages)s", name=seen.title(trial.skeleton), languages=into` (through `_written`)
 
 ## `Bench.observed`
 `src/chatddx/bench/observed.py:observed`
@@ -479,7 +478,7 @@ Heads-up: the gate's `Refused` passes through.
 Raises:
 1. `ValueError`: `"{variation.label} is a judge configuration: a judge is asked as runs are scored, and isn't run on cases"`
 2. `NotFound`: `"no case {missing[0]} for {seen.person.login}"`
-3. `Invalid`: `"%(configuration)s has no translations into %(languages)s, which its cases are in", configuration=variation.label, languages=", ".join(str(c.language) for c in left_out)`
+3. `Invalid`: `"%(name)s has no translation into %(languages)s", name=variation.label, languages=", ".join(str(c.language) for c in left_out)`
 4. `Invalid`: `"no case can be sent: %(refused)s", refused="; ".join(c.refused or "" for c in left_out)`
 
 ## `Bench.start_trials`
@@ -502,7 +501,7 @@ Raises:
 1. `NotFound`: `"no trial version {id} for {seen.person.login}"`
 2. `ValueError`: `"a start runs one trial or more"`
 3. `NotFound`: `"no case {missing[0]} for {seen.person.login}"`
-4. `Invalid`: `"%(trial)s is out of date: update it on its page", trial=name`
+4. `Invalid`: `"%(name)s is out of date: update it on its page", name=name`
 
 ## `Bench.take`
 `src/chatddx/bench/taking.py:take`
@@ -525,7 +524,7 @@ Raises:
 
 Raises:
 1. `ValueError`: `"expectation {thread} is yours already"`
-2. `Conflict`: `"%(login)s has their own expectation of %(case)s under %(schema)s, in thread %(thread)s: replace it to take this one", login=seen.person.login, case=seen.title(case), schema=seen.title(schema), thread=mine[0]`
+2. `Conflict`: `"%(login)s has their own expectation of %(case)s under %(schema)s already, in thread %(thread)s", login=seen.person.login, case=seen.title(case), schema=seen.title(schema), thread=mine[0]`
 
 ## `Bench.type_case`
 `src/chatddx/bench/cases.py:type_case`
@@ -539,11 +538,11 @@ Raises:
 
 Raises:
 1. `Invalid`: `"a typed case holds text"`
-2. `Invalid`: `"a typed case may not hold U+0000, which can't be stored"`
+2. `Invalid`: `"U+0000 can't be stored"`
 3. `Invalid`: `"a typed case holds at most %(num)s character, not %(given)s" / "a typed case holds at most %(num)s characters, not %(given)s", num=settings.TYPED_TEXT_LIMIT, given=len(text)`
 4. `Invalid`: `"a name can't be empty: none leaves the case unnamed"`
 5. `ValueError`: `str(e)` (from `LookupError`)
-6. `OverQuota`: `"%(login)s has typed %(num)s cases in the last day, as many as a day takes", login=seen.person.login, num=typed`
+6. `OverQuota`: `"over the day's quota: %(used)s of %(limit)s", used=typed + 1, limit=settings.TYPED_PER_DAY`
 
 ## `Bench.update`
 `src/chatddx/bench/updating.py:update`
@@ -612,8 +611,7 @@ ran, and its peers among the configurations given.
 * ∟`None`
 
 Raises:
-1. `Invalid`: `"%(login)s has their own expectation of %(case)s under %(schema)s, in thread %(thread)s: delete that one to restore this", login=seen.person.login, case=seen.title(case), schema=seen.title(schema), thread=others[0]`
-2. `Invalid`: `"%(login)s has their own expectation of %(case)s under %(schema)s, in thread %(thread)s: edit that one", login=seen.person.login, case=seen.title(case), schema=seen.title(schema), thread=others[0]`
+1. `Invalid`: `"%(login)s has their own expectation of %(case)s under %(schema)s already, in thread %(thread)s", login=seen.person.login, case=seen.title(case), schema=seen.title(schema), thread=others[0]`
 
 ## `check_kind`
 `src/chatddx/bench/seen.py:check_kind`
@@ -1085,7 +1083,7 @@ Raises:
 1. `ValueError`: `"endpoint {endpoint!r} serves another model than {variation.label}'s, {self.title(weights)}"`
 2. `Invalid`: `"%(configuration)s names no model: name the one to run it under", configuration=variation.label`
 3. `ValueError`: `"{variation.label} runs under its model's handle: set its model instead"`
-4. `Invalid`: `"%(configuration)s is out of date: update it on its page", configuration=variation.label`
+4. `Invalid`: `"%(name)s is out of date: update it on its page", name=variation.label`
 
 ## `Seen.case_titled`
 `src/chatddx/bench/seen.py:Seen.case_titled`
@@ -1201,7 +1199,7 @@ Raises:
 * ∟`Endpoint`
 
 Raises:
-1. `Invalid`: `"%(judge)s is out of date: update it on its page", judge=self.title(judge.digest)`
+1. `Invalid`: `"%(name)s is out of date: update it on its page", name=self.title(judge.digest)`
 
 ## `Seen.labels`
 `src/chatddx/bench/seen.py:Seen.labels`
@@ -1323,7 +1321,7 @@ Raises:
 * ∟`Skeleton`
 
 Raises:
-1. `StructuralError`: `"%(configuration)s has no translations into %(into)s", configuration=variation.label, into=str(into)`
+1. `StructuralError`: `"%(name)s has no translation into %(languages)s", name=variation.label, languages=str(into)`
 
 ## `Seen.thread`
 `src/chatddx/bench/seen.py:Seen.thread`

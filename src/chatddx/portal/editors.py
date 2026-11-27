@@ -73,11 +73,11 @@ def editors(
         fields.append({"name": name, "as": "schema", "schema": _schema(model, name)})
     drawn = {f["name"] for f in fields}
     fields += [
-        {"name": f.name, "as": "json", "expects": _expects(model, f.name)}
+        {"name": f.name, "as": "json", "brackets": f.brackets}
         for f in found
         if f.editable and f.shape == "json" and f.name not in drawn
     ]
-    if not fields:
+    if not open:
         return None
     return {
         "fields": fields,
@@ -94,16 +94,6 @@ def editors(
 def _schema(model: type[BaseModel], name: str) -> dict[str, Any]:
     whole = model.model_json_schema()
     return {**whole["properties"][name], "$defs": whole.get("$defs", {})}
-
-
-def _expects(model: type[BaseModel], name: str) -> str | None:
-    whole = model.model_json_schema()
-    held: dict[str, Any] = whole["properties"][name]
-    ref = held.get("$ref")
-    if isinstance(ref, str):
-        held = whole["$defs"][ref.removeprefix("#/$defs/")]
-    types = {m.get("type") for m in held.get("anyOf", [held])}
-    return next((t for t in ("object", "array") if t in types), None)
 
 
 def _text(value: JsonValue) -> str:

@@ -314,8 +314,8 @@ class Seen:
         handle = self.handle(judge.model)
         if handle.weights != judge.model:
             raise Invalid.of(
-                "%(judge)s is out of date: update it on its page",
-                judge=self.title(judge.digest),
+                "%(name)s is out of date: update it on its page",
+                name=self.title(judge.digest),
             )
         return self.served(handle)
 
@@ -357,8 +357,8 @@ class Seen:
         handle = self.handle(weights)
         if handle.weights != weights:
             raise Invalid.of(
-                "%(configuration)s is out of date: update it on its page",
-                configuration=variation.label,
+                "%(name)s is out of date: update it on its page",
+                name=variation.label,
             )
         return self.served(handle)
 
@@ -398,9 +398,9 @@ class Seen:
             return resolve(self.store.get, variation.configuration.digest, Skeleton)
         if recipe is None:
             raise StructuralError.of(
-                "%(configuration)s has no translations into %(into)s",
-                configuration=variation.label,
-                into=str(into),
+                "%(name)s has no translation into %(languages)s",
+                name=variation.label,
+                languages=str(into),
             )
         registry = self.store.load(s.digest for s in iter_refs(recipe))
         return compile_request(
@@ -454,7 +454,7 @@ class Seen:
         for language in sorted({s for s in sent.values() if s is not None}):
             some = [c for c in cases if sent[c] == language]
             if language not in into:
-                refused = f"{variation.label} has no translations into {language}"
+                refused = f"{variation.label} has no translation into {language}"
                 found.append(
                     Carried(language, some, refused=refused, untranslated=True)
                 )
@@ -1105,8 +1105,8 @@ def check_expecting(
     held = choices(seen, [case], schema)[case]
     if (others := sorted(t for t in held if t != thread)) and restoring:
         raise Invalid.of(
-            "%(login)s has their own expectation of %(case)s under %(schema)s, in "
-            + "thread %(thread)s: delete that one to restore this",
+            "%(login)s has their own expectation of %(case)s under %(schema)s "
+            + "already, in thread %(thread)s",
             login=seen.person.login,
             case=seen.title(case),
             schema=seen.title(schema),
@@ -1114,8 +1114,8 @@ def check_expecting(
         )
     if others:
         raise Invalid.of(
-            "%(login)s has their own expectation of %(case)s under %(schema)s, in "
-            + "thread %(thread)s: edit that one",
+            "%(login)s has their own expectation of %(case)s under %(schema)s "
+            + "already, in thread %(thread)s",
             login=seen.person.login,
             case=seen.title(case),
             schema=seen.title(schema),

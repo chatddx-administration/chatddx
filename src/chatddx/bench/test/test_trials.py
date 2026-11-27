@@ -4,6 +4,9 @@ from chatddx.bench import Bench, NotFound
 from chatddx.catalog.language import language_of
 from chatddx.factors.base import resolve
 from chatddx.factors.trial import Trial, replicates
+from chatddx.identity import Person
+from chatddx.inventory import Inventory
+from chatddx.store.store import Connection
 from chatddx.test.world import JUDGE, LINES, LINES_GUIDED, QWEN
 
 
@@ -43,7 +46,7 @@ def test_a_trial_s_cases_are_in_one_language_its_skeleton_goes_into(
             composed(bench, LINES_GUIDED, "crlf", "svenska"),
             "a trial's cases are in one language, not in en, sv",
         ),
-        (composed(bench, LINES, "svenska"), "has no translations into sv"),
+        (composed(bench, LINES, "svenska"), "has no translation into sv"),
         (composed(bench, JUDGE, "crlf"), "judge skeleton"),
     ]
     for trial, said in refused:
@@ -69,3 +72,15 @@ def test_a_trial_is_started_only_where_its_engine_is_served(bench: Bench) -> Non
     lines = bench.variation(LINES).configuration
     with pytest.raises(NotFound, match=f"no trial {lines.thread} for alice"):
         _ = bench.start_trials([lines.id])
+
+
+@pytest.mark.usefixtures("fake")
+def test_a_concurrency_past_the_endpoint_s_capacity_is_what_it_takes(
+    conn: Connection, world: Inventory, alice: Person
+) -> None:
+    bench = Bench(conn, alice, world)
+    written = bench.new(composed(bench, LINES, "crlf"), "english")
+    [run] = bench.start_trials([written.edit.id], 10_000)
+    assert run.started.endpoint is not None
+    endpoint = bench.inventory.endpoint(run.started.endpoint.name)
+    assert run.started.execution.concurrency == endpoint.capacity

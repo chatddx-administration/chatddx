@@ -5,6 +5,7 @@
   import { t, tp, upFirst } from "$lib/locale";
   import { type Body, type Chunk, type Chunks } from "./drafting";
   import JsonField from "./JsonField.svelte";
+  import { fitted } from "./logic";
   import type { Facts, ToolChoice } from "./props";
 
   let {
@@ -28,9 +29,9 @@
   } = $props();
 
   const THINKING: [string, () => string][] = [
-    ["model", () => t("As the model does")],
-    ["level", () => t("By level")],
-    ["hand", () => t("By hand")],
+    ["model", () => t("Model default")],
+    ["level", () => t("Level")],
+    ["hand", () => t("Manual")],
   ];
   const LEVELS = ["default", "off", "on", "minimal", "low", "medium", "high", "xhigh"];
   const EFFORTS = ["none", "minimal", "low", "medium", "high"];
@@ -66,6 +67,9 @@
   const recommended = $derived(
     sampling.recommended && followed !== null ? (known?.recommended[followed] ?? null) : null,
   );
+  // Policy: only what the model's facts work out is offered, so that what is picked compiles.
+  const levelled = $derived(LEVELS.filter((l) => known?.levels[l]?.lands != null));
+  const recommendable = $derived(followed !== null && known?.recommended[followed] != null);
   const held = $derived(((chunks.toolset?.tools as string[] | undefined) ?? []).filter((d) => d));
   const left = $derived(toolChoices.filter((c) => !held.includes(c.digest)));
 
@@ -91,15 +95,20 @@
     if (mode === "model") return set("reasoning", null);
     const budget = reasoning?.thinking_token_budget;
     const base = with_({ kind: "chunk.reasoning" }, "thinking_token_budget", budget);
-    set("reasoning", mode === "level" ? { ...base, level: "default" } : base);
+    const level = levelled.includes("default") ? "default" : levelled[0];
+    set("reasoning", mode === "level" ? { ...base, level } : base);
   }
 
   function landing(level: string): string {
-    if (known === null) return t("No facts are known about the model: a level can't be worked out.");
-    const at = known.levels[level];
-    if (!at) return "";
-    if (at.refused) return at.refused;
-    return at.lands === level ? "" : t("Lands at %(level)s.", { level: String(at.lands) });
+    const lands = known?.levels[level]?.lands;
+    return lands == null || lands === level ? "" : t("Lands at %(level)s.", { level: lands });
+  }
+
+  function picked(to: string): void {
+    pick(to);
+    const now = fitted(reasoning, sampling, facts[to] ?? null);
+    if (now.reasoning !== reasoning) set("reasoning", now.reasoning);
+    if (now.sampling !== sampling) set("sampling", now.sampling);
   }
 
   function refused(kind: string): string | undefined {
@@ -120,7 +129,7 @@
   }
 </script>
 
-<section class="mb-6 border-t border-border/60 pt-4" aria-label={t("Its settings")}>
+<section class="mb-6 border-t border-border/60 pt-4" aria-label={t("Settings")}>
   <div class="space-y-6 text-sm">
     <fieldset>
       <legend class="mb-2 font-medium">{worded("model")}</legend>
@@ -128,7 +137,7 @@
         size="sm"
         value={model ?? ""}
         aria-label={worded("model")}
-        onchange={(e) => pick(e.currentTarget.value)}
+        onchange={(e) => picked(e.currentTarget.value)}
       >
         {#if model === null}<NativeSelect.Option value="">—</NativeSelect.Option>{/if}
         {#each models as m (m.id)}
@@ -161,8 +170,7 @@
                 onchange={() => answer(kind)}
               />
               {name()}
-              {#if known?.answers === kind}<span class="text-xs font-normal text-muted-foreground"
-                  >{t("its default")}</span
+              {#if known?.answers === kind}<span class="text-xs font-normal text-muted-foreground">{t("default")}</span
                 >{/if}
             </span>
             <span class="text-xs text-muted-foreground">{about()}</span>
@@ -175,7 +183,7 @@
       {#if contract.kind === "tool"}
         <div class="mt-3 grid gap-2 @xl:grid-cols-2">
           <label class="grid gap-1">
-            <span class="text-xs text-muted-foreground">{t("The answer tool's name")}</span>
+            <span class="text-xs text-muted-foreground">{t("Answer tool name")}</span>
             <input
               class="h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-2"
               value={String(contract.name ?? "")}
@@ -183,7 +191,7 @@
             />
           </label>
           <label class="grid gap-1">
-            <span class="text-xs text-muted-foreground">{t("Its description")}</span>
+            <span class="text-xs text-muted-foreground">{t("Description")}</span>
             <input
               class="h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-2"
               value={String(contract.description ?? "")}
@@ -222,7 +230,13 @@
       <div class="flex flex-wrap gap-x-4 gap-y-1">
         {#each THINKING as [mode, name] (mode)}
           <label class="flex items-center gap-1.5">
-            <input type="radio" name="thinking" checked={thinking === mode} onchange={() => think(mode)} />
+            <input
+              type="radio"
+              name="thinking"
+              checked={thinking === mode}
+              disabled={mode === "level" && thinking !== "level" && !levelled.length}
+              onchange={() => think(mode)}
+            />
             {name()}
           </label>
         {/each}
@@ -237,10 +251,8 @@
                 value={String(reasoning.level)}
                 onchange={(e) => set("reasoning", { ...reasoning, level: e.currentTarget.value })}
               >
-                {#each LEVELS as level (level)}
-                  <NativeSelect.Option value={level}
-                    >{level === "default" ? t("its default") : level}</NativeSelect.Option
-                  >
+                {#each levelled as level (level)}
+                  <NativeSelect.Option value={level}>{level === "default" ? t("default") : level}</NativeSelect.Option>
                 {/each}
               </NativeSelect.Root>
               {#if landing(String(reasoning.level))}<span class="text-xs text-muted-foreground"
@@ -275,8 +287,8 @@
               />
             </div>
           {/if}
-          <!-- Policy: a budget the model's facts refuse is offered only to be taken out, as it compiles to nothing else. -->
-          {#if typeof known?.budget !== "string" || reasoning.thinking_token_budget != null}
+          <!-- Policy: a budget the model's facts refuse, or at a level don't know, is offered only to be taken out, as it compiles to nothing else. -->
+          {#if (typeof known?.budget !== "string" && (thinking !== "level" || known?.budget === true)) || reasoning.thinking_token_budget != null}
             <label class="grid gap-1">
               <span class="text-xs text-muted-foreground">{t("Thinking token budget")}</span>
               <input
@@ -300,7 +312,7 @@
         <input
           type="checkbox"
           checked={sampling.recommended === true}
-          disabled={!sampling.recommended && !Object.keys(known?.recommended ?? {}).length}
+          disabled={!sampling.recommended && !recommendable}
           onchange={(e) => set("sampling", with_(sampling, "recommended", e.currentTarget.checked || undefined))}
         />
         {t("Recommended for its thinking level")}

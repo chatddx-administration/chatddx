@@ -267,7 +267,7 @@ Finds:
 * `upgrades: ClassVar[Mapping[int, Upgrade]] = {}`
 
 Raises:
-1. `Invalid`: `"a %(kind)s may not hold U+0000, which can't be stored", kind=self.kind_name` (through `Component._storable`, in a `ValidationError`)
+1. `Invalid`: `"U+0000 can't be stored"` (through `Component._storable`, in a `ValidationError`)
 
 ## `Component.__pydantic_init_subclass__` `@classmethod` `@override`
 `src/chatddx/factors/base.py:Component.__pydantic_init_subclass__`
@@ -374,7 +374,7 @@ Raises:
 * `whitespace_limit: int | None = Field(default=100, ge=1)`
 
 Raises:
-1. `Invalid`: `"shuffle_seed goes with shuffled order, and only with it"` (through `Execution._shuffle_seed`, in a `ValidationError`)
+1. `Self`: `"shuffle_seed goes with shuffled order, and only with it"` (through `Execution._shuffle_seed`, in a `ValidationError`)
 
 ## `Execution.overlaid`
 `src/chatddx/factors/trial.py:Execution.overlaid`
@@ -690,7 +690,7 @@ Raises:
 * ∟`tuple[Landing | None, Landing | None]`
 
 Raises:
-1. `StructuralError`: `"facts about %(facts)s can't compile for %(model)s", facts=facts.model, model=model`
+1. `Self`: `"facts about %(facts)s can't compile for %(model)s", facts=facts.model, model=model` (through `raw`)
 2. `StructuralError`: `"a recommended sampling is worked out from the facts about the recipe's model, which has none"`
 3. `StructuralError`: `"reasoning %(level)s is worked out from the facts about the recipe's model, which has none", level=repr(asked)`
 4. `StructuralError`: `"%(model)s: %(refused)s", model=facts.model, refused=str(e)` (from `Refused`)
@@ -1894,6 +1894,17 @@ Raises:
 `src/chatddx/factors/base.py:Worded.of`
 
 * `wording: Wording`
+* `/`
+* `**params: Param`
+* ∟`Self`
+
+## `Worded.raw` `@classmethod`
+`src/chatddx/factors/base.py:Worded.raw`
+
+Its English and parameters as `of` has them, unworded: what a person can't
+cause through the portal, which is passed on as it comes rather than said.
+
+* `english: str`
 * `/`
 * `**params: Param`
 * ∟`Self`

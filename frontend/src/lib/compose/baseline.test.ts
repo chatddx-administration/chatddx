@@ -36,8 +36,8 @@ describe("a baseline under way", () => {
   it("says where each run stands", () => {
     expect(said(run(0, { status: "queued", ahead: 2 }))).toBe("queued, 2 ahead");
     expect(said(run(0, { status: "queued", ahead: null }))).toBe("queued, paused");
-    expect(said(run(1, {}))).toBe("Sending");
-    expect(said(run(3, {}, true))).toBe("Scoring");
+    expect(said(run(1, {}))).toBe("sending");
+    expect(said(run(3, {}, true))).toBe("scoring");
     expect(said(run(2, { status: "failed", why: "gone" }))).toBe("failed: gone");
   });
 });

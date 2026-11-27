@@ -19,10 +19,9 @@
   "trial": _("A new trial"),
 }.get(word, _("A new %(kind)s", kind=word | kind)) %}
 {% macro naming(typed) %}
-{% set unnamed = typed and typed.unnamed %}
-<label class="grid max-w-xl gap-1 text-sm"><span class="{{ 'text-destructive' if unnamed else 'text-muted-foreground' }}">{{ _("name") }}</span>
-  <input name="name" required value="{{ typed.name or '' if typed else '' }}" class="h-9 rounded-md border border-input bg-transparent px-2.5">
-  {%- if unnamed %}<span class="text-xs text-destructive">{{ _("This is needed.") }}</span>{% endif %}</label>
+<label class="grid max-w-xl gap-1 text-sm"><span class="text-muted-foreground">{{ _("name") }}</span>
+  <input name="name" required pattern=".*\S.*" value="{{ typed.name or '' if typed else '' }}" class="h-9 rounded-md border border-input bg-transparent px-2.5">
+</label>
 {% endmacro %}
 {% block title %}{{ titled }} · ChatDDX{% endblock %}
 {% block main %}
@@ -31,7 +30,7 @@
   {{ heading(titled, _("A thread of your own, from what is given here.")) }}
   {{ refusal(typed, request) }}
   {% if word == "translations" %}
-  {% call section(_("What it holds"), "holds") %}
+  {% call section(_("Contents"), "holds") %}
   {% if entries is none %}
   <form method="get" action="/library/new" class="flex flex-wrap items-end gap-3 text-sm">
     <input type="hidden" name="kind" value="translations">
@@ -58,13 +57,13 @@
   {% endif %}
   {% endcall %}
   {% else %}
-  {% call section(_("What it holds"), "holds") %}
-  <form method="post" action="{{ action }}" class="grid gap-4">
+  {% call section(_("Contents"), "holds") %}
+  <form method="post" action="{{ action }}" class="grid gap-4" data-checked>
     {{ naming(typed) }}
     {{ rows(fields, picked, titles, links) }}
     {% if languaged %}
     <label class="grid max-w-xs gap-1 text-sm"><span class="text-muted-foreground">{{ _("language") }}</span>
-      <input name="language" pattern="{{ language_pattern }}" title="{{ _('a language tag, such as sv or pt-BR') }}" value="{{ typed.language or '' if typed else '' }}" class="h-9 rounded-md border border-input bg-transparent px-2.5" placeholder="{{ pgettext('no language', 'none') }}">
+      <input name="language" pattern="{{ language_pattern }}" title="{{ _('a language tag, such as sv or pt-BR') }}" value="{{ typed.language or '' if typed else '' }}" class="h-9 rounded-md border border-input bg-transparent px-2.5" placeholder="—">
       <span class="text-xs text-muted-foreground">{{ pgettext("under the field language", "The text's, kept with it.") }}</span></label>
     {% endif %}
     {% if labels is not none %}

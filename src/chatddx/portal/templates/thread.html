@@ -17,7 +17,7 @@
   {% endif %}
   {{ updating(thread, proposal, changes) }}
 
-  {% call section(_("About it")) %}
+  {% call section(_("About")) %}
   {% set origin_link %}{% if origin %}<a href="/threads/{{ origin.id }}">{{ named(origin) }}</a>{% elif thread.forked_from is not none %}{{ _("one you don't see") }}{% else %}—{% endif %}{% endset %}
   {% set tagged %}{% for t in thread.tags %}{{ chip(t) }} {% else %}—{% endfor %}{% endset %}
   {{ facts([
@@ -34,17 +34,17 @@
   {% endcall %}
 
   {% set link = "/threads/" ~ thread.id ~ "?" ~ ("into=" ~ (translating.into | urlencode) ~ "&" if translating and translating.into else "") ~ "version=" %}
-  {% call section(_("What it holds"), "holds") %}
+  {% call section(_("Contents"), "holds") %}
   <nav class="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="{{ _('Versions') }}">
-    {% if at > 1 %}<a class="view" href="{{ link ~ (at - 1) }}" aria-label="{{ _('The version before') }}">◀</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">◀</span>{% endif %}
+    {% if at > 1 %}<a class="view" href="{{ link ~ (at - 1) }}" aria-label="{{ _('Previous version') }}">◀</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">◀</span>{% endif %}
     <span class="font-medium">{{ _("version %(at)s of %(last)s", at=at, last=last) | upfirst }}</span>
-    {% if at < last %}<a class="view" href="{{ link ~ (at + 1) }}" aria-label="{{ _('The version after') }}">▶</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">▶</span>{% endif %}
+    {% if at < last %}<a class="view" href="{{ link ~ (at + 1) }}" aria-label="{{ _('Next version') }}">▶</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">▶</span>{% endif %}
     <span class="text-muted-foreground">{{ saved.at | when }}, {{ saved.by }}</span>
     <span class="font-mono text-xs text-muted-foreground">{{ edit.digest | short }}</span>
   </nav>
   {% if at != current %}
   <div class="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-warning/10 p-3 text-sm">
-    <span>{% if current == last %}{{ _("A newer version is saved: version %(n)s, %(at)s by %(by)s.", n=current, at=versions[-1].at | when, by=versions[-1].by) }}{% else %}{{ _("Version %(n)s is brought back as the latest, %(at)s by %(by)s.", n=current, at=versions[-1].at | when, by=versions[-1].by) }}{% endif %}</span>
+    <span>{{ _("newer version") | upfirst }}: {{ _("saved %(at)s by %(by)s", at=versions[-1].at | when, by=versions[-1].by) }}.</span>
     <a class="view" href="/threads/{{ thread.id }}">{{ _("Open the latest") }}</a>
     {% if revertible %}
     <form method="post" action="/threads/{{ thread.id }}/revert">
@@ -56,16 +56,16 @@
   </div>
   {% endif %}
   {% if editable %}
-  <form method="post" action="/threads/{{ thread.id }}/edit" class="grid gap-4">
+  <form method="post" action="/threads/{{ thread.id }}/edit" class="grid gap-4" data-checked>
     <input type="hidden" name="head" value="{{ thread.head.id }}">
   {% endif %}
   {% if translating %}
   {{ translations(thread, translating, translatable, at, at == current) }}
   {% elif parts %}
-  <h3>{{ _("Its recipe") }}</h3>
+  <h3>{{ _("Recipe") }}</h3>
   {{ rows(parts, picked, titles, links) }}
   <details class="text-sm">
-    <summary class="cursor-pointer text-muted-foreground">{{ _("What it sends: the request compiled from its recipe") }}</summary>
+    <summary class="cursor-pointer text-muted-foreground">{{ _("Request") }}</summary>
     <div class="mt-3">{{ rows(fields, picked, titles, links) }}</div>
   </details>
   {% else %}
@@ -74,7 +74,7 @@
   {% if editable %}
     {% if languaged %}
     <label class="grid max-w-xs gap-1 text-sm"><span class="text-muted-foreground">{{ _("language") }}</span>
-      <input name="language" pattern="{{ language_pattern }}" title="{{ _('a language tag, such as sv or pt-BR') }}" value="{{ typed.language or '' if typed else thread.language or '' }}" class="h-9 rounded-md border border-input bg-transparent px-2.5" placeholder="{{ pgettext('no language', 'none') }}">
+      <input name="language" pattern="{{ language_pattern }}" title="{{ _('a language tag, such as sv or pt-BR') }}" value="{{ typed.language or '' if typed else thread.language or '' }}" class="h-9 rounded-md border border-input bg-transparent px-2.5" placeholder="—">
       <span class="text-xs text-muted-foreground">{{ pgettext("under the field language", "The text's, kept with it.") }}</span></label>
     {% endif %}
     {% if labels is not none %}
@@ -90,12 +90,12 @@
   </form>
   {% endif %}
   {% if checked is not none %}
-  <h3>{{ _("Its findings") }}</h3>
+  <h3>{{ _("Findings") }}</h3>
   {% set found, refused = checked %}
   {% for r in refused %}<p class="mb-2 text-sm text-warning">{{ r }}</p>{% endfor %}
   {{ findings(found) }}
   {% endif %}
-  <h3>{{ _("What this version changed in its recipe") if composed else _("What this version changed") }}</h3>
+  <h3>{{ _("Changes") }}</h3>
   {% if saved_on is not none and saved_on != at - 1 %}
   <p class="mb-2 text-sm text-muted-foreground">{{ _("Against version %(n)s, the one it was saved over.", n=saved_on) }}</p>
   {% endif %}
@@ -115,7 +115,7 @@
       <span class="text-destructive">{{ pgettext("change", "removed") }}</span>
       <div class="mt-0.5 whitespace-pre-wrap break-words font-mono text-xs line-through">{{ titles.get(c.before, c.before) if c.before is string else c.before | pretty }}</div>
       {% elif (c.before is string and c.before in titles) or (c.after is string and c.after in titles) %}
-      <div class="mt-0.5"><del class="bg-destructive/10 text-destructive">{{ pgettext("no value", "none") if c.before is none else titles.get(c.before, c.before) }}</del> → <ins class="bg-success/15 text-success no-underline">{{ pgettext("no value", "none") if c.after is none else titles.get(c.after, c.after) }}</ins></div>
+      <div class="mt-0.5"><del class="bg-destructive/10 text-destructive">{{ "—" if c.before is none else titles.get(c.before, c.before) }}</del> → <ins class="bg-success/15 text-success no-underline">{{ "—" if c.after is none else titles.get(c.after, c.after) }}</ins></div>
       {% elif c.words %}
       <div class="mt-0.5 whitespace-pre-wrap break-words">{% for mark, text in c.words %}{% if mark == "+" %}<ins class="bg-success/15 text-success no-underline">{{ text }}</ins>{% elif mark == "-" %}<del class="bg-destructive/10 text-destructive">{{ text }}</del>{% else %}{{ text }}{% endif %}{% endfor %}</div>
       {% else %}
@@ -148,7 +148,7 @@
     {% for i, r, titled in ran %}
     <li class="flex flex-wrap gap-x-3"><a href="/runs/{{ r.run }}">{{ run_title(titled) }}</a><span class="text-muted-foreground">{{ _("version %(n)s, %(at)s", n=i, at=r.at | when) }}</span></li>
     {% else %}
-    <li class="text-muted-foreground">{{ _("None of yours.") }}</li>
+    <li class="text-muted-foreground">{{ _("none of yours") | upfirst }}.</li>
     {% endfor %}
   </ul>
   {% endcall %}
@@ -162,7 +162,7 @@
   {% endif %}
 
   {% if mine and not thread.deleted %}
-  {% call section(_("What is said of it"), "said") %}
+  {% call section(_("Edit"), "said") %}
   {% set about = typed.about if typed and typed.about else {"name": thread.name or "", "description": thread.description or "", "tags": thread.tags | join(", "), "shared": thread.collaborators | join(", ")} %}
   <form method="post" action="/threads/{{ thread.id }}/said" class="grid max-w-xl gap-3 text-sm">
     <label class="grid gap-1"><span class="font-medium">{{ _("name") | upfirst }}</span>
@@ -184,7 +184,7 @@
   {% endif %}
 
   {% if not mine and person.login in thread.collaborators %}
-  {% call section(_("Shared with you"), "shared") %}
+  {% call section((_("shared with you") | upfirst), "shared") %}
   <form method="post" action="/threads/{{ thread.id }}/leave" class="flex flex-wrap items-center gap-3 text-sm">
     <button>{{ _("Leave it") }}</button>
     <span class="text-muted-foreground">{{ _("%(owner)s shares it with you. Leaving takes it out of what you see, here and wherever it is offered, until %(owner)s shares it again.", owner=thread.owner) }}</span>

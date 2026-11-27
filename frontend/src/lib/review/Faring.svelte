@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { api, type Schemas, why } from "$lib/api/client";
-  import { t, upFirst } from "$lib/locale";
+  import { t, tp, upFirst } from "$lib/locale";
   import { fieldName } from "$lib/schema/form";
   import { BINS, type Bin, below, binned, grouped, said, ticks } from "./faring";
 
@@ -85,7 +85,7 @@
 
 <div bind:this={held}>
   <header class="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-    <h2>{t("How the case fares")}</h2>
+    <h2>{t("Scores")}</h2>
     <ul class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-label={t("Legend")}>
       <li class="flex items-center gap-1.5">
         <svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" class="fill-primary" /></svg>
@@ -93,11 +93,11 @@
       </li>
       <li class="flex items-center gap-1.5">
         <svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" class="fill-warning" /></svg>
-        {t("This case, not as things are now")}
+        {t("This case")}, {t("out of date")}
       </li>
       <li class="flex items-center gap-1.5">
         <svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="2.5" class="fill-primary/70" /></svg>
-        {t("Its replicates, each a link to its score")}
+        {t("Replicates")}
       </li>
       <li class="flex items-center gap-1.5">
         <svg width="14" height="14" aria-hidden="true"
@@ -124,7 +124,7 @@
   {/if}
 
   {#if got?.configurations.length}
-    <ul class="mb-6 space-y-1 text-sm" aria-label={t("Where each configuration stands")}>
+    <ul class="mb-6 space-y-1 text-sm" aria-label={t("Configurations")}>
       {#each got.configurations as c (c.id)}
         {@const under = c.behind.some((b) => b.why === "under_way")}
         <li class="flex flex-wrap items-baseline gap-x-2">
@@ -149,10 +149,10 @@
     <p role="alert" class="text-sm text-destructive">{problem}</p>
   {:else if got === null}
     <p role="status" class="flex items-center gap-2 text-sm text-muted-foreground">
-      <LoaderCircleIcon class="size-4 animate-spin" />{t("Reading how every case fares…")}
+      <LoaderCircleIcon class="size-4 animate-spin" />{upFirst(tp("in progress", "reading"))}…
     </p>
   {:else if !got.rows.length}
-    <p class="text-sm text-muted-foreground">{t("No configuration of yours has been scored on this case yet.")}</p>
+    <p class="text-sm text-muted-foreground">{upFirst(t("none yet"))}.</p>
   {:else}
     <div class="space-y-8">
       {#each groups as group (group.field)}
@@ -189,8 +189,8 @@
                                 value: shown.value.toFixed(2),
                                 share: Math.round(100 * below(row)),
                               })
-                            : t("Not scored on this case")
-                        }${behind ? `, ${t("not as things are now")}` : ""}`}
+                            : upFirst(t("not scored"))
+                        }${behind ? `, ${t("out of date")}` : ""}`}
                       >
                         <line
                           x1={x(0)}
@@ -296,7 +296,7 @@
     </div>
 
     <details class="mt-8 text-sm">
-      <summary class="cursor-pointer text-muted-foreground">{t("The numbers")}</summary>
+      <summary class="cursor-pointer text-muted-foreground">{t("Numbers")}</summary>
       <div class="mt-2 overflow-x-auto">
         <table class="w-full">
           <thead>

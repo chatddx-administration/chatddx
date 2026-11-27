@@ -3,7 +3,7 @@
 {% block title %}{{ _("Score") }} · ChatDDX{% endblock %}
 {% block main %}
 <div class="mx-auto max-w-4xl px-4 py-8">
-  <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="/runs/{{ run }}">← {{ _("Its run") }}</a></nav>
+  <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="/runs/{{ run }}">← {{ _("Run") }}</a></nav>
   {{ heading(_("%(view)s for %(case)s", view=label, case=title), _("By %(scorer)s, replicate %(replicate)s.", scorer=scorer, replicate=replicate)) }}
 
   {% if siblings | length > 1 %}
@@ -18,7 +18,7 @@
   <p role="alert" class="mb-6 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">{{ _("Scored again now, this comes to %(value)s: the code scores it otherwise than when it was scored.", value=mean(replayed.explained.scored.value, unit)) }}</p>
   {% endif %}
 
-  {% call section(_("The score")) %}
+  {% call section(_("Score")) %}
   {{ facts([
     (_("Value"), mean(item.value, unit)),
     (_("Seed"), seed if seed is not none else _("none, it is greedy")),
@@ -48,23 +48,23 @@
   </table>
   {% if unshown %}<p class="mt-2 text-sm text-muted-foreground">{{ _("And %(count)s older.", count=unshown) }}</p>{% endif %}
   {% else %}
-  <p class="text-sm text-muted-foreground">{{ _("None yet.") }}</p>
+  <p class="text-sm text-muted-foreground">{{ _("none yet") | upfirst }}.</p>
   {% endif %}
   {% endcall %}
 
 {% if judging %}
-  {% call section(_("What the judge was asked"), about=_("By %(judge)s, as its request is rebuilt from what it pins.", judge=judging.judge)) %}
+  {% call section(_("Request"), about=_("By %(judge)s, as its request is rebuilt from what it pins.", judge=judging.judge)) %}
   {% if judging.fills is none %}
-  <p class="text-sm text-muted-foreground">{{ _("It wasn't asked.") }}</p>
+  <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
   {{ json(judging.unasked) }}
   {% else %}
-  {% for slot, heading in [("completion", _("The answer, as it was given")), ("expectation", _("The expectation, as it was given"))] if slot in judging.fills %}
+  {% for slot, heading in [("completion", _("Answer")), ("expectation", _("Expectation"))] if slot in judging.fills %}
   <h3>{{ heading }}</h3>
   <div class="mb-4 whitespace-pre-wrap rounded-lg bg-muted/60 p-3 text-sm">{{ judging.fills[slot] }}</div>
   {% endfor %}
   {% if judging.messages %}
   <details class="text-sm">
-    <summary class="cursor-pointer text-muted-foreground">{{ _("The whole request, %(count)s messages", count=judging.messages | length) }}</summary>
+    <summary class="cursor-pointer text-muted-foreground">{{ ngettext("%(num)s message", "%(num)s messages", judging.messages | length) }}</summary>
     {% for role, content in judging.messages %}
     <h3 class="mt-3">{{ role }}</h3>
     <div class="whitespace-pre-wrap">{{ content }}</div>
@@ -74,9 +74,9 @@
   {% endif %}
   {% endcall %}
 
-  {% call section(_("How the judge decided")) %}
+  {% call section(_("Verdict")) %}
   {% if unreplayed and unreplayed != "unasked" %}
-  <p class="mb-3 text-sm text-muted-foreground">{{ _("It can't be scored again to show it: %(why)s", why=unreplayed) }}</p>
+  <p class="mb-3 text-sm text-muted-foreground">{{ _("can't be shown") | upfirst }}: {{ unreplayed }}</p>
   {% endif %}
   {% for seeded in judging.seeds %}
   <div class="mb-6 last:mb-0 border-t border-border/60 pt-4 first:border-0 first:pt-0">
@@ -111,34 +111,34 @@
     {% endif %}
   </div>
   {% else %}
-  <p class="text-sm text-muted-foreground">{{ _("No seed was asked.") }}</p>
+  <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
   {% endfor %}
   <h3>{{ _("Detail") }}</h3>
   {{ json(item.detail) }}
   {% endcall %}
 
 {% else %}
-  {% call section(_("What it read")) %}
+  {% call section(_("Reading")) %}
   {% if unreplayed == "unexpected" %}
-  <p class="text-sm text-muted-foreground">{{ _("Its scoring holds no expectation for this case.") }}</p>
+  <p class="text-sm text-muted-foreground">{{ _("Expectation") }}: {{ _("none") }}.</p>
   {% elif unreplayed %}
-  <p class="text-sm text-muted-foreground">{{ _("It can't be scored again to show it: %(why)s", why=unreplayed) }}</p>
+  <p class="text-sm text-muted-foreground">{{ _("can't be shown") | upfirst }}: {{ unreplayed }}</p>
   {% elif replayed.output is none %}
-  <p class="text-sm text-muted-foreground">{{ _("There is no answer to read.") }}</p>
+  <p class="text-sm text-muted-foreground">{{ _("Answer") }}: {{ _("none") }}.</p>
   {% else %}
-  <h3>{{ _("From the answer") }}</h3>
+  <h3>{{ _("Answer") }}</h3>
   {% if segments is not none %}
   <ol class="mb-4 list-decimal space-y-1 pl-6 text-sm">
     {% for item_segments in segments %}
     <li class="whitespace-pre-wrap">{% for segment in item_segments %}{% if segment.marked %}<mark class="rounded-sm bg-success/20 px-0.5 text-foreground">{{ segment.text }}</mark>{% else %}{{ segment.text }}{% endif %}{% endfor %}</li>
     {% else %}
-    <li class="list-none text-muted-foreground">{{ _("Nothing is picked.") }}</li>
+    <li class="list-none text-muted-foreground">{{ _("none") | upfirst }}.</li>
     {% endfor %}
   </ol>
   {% else %}
   {{ json(replayed.output) }}
   {% endif %}
-  <h3>{{ _("From the expectation") }}</h3>
+  <h3>{{ _("Expectation") }}</h3>
   {{ json(replayed.expected) }}
   {% if replayed.params %}
   <h3>{{ _("Parameters") }}</h3>
@@ -159,7 +159,7 @@
   {% endif %}
   {% endcall %}
 
-  {% call section(_("The expectation")) %}
+  {% call section(_("Expectation")) %}
   {{ json(data) }}
   {% endcall %}
 </div>

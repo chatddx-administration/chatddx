@@ -103,7 +103,7 @@ def test_a_text_its_configuration_sends_untranslated_starts_from_a_similar_one(
     offered = entries(submitted(page, f"{path}/edit"))
     swedish = into(signed, guided)["sv"]
     assert offered[longer] == swedish[INSTRUCTION] == offered[INSTRUCTION]
-    assert "started from the translation of a similar text" in page
+    assert "Not translated yet: started from" in page
 
 
 @pytest.mark.slow
@@ -113,7 +113,7 @@ def test_a_language_is_added_with_the_texts_its_configurations_send(
     guided = mine(signed, "translations")
     path = f"/threads/{guided['id']}"
     page = shown(signed, f"{path}?into=de")
-    assert "it doesn't translate into it yet" in page
+    assert "not translated yet" in page
     given = submitted(page, f"{path}/edit")
     assert given["into"] == ["de"]
     assert set(entries(given)) == set(into(signed, guided)["sv"])
@@ -150,7 +150,7 @@ def test_translations_are_begun_of_a_configuration_s_texts(signed: TestClient) -
     written = {**given, "name": ["lines in Swedish"], "t.0": ["Lista diagnoserna."]}
     got = signed.post(action, data={**written, "name": [" "]})
     assert got.status_code == 422
-    assert '<span class="text-destructive">name</span>' in got.text
+    assert 'name="name" required pattern=".*\\S.*"' in got.text
     got = signed.post(action, data=written)
     assert got.status_code == 303
     made = signed.get(f"/api{got.headers['location']}").json()

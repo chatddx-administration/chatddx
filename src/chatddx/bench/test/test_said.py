@@ -117,7 +117,7 @@ def test_a_restore_is_held_to_one_expectation_per_case_and_schema(
     _ = bench.say(Subject(thread=mine), deleted=True)
     taken = bench.take_from(archives.thread)
 
-    with pytest.raises(ValueError, match=f"in thread {taken}: delete that one"):
+    with pytest.raises(ValueError, match=f"already, in thread {taken}"):
         _ = bench.say(Subject(thread=mine), deleted=False)
     _ = bench.say(Subject(thread=taken), deleted=True)
     assert not bench.say(Subject(thread=mine), deleted=False).deleted

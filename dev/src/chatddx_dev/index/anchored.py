@@ -2,12 +2,13 @@ import ast
 import io
 import re
 import tokenize
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import replace
 from pathlib import Path
 from textwrap import dedent
 
 import griffe
+from babel.messages.catalog import Catalog
 
 from chatddx.markers import PENDING
 
@@ -227,3 +228,52 @@ def whooped(name: str, within: str, facts: Iterable[Facts]) -> str:
         ],
         held,
     )
+
+
+def cataloged(name: str, within: str, files: Iterable[str], said: Catalog) -> str:
+    """The index of the messages said in files, as a catalog extracted them, named and
+    said to be from within."""
+    held: dict[tuple[str, str], list[list[str]]] = {}
+    shown = set(files)
+    for m in sorted(
+        (m for m in said if m.id),
+        key=lambda m: (_singular(m.id).casefold(), _singular(m.id), m.context or ""),
+    ):
+        forms = [m.id] if isinstance(m.id, str) else list(m.id)
+        entry = [] if m.context is None else [f"`{m.context}`", ""]
+        for i, form in enumerate(forms):
+            entry += ([""] if i else []) + _fenced(form)
+        for where in sorted({w for w, _ in m.locations if w in shown}):
+            held.setdefault((where, ""), []).append(entry)
+    return _written(
+        [
+            f"# What `{name}` says",
+            "",
+            f"Written by `chatddx-dev index` from the messages said in {within}, "
+            + "its tests left out, as `chatddx locale write` extracts them into the "
+            + "catalogs, sorted by file and then by message whatever its case:",
+            "",
+            "````",
+            "## `<file>`",
+            "",
+            "`<its context>`",
+            "",
+            "```",
+            "<the message, as written>",
+            "```",
+            "",
+            "```",
+            "<its plural>",
+            "```",
+            "````",
+            "",
+            "- A message said in no context has none before it, and one not counted no "
+            + "plural after it.",
+            PENDING,
+        ],
+        held,
+    )
+
+
+def _singular(msgid: str | Sequence[str]) -> str:
+    return msgid if isinstance(msgid, str) else msgid[0]

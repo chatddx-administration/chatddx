@@ -355,7 +355,9 @@ _SOURCES = (
 )
 
 
-def _extracted(root: Path = settings.PROJECT_ROOT) -> Catalog:
+def extracted(root: Path = settings.PROJECT_ROOT) -> Catalog:
+    """Each message the code under root says, untranslated, with its context and each
+    file and line that says it: parses every source the catalogs are extracted from."""
     template = Catalog(fuzzy=False)
     for pattern, method, keywords, kind in _SOURCES:
         for path in sorted(root.glob(pattern)):
@@ -402,7 +404,7 @@ def proofs(
     root: Path = settings.PROJECT_ROOT,
     catalogs: Path = _CATALOGS,
 ) -> list[Proof]:
-    template = _extracted(root)
+    template = extracted(root)
     paths = {p.stem: p for p in catalogs.glob("*.po")}
     paths |= {tag: catalogs / f"{tag}.po" for tag in tags}
     found: list[Proof] = []
@@ -417,7 +419,7 @@ def proofs(
 def restamped(
     tag: str, then: str | None, now: str, root: Path = settings.PROJECT_ROOT
 ) -> str:
-    return _restamped(tag, then, now, _extracted(root))[0]
+    return _restamped(tag, then, now, extracted(root))[0]
 
 
 # Policy: a catalog is written in step with the code on both sides of its stamps, each
@@ -456,7 +458,7 @@ def _po(catalog: Catalog) -> str:
 
 
 def check() -> None:
-    alike = said_alike(_extracted())
+    alike = said_alike(extracted())
     if alike:
         print("\n".join(_alike(group) for group in alike), file=sys.stderr)
         raise SystemExit(

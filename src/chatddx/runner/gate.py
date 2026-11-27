@@ -31,13 +31,13 @@ def admit(
         expected = served_model_name(engine, get)
         listed = served(url, secret=key, timeout=timeout)
     except (StructuralError, OSError) as e:
-        raise Refused.of(
+        raise Refused.raw(
             "endpoint %(endpoint)s can't be confirmed: %(error)s",
             endpoint=repr(endpoint),
             error=str(e),
         ) from None
     if not listed:
-        raise Refused.of(
+        raise Refused.raw(
             "endpoint %(endpoint)s can't be confirmed: it serves nothing at %(url)s, "
             + "not %(expected)s",
             endpoint=repr(endpoint),
@@ -45,7 +45,7 @@ def admit(
             expected=expected,
         )
     if expected not in listed:
-        raise Refused.of(
+        raise Refused.raw(
             "endpoint %(endpoint)s can't be confirmed: it serves %(served)s at "
             + "%(url)s, not %(expected)s",
             endpoint=repr(endpoint),

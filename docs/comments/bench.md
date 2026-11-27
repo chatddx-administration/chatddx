@@ -75,6 +75,13 @@ Written by `chatddx-dev index` from the comments in `[parts.bench]`'s code in `s
 # else their responses hold, the calls' ids among it.
 ```
 
+## `src/chatddx/bench/runs.py:score`
+
+```
+# Policy: a scorer reading no expectation of the run's cases has nothing to
+# score, as unscored holds, rather than refusing.
+```
+
 ## `src/chatddx/bench/runs.py:start`
 
 ```
@@ -87,6 +94,11 @@ Written by `chatddx-dev index` from the comments in `[parts.bench]`'s code in `s
 ```
 # Policy: one transaction, so that a run the gate refuses leaves none of the start's
 # begun.
+```
+
+```
+# Policy: a concurrency asked past what the endpoint takes is what it
+# takes, so that no start is refused for it.
 ```
 
 ## `src/chatddx/bench/seen.py:add_compilations`

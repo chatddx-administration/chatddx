@@ -130,7 +130,7 @@ def test_a_shelf_is_found_in_by_what_is_said_and_its_cases_narrowed_by_tags(
     hidden = [t for t in listed if t["id"] != native["id"]]
     assert any(f'href="/threads/{t["id"]}"' not in found for t in hidden)
     nothing = shown(signed, "/library?kind=configuration&q=no-such-thing")
-    assert "None you see of these." in nothing and "show every one" in nothing
+    assert "None you see." in nothing and "show every one" in nothing
 
     families = signed.get("/api/families").json()
     both = {f["id"] for f in families if {"bytes", "swedish"} <= set(f["tags"])}
@@ -154,7 +154,7 @@ def test_a_shelf_is_found_in_by_what_is_said_and_its_cases_narrowed_by_tags(
     )
     assert all(f'href="/threads/{t["id"]}"' in under for t in expected)
     none = shown(signed, "/library?kind=expectation&schema=sha256:0")
-    assert "None you see of these." in none and 'href="/threads/' not in none
+    assert "None you see." in none and 'href="/threads/' not in none
 
 
 @pytest.mark.slow
@@ -185,18 +185,18 @@ def test_a_thread_s_page_holds_its_versions_and_what_is_said(
 ) -> None:
     off = thread(signed, "reasoning", OFF)
     page = shown(signed, f"/threads/{off['id']}")
-    assert "What is said of it" in page and "Fork it" in page
+    assert "<h2>Edit</h2>" in page and "Fork it" in page
     assert "Version 1 of 1" in page and "It is the first." in page
     assert f'action="/threads/{off["id"]}/edit"' in page
     assert 'href="/library" aria-current="page"' in page
 
     archives = thread(signed, "reasoning", OFF, "archive")
     page = shown(signed, f"/threads/{archives['id']}")
-    assert "What is said of it" not in page and "Fork it" in page
+    assert "<h2>Edit</h2>" not in page and "Fork it" in page
 
     lines = thread(signed, "configuration", LINES)
     page = shown(signed, f"/threads/{lines['id']}")
-    assert "What is said of it" in page
+    assert "<h2>Edit</h2>" in page
     assert f'href="/compose/{lines["id"]}"' in page
 
 
@@ -211,7 +211,7 @@ def test_a_thread_s_fields_are_edited_by_its_owner_and_read_by_others(
         "head": [str(off["head"]["id"])],
         "f.effort": [""],
         "f.thinking_token_budget": [""],
-        "f.chat_template_kwargs": ["{}"],
+        "f.chat_template_kwargs": [""],
         "f.level": ["off"],
     }
     for typed, message in (
@@ -305,7 +305,7 @@ def test_a_refused_form_is_shown_again_with_what_was_typed_and_why(
     off = thread(signed, "reasoning", OFF)
     path = f"/threads/{off['id']}"
     given = submitted(shown(signed, path), f"{path}/edit")
-    broken = '{"enable_thinking": fals'
+    broken = '"enable_thinking": fals'
     typed = {
         **given,
         "f.chat_template_kwargs": [broken],
@@ -339,9 +339,8 @@ def test_a_refused_form_is_shown_again_with_what_was_typed_and_why(
         ["0"],
         ["</s>"],
     )
-    assert '<span class="text-destructive">name</span>' not in got.text
     got = signed.post(action, data={**written, "name": [" "]})
-    assert '<span class="text-destructive">name</span>' in got.text
+    assert 'name="name" required pattern=".*\\S.*"' in got.text
     assert '<dt class="text-destructive">max output tokens</dt>' in got.text
 
     said = {"name": "quiet", "description": "Thinks not.", "tags": "a"}
@@ -389,8 +388,8 @@ def test_a_configuration_s_recipe_parts_are_picked(signed: TestClient) -> None:
     given = submitted(page, f"{path}/edit")
     assert set(given) == {"head", *(f"f.{p}" for p in RECIPE_PARTS)}
     assert (
-        page.index("Its recipe")
-        < page.index("What it sends")
+        page.index("<h3>Recipe</h3>")
+        < page.index(">Request</summary>")
         < page.index(">messages<")
     )
     recipe = signed.get(f"/api{path}").json()["recipe"]
@@ -407,8 +406,8 @@ def test_a_configuration_s_recipe_parts_are_picked(signed: TestClient) -> None:
     assert recipe["reasoning"] == off["head"]["digest"]
     page = shown(signed, path)
     assert "Version 2 of 2" in page
-    assert "What this version changed in its recipe" in said(page)
-    assert f"/reasoning none → {OFF}" in said(page)
+    assert "<h3>Changes</h3>" in page
+    assert f"/reasoning — → {OFF}" in said(page)
 
 
 @pytest.mark.slow
@@ -465,8 +464,7 @@ def test_a_chunk_is_written_from_nothing(signed: TestClient) -> None:
     )
     got = signed.post(action, data={**given, "f.temperature": ["0.3"]})
     assert got.status_code == 422
-    assert '<span class="text-destructive">name</span>' in got.text
-    assert "This is needed." in got.text
+    assert 'name="name" required pattern=".*\\S.*"' in got.text
     assert submitted(got.text, action)["f.temperature"] == ["0.3"]
     got = signed.post(
         action, data={**given, "name": ["warm"], "f.temperature": ["0.3"]}
@@ -531,6 +529,55 @@ def test_a_judge_s_configuration_model_and_seeds_are_edited_on_its_page(
     handle = thread(signed, "model", QWEN_ARTIFACT, "archive")
     _ = Catalog(conn).edit(handle["id"], weights, alice.id)
     assert "verdict is out of date: update it on its page" in shown(signed, page)
+
+
+@pytest.mark.slow
+def test_a_form_is_checked_as_typed_and_nothing_is_written(signed: TestClient) -> None:
+    action = "/library/new?kind=sampling"
+    page = shown(signed, action)
+    assert "data-checked" in page and 'id="library-props"' in page
+    given = submitted(page, action)
+    before = signed.get("/api/threads", params={"kind": "sampling"}).json()
+    refused = {**given, "name": ["warm"], "f.temperature": ["warm"], "checking": ["1"]}
+    got = signed.post(action, data=refused)
+    assert got.status_code == 200 and got.json()["refused"][0].startswith(
+        "temperature: "
+    )
+    fine = {**given, "name": ["warm"], "f.temperature": ["0.3"], "checking": ["1"]}
+    assert signed.post(action, data=fine).json() == {"refused": []}
+    after = signed.get("/api/threads", params={"kind": "sampling"}).json()
+    assert after == before
+
+
+@pytest.mark.slow
+def test_a_recipe_is_checked_as_typed_by_compiling_it(signed: TestClient) -> None:
+    action = "/library/new?kind=configuration"
+    given = submitted(shown(signed, action), action)
+    models = signed.get("/api/threads", params={"kind": "model"}).json()
+    mistral = next(m for m in models if "mistral" in (m["name"] or m["title"]))
+    high = thread(signed, "reasoning", "high", "archive")["head"]["digest"]
+    case, lines, greedy = (
+        thread(signed, kind, name, "archive")["head"]["digest"]
+        for kind, name in (
+            ("prompt", "case"),
+            ("output", "lines"),
+            ("sampling", "greedy"),
+        )
+    )
+    picks = {
+        **given,
+        "f.prompt": [case],
+        "f.output": [lines],
+        "f.sampling": [greedy],
+        "f.model": [mistral["head"]["digest"]],
+    }
+    before = signed.get("/api/threads", params={"kind": "configuration"}).json()
+    asked = {**picks, "f.reasoning": [high], "checking": ["1"]}
+    assert signed.post(action, data=asked).json()["refused"]
+    assert signed.post(action, data={**picks, "checking": ["1"]}).json() == {
+        "refused": []
+    }
+    assert signed.get("/api/threads", params={"kind": "configuration"}).json() == before
 
 
 @pytest.mark.slow
@@ -621,10 +668,14 @@ def test_a_scorer_s_views_and_labels_are_edited_on_its_page(signed: TestClient) 
     labels = {"views": ["text", "differential", "dont-miss"], "resources": []}
     assert json.loads(given["labels"][0]) == labels
 
-    views = json.loads(given["f.views"][0])
+    views = json.loads(f"[{given['f.views'][0]}]")
     moved = [views[1], views[0], *views[2:]]
     renamed = {"views": ["differential", "first", "dont-miss"]}
-    changed = {**given, "f.views": [json.dumps(moved)], "labels": [json.dumps(renamed)]}
+    changed = {
+        **given,
+        "f.views": [json.dumps(moved)[1:-1]],
+        "labels": [json.dumps(renamed)],
+    }
     assert signed.post(f"{path}/edit", data=changed).status_code == 303
     head = signed.get(f"/api{path}").json()["head"]
     held = signed.get(f"/api/components/{head['digest']}").json()["body"]
@@ -665,7 +716,7 @@ def test_a_scorer_is_written_from_nothing_with_its_labels(signed: TestClient) ->
         **given,
         "name": ["mine"],
         "f.expectation_schema": [body["expectation_schema"]],
-        "f.views": [json.dumps(body["views"])],
+        "f.views": [json.dumps(body["views"])[1:-1]],
         "labels": [json.dumps({"views": ["a", "b", "c"]})],
     }
     got = signed.post(action, data=written)
@@ -706,7 +757,7 @@ def test_an_expectation_is_written_from_nothing_and_an_appendix_only_in_review(
         "f.data": [json.dumps(expected["data"])],
     }
     got = signed.post(action, data=written)
-    assert got.status_code == 422 and "edit that one" in got.text
+    assert got.status_code == 422 and "already, in thread" in got.text
 
 
 @pytest.mark.slow
@@ -784,7 +835,7 @@ def test_what_is_said_of_a_thread_is_changed_and_it_is_deleted_and_restored(
 
     assert signed.post(f"{path}/delete").status_code == 303
     page = shown(signed, path)
-    assert "You deleted it" in page and "What is said of it" not in page
+    assert "You deleted it" in page and "<h2>Edit</h2>" not in page
     assert f'action="{path}/restore"' in shown(signed, "/library?kind=reasoning")
     assert f'action="{path}/restore"' not in shown(signed, "/library?kind=sampling")
     assert signed.post(f"{path}/restore").status_code == 303
@@ -884,7 +935,7 @@ def test_a_thread_s_versions_are_stepped_through_by_link(signed: TestClient) -> 
     assert "/thinking_token_budget" in latest and f'action="{path}/edit"' in latest
     first = shown(signed, f"{path}?version=1")
     assert "Version 1 of 2" in first and "It is the first." in first
-    assert "A newer version is saved" in first and f'action="{path}/revert"' in first
+    assert "Newer version: saved" in first and f'action="{path}/revert"' in first
     assert f'action="{path}/edit"' not in first
     for missing in (0, 3):
         got = signed.get(f"{path}?version={missing}")
@@ -915,12 +966,10 @@ def test_an_earlier_version_is_made_the_latest_as_an_edit(signed: TestClient) ->
     ]
     assert [v["version"] for v in versions] == [1, 2, 1]
     page = shown(signed, path)
-    assert "Version 1 of 2" in page and "is brought back" not in page
+    assert "Version 1 of 2" in page and "Newer version: saved" not in page
     assert f'name="edit" value="{versions[-1]["id"]}"' not in page
     page = shown(signed, f"{path}?version=2")
-    assert (
-        "Version 2 of 2" in page and "Version 1 is brought back as the latest" in page
-    )
+    assert "Version 2 of 2" in page and "Newer version: saved" in page
     assert f'name="edit" value="{head.json()["id"]}"' in page
 
     later = signed.post(

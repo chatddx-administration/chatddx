@@ -6,12 +6,12 @@
   <ul class="space-y-3">
     {% for s in trials %}
     {% set named = s.thread.name or s.thread.title %}
-    <li class="grid gap-1.5 rounded-lg border border-border/60 p-3">
+    <li class="grid gap-1.5 rounded-lg border border-border/60 p-3"><input type="hidden" name="trial" value="{{ s.thread.id }}">
       <div class="flex flex-wrap items-baseline gap-x-3"><a class="font-medium" href="/threads/{{ s.thread.id }}">{{ named }}</a>{% if s.thread.outdated %}{{ outdated() }}{% endif %}<span class="text-muted-foreground">{{ s.thread.language | language if s.thread.language else _("a language unknown") }}, {{ ngettext("%(num)s case", "%(num)s cases", s.trial.cases | length) }}, {{ ngettext("%(num)s seed", "%(num)s seeds", s.trial.seeds | length) }}</span></div>
       <label class="flex flex-wrap items-center gap-2"><span class="text-muted-foreground">{{ _("version") }}</span>
         <select name="version" aria-label="{{ _('version of %(name)s', name=named) }}" class="{{ box }}">
-          {% if optional %}<option value="">{{ _("not this time") }}</option>{% endif %}
           {% for v in s.versions | reverse %}<option value="{{ v.id }}">{{ _("version %(n)s, %(at)s", n=v.version, at=v.at | when) | upfirst }}</option>{% endfor %}
+          {% if optional %}<option value="">—</option>{% endif %}
         </select></label>
       {% if s.endpoint %}
       <p class="text-muted-foreground">{{ _("at %(endpoint)s: %(concurrency)s at once, %(order)s", endpoint=s.endpoint.name, concurrency=s.endpoint.spec.execution.concurrency, order=s.endpoint.spec.execution.order) }}</p>
@@ -29,7 +29,7 @@
         <option value="">{{ pgettext("order", "each endpoint's") }}</option>
         {% for o in orders %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
       </select></label>
-    <label class="flex h-9 items-center gap-2"><input type="checkbox" name="score" value="true" checked> {{ _("Score it once it is done") }}</label>
+    <label class="flex h-9 items-center gap-2"><input type="checkbox" name="score" value="true" checked> {{ _("Score it once it is finished") }}</label>
   </div>
   <p class="text-xs text-muted-foreground">{{ _("Left empty, each endpoint's execution; a shuffled order's seed is drawn. The trials run as one start, queued as your job.") }}</p>
   <div><button class="run">{{ _("Run the picked") if optional else npgettext("trials", "Run it", "Run them", trials | length) }}</button></div>

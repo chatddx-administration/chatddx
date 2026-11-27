@@ -6,7 +6,7 @@ from uuid import UUID
 from chatddx import settings
 from chatddx.catalog import Entry, EntryField, Subject, read, titles
 from chatddx.catalog.families import family_of
-from chatddx.factors.base import Invalid, Missing, resolve
+from chatddx.factors.base import Invalid, resolve
 from chatddx.factors.bundle import Registry
 from chatddx.factors.cases import CleanupOp
 from chatddx.factors.engine import model_of
@@ -59,9 +59,8 @@ def start(
     left_out = [c for c in carried if c.skeleton is None]
     if not sent and left_out and all(c.untranslated for c in left_out):
         raise Invalid.of(
-            "%(configuration)s has no translations into %(languages)s, which its cases "
-            + "are in",
-            configuration=variation.label,
+            "%(name)s has no translation into %(languages)s",
+            name=variation.label,
             languages=", ".join(str(c.language) for c in left_out),
         )
     if not sent:
@@ -269,7 +268,7 @@ def start_trials(
                 serving = seen.inventory.serving(made.engine)
             except LookupError:
                 raise Invalid.of(
-                    "%(trial)s is out of date: update it on its page", trial=name
+                    "%(name)s is out of date: update it on its page", name=name
                 ) from None
             at = seen.endpoint(serving)
             canaries = at.spec.canaries
@@ -282,7 +281,14 @@ def start_trials(
                     at.name,
                     name,
                     with_first,
-                    at.spec.execution.overlaid(concurrency, order),
+                    # Policy: a concurrency asked past what the endpoint takes is what it
+                    # takes, so that no start is refused for it.
+                    at.spec.execution.overlaid(
+                        None
+                        if concurrency is None
+                        else min(concurrency, at.spec.capacity),
+                        order,
+                    ),
                     None
                     if canaries is None
                     else resolve(seen.store.get, canaries, CanarySet),
@@ -307,29 +313,10 @@ def check_quota(seen: Seen, runs: Sequence[int]) -> None:
     since = datetime.now(UTC) - timedelta(days=1)
     started = seen.rows.runs_started(seen.person.id, since)
     if started + len(runs) > settings.RUNS_PER_DAY:
-        login = seen.person.login
-        if len(runs) == 1:
-            raise OverQuota.of(
-                (
-                    "%(login)s has started %(num)s runs in the last day, as many as a "
-                    + "day takes",
-                    "%(login)s has started %(num)s runs in the last day, as many as a "
-                    + "day takes",
-                ),
-                login=login,
-                num=started,
-            )
         raise OverQuota.of(
-            (
-                "%(login)s has started %(num)s runs in the last day, and a day takes "
-                + "%(limit)s, not %(more)s more",
-                "%(login)s has started %(num)s runs in the last day, and a day takes "
-                + "%(limit)s, not %(more)s more",
-            ),
-            login=login,
-            num=started,
+            "over the day's quota: %(used)s of %(limit)s",
+            used=started + len(runs),
             limit=settings.RUNS_PER_DAY,
-            more=len(runs),
         )
 
 
@@ -379,6 +366,10 @@ def score(
             stopped = True
             found.append(Graded(name, scorer, labels, refused=STOPPED))
             continue
+        # Policy: a scorer reading no expectation of the run's cases has nothing to
+        # score, as unscored holds, rather than refusing.
+        if grading is None:
+            continue
         if on_event is not None:
             on_event(ScorerStarted(edit.digest, name, grading.score))
         failed: str | None = None
@@ -396,10 +387,10 @@ def score(
     return sorted(found, key=lambda g: g.name)
 
 
-def _started(seen: Seen, run: RunStarted, scorer: str) -> Grading:
+def _started(seen: Seen, run: RunStarted, scorer: str) -> Grading | None:
     built = scoring(seen, run, scorer)
     if built is None:
-        raise Missing.of("none of the run's cases has an expectation")
+        return None
     pinned = [e.engine for e in built.engines]
     registry = seen.store.load([built.scorer, *built.expectations, *pinned])
     runner = Runner(seen.conn, seen.inventory, seen.person)

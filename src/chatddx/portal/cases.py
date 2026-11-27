@@ -31,7 +31,7 @@ def case_page(
     bindings = bench.rows.bindings([family])
     at = len(bindings) if version is None else version
     if not 1 <= at <= len(bindings):
-        raise NotFound.of(
+        raise NotFound.raw(
             "no version %(at)s of case %(family)s: it has %(versions)s",
             at=at,
             family=family,
@@ -204,7 +204,7 @@ def taking(
         return library_page(request, bench, "case", tag, typed)
     listed = {f.id: f for f in api.families(bench)}
     if missing := [f for f in families if f not in listed]:
-        raise NotFound.of(
+        raise NotFound.raw(
             "no case %(case)s for %(login)s", case=missing[0], login=bench.person.login
         )
     named = {listed[f].case: listed[f].name for f in families}

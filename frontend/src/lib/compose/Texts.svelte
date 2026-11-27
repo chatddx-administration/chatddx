@@ -65,7 +65,7 @@
   const elsewhere = $derived(TEXTS.filter((p) => p !== "output" && p !== "toolset" && listed[p].length));
 
   function partName(part: string): string {
-    return part === "appendix_layout" ? t("How appendices are laid out") : worded(part);
+    return part === "appendix_layout" ? t("Appendix layout") : worded(part);
   }
 
   function also(text: string, part: string): string[] {
@@ -107,13 +107,13 @@
   }
 </script>
 
-<section class="mb-6 border-t border-border/60 pt-4" aria-label={t("Its texts")}>
+<section class="mb-6 border-t border-border/60 pt-4" aria-label={t("Texts")}>
   <nav class="mb-4 flex flex-wrap items-center gap-1 border-b border-border/60 text-sm" aria-label={t("Languages")}>
     <button
       type="button"
       class="-mb-px border-b-2 px-3 py-1.5 {shown === null ? 'border-primary font-medium' : 'border-transparent'}"
       aria-current={shown === null ? "page" : undefined}
-      onclick={() => (tab = null)}>{language ? displayLanguage(language) : t("As written")}</button
+      onclick={() => (tab = null)}>{language ? displayLanguage(language) : t("Original")}</button
     >
     {#each languages as l (l)}
       {@const [done, all] = counted(texts, into[l] ?? {})}
@@ -248,7 +248,7 @@
     {/snippet}
     <div class="space-y-5 text-sm">
       <p class="hidden grid-cols-2 gap-2 text-xs text-muted-foreground @3xl:grid" aria-hidden="true">
-        <span>{language ? displayLanguage(language) : t("As written")}</span><span>{displayLanguage(l)}</span>
+        <span>{language ? displayLanguage(language) : t("Original")}</span><span>{displayLanguage(l)}</span>
       </p>
 
       {#if chunks.instructions}
@@ -391,7 +391,7 @@
       {/each}
 
       {#if !Object.values(texts).some((found) => found.length)}
-        <p class="text-muted-foreground">{t("Nothing to translate.")}</p>
+        <p class="text-muted-foreground">{upFirst(t("none"))}.</p>
       {/if}
       <button type="button" class="text-xs" onclick={() => dropped(l)}
         >{t("Translate it into %(language)s no more", { language: displayLanguage(l) })}</button

@@ -103,11 +103,11 @@ def _check_labels(rows: Reader, thread: Thread, digest: str, labels: Labels) -> 
         if not 0 <= position < len(parts):
             raise ValueError(f"{digest} has no {part} at position {position}")
         if not value and part == "view":
-            raise Invalid.of(
+            raise Invalid.raw(
                 "the label of view %(position)s is empty", position=position
             )
         if not value:
-            raise Invalid.of(
+            raise Invalid.raw(
                 "the label of resource %(position)s is empty", position=position
             )
 
@@ -153,7 +153,7 @@ def _check_expectation(
         e.thread for e, a in expecting(rows, [case], schema)[case] if owns(owner, a)
     ]
     if others := sorted(t for t in held if t != thread.id):
-        raise Invalid.of(
+        raise Invalid.raw(
             "person %(owner)s owns an expectation of case %(case)s under that schema "
             + "already, in thread %(thread)s",
             owner=owner,

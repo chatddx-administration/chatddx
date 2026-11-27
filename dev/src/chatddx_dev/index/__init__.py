@@ -5,6 +5,9 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from babel.messages.catalog import Catalog
+
+from chatddx import locale
 from chatddx.markers import stamped, stamps
 from chatddx_dev import project
 
@@ -14,6 +17,7 @@ from .facts import Entry, Facts, dumped
 from .trace import Trace
 
 __all__ = [
+    "CATALOG",
     "COMMENTS",
     "KINDS",
     "SURFACES",
@@ -27,10 +31,11 @@ __all__ = [
 
 PARTS = project.PROJECT_ROOT / "docs" / "parts"
 _FRONTEND = ("frontend/src/lib", "frontend/src/islands")
+CATALOG = project.PROJECT_ROOT / "docs" / "catalog"
 SURFACES = project.PROJECT_ROOT / "docs" / "surfaces"
 COMMENTS = project.PROJECT_ROOT / "docs" / "comments"
 WHOOPSES = project.PROJECT_ROOT / "docs" / "whoopses"
-KINDS = ("comments", "surfaces", "whoopses")
+KINDS = ("catalog", "comments", "surfaces", "whoopses")
 _FINDING = "chatddx.factors.base.Finding"
 _WHOOPS = "chatddx.whoops.Whoops"
 
@@ -58,15 +63,17 @@ class Proof:
 def proofs(
     parts: Iterable[str] | None = None, kinds: Iterable[str] | None = None
 ) -> list[Proof]:
-    """The surface, the comment index and the whoops index of each part, or each part
-    named, or those of the kinds named, at a stage from which each is stamped, whatever the language of its code: its
-    Python modules' public names and the frontend's exports and props; its comments in
-    what Python, SQL, TOML, bash, bats, TypeScript or Svelte is in it; its claims in its
-    Python, its tests left out. Griffe reads each package once, shfmt each script once,
-    and node a part's frontend once."""
+    """The surface, the comment index, the whoops index and the catalog of each part, or
+    each part named, or those of the kinds named, at a stage from which each is stamped,
+    whatever the language of its code: its Python modules' public names and the
+    frontend's exports and props; its comments in what Python, SQL, TOML, bash, bats,
+    TypeScript or Svelte is in it; its claims in its Python, and the messages it says,
+    its tests left out. Griffe reads each package once, shfmt each script once, node a
+    part's frontend once, and the locale's extraction the whole code once."""
     root = project.PROJECT_ROOT
     codes: dict[Path, Code] = {}
     traces: dict[Path, Trace] = {}
+    said: list[Catalog] = []
     found: list[Proof] = []
     for name in sorted(project.PARTS if parts is None else parts):
         part = project.PARTS.get(name)
@@ -77,7 +84,7 @@ def proofs(
         stamping = {
             d: part.stage >= project.STAMPED_FROM[d.name]
             and (kinds is None or d.name in kinds)
-            for d in (SURFACES, COMMENTS, WHOOPSES)
+            for d in (SURFACES, COMMENTS, WHOOPSES, CATALOG)
         }
         fronted = (
             frontend.facts([p for _, p in held if p.suffix in frontend.SUFFIXES], root)
@@ -139,6 +146,16 @@ def proofs(
                 found.append(
                     _proof(
                         WHOOPSES / f"{name}.md", anchored.whooped(name, within, claimed)
+                    )
+                )
+        if stamping[CATALOG]:
+            said = said or [locale.extracted(root)]
+            files = {str(p.relative_to(root)) for _, p in held}
+            if any(w in files for m in said[0] for w, _ in m.locations):
+                found.append(
+                    _proof(
+                        CATALOG / f"{name}.md",
+                        anchored.cataloged(name, within, files, said[0]),
                     )
                 )
     return found
@@ -306,7 +323,9 @@ def _strays(written: set[Path]) -> list[str]:
     units += [p for d in _FRONTEND for p in (root / d).glob("*")]
     held = [(name, root / c) for name, part in project.PARTS.items() for c in part.code]
     docs = {root / p.doc: name for name, p in project.PARTS.items() if p.doc}
-    generated = [*SURFACES.glob("*.md"), *COMMENTS.glob("*.md"), *WHOOPSES.glob("*.md")]
+    generated = [
+        p for docs in (SURFACES, COMMENTS, WHOOPSES, CATALOG) for p in docs.glob("*.md")
+    ]
     return (
         [
             f"{_shown(p)}: no part's code in project.PARTS holds it"

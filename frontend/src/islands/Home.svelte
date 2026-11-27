@@ -12,9 +12,9 @@
   import * as NativeSelect from "$lib/components/ui/native-select";
   import { Textarea } from "$lib/components/ui/textarea";
   import { api, type Schemas, why } from "$lib/api/client";
-  import { displayLanguage, t, th, tn } from "$lib/locale";
+  import { displayLanguage, t, th, tn, tp, upFirst } from "$lib/locale";
   import { watch } from "$lib/runs/events";
-  import { begun, failed, fold } from "$lib/runs/progress";
+  import { begun, failed, fold, streaming } from "$lib/runs/progress";
   import ManagementPlan from "$lib/plan/ManagementPlan.svelte";
   import { isPlan, PLAN } from "$lib/plan/types";
   import { outcome } from "$lib/runs/outcomes";
@@ -120,9 +120,9 @@
 
   const SAYING: Record<Phase, string> = {
     idle: "",
-    typing: t("Keeping the case…"),
-    running: t("Waiting for the model…"),
-    reading: t("Reading the answer…"),
+    typing: `${upFirst(tp("in progress", "saving"))}…`,
+    running: `${upFirst(tp("in progress", "waiting"))}…`,
+    reading: `${upFirst(tp("in progress", "reading"))}…`,
     done: "",
   };
 </script>
@@ -184,7 +184,7 @@
       <form class="space-y-5" onsubmit={analyze}>
         <Textarea
           bind:value={text}
-          aria-label={t("The case")}
+          aria-label={t("Case")}
           placeholder={t(
             "65-year-old man with sudden chest pain for 2 hours, radiating to the left arm, nausea, cold sweats. History of hypertension and type 2 diabetes.",
           )}
@@ -245,9 +245,9 @@
         </div>
         {#if phase === "running" && streamed}
           <p class="text-sm text-muted-foreground" aria-live="polite">
-            {streamed.kind === "reasoning"
-              ? tn("Thinking: %(n)s token", "Thinking: %(n)s tokens", streamed.tokens, { n: streamed.tokens })
-              : tn("Writing: %(n)s token", "Writing: %(n)s tokens", streamed.tokens, { n: streamed.tokens })}
+            {upFirst(streaming(streamed.kind))}, {tn("%(num)s token", "%(num)s tokens", streamed.tokens, {
+              num: streamed.tokens,
+            })}
           </p>
         {/if}
       </form>
@@ -257,7 +257,7 @@
   {#if failure}
     <Alert.Root variant="destructive" class="mb-8 rounded-2xl">
       <TriangleAlertIcon />
-      <Alert.Title>{t("It didn't go through")}</Alert.Title>
+      <Alert.Title>{upFirst(t("something went wrong"))}</Alert.Title>
       <Alert.Description>{failure}</Alert.Description>
     </Alert.Root>
   {/if}
@@ -275,9 +275,7 @@
         {#if answer.problem || answer.salvaged}
           <Alert.Root class="rounded-2xl border-warning/30">
             <TriangleAlertIcon class="text-warning" />
-            <Alert.Title
-              >{answer.salvaged ? t("The answer was cut short") : t("The answer breaks its schema")}</Alert.Title
-            >
+            <Alert.Title>{upFirst(outcome(answer.salvaged ? "salvaged" : "invalid"))}</Alert.Title>
             {#if answer.problem}<Alert.Description>{answer.problem}</Alert.Description>{/if}
           </Alert.Root>
         {/if}

@@ -6,7 +6,7 @@ from pathlib import Path
 from chatddx import locale
 from chatddx.markers import applied, restamped, signed
 from chatddx_dev import project
-from chatddx_dev.index import COMMENTS, SURFACES, WHOOPSES, Proof
+from chatddx_dev.index import CATALOG, COMMENTS, SURFACES, WHOOPSES, Proof
 
 __all__ = ["check", "docs", "documents", "pending", "reflow"]
 
@@ -14,7 +14,7 @@ _PRETTIER = project.PROJECT_ROOT / "frontend" / "node_modules" / ".bin" / "prett
 
 
 def documents() -> list[Path]:
-    root, written = project.PROJECT_ROOT, {SURFACES, COMMENTS, WHOOPSES}
+    root, written = project.PROJECT_ROOT, {SURFACES, COMMENTS, WHOOPSES, CATALOG}
     found = [p for p in (root / "docs").rglob("*.md") if not written & set(p.parents)]
     found += [root / "AGENTS.md", root / "README.md"]
     return sorted(p for p in found if p.is_file())
@@ -31,7 +31,9 @@ def check() -> None:
 
 
 def _indexes() -> list[Path]:
-    return [p for docs in (SURFACES, COMMENTS, WHOOPSES) for p in docs.glob("*.md")]
+    return [
+        p for docs in (SURFACES, COMMENTS, WHOOPSES, CATALOG) for p in docs.glob("*.md")
+    ]
 
 
 def pending() -> None:

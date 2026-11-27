@@ -26,10 +26,7 @@
   function step(by: number): void {
     const to = given.history[shown + by];
     if (!to || !version || !fields) return;
-    if (
-      !fields.holds(version.data) &&
-      !confirm(t("Replace what you changed with version %(n)s?", { n: shown + by + 1 }))
-    ) {
+    if (!fields.holds(version.data) && !confirm(t("Discard what you changed?"))) {
       return;
     }
     shown += by;
@@ -58,7 +55,7 @@
         type="button"
         class="rounded-md border border-border px-2 py-0.5 hover:bg-muted disabled:opacity-40"
         disabled={shown === 0}
-        aria-label={t("The version before")}
+        aria-label={t("Previous version")}
         onclick={() => step(-1)}>◀</button
       >
       <span class="font-medium"
@@ -68,7 +65,7 @@
         type="button"
         class="rounded-md border border-border px-2 py-0.5 hover:bg-muted disabled:opacity-40"
         disabled={shown === given.history.length - 1}
-        aria-label={t("The version after")}
+        aria-label={t("Next version")}
         onclick={() => step(1)}>▶</button
       >
       <span class="text-muted-foreground">{when(version.at)}, {version.by}</span>

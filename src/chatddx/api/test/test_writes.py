@@ -135,7 +135,7 @@ def test_an_expectation_s_edit_says_what_the_lints_say(signed: TestClient) -> No
         "/api/threads", json={"component": {**held, "data": [2]}, "name": "again"}
     )
     assert got.status_code == 422
-    assert f"in thread {mine['id']}: edit that one" in got.json()["detail"]
+    assert f"already, in thread {mine['id']}" in got.json()["detail"]
 
     data = held["data"]
     broken = {**data, "diagnosis": {**data["diagnosis"], "pattern": "copd | (asthma"}}

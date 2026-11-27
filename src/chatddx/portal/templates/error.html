@@ -1,21 +1,20 @@
 {% extends "base.html" %}
 {% set titles = {
-  "not_found": _("Not found"),
-  "not_allowed": _("Not allowed"),
-  "cross_site": _("Refused"),
+  "not_found": _("not found") | upfirst,
+  "not_allowed": _("not allowed") | upfirst,
+  "cross_site": _("not allowed") | upfirst,
   "unauthenticated": _("Sign in"),
-  "refused": _("That can't be done"),
-  "unprocessable": _("That can't be done"),
-  "conflict": _("A conflict"),
-  "moved_on": _("It has moved on"),
-  "ambiguous": _("That names several"),
-  "over_quota": _("Over the day's quota"),
-  "whoops": _("That shouldn't have happened"),
+  "refused": _("can't be done") | upfirst,
+  "unprocessable": _("can't be done") | upfirst,
+  "conflict": _("can't be done") | upfirst,
+  "moved_on": _("newer version") | upfirst,
+  "ambiguous": _("can't be done") | upfirst,
+  "over_quota": _("can't be done") | upfirst,
 } %}
-{% block title %}{{ titles.get(error.code, _("Something went wrong")) }} · ChatDDX{% endblock %}
+{% block title %}{{ titles.get(error.code, _("something went wrong") | upfirst) }} · ChatDDX{% endblock %}
 {% block main %}
 <div class="mx-auto max-w-xl px-4 py-16 text-center">
-  <h1 class="mb-4 text-3xl font-bold">{{ titles.get(error.code, _("Something went wrong")) }}</h1>
+  <h1 class="mb-4 text-3xl font-bold">{{ titles.get(error.code, _("something went wrong") | upfirst) }}</h1>
   {% if error.detail is string %}
   {% if error.code == "whoops" %}
   <p class="mb-2 text-muted-foreground">{{ error.detail }}</p>
@@ -26,7 +25,7 @@
   <p class="mb-8 text-sm text-muted-foreground">{{ _("Copy this and send it to drift@chatddx.com:") }} <span class="font-mono">{{ error.detail }}</span></p>
   {% endif %}
   {% else %}
-  <p class="mb-2 text-muted-foreground">{{ _("The request didn't hold together:") }}</p>
+  <p class="mb-2 text-muted-foreground">{{ _("Copy this and send it to drift@chatddx.com:") }}</p>
   <ul class="mb-8 text-sm text-muted-foreground">
     {% for e in error.detail %}<li>{{ e.loc | join(".") }}: {{ e.msg }}</li>{% endfor %}
   </ul>

@@ -37,9 +37,9 @@ Finds:
 
 Raises:
 1. `Refused`: `"endpoint {endpoint!r} needs the secret in ${credential}, which isn't set"` (through `_secret`)
-2. `Refused`: `"endpoint %(endpoint)s can't be confirmed: %(error)s", endpoint=repr(endpoint), error=str(e)` (from `(StructuralError, OSError)`)
-3. `Refused`: `"endpoint %(endpoint)s can't be confirmed: it serves nothing at %(url)s, not %(expected)s", endpoint=repr(endpoint), url=url, expected=expected`
-4. `Refused`: `"endpoint %(endpoint)s can't be confirmed: it serves %(served)s at %(url)s, not %(expected)s", endpoint=repr(endpoint), served=", ".join(listed), url=url, expected=expected`
+2. `Self`: `"endpoint %(endpoint)s can't be confirmed: %(error)s", endpoint=repr(endpoint), error=str(e)` (from `(StructuralError, OSError)`, through `raw`)
+3. `Self`: `"endpoint %(endpoint)s can't be confirmed: it serves nothing at %(url)s, not %(expected)s", endpoint=repr(endpoint), url=url, expected=expected` (through `raw`)
+4. `Self`: `"endpoint %(endpoint)s can't be confirmed: it serves %(served)s at %(url)s, not %(expected)s", endpoint=repr(endpoint), served=", ".join(listed), url=url, expected=expected` (through `raw`)
 
 ## `assemble`
 `src/chatddx/runner/wire.py:assemble`
@@ -395,7 +395,7 @@ Raises:
 Raises:
 1. `ValueError`: `"run {run} is finished"`
 2. `ValueError`: `"run {run} was sent to no endpoint, so it can't resume"`
-3. `Invalid`: `"endpoint %(endpoint)s takes %(num)s request at once, the execution sends %(sends)s" / "endpoint %(endpoint)s takes %(num)s requests at once, the execution sends %(sends)s", endpoint=repr(endpoint), num=spec.capacity, sends=execution.concurrency` (through `Runner._admitted`)
+3. `Self`: `"endpoint %(endpoint)s takes %(num)s at once, the execution sends %(sends)s", endpoint=repr(endpoint), num=spec.capacity, sends=execution.concurrency` (through `Runner._admitted`)
 4. `ValueError`: `"endpoint {endpoint.name!r} is at {url} now, and run {run} was sent to {endpoint.url}"`
 
 Finds:
@@ -423,7 +423,7 @@ Finds:
 * ∟`"Running"`
 
 Raises:
-1. `Invalid`: `"endpoint %(endpoint)s takes %(num)s request at once, the execution sends %(sends)s" / "endpoint %(endpoint)s takes %(num)s requests at once, the execution sends %(sends)s", endpoint=repr(endpoint), num=spec.capacity, sends=execution.concurrency` (through `Runner._admitted`)
+1. `Self`: `"endpoint %(endpoint)s takes %(num)s at once, the execution sends %(sends)s", endpoint=repr(endpoint), num=spec.capacity, sends=execution.concurrency` (through `Runner._admitted`)
 
 ## `Running`
 `src/chatddx/runner/run.py:Running`

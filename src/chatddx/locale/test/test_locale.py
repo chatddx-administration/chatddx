@@ -452,7 +452,7 @@ def test_check_fails_on_a_catalog_behind_the_code_and_pending_on_one_left_to_tra
         return said
 
     monkeypatch.setattr(catalogs, "proofs", found)
-    monkeypatch.setattr(catalogs, "_extracted", extracted)
+    monkeypatch.setattr(catalogs, "extracted", extracted)
     check()
     pending()
     assert capsys.readouterr() == ("ok\nok\n", "")

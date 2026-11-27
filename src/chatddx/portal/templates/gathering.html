@@ -9,7 +9,7 @@
   <nav aria-label="{{ _('Breadcrumb') }}" class="text-sm"><a href="/compose/{{ held.configuration }}">← {{ held.name }}</a></nav>
   {{ heading(_("%(configuration)s, version %(n)s, on its baseline", configuration=held.name, n=p.version), p.at | when) }}
 
-  {% call section(_("The run")) %}
+  {% call section(_("Run")) %}
   {% set runs %}{% for r in held.runs %}<a href="/runs/{{ r.run }}">{% set said = r.language | language if r.language else _("a language unknown") %}{% if r.repeat %}{{ _("%(run)s, the repeat in %(language)s", run=(r.run | string)[:8], language=said) }}{% else %}{{ _("%(run)s, the original in %(language)s", run=(r.run | string)[:8], language=said) }}{% endif %}</a>{% if not loop.last %}; {% endif %}{% endfor %}{% endset %}
   {% set languages %}{% for l in p.languages %}{{ l.language | language if l.language else "—" }} {{ l.cases }}{% if not loop.last %}, {% endif %}{% endfor %}{% endset %}
   {% set unanswered %}{% if p.missing %}<span class="text-destructive">{{ ngettext("%(missing)s of %(of)s case unanswered", "%(missing)s of %(of)s cases unanswered", held.cases, missing=p.missing, of=held.cases) }}</span>{% else %}—{% endif %}{% endset %}
@@ -18,13 +18,13 @@
     (_("Baseline"), held.tag ~ " · " ~ ngettext("%(num)s case", "%(num)s cases", held.cases, num=held.cases)),
     (_("Languages"), languages),
     (pgettext("cases", "Unanswered"), unanswered),
-    (_("Scored"), _("not as things are now") if p.stale else _("as things are now")),
+    (_("Scored"), _("out of date") if p.stale else _("up to date")),
     ((_("runs") | upfirst), runs),
-    (_("The run before"), before),
+    (_("Previous run"), before),
   ]) }}
   {% endcall %}
 
-  {% call section(_("How it fared")) %}
+  {% call section(_("Scores")) %}
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead class="text-left text-xs text-muted-foreground">
@@ -70,7 +70,7 @@
           <th class="pb-2 pr-4 text-right font-medium">{{ _("Replicate") }}</th>
           <th class="pb-2 pr-4 text-right font-medium">{{ _("Repeat") }}</th>
           <th class="pb-2 pr-4 text-right font-medium">≡</th>
-          <th class="pb-2 pr-4 text-right font-medium">{{ _("The run before") }}</th>
+          <th class="pb-2 pr-4 text-right font-medium">{{ _("Previous run") }}</th>
           <th class="pb-2 text-right font-medium">Δ</th>
         </tr>
       </thead>

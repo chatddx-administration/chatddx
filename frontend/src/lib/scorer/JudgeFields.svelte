@@ -33,7 +33,7 @@
 </script>
 
 <label class="grid gap-1"
-  ><span class="text-muted-foreground">{t("Its request, a judge configuration")}</span>
+  ><span class="text-muted-foreground">{t("Request")}</span>
   <select class={FIELD} bind:value={configuration}>
     {#each configurations as c (c.key)}<option value={c.value}>{c.label}</option>{/each}
   </select></label
@@ -48,6 +48,8 @@
 <label class="grid gap-1"
   ><span class="text-muted-foreground">{t("Seeds, a call each")}</span><input
     class="{FIELD} font-mono"
-    bind:value={seeds}
+    inputmode="numeric"
+    placeholder="1"
+    bind:value={() => seeds, (typed) => (seeds = typed.replace(/[^\d,\s]/g, ""))}
   /></label
 >

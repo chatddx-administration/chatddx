@@ -140,11 +140,11 @@ Raises:
 Raises:
 1. `MovedOn`: `"thread %(thread)s has moved on since edit %(edit)s: its head is edit %(head)s", thread=thread_id, edit=head, head=current.id`
 2. `ValueError`: `"edit {based_on} is not in the origin of thread {thread.id}"` (through `_check_based_on`)
-3. `Invalid`: `"person %(owner)s owns an expectation of case %(case)s under that schema already, in thread %(thread)s", owner=owner, case=case, thread=others[0]` (through `_check_expectation`)
+3. `Self`: `"person %(owner)s owns an expectation of case %(case)s under that schema already, in thread %(thread)s", owner=owner, case=case, thread=others[0]` (through `_check_expectation`)
 4. `ValueError`: `"a {thread.kind} has no views or resources to label"` (through `_check_labels`)
 5. `ValueError`: `"{digest} has no {part} at position {position}"` (through `_check_labels`)
-6. `Invalid`: `"the label of view %(position)s is empty", position=position` (through `_check_labels`)
-7. `Invalid`: `"the label of resource %(position)s is empty", position=position` (through `_check_labels`)
+6. `Self`: `"the label of view %(position)s is empty", position=position` (through `_check_labels`)
+7. `Self`: `"the label of resource %(position)s is empty", position=position` (through `_check_labels`)
 
 ## `check_language`
 `src/chatddx/catalog/language.py:check_language`
@@ -172,7 +172,7 @@ Raises:
 2. `ValueError`: `"a {entry.field} entry is about a run, and what it ran"` (through `_check_ran`)
 3. `ValueError`: `"edit {entry.value} is no configuration's"` (through `_check_ran`)
 4. `ValueError`: `"{digest} isn't {what} in the store"` (through `_check_ran`)
-5. `Invalid`: `"person %(owner)s owns an expectation of case %(case)s under that schema already, in thread %(thread)s", owner=owner, case=case, thread=others[0]` (through `_check_expectation`)
+5. `Self`: `"person %(owner)s owns an expectation of case %(case)s under that schema already, in thread %(thread)s", owner=owner, case=case, thread=others[0]` (through `_check_expectation`)
 
 ## `describe`
 `src/chatddx/catalog/titles.py:describe`

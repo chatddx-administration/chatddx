@@ -156,7 +156,7 @@ def test_a_configuration_is_read_with_its_recipe_in_compose(
     [first, *_] = signed.get("/api/threads", params=query).json()
     page = shown(signed, f"/compose/{first['id']}")
     assert compose_props(page)["drafted"] is not None
-    assert "Version 1" in page and "take scripts" in page
+    assert "Version 1" in page and "Needs scripts." in page
     scorer = signed.get("/api/threads", params={"kind": "scorer"}).json()[0]
     assert signed.get(f"/compose/{scorer['id']}").status_code == 404
 

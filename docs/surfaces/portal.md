@@ -358,7 +358,7 @@ type Scoring = {
 `frontend/src/lib/scorer/judging.ts:seedsOf`
 
 * `text: string`
-* ∟`number[] | string`
+* ∟`number[]`
 
 ## `Seg`
 `frontend/src/lib/scorer/texts.ts:Seg`

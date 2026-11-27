@@ -109,7 +109,7 @@ class Labels(_Schema):
             (part, position): label
             for part, labels in parts
             for position, label in enumerate(labels)
-            if label is not None
+            if label is not None and label.strip()
         }
 
     @classmethod

@@ -71,9 +71,7 @@ def test_show_sets_each_part_beside_what_it_is_and_renders_the_request(say: Say)
     assert "‹vignette›‹appendices›" in written
     assert '"seed": 7' in written
     assert f"en: {len(CASES) - len(sv)} cases, as written" in written
-    assert (
-        f"sv: {len(sv)} cases, left out: lines has no translations into sv" in written
-    )
+    assert f"sv: {len(sv)} cases, left out: lines has no translation into sv" in written
     assert "translations.missing" not in written
     assert "sv: 3 cases, translated" in say(f"use {LINES_GUIDED}", "show")
 

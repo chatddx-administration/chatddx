@@ -283,10 +283,9 @@ def _carried(seen: Seen, trial: Trial) -> tuple[Trial, Registry, list[str]]:
     ):
         if own is not None:
             raise Invalid.of(
-                "%(configuration)s has no translations into %(into)s, its cases' "
-                + "language",
-                configuration=seen.title(trial.skeleton),
-                into=into,
+                "%(name)s has no translation into %(languages)s",
+                name=seen.title(trial.skeleton),
+                languages=into,
             )
         # Policy: as a start does, a skeleton of no language of its own is sent as
         # written into a language its translations don't go into.

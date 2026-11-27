@@ -51,9 +51,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     indexing = commands.add_parser(
         "index",
         help="write, from each part's code, whatever its language, the indexes behind "
-        + "it: its surface in docs/surfaces/, its comments in docs/comments/ and its "
-        + "whoopses and asserts in docs/whoopses/, with what changed as stamps pending, "
-        + "and say how many",
+        + "it: its surface in docs/surfaces/, its comments in docs/comments/, its "
+        + "whoopses and asserts in docs/whoopses/ and the messages it says in "
+        + "docs/catalog/, with what changed as stamps pending, and say how many",
     )
     _ = indexing.add_argument(
         "kind",

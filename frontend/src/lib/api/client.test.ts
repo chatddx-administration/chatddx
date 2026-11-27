@@ -8,9 +8,8 @@ describe("why a request was refused", () => {
       tag: "sv",
       messages: {
         "refusal\u0004a fork is named": "en förgrening har ett namn",
-        "That can't be done": "Det går inte",
-        "%(title)s. Copy this and send it to drift@chatddx.com: %(pass_on)s":
-          "%(title)s. Kopiera och skicka detta till drift@chatddx.com: %(pass_on)s",
+        "can't be done": "det går inte",
+        "Copy this and send it to drift@chatddx.com:": "Kopiera och skicka detta till drift@chatddx.com:",
       },
     });
     expect(why({ detail: "a fork is named", code: "refused", wording: "a fork is named", params: {} })).toBe(

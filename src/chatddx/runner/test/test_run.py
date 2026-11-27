@@ -390,9 +390,7 @@ def test_a_concurrency_above_the_endpoint_s_capacity_is_refused(
     conn: Connection, db: str, inventory: Inventory, alice: Person, plan: Plan
 ) -> None:
     assert inventory.endpoint(QWEN).capacity == 4
-    with pytest.raises(
-        ValueError, match="takes 4 requests at once, the execution sends 5"
-    ):
+    with pytest.raises(ValueError, match="takes 4 at once, the execution sends 5"):
         _ = Runner(conn, inventory, alice).start(
             trial(plan), plan.registry, QWEN, Execution(concurrency=5)
         )

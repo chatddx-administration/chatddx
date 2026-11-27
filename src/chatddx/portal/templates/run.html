@@ -13,11 +13,11 @@
     {% endif %}
     {% if left %}
     <form method="post" action="/runs/{{ run.id }}/scores"><button class="primary">{{ _("Score again") }}</button></form>
-    <span class="text-muted-foreground">{{ _("Left to score by %(scorers)s.", scorers=left | join(", ")) }}</span>
+    <span class="text-muted-foreground">{{ _("Left to score") }}: {{ left | join(", ") }}</span>
     {% endif %}
     {% if resumable %}
     <form method="post" action="/runs/{{ run.id }}/resume"><button class="primary">{{ _("Resume") }}</button></form>
-    <span class="text-muted-foreground">{{ pgettext("after the button Resume", "Unfinished: resuming sends what it lacks.") }}</span>
+    <span class="text-muted-foreground">{{ _("unfinished") | upfirst }}: {{ pgettext("after the button Resume", "resuming sends what it lacks.") }}</span>
     {% endif %}
     {% if run.endpoint and not under_way %}
     <form method="post" action="/runs/{{ run.id }}/again"><button class="run">{{ _("Run again") }}</button></form>
@@ -25,7 +25,7 @@
   </div>
   {% endif %}
 
-  {% call section(_("The run")) %}
+  {% call section(_("Run")) %}
   {% set trial_held %}{% if trial %}<a href="/threads/{{ trial[0] }}">{{ trial[1] }}</a> {% endif %}<span class="font-mono text-xs text-muted-foreground">{{ run.trial | short }}</span>{% endset %}
   {% set held %}{% if configuration %}<a href="{{ configuration[0] }}">{{ configuration[1] }}</a>{% else %}{{ run.skeleton | short }}{% endif %}{% endset %}
   {% set started_with %}{% for other, language in together %}<a href="/runs/{{ other }}">{{ _("%(name)s, in %(language)s", name=(other | string)[:8], language=language | language if language else _("a language unknown")) }}</a>{% if not loop.last %}; {% endif %}{% else %}—{% endfor %}{% endset %}
@@ -45,8 +45,8 @@
   ]) }}
   {% endcall %}
 
-  {% call section(_("What was noted")) %}
-  <h3>{{ _("As it ran") }}</h3>
+  {% call section(_("Findings")) %}
+  <h3>{{ _("Recorded") }}</h3>
   {{ findings(run.noted) }}
   <h3>{{ _("Checked now") }}</h3>
   {{ findings(run.findings) }}
@@ -55,7 +55,7 @@
   {% if under_way %}
   <div id="run-live">
     {% call section((_("under way") | upfirst)) %}
-    <p class="text-sm text-muted-foreground">{{ _("Something is under way for this run. Reload the page to see how far it has come.") }}</p>
+    <p class="text-sm text-muted-foreground">{{ _("under way") | upfirst }}. {{ _("Reload the page to see how far it has come.") }}</p>
     {% endcall %}
   </div>
   <script type="application/json" id="run-live-props">{{ live | tojson }}</script>
@@ -76,7 +76,7 @@
           <td class="whitespace-nowrap py-2 pr-4 align-top text-muted-foreground">{{ _("%(sent)s in, %(got)s out", sent=item.prompt_tokens, got=item.completion_tokens) }}</td>
         </tr>
         {% else %}
-        <tr><td class="py-2 text-muted-foreground" colspan="4">{{ _("No items yet.") }}</td></tr>
+        <tr><td class="py-2 text-muted-foreground" colspan="4">{{ _("none yet") | upfirst }}.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -89,7 +89,7 @@
   <div class="mb-6 last:mb-0">
     <h3>{{ graded.name }}
       {% if graded.refused %}<span class="text-sm font-normal text-muted-foreground">: {{ graded.refused }}</span>
-      {% elif not graded.finished %}<span class="text-sm font-normal text-warning">: {{ _("not finished") }}</span>{% endif %}
+      {% elif not graded.finished %}<span class="text-sm font-normal text-warning">: {{ _("unfinished") }}</span>{% endif %}
     </h3>
     {% if graded.labels and rows %}
     {% call paged(rows | length) %}
@@ -118,7 +118,7 @@
     {% endif %}
   </div>
   {% else %}
-  <p class="text-sm text-muted-foreground">{{ pgettext("a run", "Not scored.") }}</p>
+  <p class="text-sm text-muted-foreground">{{ _("not scored") | upfirst }}.</p>
   {% endfor %}
   {% endcall %}
 
@@ -146,7 +146,7 @@
   {% endif %}
   {% set parts = said(item.call) %}
   {% if parts %}
-  <h3>{{ _("The response, part by part") }}</h3>
+  <h3>{{ _("Response") }}</h3>
   <div class="space-y-2">
     {% for kind, shown, text in parts %}
     <details class="rounded-lg border border-border/60 bg-background/40 p-3"{% if kind == "content" %} open{% endif %}>

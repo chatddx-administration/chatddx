@@ -12,6 +12,7 @@ openapi = [
   "docs/comments",
   "docs/surfaces",
   "docs/whoopses",
+  "docs/catalog",
   "frontend/openapi.json",
   "pyproject.toml",
   "uv.lock",
@@ -54,6 +55,7 @@ python-lint = [
   "docs/comments",
   "docs/surfaces",
   "docs/whoopses",
+  "docs/catalog",
   "frontend/openapi.json",
   "pyproject.toml",
   "uv.lock",
@@ -69,6 +71,7 @@ python-tests = [
   "docs/comments",
   "docs/surfaces",
   "docs/whoopses",
+  "docs/catalog",
   "frontend/openapi.json",
   "pyproject.toml",
   "uv.lock",
@@ -507,6 +510,7 @@ code = ["src/chatddx/worker"]
 
 # What chatddx.settings.STAMPED_FROM holds: the stage from which a thing has its docs/<kind>/<thing>.md stamped.
 [stamped_from]
+catalog = "drafted"
 comments = "drafted"
 surfaces = "solidified"
 whoopses = "drafted"

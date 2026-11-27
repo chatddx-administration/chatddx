@@ -48,13 +48,6 @@ Written by `chatddx-dev index` from the comments in `[parts.locale]`'s code in `
 // names and the lists it holds, which the server writes by their tags and joined by ", ".
 ```
 
-## `src/chatddx/locale/locale.py:_extracted`
-
-```
-# Accommodating for Babel, whose type for an extraction method's results
-# leaves out the name of the function called, which it reads.
-```
-
 ## `src/chatddx/locale/locale.py:_LANGUAGE_PARAMS`
 
 ```
@@ -127,6 +120,13 @@ Written by `chatddx-dev index` from the comments in `[parts.locale]`'s code in `
 
 ```
 # Policy: the cookie that keeps the locale a person chose over their browser's.
+```
+
+## `src/chatddx/locale/locale.py:extracted`
+
+```
+# Accommodating for Babel, whose type for an extraction method's results
+# leaves out the name of the function called, which it reads.
 ```
 
 ## `src/chatddx/locale/locale.py:upfirst`

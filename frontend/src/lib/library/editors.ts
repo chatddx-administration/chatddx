@@ -7,7 +7,7 @@ export type Editor =
   | { name: string; as: "texts"; inserts: string[]; slots: Record<string, string[]> }
   | { name: string; as: "schema"; of?: string; schema?: Schema }
   | { name: string; as: "views"; of: string }
-  | { name: string; as: "json"; expects: "object" | "array" | null };
+  | { name: string; as: "json"; brackets: string | null };
 
 export type Editing = {
   fields: Editor[];
@@ -28,6 +28,24 @@ export function read(text: string): Read {
 
 export function written(value: unknown): string {
   return JSON.stringify(value, null, 2);
+}
+
+// Dependency: a box's brackets, which src/chatddx/portal/templates/fields.html shows around it and names in
+// data-brackets, the box holding what is between them.
+export function inBrackets(area: HTMLTextAreaElement): string {
+  const brackets = area.dataset.brackets;
+  return brackets ? `${brackets[0]}${area.value}${brackets[1]}` : area.value;
+}
+
+export function betweenBrackets(area: HTMLTextAreaElement, text: string): string {
+  if (!area.dataset.brackets) return text;
+  const lines = text.split("\n");
+  return lines.length < 3
+    ? ""
+    : lines
+        .slice(1, -1)
+        .map((line) => line.replace(/^ {2}/, ""))
+        .join("\n");
 }
 
 // Dependency: an either-field's text box and its "as." select, as src/chatddx/portal/templates/fields.html draws them.
@@ -53,17 +71,12 @@ export function labelled(held: unknown, views: number): { views: string[]; rest:
   };
 }
 
-export function misread(text: string, expects: "object" | "array" | null): string | null {
+export function misread(text: string, brackets: string | null): string | null {
   if (!text.trim()) return null;
-  let value: unknown;
   try {
-    value = JSON.parse(text);
+    JSON.parse(brackets ? `${brackets[0]}${text}${brackets[1]}` : text);
   } catch (e) {
     return t("It isn't JSON yet: %(error)s", { error: e instanceof Error ? e.message : String(e) });
   }
-  if (expects === "object" && (typeof value !== "object" || value === null || Array.isArray(value))) {
-    return t("It is to be an object, between { and }.");
-  }
-  if (expects === "array" && !Array.isArray(value)) return t("It is to be a list, between [ and ].");
   return null;
 }

@@ -1,5 +1,16 @@
 import { mount, unmount } from "svelte";
-import { type Editing, type Editor, labelled, misread, read, segsOf, textOfSegs, written } from "$lib/library/editors";
+import {
+  type Editing,
+  type Editor,
+  betweenBrackets,
+  inBrackets,
+  labelled,
+  misread,
+  read,
+  segsOf,
+  textOfSegs,
+  written,
+} from "$lib/library/editors";
 import SchemaInput from "$lib/library/SchemaInput.svelte";
 import { t } from "$lib/locale";
 import TextsField from "$lib/library/TextsField.svelte";
@@ -14,14 +25,51 @@ const held = document.getElementById("library-props");
 if (held) {
   const editing = JSON.parse(held.textContent ?? "null") as Editing;
   for (const editor of editing.fields) {
-    if (editor.as === "json") checked(editor.name, editor.expects);
+    if (editor.as === "json") checked(editor.name, editor.brackets);
     else enhanced(editor, editing);
   }
+  const form = document.querySelector<HTMLFormElement>("form[data-checked]");
+  if (form) gated(form);
+}
+
+// Policy: a library form is read as it is typed as the server reads it when it is sent,
+// and isn't sent while it would be refused, rather than coming back refused.
+function gated(form: HTMLFormElement): void {
+  const note = document.createElement("ul");
+  note.className = "space-y-0.5 text-xs text-warning";
+  note.hidden = true;
+  const sending = [...form.querySelectorAll<HTMLButtonElement>("button:not([type=button])")];
+  (sending[0]?.parentElement ?? form).before(note);
+  let asked = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const check = async (): Promise<void> => {
+    const mine = ++asked;
+    const body = new FormData(form);
+    body.set("checking", "1");
+    const got = await fetch(form.action, { method: "POST", body });
+    if (mine !== asked || !got.ok) return;
+    const { refused } = (await got.json()) as { refused: string[] };
+    note.replaceChildren(...refused.map((r) => Object.assign(document.createElement("li"), { textContent: r })));
+    note.hidden = refused.length === 0;
+    for (const b of sending) b.disabled = refused.length > 0;
+  };
+  const later = (): void => {
+    clearTimeout(timer);
+    timer = setTimeout(() => void check(), 400);
+  };
+  form.addEventListener("input", later);
+  form.addEventListener("change", later);
+  void check();
+}
+
+function wrote(area: HTMLTextAreaElement, text: string): void {
+  area.value = text;
+  area.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 // Policy: a JSON box says as it is typed in what keeps it from being sent, and the form
 // isn't sent while it does, rather than coming back refused.
-function checked(name: string, expects: "object" | "array" | null): void {
+function checked(name: string, brackets: string | null): void {
   const area = document.querySelector<HTMLTextAreaElement>(`textarea[name="f.${name}"]`);
   if (!area) return;
   const note = document.createElement("p");
@@ -29,7 +77,7 @@ function checked(name: string, expects: "object" | "array" | null): void {
   note.hidden = true;
   area.after(note);
   const refusal = (): string | null => {
-    const found = misread(area.value, expects);
+    const found = misread(area.value, brackets);
     note.textContent = found ?? "";
     note.hidden = found === null;
     area.setAttribute("aria-invalid", String(found !== null));
@@ -113,13 +161,13 @@ function drawn(editor: Drawable, editing: Editing, area: HTMLTextAreaElement, as
   const raw = [area, ...(as ? [as] : [])];
   switch (editor.as) {
     case "texts": {
-      const segs = segsOf(area.value, as ? as.value === "text" : null);
+      const segs = segsOf(as?.value === "text" ? area.value : inBrackets(area), as ? as.value === "text" : null);
       if (!segs) return t("What it holds isn't JSON the form can show: set it right here first.");
       const slots = editor.slots[picked("purpose", editing)] ?? [];
       const changed = (s: Parameters<typeof textOfSegs>[0]): void => {
         const made = textOfSegs(s, as !== null);
         if (as) as.value = made.asText ? "text" : "json";
-        area.value = made.text;
+        wrote(area, made.asText ? made.text : betweenBrackets(area, made.text));
       };
       const label = editor.name.replaceAll("_", " ");
       return {
@@ -131,10 +179,10 @@ function drawn(editor: Drawable, editing: Editing, area: HTMLTextAreaElement, as
     case "schema": {
       const schema = editor.schema ?? editing.schemas[picked(editor.of ?? "", editing)];
       if (!schema) return t("Pick its expectation schema first, and the form shows what it holds.");
-      const found = area.value.trim() ? read(area.value) : { ok: true as const, value: null };
+      const found = area.value.trim() ? read(inBrackets(area)) : { ok: true as const, value: null };
       if (!found.ok) return t("What it holds isn't JSON the form can show: set it right here first.");
       const changed = (v: unknown): void => {
-        area.value = written(v);
+        wrote(area, betweenBrackets(area, written(v)));
       };
       const label = editor.name.replaceAll("_", " ");
       return {
@@ -144,7 +192,7 @@ function drawn(editor: Drawable, editing: Editing, area: HTMLTextAreaElement, as
     }
     case "views": {
       const scoring = editing.scoring;
-      const found = area.value.trim() ? read(area.value) : { ok: true as const, value: [] };
+      const found = area.value.trim() ? read(inBrackets(area)) : { ok: true as const, value: [] };
       if (!scoring || !found.ok || !Array.isArray(found.value)) {
         return t("What it holds isn't JSON the form can show: set it right here first.");
       }
@@ -158,7 +206,7 @@ function drawn(editor: Drawable, editing: Editing, area: HTMLTextAreaElement, as
       const changed = (now: ScorerView[], named: string[]): void => {
         touched ||= written([now, named]) !== was;
         if (!touched) return;
-        area.value = written(now);
+        wrote(area, betweenBrackets(area, written(now)));
         if (naming) naming.value = written({ ...rest, views: named });
       };
       const shown = naming?.closest("label");

@@ -323,7 +323,7 @@ def scoring(
 ) -> Response:
     shown = api.thread(bench, thread)
     if shown.kind not in ("scorer", "judge"):
-        raise NotFound.of(
+        raise NotFound.raw(
             "no scorer or judge %(thread)s for %(login)s",
             thread=thread,
             login=bench.person.login,
@@ -526,7 +526,7 @@ def _lineage(bench: Bench, shown: schemas.ThreadDetail) -> dict[str, str]:
         e.digest: tr("version %(at)s of %(last)s", at=e.version, last=last)
         for e in edits
     }
-    found[shown.head.digest] = tr("its latest version")
+    found[shown.head.digest] = tr("latest version")
     origin = shown.forked_from
     while origin is not None and (edit := bench.rows.edit(origin)) is not None:
         try:
@@ -550,7 +550,7 @@ def following(
 ) -> Response:
     shown = api.thread(bench, thread)
     if shown.kind != "judge":
-        raise NotFound.of(
+        raise NotFound.raw(
             "no judge %(thread)s for %(login)s", thread=thread, login=bench.person.login
         )
     lineage = _lineage(bench, shown)
@@ -585,7 +585,7 @@ def _read(
     by = next((a for a in asked_by if view in (None, a.key)), None)
     if by is None:
         if view is not None:
-            raise NotFound.of("no view %(view)s asks this judge", view=view)
+            raise NotFound.raw("no view %(view)s asks this judge", view=view)
         return Read(None, None, [], None, [])
     expected: list[tuple[schemas.Family, JsonValue]] = []
     for f in api_families.families(bench):

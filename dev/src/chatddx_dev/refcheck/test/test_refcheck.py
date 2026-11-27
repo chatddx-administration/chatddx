@@ -16,7 +16,7 @@ def documented(
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         _ = (tmp_path / name).write_text(text)
     monkeypatch.setattr(project, "PROJECT_ROOT", tmp_path)
-    for written in ("surfaces", "comments", "whoopses"):
+    for written in ("surfaces", "comments", "whoopses", "catalog"):
         monkeypatch.setattr(stamp, written.upper(), tmp_path / "docs" / written)
 
 

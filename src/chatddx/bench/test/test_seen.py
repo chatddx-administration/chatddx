@@ -528,9 +528,7 @@ def test_a_person_replaces_their_own_expectation_only_when_they_say_so(
     mine = _expectation_of(rows, case, alice.id)
     origin = _expectation_of(rows, case, archive.id)
 
-    with pytest.raises(
-        Conflict, match=f"has their own .* in thread {mine}: replace it"
-    ):
+    with pytest.raises(Conflict, match=f"has their own .* already, in thread {mine}"):
         _ = bench.take_from(origin)
     with pytest.raises(ValueError, match=f"expectation {mine} is yours already"):
         _ = bench.take_from(mine)

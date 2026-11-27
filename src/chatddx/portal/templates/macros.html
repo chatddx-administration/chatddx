@@ -35,7 +35,7 @@
   {% endfor %}
 </ul>
 {% else %}
-<p class="text-sm text-muted-foreground">{{ _("None.") }}</p>
+<p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
 {% endif %}
 {% endmacro %}
 
@@ -63,8 +63,7 @@
 
 {% macro job(j) -%}
 {%- if j is none -%}—
-{%- elif j.status == "queued" and j.ahead is none -%}{{ _("queued, paused, halting") if j.halt else _("queued, paused") }}
-{%- elif j.status == "queued" -%}{{ ngettext("queued, %(num)s ahead, halting", "queued, %(num)s ahead, halting", j.ahead) if j.halt else ngettext("queued, %(num)s ahead", "queued, %(num)s ahead", j.ahead) }}
+{%- elif j.status == "queued" -%}{{ _("queued") }}, {{ _("paused") if j.ahead is none else ngettext("%(num)s ahead", "%(num)s ahead", j.ahead) }}{% if j.halt %}, {{ _("halting") }}{% endif %}
 {%- elif j.status == "under way" -%}{{ _("halting") if j.halt else _("under way") }}
 {%- else -%}
 {%- set status = {"finished": pgettext("job", "finished"), "stopped": pgettext("job", "stopped"), "failed": pgettext("job", "failed")}.get(j.status, j.status) -%}
@@ -110,7 +109,7 @@
 {{ _("%(cases)s with %(configuration)s on %(model)s (%(seeds)s)", cases=cases, configuration=configuration, model=t.at, seeds=seeds) }}
 {%- endmacro %}
 
-{% macro outdated() %}<span class="inline-flex rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">{{ pgettext("a thread", "Out of date") }}</span>{% endmacro %}
+{% macro outdated() %}<span class="inline-flex rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">{{ _("out of date") | upfirst }}</span>{% endmacro %}
 
 {% macro updating(thread, proposal=none, changes=[], next=none) %}
 {% if (thread.outdated or proposal) and not thread.deleted %}
@@ -130,9 +129,9 @@
     {% if proposal.clashes %}<li>{{ _("Yours and its origin both change %(paths)s: updating keeps yours there.", paths=proposal.clashes | map("replace", "/recipe/", "") | join(", ")) }}</li>{% endif %}
   </ul>
   {% endif %}
-  {% if thread.outdated %}<p class="mt-2">{{ _("It can't be used until it is updated.") }}</p>{% endif %}
+  {% if thread.outdated %}<p class="mt-2">{{ _("can't be used") | upfirst }}.</p>{% endif %}
   {% if proposal and proposal.refused %}
-  <p class="mt-2 text-warning">{{ _("It can't be updated as things are: %(refused)s", refused=proposal.refused) }}</p>
+  <p class="mt-2 text-warning">{{ _("can't be updated") | upfirst }}: {{ proposal.refused }}</p>
   {% elif proposal %}
   <form class="mt-3" method="post" action="/threads/{{ thread.id }}/update">
     <input type="hidden" name="head" value="{{ thread.head.id }}">
@@ -170,7 +169,7 @@
         <th class="pb-2 pr-4 font-medium">{{ _("Outcomes") }}</th>
         <th class="pb-2 pr-4 font-medium">{{ _("Finished") }}</th>
         <th class="pb-2 pr-4 font-medium">{{ _("Job") }}</th>
-        {% if left %}<th class="pb-2 font-medium">{{ _("Left to score by") }}</th>{% endif %}
+        {% if left %}<th class="pb-2 font-medium">{{ _("Left to score") }}</th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -190,7 +189,7 @@
   </table>
 </div>
 {% else %}
-<p class="text-sm text-muted-foreground">{{ _("No runs.") }}</p>
+<p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
 {% endif %}
 {% endmacro %}
 
@@ -211,7 +210,7 @@
 {% macro refusal(typed, request) %}
 {% if typed %}
 <div role="alert" class="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
-  <p class="font-medium text-destructive">{{ _("Nothing is saved yet") if request.method == "POST" else _("That can't be shown") }}</p>
+  <p class="font-medium text-destructive">{{ _("Nothing is saved yet") if request.method == "POST" else _("can't be shown") | upfirst }}</p>
   {% for refused in typed.refused %}<p class="mt-1 [overflow-wrap:anywhere]">{{ refused }}</p>{% endfor %}
   {% if request.method == "POST" and typed.kept %}<p class="mt-1 text-muted-foreground">{{ _("What you typed is kept below, and what was refused is marked there: set it right and send it again.") }}</p>{% endif %}
 </div>

@@ -10,8 +10,8 @@
 {{ _("%(name)s from %(provider)s", name=w.name, provider=w.provider) }}
 {%- endif -%}
 {%- endmacro %}
-{% macro to_handle(h) %}{% if h %}<a href="#handle-{{ h.thread }}">{{ h.name }}</a>{% else %}{{ pgettext("no handle", "none") }}{% endif %}{% endmacro %}
-{% macro to_endpoint(name) %}{% if name %}<a href="#endpoint-{{ name }}">{{ name }}</a>{% else %}{{ pgettext("no endpoint", "none") }}{% endif %}{% endmacro %}
+{% macro to_handle(h) %}{% if h %}<a href="#handle-{{ h.thread }}">{{ h.name }}</a>{% else %}—{% endif %}{% endmacro %}
+{% macro to_endpoint(name) %}{% if name %}<a href="#endpoint-{{ name }}">{{ name }}</a>{% else %}—{% endif %}{% endmacro %}
 {% macro to_host(name) %}<a href="#host-{{ name }}">{{ name }}</a>{% endmacro %}
 {% macro bound(name) %}{% if named.get(name) %}{{ to_handle(named[name]) }}{% else %}{{ name }}{% endif %}{% endmacro %}
 {% macro history(thread) %}<a href="/threads/{{ thread }}">{{ _("its versions") }}</a>{% endmacro %}
@@ -57,9 +57,9 @@
         <span class="text-muted-foreground">{{ h.weights.name }}</span>
         {% if h.endpoint is none %}<span class="text-warning">{{ _("no endpoint serves its weights, so it can't be picked") }}</span>{% endif %}</summary>
       <div class="mt-3">
-      {% set engine %}{% if h.engine %}<a href="#engine-{{ h.engine.thread }}">{{ h.engine.name }}</a>{% else %}{{ pgettext("no engine", "none") }}{% endif %}{% endset %}
-      {% set host %}{% if h.host %}{{ to_host(h.host) }}{% elif h.endpoint %}{{ _("none: a remote engine") }}{% else %}{{ pgettext("no host", "none") }}{% endif %}{% endset %}
-      {% set known %}{% if h.facts %}<a href="#facts-{{ h.facts }}">{{ h.weights.name }}</a>{% else %}{{ pgettext("no facts", "none") }}{% endif %}{% endset %}
+      {% set engine %}{% if h.engine %}<a href="#engine-{{ h.engine.thread }}">{{ h.engine.name }}</a>{% else %}—{% endif %}{% endset %}
+      {% set host %}{% if h.host %}{{ to_host(h.host) }}{% elif h.endpoint %}{{ _("none: a remote engine") }}{% else %}—{% endif %}{% endset %}
+      {% set known %}{% if h.facts %}<a href="#facts-{{ h.facts }}">{{ h.weights.name }}</a>{% else %}—{% endif %}{% endset %}
       {{ facts([
         (_("Weights"), weights(h.weights)),
         (_("Engine"), engine),
@@ -71,7 +71,7 @@
       </div>
     </details>
     {% else %}
-    <p class="text-sm text-muted-foreground">{{ _("None.") }}</p>
+    <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
     {% endfor %}
   </div>
   {% endcall %}
@@ -99,7 +99,7 @@
         <div>
           <h3 class="mb-1 font-medium">{{ _("Reasoning") }}</h3>
           <table class="text-sm">
-            <thead class="text-left text-xs text-muted-foreground"><tr><th class="{{ column }}">{{ _("Level") }}</th><th class="{{ column }}">{{ _("What it does") }}</th></tr></thead>
+            <thead class="text-left text-xs text-muted-foreground"><tr><th class="{{ column }}">{{ _("Level") }}</th><th class="{{ column }}">{{ _("Description") }}</th></tr></thead>
             <tbody>
               {% for r in k.reasoning %}
               <tr>
@@ -133,7 +133,7 @@
         <div>
           <h3 class="mb-1 font-medium">{{ _("Output contracts") }}</h3>
           <table class="text-sm">
-            <thead class="text-left text-xs text-muted-foreground"><tr><th class="{{ column }}">{{ _("Contract") }}</th><th class="{{ column }}">{{ _("What it does") }}</th></tr></thead>
+            <thead class="text-left text-xs text-muted-foreground"><tr><th class="{{ column }}">{{ _("Contract") }}</th><th class="{{ column }}">{{ _("Description") }}</th></tr></thead>
             <tbody>
               {% for r in k.output %}
               <tr>
@@ -145,7 +145,7 @@
           </table>
         </div>
         {% endif %}
-        {% set held %}{% for h in k.handles %}{{ to_handle(h) }}{{ ", " if not loop.last }}{% else %}{{ pgettext("no handle", "none") }}{% endfor %}{% endset %}
+        {% set held %}{% for h in k.handles %}{{ to_handle(h) }}{{ ", " if not loop.last }}{% else %}—{% endfor %}{% endset %}
         {{ facts([
           (_("Handles"), held),
           (_("History"), history(k.thread)),
@@ -153,7 +153,7 @@
       </div>
     </details>
     {% else %}
-    <p class="text-sm text-muted-foreground">{{ _("None.") }}</p>
+    <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
     {% endfor %}
   </div>
   {% endcall %}
@@ -175,8 +175,8 @@
         {% endif %}
         {% if e.kind == "engine.local" %}
         {% set template %}<span class="font-mono text-xs">{{ e.chat_template[:12] }}</span>{% if p.template %} {% trans path=p.template, host=to_host(p.host) %}kept at <span class="font-mono text-xs">{{ path }}</span> on {{ host }}{% endtrans %}{% endif %}{% endset %}
-        {% set argv %}{% if e.argv %}<span class="font-mono text-xs">{{ p.argv }}</span>{% else %}{{ pgettext("no arguments", "none") }}{% endif %}{% endset %}
-        {% set env %}{% if e.env %}<ul class="space-y-0.5 font-mono text-xs">{% for name, value in e.env.items() %}<li>{{ name }}={{ value }}</li>{% endfor %}</ul>{% else %}{{ pgettext("no variables", "none") }}{% endif %}{% endset %}
+        {% set argv %}{% if e.argv %}<span class="font-mono text-xs">{{ p.argv }}</span>{% else %}—{% endif %}{% endset %}
+        {% set env %}{% if e.env %}<ul class="space-y-0.5 font-mono text-xs">{% for name, value in e.env.items() %}<li>{{ name }}={{ value }}</li>{% endfor %}</ul>{% else %}—{% endif %}{% endset %}
         {% set runtime %}{% trans version=e.runtime.version, closure=e.runtime.closure %}vLLM {{ version }}, from <span class="font-mono text-xs">{{ closure }}</span>{% endtrans %}{% endset %}
         {{ facts([
           (_("Weights"), weights(p.weights)),
@@ -202,7 +202,7 @@
       </div>
     </details>
     {% else %}
-    <p class="text-sm text-muted-foreground">{{ _("None.") }}</p>
+    <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
     {% endfor %}
   </div>
   {% endcall %}
@@ -228,15 +228,15 @@
         (_("Host"), to_host(e.host) if e.host else _("none: a remote engine")),
         (_("Capacity"), ngettext("%(num)s at once", "%(num)s at once", e.capacity)),
         (_("Runs by default"), _("%(concurrency)s, %(order)s, %(retries)s", concurrency=ngettext("%(num)s at once", "%(num)s at once", s.spec.execution.concurrency), order=s.spec.execution.order, retries=ngettext("%(num)s retry", "%(num)s retries", s.spec.execution.retries))),
-        (_("Canaries"), s.canaries or pgettext("no canaries", "none")),
-        (_("Its secret's variable"), e.credential or _("none: it takes no secret")),
-        (_("Cleared for"), e.cleared_for | join(", ") or _("no source")),
+        (_("Canaries"), s.canaries or "—"),
+        (_("Secret variable"), e.credential or _("none: it takes no secret")),
+        (_("Cleared for"), e.cleared_for | join(", ") or "—"),
         (_("Takes typed cases"), _("yes") if e.takes_typed else _("no")),
       ]) }}
       </div>
     </details>
     {% else %}
-    <p class="text-sm text-muted-foreground">{{ _("None.") }}</p>
+    <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
     {% endfor %}
   </div>
   {% endcall %}
@@ -252,16 +252,16 @@
       <div class="mt-3 grid gap-3 text-sm">
         <div>
           <h3 class="mb-1 font-medium">{{ _("Models") }}</h3>
-          <ul class="space-y-0.5">{% for digest, at in h.models.items() %}<li>{% if weighed.get(digest) %}{{ to_handle(weighed[digest]) }}{% else %}{{ titles[digest] }}{% endif %} <span class="font-mono text-xs text-muted-foreground">{{ at }}</span></li>{% else %}<li class="text-muted-foreground">{{ _("None.") }}</li>{% endfor %}</ul>
+          <ul class="space-y-0.5">{% for digest, at in h.models.items() %}<li>{% if weighed.get(digest) %}{{ to_handle(weighed[digest]) }}{% else %}{{ titles[digest] }}{% endif %} <span class="font-mono text-xs text-muted-foreground">{{ at }}</span></li>{% else %}<li class="text-muted-foreground">{{ _("none") | upfirst }}.</li>{% endfor %}</ul>
         </div>
         <div>
           <h3 class="mb-1 font-medium">{{ _("Chat templates") }}</h3>
-          <ul class="space-y-0.5">{% for sha, at in h.templates.items() %}<li><span class="font-mono text-xs">{{ sha[:12] }}</span> <span class="font-mono text-xs text-muted-foreground">{{ at }}</span>{% if pinning[sha] %} {{ _("pinned by") }} {% for p in pinning[sha] %}<a href="#engine-{{ p.thread }}">{{ p.name }}</a>{{ ", " if not loop.last }}{% endfor %}{% endif %}</li>{% else %}<li class="text-muted-foreground">{{ _("None.") }}</li>{% endfor %}</ul>
+          <ul class="space-y-0.5">{% for sha, at in h.templates.items() %}<li><span class="font-mono text-xs">{{ sha[:12] }}</span> <span class="font-mono text-xs text-muted-foreground">{{ at }}</span>{% if pinning[sha] %} {{ _("pinned by") }} {% for p in pinning[sha] %}<a href="#engine-{{ p.thread }}">{{ p.name }}</a>{{ ", " if not loop.last }}{% endfor %}{% endif %}</li>{% else %}<li class="text-muted-foreground">{{ _("none") | upfirst }}.</li>{% endfor %}</ul>
         </div>
       </div>
     </details>
     {% else %}
-    <p class="text-sm text-muted-foreground">{{ _("None.") }}</p>
+    <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
     {% endfor %}
   </div>
   {% endcall %}
@@ -277,7 +277,7 @@
       <div class="mt-2">
       {% set where %}{% if s.source.kind == "directory" %}{% trans path=s.source.path, suffix=s.source.suffix %}<span class="font-mono text-xs">{{ path }}</span>, a vignette a <span class="font-mono text-xs">{{ suffix }}</span> file{% endtrans %}{% else %}{{ _("texts typed into the database") }}{% endif %}{% endset %}
       {% set held %}{% if s.unread %}<span class="text-warning">{{ _("its directory can't be read: %(why)s", why=s.unread) }}</span>{% elif s.vignettes is not none %}{{ ngettext("%(num)s vignette", "%(num)s vignettes", s.vignettes) }}{% else %}{{ _("as many as are typed") }}{% endif %}{% endset %}
-      {% set cleared %}{% for e in s.cleared %}{{ to_endpoint(e) }}{{ ", " if not loop.last }}{% else %}{{ _("no endpoint") }}{% endfor %}{% endset %}
+      {% set cleared %}{% for e in s.cleared %}{{ to_endpoint(e) }}{{ ", " if not loop.last }}{% else %}—{% endfor %}{% endset %}
       {{ facts([
         (_("Where"), where),
         (_("Holds"), held),
@@ -287,7 +287,7 @@
       </div>
     </div>
     {% else %}
-    <p class="text-sm text-muted-foreground">{{ _("None.") }}</p>
+    <p class="text-sm text-muted-foreground">{{ _("none") | upfirst }}.</p>
     {% endfor %}
   </div>
   {% endcall %}
@@ -295,9 +295,9 @@
 
   {% call section(_("Bindings"), "bindings") %}
   <p class="mb-3 text-sm text-muted-foreground">{{ _("So that a data set's configurations and judges run on models this portal serves.") }}</p>
-  {% set judged %}{% for judge, handle in judges %}{% trans judge=judge, handle=bound(handle) %}<span class="font-medium">{{ judge }}</span> to {{ handle }}{% endtrans %}{{ ", " if not loop.last }}{% else %}{{ pgettext("no judges", "none") }}{% endfor %}{% endset %}
+  {% set judged %}{% for judge, handle in judges %}{% trans judge=judge, handle=bound(handle) %}<span class="font-medium">{{ judge }}</span> to {{ handle }}{% endtrans %}{{ ", " if not loop.last }}{% else %}—{% endfor %}{% endset %}
   {{ facts([
-    (_("Configurations are made for"), bound(configurations) if configurations else _("no model")),
+    (_("Configurations are made for"), bound(configurations) if configurations else "—"),
     (_("Judges are bound"), judged),
   ]) }}
   {% endcall %}

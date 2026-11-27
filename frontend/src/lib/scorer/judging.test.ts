@@ -19,11 +19,11 @@ const AT = { type: "object", properties: { at: { type: "string" } }, required: [
 const AT_MAX = { type: "object", properties: { at: { type: "string" }, max: { type: "number" } } };
 
 describe("seedsOf", () => {
-  it("reads seeds as typed, and says what is wrong with them", () => {
+  it("reads each whole number typed once, and the seed 1 while none is", () => {
     expect(seedsOf("1, 2 3")).toEqual([1, 2, 3]);
-    expect(seedsOf(" ")).toBe("a judge has a seed or more");
-    expect(seedsOf("1, x")).toBe("seeds are whole numbers, 0 or more");
-    expect(seedsOf("2, 2")).toBe("each seed once");
+    expect(seedsOf(" ")).toEqual([1]);
+    expect(seedsOf("1, x")).toEqual([1]);
+    expect(seedsOf("2, 2")).toEqual([2]);
   });
 });
 

@@ -99,7 +99,7 @@ def test_a_configuration_with_nothing_replaced_is_itself(signed: TestClient) -> 
         None,
     )
     assert (swedish["refused"], swedish["untranslated"]) == (
-        "lines has no translations into sv",
+        "lines has no translation into sv",
         True,
     )
 

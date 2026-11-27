@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { displayLanguage, t } from "$lib/locale";
+  import { displayLanguage, t, upFirst } from "$lib/locale";
 
   let {
     language,
@@ -35,7 +35,7 @@
     oninput={(e) => translate(language, text, e.currentTarget.value)}></textarea>
   {#if stale}
     <p class="text-xs text-warning">
-      {t("Carried over from the text as it was.")}
+      {upFirst(t("out of date"))}.
       <button type="button" class="underline" onclick={() => settle(language, text)}>{t("It still reads right")}</button
       >
     </p>

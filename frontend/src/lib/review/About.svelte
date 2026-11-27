@@ -110,16 +110,16 @@
     {#if picking}
       <select
         class="h-7 rounded-md border border-input bg-transparent px-1.5"
-        aria-label={t("Its language")}
+        aria-label={upFirst(t("language"))}
         value={language ?? ""}
         onchange={(e) => spoken(e.currentTarget.value)}
         onblur={() => (picking = false)}
       >
-        {#if !language}<option value="" disabled>{tp("no language", "none")}</option>{/if}
+        {#if !language}<option value="" disabled>—</option>{/if}
         {#each given.languages as [tag, name] (tag)}<option value={tag}>{name}</option>{/each}
       </select>
     {:else}
-      <span>{language ? (named.get(language) ?? language) : t("no language")}</span>
+      <span>{language ? (named.get(language) ?? language) : "—"}</span>
       {#if given.editable}
         <button
           type="button"

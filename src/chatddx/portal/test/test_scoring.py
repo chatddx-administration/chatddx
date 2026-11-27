@@ -62,8 +62,10 @@ def test_a_scorer_names_its_judges_what_it_reads_and_how_its_runs_scored(
         judge = thread(signed, "judge", name, "archive")
         assert f'href="/scoring/{judge["id"]}"' in page
 
-    reads = text.split("Answers of", 1)[1].split("Not of", 1)[0]
-    skips = text.split("Not of", 1)[1].split("Expected", 1)[0]
+    reads = text.split("Configurations read", 1)[1].split("Configurations left out", 1)[
+        0
+    ]
+    skips = text.split("Configurations left out", 1)[1].split("Expected", 1)[0]
     assert LINES in [n.strip() for n in reads.split(",")]
     assert NATIVE in [n.strip() for n in skips.split(",")]
     families = signed.get("/api/families").json()
@@ -100,7 +102,7 @@ def test_a_judge_shows_who_asks_it_what_it_is_asked_and_where_its_seeds_disagree
     asks = [t for t in configurations if t["head"]["digest"] == body["skeleton"]]
     assert asks and any(f'href="/compose/{t["id"]}"' in page for t in asks)
     assert f'href="/scoring/{judged["id"]}"' in page
-    assert re.search(r"archive/judged · note-graded its latest version", text)
+    assert re.search(r"archive/judged · note-graded latest version", text)
     assert "‹completion›" in text
 
     held = signed.get(f"/api/components/{judged['head']['digest']}").json()["body"]

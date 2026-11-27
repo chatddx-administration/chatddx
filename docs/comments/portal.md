@@ -26,6 +26,13 @@ Written by `chatddx-dev index` from the comments in `[parts.portal]`'s code in `
 // UTF-16 units.
 ```
 
+## `frontend/src/lib/scorer/judging.ts:seedsOf`
+
+```
+// Policy: seeds are read from what is typed, whatever it is, so that nothing typed is
+// refused: each whole number once, and the seed 1 while none is typed.
+```
+
 ## `frontend/src/lib/scorer/judging.ts:startingParams`
 
 ```
@@ -74,6 +81,13 @@ Written by `chatddx-dev index` from the comments in `[parts.portal]`'s code in `
 # clearer as JSON.
 ```
 
+## `src/chatddx/portal/fields.py:_bracketed`
+
+```
+# Policy: a box whose field is an object or a list holds what is between its brackets,
+# which the page shows around it, so that what is typed is of its shape whatever it is.
+```
+
 ## `src/chatddx/portal/fields.py:_engines`
 
 ```
@@ -85,6 +99,13 @@ Written by `chatddx-dev index` from the comments in `[parts.portal]`'s code in `
 
 ```
 # Accommodating for browsers, which send a textarea's line breaks as CRLF.
+```
+
+## `src/chatddx/portal/fields.py:_lines`
+
+```
+# Policy: a list of whole numbers is read from whatever is typed, each whole number once,
+# so that nothing typed in it is refused.
 ```
 
 ## `src/chatddx/portal/fields.py:listed`
@@ -239,6 +260,13 @@ Written by `chatddx-dev index` from the comments in `[parts.portal]`'s code in `
 ```
 # Accommodating for the test World's shelves, which are shorter than a page: a page
 # as long as the shelf gives it its search box.
+```
+
+## `src/chatddx/portal/threads.py:_checked`
+
+```
+# Policy: a form is read as it is typed as it is read when it is sent, so that the island
+# holds it back while it would be refused rather than sending it to be.
 ```
 
 ## `src/chatddx/portal/threads.py:_drawn`

@@ -1,5 +1,5 @@
 import type { Schemas } from "$lib/api/client";
-import { t } from "$lib/locale";
+import { t, tp } from "$lib/locale";
 import type { Event } from "./events";
 
 export type Kind = Schemas["ItemDeltaData"]["kind"];
@@ -187,4 +187,10 @@ export function tally(progress: Progress): {
 export function failed(progress: Progress): string | null {
   if (progress.errors.length) return progress.errors.join("; ");
   return progress.finished === null ? t("the run didn't finish") : null;
+}
+
+export function streaming(kind: Kind | null): string {
+  if (kind === "reasoning") return tp("in progress", "thinking");
+  if (kind === "tool_call") return tp("in progress", "calling a tool");
+  return tp("in progress", "writing");
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Schemas } from "$lib/api/client";
-import { whereSaveGoes } from "./logic";
+import { fitted, whereSaveGoes } from "./logic";
+import type { Facts } from "./props";
 
 const DIGEST = (n: number) => `sha256:${String(n).padStart(64, "0")}`;
 
@@ -73,5 +74,35 @@ describe("where a save goes", () => {
 
   it("is nowhere without a name", () => {
     expect(whereSaveGoes({ ...given, name: "  " })).toEqual({ to: "nothing", because: "nameless" });
+  });
+});
+
+describe("settings fitted to a model's facts", () => {
+  const facts: Facts = {
+    levels: { default: { lands: "off" }, off: { lands: "off" }, high: { refused: "no" } },
+    recommended: { off: { temperature: 0.6 } },
+    output: {},
+    answers: null,
+    budget: false,
+  };
+
+  it("keeps what the facts work out", () => {
+    const reasoning = { kind: "chunk.reasoning", level: "off" };
+    const sampling = { kind: "chunk.sampling", recommended: true };
+    expect(fitted(reasoning, sampling, facts)).toEqual({ reasoning, sampling });
+  });
+
+  it("moves a level they don't land to the default, and takes out a budget they don't know", () => {
+    const reasoning = { kind: "chunk.reasoning", level: "high", thinking_token_budget: 64 };
+    expect(fitted(reasoning, { kind: "chunk.sampling" }, facts).reasoning).toEqual({
+      kind: "chunk.reasoning",
+      level: "default",
+    });
+  });
+
+  it("leaves the model's default and no recommendation where there are no facts", () => {
+    const reasoning = { kind: "chunk.reasoning", level: "off" };
+    const sampling = { kind: "chunk.sampling", recommended: true };
+    expect(fitted(reasoning, sampling, null)).toEqual({ reasoning: null, sampling: { kind: "chunk.sampling" } });
   });
 });

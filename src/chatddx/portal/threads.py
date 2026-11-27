@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal, cast
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Query, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, JsonValue, ValidationError
 from starlette.datastructures import FormData
 
@@ -13,6 +13,7 @@ from chatddx import catalog
 from chatddx.api import families, schemas, threads as api
 from chatddx.api.state import Refusing, refused
 from chatddx.bench import KINDS, WRITTEN, Bench, NotFound, Titled, word_of
+from chatddx.bench.seen import compiled
 from chatddx.catalog import LANGUAGE_KINDS, Labels, Subject, read
 from chatddx.factors.base import Component, Invalid, language_tag, resolve
 from chatddx.factors.kinds import BY_KIND
@@ -56,7 +57,6 @@ class Typed:
     labels: str | None = None
     about: dict[str, str] | None = None
     kept: bool = True
-    unnamed: bool = False
 
 
 @router.get("/library")
@@ -102,7 +102,7 @@ def library_page(
             behind=behind,
         )
     if kind not in words:
-        raise NotFound.of(
+        raise NotFound.raw(
             "no kind %(kind)s: the kinds are %(kinds)s",
             kind=repr(kind),
             kinds=", ".join(words),
@@ -255,6 +255,8 @@ def writing(
 ) -> Response:
     model = _begun(kind)
     name = str(form.get("name", "")).strip()
+    if form.get("checking") and model is Translations:
+        return JSONResponse({"refused": []})
     if model is Translations:
         refusals: list[str] = []
         try:
@@ -267,10 +269,12 @@ def writing(
                 raise
             refusals = [refusal_of(e)]
         return _beginning_translations(
-            request, bench, configuration, into, refusals, 422, unnamed=not name
+            request, bench, configuration, into, refusals, 422
         )
     with refused(NotFound):
         found = fresh(model, _given(bench, request))
+    if form.get("checking"):
+        return _checked(bench, model, found, form)
     language = str(form.get("language", "")).strip() or None
     labels = str(form.get("labels", "{}"))
     declined: ValueError | None = None
@@ -289,8 +293,53 @@ def writing(
             raise
         declined = e
     found, refusals = kept(found, form, declined)
-    typed = Typed(refusals, name, language, labels, unnamed=not name)
+    typed = Typed(refusals, name, language, labels)
     return _begin_page(request, bench, kind, model, found, typed)
+
+
+# Policy: a form is read as it is typed as it is read when it is sent, so that the island
+# holds it back while it would be refused rather than sending it to be.
+def _checked(
+    bench: Bench, model: type[BaseModel], found: list[Field], form: FormData
+) -> Response:
+    try:
+        made = model.model_validate(parsed(found, form))
+        if isinstance(made, Scorer):
+            _ = _labels(str(form.get("labels", "{}")))
+        if isinstance(made, Recipe):
+            _ = compiled(bench, made)
+    except ValueError as e:
+        if not refusable(e):
+            raise
+        kept_found, rest = kept(found, form, e)
+        refusals = [
+            f"{f.name.replace('_', ' ')}: {f.refused}" for f in kept_found if f.refused
+        ]
+        return JSONResponse({"refused": [*refusals, *rest]})
+    return JSONResponse({"refused": []})
+
+
+def _picks_checked(
+    bench: Bench,
+    thread: int,
+    head: int,
+    recipe: dict[str, JsonValue],
+    found: list[Field],
+    form: FormData,
+) -> Response:
+    try:
+        picked = parsed(found, form)
+        given = {
+            p: picked.get(p) for p in RECIPE_PARTS if picked.get(p) != recipe.get(p)
+        }
+        variation = bench.variation(thread, cast(dict[str, str | None], given), head)
+        if variation.varied is not None:
+            _ = compiled(bench, variation.varied)
+    except ValueError as e:
+        if not refusable(e):
+            raise
+        return JSONResponse({"refused": [refusal_of(e)]})
+    return JSONResponse({"refused": []})
 
 
 def _labels(typed: str) -> Labels:
@@ -352,7 +401,6 @@ def _beginning_translations(
     into: str | None,
     refusals: list[str] | None = None,
     status: int = 200,
-    unnamed: bool = False,
 ) -> Response:
     entries = None
     if configuration is not None and into:
@@ -380,7 +428,7 @@ def _beginning_translations(
         configuration=configuration,
         into=into,
         entries=entries,
-        typed=None if refusals is None else Typed(refusals, unnamed=unnamed),
+        typed=None if refusals is None else Typed(refusals),
     )
 
 
@@ -417,7 +465,7 @@ def _drawn(
 
 def _begun(kind: str) -> type[Component] | type[Recipe]:
     if kind not in _BEGUN:
-        raise NotFound.of(
+        raise NotFound.raw(
             "no %(kind)s is begun here: what is begun here is %(kinds)s",
             kind=kind,
             kinds=", ".join(_BEGUN),
@@ -450,7 +498,7 @@ def _thread_page(
     shown = api.thread(bench, thread)
     word = word_of(shown.kind)
     if word in IN_REVIEW:
-        raise NotFound.of(
+        raise NotFound.raw(
             "no page of %(kind)s %(thread)s: it is in Review, in the case it goes with",
             kind=display_kind(word),
             thread=thread,
@@ -460,7 +508,7 @@ def _thread_page(
     current = versions[-1].version
     at = current if version is None else version
     if not 1 <= at <= last:
-        raise NotFound.of(
+        raise NotFound.raw(
             "no version %(at)s of %(kind)s %(thread)s: it has %(versions)s",
             at=at,
             kind=display_kind(word),
@@ -691,6 +739,8 @@ def editing(request: Request, bench: BenchDep, thread: int, form: FormDep) -> Re
     held = bench.store.get(shown.head.digest)
     with refused():
         head = int(str(form.get("head", "")))
+    if form.get("checking") and isinstance(held, Translations):
+        return JSONResponse({"refused": []})
     if isinstance(held, Translations):
         into = str(form.get("into", ""))
         try:
@@ -713,6 +763,8 @@ def editing(request: Request, bench: BenchDep, thread: int, form: FormDep) -> Re
                 thread=thread,
             )
         found = fields(Recipe, recipe, RECIPE_PARTS)
+        if form.get("checking"):
+            return _picks_checked(bench, thread, head, recipe, found, form)
         try:
             picked = parsed(found, form)
             replaced = {p: picked.get(p) for p in RECIPE_PARTS}
@@ -731,6 +783,8 @@ def editing(request: Request, bench: BenchDep, thread: int, form: FormDep) -> Re
         return _back(thread, None)
     body = held.model_dump(mode="json")
     found = fields(type(held), body, _editable(held, body))
+    if form.get("checking"):
+        return _checked(bench, type(held), found, form)
     language = str(form.get("language", "")).strip() or None
     labels = str(form.get("labels", "{}"))
     try:
@@ -760,7 +814,7 @@ def reverting(
 ) -> Response:
     earlier = next((v for v in api.edits(bench, thread) if v.id == edit), None)
     if earlier is None:
-        raise Invalid.of(
+        raise Invalid.raw(
             "edit %(edit)s isn't a version of thread %(thread)s",
             edit=edit,
             thread=thread,

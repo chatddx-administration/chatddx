@@ -62,7 +62,7 @@ def test_compose_lists_the_configurations_review_runs_a_case_under(
     assert re.findall(r'href="/compose/\d+"[^>]*>([^<]*)</a>', listing) == names
     assert "<details" not in page
     assert f'href="/compose/{mine["id"]}" aria-current="page"' in page
-    assert 'aria-label="How they fare"' not in page
+    assert "<h2>Scores</h2>" not in page
 
 
 def test_compose_lists_a_fork_under_what_it_was_forked_from(
@@ -105,7 +105,7 @@ def test_weights_no_model_thread_holds_are_a_whoops_where_they_are_tried(
     got = paged.get(f"/compose/{lines['id']}?model={weights}")
     assert got.status_code == 500, said(got.text)[:300]
     assert said(got.text).startswith(
-        f"> That shouldn't have happened {escape(whoops)} Copy this and send it to "
+        f"> Something went wrong {escape(whoops)} Copy this and send it to "
         + f"drift@chatddx.com: {pass_on} "
     )
     asked = paged.get(f"/api/threads/{lines['id']}/variation?model={weights}")
@@ -166,7 +166,7 @@ def test_runs_picked_on_the_runs_page_are_compared(
     text = said(shown(signed, f"/runs/compare?run={runs[0]}&run={appendix}"))
     assert "A mean is over the 0 items" in text and "By item" not in text
     assert "Held by only some" in text
-    assert signed.get("/runs/compare").status_code == 422
+    assert signed.get("/runs/compare").headers["location"] == "/runs"
 
 
 @pytest.mark.slow
@@ -267,13 +267,13 @@ def test_its_versions_are_stepped_through_keeping_what_is_set(
 
     greedy = thread(signed, "sampling", "greedy")["head"]["digest"]
     page = shown(signed, f"{path}?head={first}&sampling={greedy}")
-    assert "Version 1 of 2" in page and "A newer version is saved" in page
+    assert "Version 1 of 2" in page and "Newer version: saved" in page
     kept = urlencode({"sampling": greedy})
     assert f'href="?{kept}" data-head="{latest}"' in page
     assert compose_props(page)["head"] == first
 
     page = shown(signed, path)
-    assert "Version 2 of 2" in page and "A newer version is saved" not in page
+    assert "Version 2 of 2" in page and "Newer version: saved" not in page
     assert f'href="?head={first}" data-head="{first}"' in page
     assert compose_props(page)["drafted"]["chunks"]["reasoning"] is not None
 
@@ -284,14 +284,12 @@ def test_its_versions_are_stepped_through_keeping_what_is_set(
     restored = signed.get(edits).json()[-1]
     assert restored["version"] == 1
     page = shown(signed, path)
-    assert "Version 1 of 2" in page and "brought back as the latest" not in page
+    assert "Version 1 of 2" in page and "Newer version: saved" not in page
     assert f'href="?head={latest}" data-head="{latest}"' in page
     page = shown(signed, f"{path}?head={first}")
-    assert "Version 1 of 2" in page and "brought back as the latest" not in page
+    assert "Version 1 of 2" in page and "Newer version: saved" not in page
     page = shown(signed, f"{path}?head={latest}")
-    assert (
-        "Version 2 of 2" in page and "Version 1 is brought back as the latest" in page
-    )
+    assert "Version 2 of 2" in page and "Newer version: saved" in page
     assert f'href="?" data-head="{restored["id"]}"' in page
 
 

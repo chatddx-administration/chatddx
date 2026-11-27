@@ -39,7 +39,7 @@
   } = $props();
   const known = new Map(untrack(() => metrics).map((m) => [m.name, m]));
   const unjudged = untrack(() => metrics).filter((m) => !m.judged);
-  const named: Record<string, string> = { at: t("Its verdict at"), max: t("Out of") };
+  const named: Record<string, string> = { at: t("Verdict at"), max: t("Out of") };
 
   let writing = $state<number | null>(null);
 
@@ -113,7 +113,7 @@
     {@const judge = judgeOf(view)}
     <li class="space-y-2 rounded-lg border border-border/60 bg-background/60 p-2.5">
       <div class="flex items-center gap-2">
-        <input class="{FIELD} min-w-0 flex-1 font-medium" aria-label={t("Its label")} bind:value={labels[at]} />
+        <input class="{FIELD} min-w-0 flex-1 font-medium" aria-label={t("Label")} bind:value={labels[at]} />
         <button
           type="button"
           class="rounded px-1.5 hover:bg-muted disabled:opacity-40"

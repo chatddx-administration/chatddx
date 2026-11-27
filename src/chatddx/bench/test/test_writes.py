@@ -118,7 +118,7 @@ def test_a_person_writes_expectations_and_hears_what_the_lints_say(
         case=case, expectation_schema=schema, data=["not", "an", "object"]
     )
 
-    with pytest.raises(ValueError, match=f"in thread {mine}: edit that one"):
+    with pytest.raises(ValueError, match=f"already, in thread {mine}"):
         _ = bench.new(odd, "second")
     with pytest.raises(ValueError, match="expectation components have no language"):
         _ = bench.edit(mine, head.id, odd, "en")

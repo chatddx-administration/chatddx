@@ -13,7 +13,7 @@
   </div>
   {% endif %}
 
-  {% call section(_("About it")) %}
+  {% call section(_("About")) %}
   {% set tagged %}{% for t in case.tags %}{{ chip(t) }} {% else %}—{% endfor %}{% endset %}
   {{ facts([
     (_("Kind"), "case" | kind),
@@ -30,15 +30,15 @@
 
   {% set last = bindings | length %}
   {% set versioned = "/cases/" ~ case.id ~ "?version=" %}
-  {% call section(_("What it holds"), "holds") %}
+  {% call section(_("Contents"), "holds") %}
   <nav class="mb-4 flex flex-wrap items-center gap-3 text-sm" aria-label="{{ _('Versions') }}">
-    {% if at > 1 %}<a class="view" href="{{ versioned ~ (at - 1) }}" aria-label="{{ _('The version before') }}">◀</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">◀</span>{% endif %}
+    {% if at > 1 %}<a class="view" href="{{ versioned ~ (at - 1) }}" aria-label="{{ _('Previous version') }}">◀</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">◀</span>{% endif %}
     <span class="font-medium">{{ _("version %(at)s of %(last)s", at=at, last=last) | upfirst }}</span>
-    {% if at < last %}<a class="view" href="{{ versioned ~ (at + 1) }}" aria-label="{{ _('The version after') }}">▶</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">▶</span>{% endif %}
+    {% if at < last %}<a class="view" href="{{ versioned ~ (at + 1) }}" aria-label="{{ _('Next version') }}">▶</a>{% else %}<span class="text-muted-foreground/50" aria-hidden="true">▶</span>{% endif %}
     <span class="text-muted-foreground">{{ bound.at | when }}, {{ by }}</span>
   </nav>
   {% if not latest %}
-  <p class="mb-4 rounded-lg bg-warning/10 p-3 text-sm">{{ _("A repair has moved its vignette since: version %(n)s, %(at)s.", n=last, at=bindings[-1].at | when) }} <a class="view" href="/cases/{{ case.id }}">{{ _("Open the latest") }}</a></p>
+  <p class="mb-4 rounded-lg bg-warning/10 p-3 text-sm">{{ _("newer version") | upfirst }}: {{ _("version %(n)s, %(at)s", n=last, at=bindings[-1].at | when) }}. <a class="view" href="/cases/{{ case.id }}">{{ _("Open the latest") }}</a></p>
   {% endif %}
   <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[max-content_1fr]">
     <dt class="text-muted-foreground">{{ _("source") }}</dt><dd>{{ bound.vignette.source }}</dd>
@@ -46,7 +46,7 @@
     <dt class="text-muted-foreground">{{ _("fingerprint") }}</dt><dd class="break-all font-mono text-xs">{{ bound.vignette.fingerprint.alg }}{% if bound.vignette.fingerprint.key_id %} ({{ bound.vignette.fingerprint.key_id }}){% endif %}:{{ bound.vignette.fingerprint.hex }}</dd>
   </dl>
 
-  <h3>{{ _("What this version changed") }}</h3>
+  <h3>{{ _("Changes") }}</h3>
   {% if changed is none %}
   <p class="text-sm text-muted-foreground">{{ _("It is the first.") }}</p>
   {% else %}
@@ -55,12 +55,12 @@
   </ul>
   {% endif %}
 
-  <h3>{{ _("Its cases at this vignette") }}</h3>
+  <h3>{{ _("cases") | upfirst }}</h3>
   <ul class="space-y-3 text-sm" aria-label="{{ _('cases') | upfirst }}">
     {% for c in cases %}
     <li class="rounded-lg border border-border/60 p-3">
       <div class="flex flex-wrap items-baseline gap-x-3"><span class="font-medium">{{ c.titled | case }}</span><span class="font-mono text-xs text-muted-foreground">{{ c.case | short }}</span></div>
-      {% set appended %}{% for a in c.appendices %}{{ titles[a] }}{{ ", " if not loop.last }}{% else %}{{ pgettext("no appendices", "none") }}{% endfor %}{% endset %}
+      {% set appended %}{% for a in c.appendices %}{{ titles[a] }}{{ ", " if not loop.last }}{% else %}—{% endfor %}{% endset %}
       <p class="mt-1 text-muted-foreground">{{ _("appendices: %(appendices)s", appendices=appended) }}</p>
       {% if latest %}
       {% set expected = c.expectations | map(attribute="expectation_schema") | list %}
@@ -68,7 +68,7 @@
         {% for e in c.expectations %}
         <li><span class="text-muted-foreground">{{ e.title }}:</span>
           {% if e.ambiguous %}<span class="text-warning">{{ e.ambiguous }}</span>
-          {% elif e.expectation %}{% if held[e.expectation] %}<a href="/threads/{{ held[e.expectation] }}">{{ pgettext("an expectation", "yours") if e.expectation in own else _("the one picked") }}</a>{% else %}{{ _("the one picked") }}{% endif %}{% endif %}
+          {% elif e.expectation %}{% if held[e.expectation] %}<a href="/threads/{{ held[e.expectation] }}">{{ _("yours") if e.expectation in own else _("the one picked") }}</a>{% else %}{{ _("the one picked") }}{% endif %}{% endif %}
           {% if not e.ambiguous and e.expectation not in own and not case.deleted %}{{ " · " if e.expectation }}<a class="begin" href="{{ begin('expectation', case=c.case, expectation_schema=e.expectation_schema) }}">{{ _("write yours") }}</a>{% endif %}
           {% for t in e.shared %} · <a href="/threads/{{ t.id }}">{{ _("%(owner)s's", owner=t.owner) }}</a>{% endfor %}
         </li>
@@ -85,7 +85,7 @@
       {% endif %}
     </li>
     {% else %}
-    <li class="text-muted-foreground">{{ _("None stored.") }}</li>
+    <li class="text-muted-foreground">{{ _("none") | upfirst }}.</li>
     {% endfor %}
   </ul>
 
@@ -103,7 +103,7 @@
   {% endcall %}
 
   {% if mine and not case.deleted %}
-  {% call section(_("What is said of it"), "said") %}
+  {% call section(_("Edit"), "said") %}
   <form method="post" action="/cases/{{ case.id }}/said" class="grid max-w-xl gap-3 text-sm">
     <label class="grid gap-1"><span class="font-medium">{{ _("name") | upfirst }}</span>
       <input name="name" value="{{ named or '' }}" class="h-9 rounded-md border border-input bg-transparent px-2.5" placeholder="{{ bindings[-1].vignette.source }}/{{ bindings[-1].vignette.id }}">
@@ -128,7 +128,7 @@
   {% endif %}
 
   {% if not mine and person.login in case.collaborators %}
-  {% call section(_("Shared with you"), "shared") %}
+  {% call section((_("shared with you") | upfirst), "shared") %}
   <form method="post" action="/cases/{{ case.id }}/leave" class="flex flex-wrap items-center gap-3 text-sm">
     <button>{{ _("Leave it") }}</button>
     <span class="text-muted-foreground">{{ _("%(owner)s shares it with you. Leaving takes it out of what you see, here and wherever it is offered, until %(owner)s shares it again.", owner=case.owner) }}</span>

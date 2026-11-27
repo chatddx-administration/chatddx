@@ -155,12 +155,12 @@ def test_a_variation_is_run_watched_halted_scored_again_and_run_again(
         ).to_be_visible()
         page.get_by_role("button", name="Halt").click()
         expect(page.get_by_role("heading", name="Items")).to_be_visible()
-        expect(page.get_by_text("Left to score by")).to_be_visible()
+        expect(page.get_by_text(re.compile(r"^Left to score:"))).to_be_visible()
 
     with faked(world, Store(conn).get):
         page.get_by_role("button", name="Score again").click()
         expect(page.get_by_role("heading", name="Items")).to_be_visible()
-        expect(page.get_by_text("Left to score by")).to_have_count(0)
+        expect(page.get_by_text(re.compile(r"^Left to score:"))).to_have_count(0)
 
         page.get_by_role("button", name="Run again").click()
         page.wait_for_url(re.compile(r"/runs/[0-9a-f-]{36}$"))
@@ -181,7 +181,7 @@ def test_a_judge_s_configuration_is_written_in_compose(page: Page) -> None:
     }
     judge = page.request.get("/api/threads", params=query).json()[0]
     _ = page.goto(f"/compose/{judge['id']}")
-    expect(page.get_by_role("region", name="Its texts")).to_be_visible()
+    expect(page.get_by_role("region", name="Texts", exact=True)).to_be_visible()
     expect(page.get_by_role("button", name="Save")).to_be_visible()
     expect(page.get_by_role("button", name="Run it")).to_have_count(0)
     expect(page.get_by_role("button", name="Run", exact=True)).to_have_count(0)
@@ -211,7 +211,7 @@ def test_a_configuration_s_parts_are_written_in_compose_and_saved_with_it(
     expect(page.get_by_label(f"Into Swedish: {old}", exact=True)).to_have_count(0)
     carried = page.get_by_label(f"Into Swedish: {new}", exact=True)
     expect(carried).to_have_value(re.compile(r"^Du bistår"))
-    expect(page.get_by_text("Carried over from the text as it was.")).to_be_visible()
+    expect(page.get_by_text("Out of date.")).to_be_visible()
     expect(page.get_by_label("temperature", exact=True)).to_have_count(0)
 
     page.locator("main").get_by_role("button", name="English", exact=True).click()
@@ -362,10 +362,10 @@ def test_what_a_configuration_sends_slides_in_marked_against_what_was_saved(
     guided = page.request.get("/api/threads", params=query).json()[0]
     page.set_viewport_size({"width": 1600, "height": 1000})
     _ = page.goto(f"/compose/{guided['id']}")
-    sends = page.get_by_role("region", name="What it sends")
+    sends = page.get_by_role("region", name="Request", exact=True)
     expect(sends).to_be_hidden()
     with page.expect_response(re.compile(r"/previews$")):
-        page.get_by_role("button", name="What it sends").click()
+        page.get_by_role("button", name="Request", exact=True).click()
     expect(page.locator("[data-compose]")).to_have_attribute("data-slid", "")
     shown = sends.locator("[data-preview]")
     expect(shown).to_contain_text("You are assisting")
@@ -389,16 +389,16 @@ def test_what_a_configuration_sends_slides_in_marked_against_what_was_saved(
     expect(update).to_be_enabled()
     with page.expect_response(re.compile(r"/previews$")):
         update.click()
-    expect(shown.get_by_title("instructions, not yet translated").first).to_be_visible()
+    expect(shown.get_by_title("instructions, not translated yet").first).to_be_visible()
     expect(shown.locator("del").first).to_contain_text("Du")
     expect(update).to_be_disabled()
-    sends.get_by_role("button", name="As sent").click()
+    sends.get_by_role("button", name="Raw", exact=True).click()
     expect(shown.locator("pre")).to_contain_text('"messages"')
     expect(shown.locator("pre")).not_to_contain_text("\\n")
     expect(shown.locator("pre ins").first).to_contain_text("Be brief.")
     sends.get_by_role("button", name="Close").click()
     expect(page.locator("[data-compose]")).not_to_have_attribute("data-slid", "")
-    expect(page.get_by_role("button", name="What it sends")).to_be_visible()
+    expect(page.get_by_role("button", name="Request", exact=True)).to_be_visible()
     assert errors == []
 
 
@@ -414,18 +414,18 @@ def test_a_configuration_s_settings_are_written_by_what_they_decide(
     }
     reasoned = page.request.get("/api/threads", params=query).json()[0]
     _ = page.goto(f"/compose/{reasoned['id']}")
-    settings = page.get_by_role("region", name="Its settings")
+    settings = page.get_by_role("region", name="Settings", exact=True)
     expect(settings.get_by_text("Lands at on.")).to_be_visible()
     expect(settings.get_by_label("temperature", exact=True)).to_have_attribute(
         "placeholder", "0.6"
     )
     with page.expect_response(re.compile(r"/drafts$")):
-        settings.get_by_label("By hand").check()
+        settings.get_by_label("Manual", exact=True).check()
     expect(settings.get_by_text("Effort")).to_be_visible()
     with page.expect_response(re.compile(r"/drafts$")):
         settings.get_by_label("A tool call").check()
     expect(settings.get_by_label("The answer's schema")).to_be_visible()
-    expect(settings.get_by_text("The answer tool's name")).to_be_visible()
+    expect(settings.get_by_text("Answer tool name", exact=True)).to_be_visible()
 
     expect(settings.get_by_text("Thinking token budget")).to_be_visible()
     model = settings.get_by_label("model", exact=True)
@@ -580,7 +580,7 @@ def test_a_clinician_reviews_a_case_writing_what_is_expected_and_its_appendices(
 
     expect(expected.get_by_role("button", name="Restore")).to_have_count(0)
     expect(saving).to_be_disabled()
-    expected.get_by_role("button", name="The version before").click()
+    expected.get_by_role("button", name="Previous version", exact=True).click()
     expect(page.get_by_text("Save makes it the latest.")).to_be_visible()
     expect(warning.get_by_label("none expected")).not_to_be_checked()
     expect(saving).to_be_enabled()
@@ -593,14 +593,14 @@ def test_a_clinician_reviews_a_case_writing_what_is_expected_and_its_appendices(
         _ = dialog.accept() if accept else dialog.dismiss()
 
     page.once("dialog", lambda d: answered(d, False))
-    expected.get_by_role("button", name="The version after").click()
+    expected.get_by_role("button", name="Next version", exact=True).click()
     expect(expected.get_by_text("Version 1 of 2", exact=True)).to_be_visible()
     expect(warning.get_by_label("none expected")).to_be_checked()
     page.once("dialog", lambda d: answered(d, True))
-    expected.get_by_role("button", name="The version after").click()
+    expected.get_by_role("button", name="Next version", exact=True).click()
     expect(expected.get_by_text("Version 2 of 2", exact=True)).to_be_visible()
-    assert replacing == ["Replace what you changed with version 2?"] * 2
-    expected.get_by_role("button", name="The version before").click()
+    assert replacing == ["Discard what you changed?"] * 2
+    expected.get_by_role("button", name="Previous version", exact=True).click()
     expect(expected.get_by_text("Version 1 of 2", exact=True)).to_be_visible()
     assert len(replacing) == 2
     saved = page.url
@@ -704,7 +704,7 @@ def test_a_clinician_reviews_a_case_writing_what_is_expected_and_its_appendices(
     deleting.click()
     page.wait_for_url(lambda url: url != edited)
     assert asked == [
-        "Delete the appendix FAST? This case and those under it leave the list."
+        "Delete? Deletes the appendix FAST: this case and those under it leave the list."
     ]
     expect(page.get_by_role("article")).to_have_count(0)
     expect(branch).to_have_count(0)
@@ -757,7 +757,7 @@ def test_a_case_s_tags_and_language_are_saved_with_the_page(page: Page) -> None:
     path = f"/api/families/{noted['id']}"
 
     _ = page.goto(f"/review/{noted['id']}")
-    case = page.get_by_role("region", name="The case")
+    case = page.get_by_role("region", name="Case", exact=True)
     expect(case.get_by_role("link", name="Show in the Library")).to_be_visible()
     bar = page.get_by_role("group", name="Saving")
     saving = bar.get_by_role("button", name="Save")
@@ -784,7 +784,7 @@ def test_a_case_s_tags_and_language_are_saved_with_the_page(page: Page) -> None:
     tag.fill("reviewed")
     tag.press("Enter")
     bar.get_by_role("button", name="Change its language").click()
-    _ = bar.get_by_label("Its language").select_option("sv")
+    _ = bar.get_by_label("Language", exact=True).select_option("sv")
     expect(bar).to_contain_text("Swedish")
     held = page.request.get(path).json()
     assert "reviewed" not in held["tags"] and held["language"] != "sv"
@@ -872,8 +872,10 @@ def test_a_judged_view_is_written_with_a_new_judge_and_scored_through_the_worker
         _settled(page, run)
         _ = page.goto(f"/threads/{mine['id']}")
         page.get_by_role("button", name="+ a view").click()
-        view = page.locator("li").filter(has=page.get_by_label("Its label")).last
-        view.get_by_label("Its label").fill("met")
+        view = (
+            page.locator("li").filter(has=page.get_by_label("Label", exact=True)).last
+        )
+        view.get_by_label("Label", exact=True).fill("met")
         _ = view.get_by_label("Reads of what is expected").select_option(
             label="each of notes › comment"
         )
@@ -887,9 +889,9 @@ def test_a_judged_view_is_written_with_a_new_judge_and_scored_through_the_worker
         written.get_by_role("button", name="Save").click()
         expect(written).to_have_count(0)
         expect(judge.locator("option:checked")).to_contain_text("strict")
-        expect(view.get_by_role("combobox", name="Its verdict at")).to_have_value(
-            "/meets"
-        )
+        expect(
+            view.get_by_role("combobox", name="Verdict at", exact=True)
+        ).to_have_value("/meets")
         page.get_by_role("button", name="Save it").click()
         expect(page.get_by_text("Version 2 of 2", exact=True)).to_be_visible()
 
@@ -898,7 +900,7 @@ def test_a_judged_view_is_written_with_a_new_judge_and_scored_through_the_worker
         page.wait_for_url(re.compile(rf"/runs/{run}$"))
         _settled(page, run)
     _ = page.goto(f"/runs/{run}")
-    expect(page.get_by_text(re.compile(r"^Left to score by"))).to_have_count(0)
+    expect(page.get_by_text(re.compile(r"^Left to score:"))).to_have_count(0)
     head = page.request.get(f"/api/threads/{mine['id']}").json()["head"]["digest"]
     scores = page.request.get(f"/api/runs/{run}/scores").json()
     assert head in {g["scorer"] for g in scores}
@@ -922,13 +924,13 @@ def test_what_a_judge_is_asked_is_rewritten_on_its_page_and_picked_in_the_librar
 
     _ = page.goto(f"/scoring/{archives['id']}")
     page.get_by_role("button", name="Change what it is asked").click()
-    panel = page.get_by_role("region", name="What its judge is asked, as you write it")
+    panel = page.get_by_role("region", name="Texts", exact=True)
     told = panel.get_by_label("What it is told to answer, text 1")
     expect(told).to_have_value(
         "Say whether the answer meets what was expected, and why."
     )
     told.fill("Say whether the answer meets carol's note, and why.")
-    preview = panel.get_by_role("list", name="As it would read")
+    preview = panel.get_by_role("list", name="Preview", exact=True)
     expect(preview).to_contain_text("meets carol's note")
     expect(preview).to_contain_text("Chock, troligen septisk.")
     panel.get_by_role("button", name="Save what it is asked").click()
@@ -937,7 +939,7 @@ def test_what_a_judge_is_asked_is_rewritten_on_its_page_and_picked_in_the_librar
     query = {"kind": "judge", "name": "verdict", "owner": "alice"}
     [verdict] = page.request.get("/api/threads", params=query).json()
     assert page.url.endswith(f"/scoring/{verdict['id']}")
-    asked = page.get_by_role("region", name="What it is asked", exact=True)
+    asked = page.get_by_role("region", name="Texts", exact=True)
     expect(asked).to_contain_text("meets carol's note")
     held = page.request.get(f"/api/components/{verdict['head']['digest']}").json()
     query = {"kind": "configuration", "purpose": "judge", "owner": "alice"}
@@ -1003,9 +1005,9 @@ def test_a_translator_carries_an_edited_instruction_over_and_compose_takes_it(
     [translations] = page.request.get("/api/threads", params=held).json()
     _ = page.goto(f"/threads/{translations['id']}?into=sv")
     expect(
-        page.get_by_text(re.compile("started from the translation of a similar text"))
+        page.get_by_text(re.compile("Not translated yet: started from"))
     ).to_be_visible()
-    swedish = page.get_by_label("Its translation").first
+    swedish = page.get_by_label("Translation", exact=True).first
     expect(swedish).to_have_value(
         "Du bistår en läkare på en akutmottagning. Läs fallet och ge din bedömning."
     )
@@ -1093,11 +1095,27 @@ def test_a_text_an_expectation_and_a_scorer_s_views_are_written_in_their_editors
     expect(page.get_by_text("Version 1 of 1")).to_be_visible()
     edits = f"/api/threads/{scorer['id']}/edits"
     assert len(page.request.get(edits).json()) == 1
-    page.get_by_label("Its label").first.fill("first")
+    page.get_by_label("Label", exact=True).first.fill("first")
     page.get_by_role("button", name="Save it").click()
     expect(page.get_by_text("Version 2 of 2", exact=True)).to_be_visible()
     assert page.request.get(edits).json()[-1]["labels"]["views"][0] == "first"
     assert body(scorer)["views"] == body(lines)["views"]
+    assert errors == []
+
+
+def test_a_library_form_is_held_back_while_it_would_be_refused(page: Page) -> None:
+    errors: list[str] = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    _ = page.goto("/library/new?kind=passthrough")
+    page.get_by_label("name", exact=True).fill("mine")
+    write = page.get_by_role("button", name="Write it")
+    body = page.get_by_label("body", exact=True)
+    body.fill('"temperature": 1')
+    expect(page.get_by_text("passthrough may not set")).to_be_visible()
+    expect(write).to_be_disabled()
+    body.fill('"foo": 1')
+    expect(page.get_by_text("passthrough may not set")).to_be_hidden()
+    expect(write).to_be_enabled()
     assert errors == []
 
 
@@ -1139,14 +1157,14 @@ def test_few_shot_messages_and_a_contract_are_written_in_forms_and_json_checked_
     off = mine("reasoning", "off")
     _ = page.goto(f"/threads/{off['id']}")
     kwargs = page.get_by_label("chat template kwargs", exact=True)
-    kwargs.fill('{"enable_thinking": fals')
+    kwargs.fill('"enable_thinking": fals')
     expect(page.get_by_text("It isn't JSON yet")).to_be_visible()
     page.get_by_role("button", name="Save it").click()
     expect(page.get_by_text("Version 1 of 1")).to_be_visible()
     assert len(page.request.get(f"/api/threads/{off['id']}/edits").json()) == 1
-    kwargs.fill('{"enable_thinking": false}')
+    kwargs.fill('"enable_thinking": false')
     expect(page.get_by_text("It isn't JSON yet")).to_be_hidden()
-    _ = page.get_by_label("level", exact=True).select_option(label="none")
+    _ = page.get_by_label("level", exact=True).select_option(label="—")
     page.get_by_role("button", name="Save it").click()
     expect(page.get_by_text("Version 2 of 2", exact=True)).to_be_visible()
     assert body(off)["chat_template_kwargs"] == {"enable_thinking": False}
@@ -1168,7 +1186,7 @@ def test_a_researcher_s_chunks_are_written_in_their_forms_and_made_into_a_config
     _ = page.goto(f"/threads/{case['id']}")
     segments = ["The case:\n", {"slot": "vignette"}, {"slot": "appendices"}]
     page.get_by_role("button", name="Write it as JSON").click()
-    page.get_by_label("segments", exact=True).fill(json.dumps(segments))
+    page.get_by_label("segments", exact=True).fill(json.dumps(segments)[1:-1])
     page.get_by_role("button", name="Save it").click()
     expect(page.get_by_text("Version 2 of 2", exact=True)).to_be_visible()
     prompt = mine("prompt", "case")["head"]["digest"]
@@ -1229,7 +1247,7 @@ def test_a_trial_is_begun_of_the_picked_cases_in_their_language_and_run(
 
     page.get_by_role("link", name="Run it").click()
     page.wait_for_url(re.compile(r"/lab/run\?"))
-    page.get_by_label("Score it once it is done").uncheck()
+    page.get_by_label("Score it once it is finished").uncheck()
     with faked(world, Store(conn).get):
         page.get_by_role("button", name="Run it").click()
         page.wait_for_url(re.compile(r"/runs/[0-9a-f-]{36}$"))
@@ -1360,7 +1378,7 @@ def test_a_case_over_the_limit_isn_t_sent_and_says_why(
 ) -> None:
     monkeypatch.setattr(settings, "TYPED_TEXT_LIMIT", 10)
     _ = page.goto("/")
-    case = page.get_by_label("The case")
+    case = page.get_by_label("Case", exact=True)
     over = page.get_by_text(re.compile(r"^A case holds at most 10 characters"))
     case.fill("chest pai\N{ANATOMICAL HEART}")
     expect(over).to_have_count(0)
@@ -1389,8 +1407,8 @@ def test_an_island_says_what_its_page_s_catalog_holds_in_the_locale_asked_for(
             msgstr "<span class=\\"gradient-text\\">Akut</span> differentialdiagnostik"
 
             #: frontend/src/lib/variation/Texts.svelte
-            msgid "Its texts"
-            msgstr "Dess texter"
+            msgid "Texts"
+            msgstr "Texter"
             """,
         )
     )
@@ -1409,7 +1427,7 @@ def test_an_island_says_what_its_page_s_catalog_holds_in_the_locale_asked_for(
     }
     lines = page.request.get("/api/threads", params=query).json()[0]
     _ = page.goto(f"/compose/{lines['id']}")
-    expect(page.get_by_role("region", name="Dess texter")).to_be_visible()
+    expect(page.get_by_role("region", name="Texter", exact=True)).to_be_visible()
     assert errors == []
 
 
@@ -1548,7 +1566,7 @@ def test_how_a_case_fares_is_drawn_below_its_review_once_scrolled_to(
         run = page.request.post("/api/runs", data=body).json()["runs"][0]["run"]
         _settled(page, run)
     _ = page.goto(f"/review/{noted['id']}")
-    faring = page.get_by_role("region", name="How the case fares")
+    faring = page.get_by_role("region", name="Scores", exact=True)
     expect(faring.get_by_role("figure").first).to_have_count(0)
     faring.scroll_into_view_if_needed()
     expect(faring.get_by_role("figure").first).to_be_visible(timeout=30_000)
@@ -1558,11 +1576,11 @@ def test_how_a_case_fares_is_drawn_below_its_review_once_scrolled_to(
         faring.get_by_role("link", name=re.compile(r"^\d\.\d\d$")).first
     ).to_have_attribute("href", re.compile(r"^/scores/"))
     expect(faring.get_by_text("Other cases, drawn")).to_have_count(0)
-    standing = faring.get_by_role("list", name="Where each configuration stands")
+    standing = faring.get_by_role("list", name="Configurations", exact=True)
     expect(
         standing.get_by_role("listitem").filter(has_text=LINES).first
     ).to_contain_text("aren't three replicates and a repeat")
-    expect(strip.first).to_have_accessible_name(re.compile(r"not as things are now$"))
+    expect(strip.first).to_have_accessible_name(re.compile(r"out of date$"))
     expect(
         faring.get_by_role("link", name=re.compile(r"^Replicate 1: \d\.\d\d$")).first
     ).to_have_attribute("href", re.compile(r"^/scores/"))

@@ -3,6 +3,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
+from babel.messages.catalog import Catalog
 
 from chatddx import locale, markers
 from chatddx.markers import stamped
@@ -107,6 +108,7 @@ def faked(
     monkeypatch.setattr(project, "PARTS", {})
     monkeypatch.setattr(indexes, "COMMENTS", tmp_path / "docs" / "comments")
     monkeypatch.setattr(indexes, "WHOOPSES", tmp_path / "docs" / "whoopses")
+    monkeypatch.setattr(indexes, "CATALOG", tmp_path / "docs" / "catalog")
     catalogs = tmp_path / "src" / "chatddx" / "locale" / "catalogs"
     monkeypatch.setattr(locale, "catalogs", lambda: locale.locale.catalogs(catalogs))
 
@@ -887,6 +889,7 @@ def test_each_kind_of_proof_says_how_to_read_it_before_its_first_entry(
         surface_in(code, trace, "proj.alpha", tmp_path),
         comments_in(code, "proj.alpha", tmp_path),
         whoopses_in(code, "proj.alpha", tmp_path),
+        anchored.cataloged("alpha", "`alpha`", [], Catalog()),
     ):
         assert markers.PENDING in proof.splitlines()
         reread = proof.replace(markers.PENDING, "- read it otherwise")
@@ -921,7 +924,7 @@ def test_a_module_s_stage_says_what_is_written_of_it(
         "delta": Stage.SOLIDIFIED,
     }
     monkeypatch.setattr(project, "PROJECT_ROOT", tmp_path)
-    for docs in ("surfaces", "comments", "whoopses"):
+    for docs in ("surfaces", "comments", "whoopses", "catalog"):
         monkeypatch.setattr(indexes, docs.upper(), tmp_path / docs)
     monkeypatch.setattr(
         project,
@@ -984,6 +987,8 @@ def test_check_flags_what_parts_hold_amiss_a_proof_no_module_writes_and_a_broken
     _ = (tmp_path / "docs" / "comments" / "gone.md").write_text("## e\n")
     (tmp_path / "docs" / "whoopses").mkdir()
     _ = (tmp_path / "docs" / "whoopses" / "gone.md").write_text("## e\n")
+    (tmp_path / "docs" / "catalog").mkdir()
+    _ = (tmp_path / "docs" / "catalog" / "gone.md").write_text("## e\n")
     _ = sourced(
         tmp_path,
         {
@@ -1032,6 +1037,7 @@ def test_check_flags_what_parts_hold_amiss_a_proof_no_module_writes_and_a_broken
         "flag: frontend/src/lib/x: held by a and b",
         "flag: docs/parts/astray.md: no part in project.PARTS has it as its doc",
         "flag: docs/parts/gone.md: a's doc, but isn't there",
+        "flag: docs/catalog/gone.md: no part writes it at its stage",
         "flag: docs/comments/gone.md: no part writes it at its stage",
         "flag: docs/surfaces/gone.md: no part writes it at its stage",
         "flag: docs/whoopses/gone.md: no part writes it at its stage",
@@ -1076,3 +1082,56 @@ def test_write_says_how_many_stamps_it_wrote_to_each_proof(
 def test_each_surface_is_as_chatddx_stamp_writes_it() -> None:
     for s in proofs():
         assert not s.behind, "chatddx-dev index"
+
+
+def test_a_catalog_lists_the_messages_said_in_its_files_by_file_then_message() -> None:
+    said = Catalog()
+    _ = said.add("Saved", locations=[("a.html", 3), ("b.py", 1), ("elsewhere.py", 2)])
+    _ = said.add("Name", locations=[("a.html", 1)], context="a field")
+    _ = said.add(("%(num)s case", "%(num)s cases"), locations=[("a.html", 2)])
+    _ = said.add("Unsaid", locations=[("elsewhere.py", 1)])
+    found = entries(anchored.cataloged("alpha", "`alpha`", ["a.html", "b.py"], said))
+    assert found.split("\n\n") == [
+        "\n## `a.html`",
+        "```\n%(num)s case\n```",
+        "```\n%(num)s cases\n```",
+        "`a field`",
+        "```\nName\n```",
+        "```\nSaved\n```",
+        "## `b.py`",
+        "```\nSaved\n```\n",
+    ]
+
+
+def test_a_part_has_a_catalog_from_its_stage_while_its_code_says_a_message(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _ = sourced(
+        tmp_path,
+        {
+            "chatddx/__init__.py": "",
+            "chatddx/portal/__init__.py": "",
+            "chatddx/portal/pages.py": 'tr("Saved")\n',
+            "chatddx/quiet.py": "",
+        },
+    )
+    monkeypatch.setattr(project, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(indexes, "CATALOG", tmp_path / "catalog")
+    portal = ("src/chatddx/portal/pages.py",)
+    monkeypatch.setattr(
+        project,
+        "PARTS",
+        {
+            "pages": Part(Stage.DRAFTED, Class.MACHINERY, None, portal),
+            "quiet": Part(
+                Stage.DRAFTED, Class.MACHINERY, None, ("src/chatddx/quiet.py",)
+            ),
+        },
+    )
+    [found] = proofs(kinds=["catalog"])
+    assert found.path == tmp_path / "catalog" / "pages.md"
+    assert "## `src/chatddx/portal/pages.py`\n\n```\nSaved\n```\n" in found.written
+    monkeypatch.setattr(
+        project, "PARTS", {"pages": Part(Stage.PLANNED, Class.MACHINERY, None, portal)}
+    )
+    assert proofs(kinds=["catalog"]) == []

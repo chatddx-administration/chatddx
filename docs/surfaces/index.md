@@ -24,6 +24,23 @@ Finds:
 
 - A stamp pending is a git conflict, from `<<<<<<< signed` to `=======` as last stamped and on to the `>>>>>>>` closing it as written now, till it is stamped.
 
+## `CATALOG`
+`dev/src/chatddx_dev/index/__init__.py:CATALOG`
+
+`CATALOG = project.PROJECT_ROOT / "docs" / "catalog"`
+
+## `cataloged`
+`dev/src/chatddx_dev/index/anchored.py:cataloged`
+
+The index of the messages said in files, as a catalog extracted them, named and
+said to be from within.
+
+* `name: str`
+* `within: str`
+* `files: Iterable[str]`
+* `said: Catalog`
+* ∟`str`
+
 ## `check`
 `dev/src/chatddx_dev/index/__init__.py:check`
 
@@ -311,7 +328,7 @@ Raises:
 ## `KINDS`
 `dev/src/chatddx_dev/index/__init__.py:KINDS`
 
-`KINDS = ("comments", "surfaces", "whoopses")`
+`KINDS = ("catalog", "comments", "surfaces", "whoopses")`
 
 ## `bash.LEGEND`
 `dev/src/chatddx_dev/index/bash.py:LEGEND`
@@ -385,12 +402,13 @@ Facts as dumped writes them, as an extractor in another language prints them.
 ## `proofs`
 `dev/src/chatddx_dev/index/__init__.py:proofs`
 
-The surface, the comment index and the whoops index of each part, or each part
-named, or those of the kinds named, at a stage from which each is stamped, whatever the language of its code: its
-Python modules' public names and the frontend's exports and props; its comments in
-what Python, SQL, TOML, bash, bats, TypeScript or Svelte is in it; its claims in its
-Python, its tests left out. Griffe reads each package once, shfmt each script once,
-and node a part's frontend once.
+The surface, the comment index, the whoops index and the catalog of each part, or
+each part named, or those of the kinds named, at a stage from which each is stamped,
+whatever the language of its code: its Python modules' public names and the
+frontend's exports and props; its comments in what Python, SQL, TOML, bash, bats,
+TypeScript or Svelte is in it; its claims in its Python, and the messages it says,
+its tests left out. Griffe reads each package once, shfmt each script once, node a
+part's frontend once, and the locale's extraction the whole code once.
 
 * `parts: Iterable[str] | None = None`
 * `kinds: Iterable[str] | None = None`
